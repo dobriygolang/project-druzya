@@ -1,0 +1,13 @@
+---
+description: Go conventions (service-local)
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go
+
+- Domain: `internal/<service>/` (identity: model/repository/service)
+- Transport: `internal/app/api/<service>/`
+- Adapters: `internal/adapter/`
+- Wiring: `cmd/<service>/app/run.go` only
+- `make lint` / `make test` from service root

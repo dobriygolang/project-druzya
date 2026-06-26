@@ -1,0 +1,11 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/sedorofeevd/project-druzya/services/ai/pkg/api
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: pkg/api
+    opt:
+      - paths=source_relative

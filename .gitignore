@@ -1,0 +1,4 @@
+# optional monorepo workspace
+go.work.sum
+
+# each service ignores its own pkg/api/ and .bin/ via services/*/.gitignore

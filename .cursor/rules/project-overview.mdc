@@ -1,0 +1,14 @@
+---
+description: Monorepo index — open a service folder for real work
+alwaysApply: true
+---
+
+# project-druzya monorepo
+
+Services live in `services/<name>/`. Each is **independent**:
+
+- own `Makefile`, `AGENTS.md`, `.golangci.yml`, `go.mod`
+- own `scripts/dev/docker-compose.yml`
+- own `.cursor/rules/`
+
+When editing code, **cd into `services/<name>/`** and follow that service's `AGENTS.md`. Do not assume a root Makefile or root lint config.

@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package content.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/content/pkg/api/content/v1;contentv1";
+
+service ContentService {
+  rpc GetLesson(GetLessonRequest) returns (GetLessonResponse);
+  rpc ListLessons(ListLessonsRequest) returns (ListLessonsResponse);
+}
+
+message Lesson {
+  string id = 1;
+  string title = 2;
+  string body = 3;
+}
+
+message GetLessonRequest {
+  string id = 1;
+}
+
+message GetLessonResponse {
+  Lesson lesson = 1;
+}
+
+message ListLessonsRequest {
+  string course_id = 1;
+}
+
+message ListLessonsResponse {
+  repeated Lesson lessons = 1;
+}

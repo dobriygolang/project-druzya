@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package interview.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/interview/pkg/api/interview/v1;interviewv1";
+
+service InterviewService {
+  rpc StartSession(StartSessionRequest) returns (StartSessionResponse);
+  rpc CompleteSession(CompleteSessionRequest) returns (CompleteSessionResponse);
+}
+
+message Session {
+  string id = 1;
+  string candidate_id = 2;
+  string status = 3;
+}
+
+message StartSessionRequest {
+  string candidate_id = 1;
+}
+
+message StartSessionResponse {
+  Session session = 1;
+}
+
+message CompleteSessionRequest {
+  string session_id = 1;
+}
+
+message CompleteSessionResponse {}

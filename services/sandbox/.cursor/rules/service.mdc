@@ -1,0 +1,23 @@
+---
+description: sandbox service — architecture and workflow
+alwaysApply: true
+---
+
+# sandbox service
+
+Module: `github.com/sedorofeevd/project-druzya/services/sandbox`. Work from service root only.
+
+## Layers
+
+```
+cmd/sandbox/app/run.go     → DI
+internal/app/api/identity/ → gRPC transport
+internal/sandbox/          → model, repository, service
+internal/adapter/postgres/  → persistence
+```
+
+## Dev
+
+`make start` | `make run` | `make lint` | `make gen-proto`
+
+HTTP `:8084`, gRPC `:9094`. See `AGENTS.md`.

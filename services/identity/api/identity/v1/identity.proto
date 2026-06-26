@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package identity.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/identity/pkg/api/identity/v1;identityv1";
+
+service IdentityService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  User user = 1;
+}
+
+message CreateUserRequest {
+  string email = 1;
+  string name = 2;
+}
+
+message CreateUserResponse {
+  User user = 1;
+}

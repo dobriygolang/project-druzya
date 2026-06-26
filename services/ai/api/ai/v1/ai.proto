@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package ai.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/ai/pkg/api/ai/v1;aiv1";
+
+service AIService {
+  rpc ReviewAnswer(ReviewAnswerRequest) returns (ReviewAnswerResponse);
+  rpc GenerateQuestion(GenerateQuestionRequest) returns (GenerateQuestionResponse);
+}
+
+message Feedback {
+  int32 score = 1;
+  string summary = 2;
+  repeated string hints = 3;
+}
+
+message ReviewAnswerRequest {
+  string question = 1;
+  string answer = 2;
+}
+
+message ReviewAnswerResponse {
+  Feedback feedback = 1;
+}
+
+message GenerateQuestionRequest {
+  string topic = 1;
+  int32 difficulty = 2;
+}
+
+message GenerateQuestionResponse {
+  string question = 1;
+}
