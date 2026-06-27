@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose -f docker-compose.prod.yml --env-file .env
 
-.PHONY: help keys build web-build up down logs migrate ps monitoring backup
+.PHONY: help keys build web-build up down logs migrate ps monitoring backup prune deploy
 
 help: ## Show deploy commands
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -37,3 +37,12 @@ monitoring: ## Start Prometheus + Grafana (profile monitoring)
 
 backup: ## Dump all Postgres databases (requires pg_dump + .env)
 	@set -a && . ./.env && set +a && ./scripts/backup-postgres.sh
+
+prune: ## Remove dangling images and old build cache (safe after deploy)
+	@./scripts/docker-prune.sh
+
+deploy: ## Pull-less prod update: build, migrate, up, prune (run from repo root on server)
+	$(COMPOSE) build
+	$(COMPOSE) run --rm migrate
+	$(COMPOSE) up -d --remove-orphans
+	@./scripts/docker-prune.sh

@@ -82,7 +82,10 @@ Telegram bot: включить inline / web app по необходимости;
 | `DEPLOY_SSH_HOST` | IP или hostname |
 | `DEPLOY_SSH_USER` | SSH user |
 | `DEPLOY_SSH_KEY` | private key (multiline) |
-| `DEPLOY_ENV` | **весь** содержимый `deploy/.env` (base64 или raw) |
+| `DEPLOY_REPO_DIR` | опционально; по умолчанию `/opt/project-druzya` |
+| `DEPLOY_BRANCH` | опционально; по умолчанию `main` |
+
+**Первый деплой:** GitHub Actions не клонирует репо сам — один раз вручную на VPS (см. §6). После этого каждый merge в `main` делает `git pull` + `docker compose up`.
 
 Сейчас CI только проверяет build/lint/test — деплой вручную или по SSH.
 
@@ -108,9 +111,12 @@ Telegram bot: включить inline / web app по необходимости;
 curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER
 
-# 2. Клонировать репо
-git clone git@github.com:YOUR_ORG/project-druzya.git
-cd project-druzya/deploy
+# 2. Клонировать репо (путь должен совпадать с deploy workflow — по умолчанию /opt/project-druzya)
+sudo mkdir -p /opt
+git clone git@github.com:YOUR_ORG/project-druzya.git /opt/project-druzya
+cd /opt/project-druzya/deploy
+
+# Альтернатива: ./scripts/bootstrap-server.sh git@github.com:YOUR_ORG/project-druzya.git
 
 # 3. Секреты
 cp .env.example .env
@@ -119,6 +125,12 @@ make keys
 
 # 4. Поднять
 make up
+
+# Обновление после git pull (или автодеплой из GitHub Actions):
+make deploy   # build + migrate + up --remove-orphans + docker-prune
+
+# Только очистка dangling-образов и build cache (безопасно, volumes не трогает):
+make prune
 
 # 5. Smoke test
 curl -sf https://api.druz9.ru/healthz

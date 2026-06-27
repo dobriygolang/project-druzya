@@ -37,15 +37,34 @@ jobs:
             if [ -n "${{ secrets.DEPLOY_REPO_DIR }}" ]; then REPO_DIR="${{ secrets.DEPLOY_REPO_DIR }}"; fi
             if [ -n "${{ secrets.DEPLOY_BRANCH }}" ]; then BRANCH="${{ secrets.DEPLOY_BRANCH }}"; fi
 
+            if [ ! -d "$REPO_DIR/.git" ]; then
+              echo "ERROR: repo not found at $REPO_DIR"
+              echo ""
+              echo "Run one-time bootstrap ON THE SERVER (SSH in manually):"
+              echo "  git clone git@github.com:${{ github.repository }}.git $REPO_DIR"
+              echo "  cd $REPO_DIR/deploy && cp .env.example .env && nano .env && make keys && make up"
+              echo ""
+              echo "Or use deploy/scripts/bootstrap-server.sh"
+              echo "Then set GitHub secret DEPLOY_REPO_DIR if you used another path."
+              exit 1
+            fi
+
             cd "$REPO_DIR"
             git fetch origin "$BRANCH"
             git checkout "$BRANCH"
             git pull --ff-only origin "$BRANCH"
 
+            if [ ! -f deploy/.env ]; then
+              echo "ERROR: missing deploy/.env — copy deploy/.env.example and fill secrets"
+              exit 1
+            fi
+
             cd deploy
             docker compose -f docker-compose.prod.yml --env-file .env build
             docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
             docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
+
+            ./scripts/docker-prune.sh
 
             docker compose -f docker-compose.prod.yml --env-file .env ps
 
