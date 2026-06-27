@@ -1,0 +1,395 @@
+syntax = "proto3";
+
+package interview.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/interview/pkg/api/interview/v1;interviewv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+enum SessionMode {
+  SESSION_MODE_UNSPECIFIED = 0;
+  SESSION_MODE_COMPANY_INTERVIEW = 1;
+  SESSION_MODE_ALGORITHMS_TRAINING = 2;
+  SESSION_MODE_LIVE_CODING_TRAINING = 3;
+  SESSION_MODE_SYSTEM_DESIGN_TRAINING = 4;
+  SESSION_MODE_BEHAVIORAL_TRAINING = 5;
+  SESSION_MODE_SQL_TRAINING = 6;
+  SESSION_MODE_RETRY_MISTAKES = 7;
+}
+
+enum SessionStatus {
+  SESSION_STATUS_UNSPECIFIED = 0;
+  SESSION_STATUS_ACTIVE = 1;
+  SESSION_STATUS_COMPLETED = 2;
+  SESSION_STATUS_CANCELLED = 3;
+  SESSION_STATUS_EXPIRED = 4;
+}
+
+enum SectionStatus {
+  SECTION_STATUS_UNSPECIFIED = 0;
+  SECTION_STATUS_PENDING = 1;
+  SECTION_STATUS_ACTIVE = 2;
+  SECTION_STATUS_COMPLETED = 3;
+}
+
+enum SessionTaskStatus {
+  SESSION_TASK_STATUS_UNSPECIFIED = 0;
+  SESSION_TASK_STATUS_ASSIGNED = 1;
+  SESSION_TASK_STATUS_SUBMITTED = 2;
+  SESSION_TASK_STATUS_EVALUATED = 3;
+  SESSION_TASK_STATUS_SKIPPED = 4;
+}
+
+enum AttemptStatus {
+  ATTEMPT_STATUS_UNSPECIFIED = 0;
+  ATTEMPT_STATUS_SUBMITTED = 1;
+  ATTEMPT_STATUS_EVALUATING = 2;
+  ATTEMPT_STATUS_EVALUATED = 3;
+  ATTEMPT_STATUS_FAILED = 4;
+  ATTEMPT_STATUS_CANCELLED = 5;
+}
+
+enum RetryItemStatus {
+  RETRY_ITEM_STATUS_UNSPECIFIED = 0;
+  RETRY_ITEM_STATUS_PENDING = 1;
+  RETRY_ITEM_STATUS_IN_PROGRESS = 2;
+  RETRY_ITEM_STATUS_COMPLETED = 3;
+  RETRY_ITEM_STATUS_DISMISSED = 4;
+}
+
+service InterviewService {
+  rpc StartInterviewSession(StartInterviewSessionRequest) returns (StartInterviewSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/sessions"
+      body: "*"
+    };
+  }
+
+  rpc GetInterviewSession(GetInterviewSessionRequest) returns (GetInterviewSessionResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/sessions/{session_id}"
+    };
+  }
+
+  rpc GetCurrentSessionState(GetCurrentSessionStateRequest) returns (GetCurrentSessionStateResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/sessions/{session_id}/current"
+    };
+  }
+
+  rpc GetSessionResults(GetSessionResultsRequest) returns (GetSessionResultsResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/sessions/{session_id}/results"
+    };
+  }
+
+  rpc CancelSession(CancelSessionRequest) returns (CancelSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/sessions/{session_id}/cancel"
+      body: "*"
+    };
+  }
+
+  rpc SubmitAttempt(SubmitAttemptRequest) returns (SubmitAttemptResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/session-tasks/{session_task_id}/attempts"
+      body: "*"
+    };
+  }
+
+  rpc SkipTask(SkipTaskRequest) returns (SkipTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/session-tasks/{session_task_id}/skip"
+      body: "*"
+    };
+  }
+
+  rpc GetAttempt(GetAttemptRequest) returns (GetAttemptResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/attempts/{attempt_id}"
+    };
+  }
+
+  rpc ListRetryItems(ListRetryItemsRequest) returns (ListRetryItemsResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/retry-items"
+    };
+  }
+
+  rpc DismissRetryItem(DismissRetryItemRequest) returns (DismissRetryItemResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/retry-items/{retry_item_id}/dismiss"
+      body: "*"
+    };
+  }
+
+  rpc StartRetrySession(StartRetrySessionRequest) returns (StartRetrySessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/retry-sessions"
+      body: "*"
+    };
+  }
+}
+
+service InterviewInternalService {
+  rpc CompleteEvaluation(CompleteEvaluationRequest) returns (CompleteEvaluationResponse);
+  rpc GetAttemptInternal(GetAttemptInternalRequest) returns (GetAttemptResponse);
+  rpc ClaimOutboxEvents(ClaimOutboxEventsRequest) returns (ClaimOutboxEventsResponse);
+  rpc AckOutboxEvents(AckOutboxEventsRequest) returns (AckOutboxEventsResponse);
+  rpc FailOutboxEvent(FailOutboxEventRequest) returns (FailOutboxEventResponse);
+}
+
+message Session {
+  string id = 1;
+  string user_id = 2;
+  optional string template_id = 3;
+  SessionMode mode = 4;
+  SessionStatus status = 5;
+  google.protobuf.Timestamp started_at = 6;
+  optional google.protobuf.Timestamp completed_at = 7;
+  int32 passing_score = 8;
+  optional string total_score = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message SessionSection {
+  string id = 1;
+  string session_id = 2;
+  string section_type = 3;
+  string title = 4;
+  int32 position = 5;
+  SectionStatus status = 6;
+  optional int32 passing_score = 7;
+  optional string score = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message SessionTask {
+  string id = 1;
+  string session_id = 2;
+  string section_id = 3;
+  string task_id = 4;
+  int32 position = 5;
+  SessionTaskStatus status = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message Attempt {
+  string id = 1;
+  string user_id = 2;
+  string session_task_id = 3;
+  string task_id = 4;
+  optional string answer_text = 5;
+  optional string code = 6;
+  optional string language = 7;
+  google.protobuf.Struct attachments = 8;
+  AttemptStatus status = 9;
+  google.protobuf.Timestamp submitted_at = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message EvaluationSummary {
+  string id = 1;
+  string attempt_id = 2;
+  string score = 3;
+  bool passed = 4;
+  optional string summary = 5;
+  google.protobuf.Struct feedback = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message RetryItem {
+  string id = 1;
+  string user_id = 2;
+  string task_id = 3;
+  string source_attempt_id = 4;
+  optional string session_id = 5;
+  optional string reason = 6;
+  RetryItemStatus status = 7;
+  optional google.protobuf.Timestamp next_retry_at = 8;
+  optional google.protobuf.Timestamp resolved_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message Progress {
+  int32 total_tasks = 1;
+  int32 evaluated_tasks = 2;
+  int32 skipped_tasks = 3;
+  int32 total_sections = 4;
+  int32 done_sections = 5;
+}
+
+message StartInterviewSessionRequest {
+  optional string template_id = 1;
+  SessionMode mode = 2;
+}
+
+message StartInterviewSessionResponse {
+  Session session = 1;
+  repeated SessionSection sections = 2;
+  repeated SessionTask tasks = 3;
+  Progress progress = 4;
+}
+
+message GetInterviewSessionRequest {
+  string session_id = 1;
+}
+
+message GetInterviewSessionResponse {
+  Session session = 1;
+  repeated SessionSection sections = 2;
+  repeated SessionTask tasks = 3;
+  Progress progress = 4;
+}
+
+message GetCurrentSessionStateRequest {
+  string session_id = 1;
+}
+
+message GetCurrentSessionStateResponse {
+  Session session = 1;
+  optional SessionSection current_section = 2;
+  optional SessionTask current_task = 3;
+  Progress progress = 4;
+}
+
+message GetSessionResultsRequest {
+  string session_id = 1;
+}
+
+message EvaluationResult {
+  EvaluationSummary summary = 1;
+  Attempt attempt = 2;
+  string task_id = 3;
+}
+
+message GetSessionResultsResponse {
+  Session session = 1;
+  repeated SessionSection sections = 2;
+  repeated SessionTask tasks = 3;
+  repeated EvaluationResult evaluations = 4;
+  Progress progress = 5;
+}
+
+message CancelSessionRequest {
+  string session_id = 1;
+}
+
+message CancelSessionResponse {
+  Session session = 1;
+}
+
+message SubmitAttemptRequest {
+  string session_task_id = 1;
+  optional string answer_text = 2;
+  optional string code = 3;
+  optional string language = 4;
+  repeated Attachment attachments = 5;
+}
+
+message SkipTaskRequest {
+  string session_task_id = 1;
+}
+
+message SkipTaskResponse {
+  SessionTask task = 1;
+  Progress progress = 2;
+}
+
+message Attachment {
+  string name = 1;
+  string url = 2;
+  string type = 3;
+}
+
+message SubmitAttemptResponse {
+  Attempt attempt = 1;
+}
+
+message GetAttemptRequest {
+  string attempt_id = 1;
+}
+
+message GetAttemptResponse {
+  Attempt attempt = 1;
+}
+
+message CompleteEvaluationRequest {
+  string attempt_id = 1;
+  double score = 2;
+  optional bool passed = 3;
+  optional string summary = 4;
+  google.protobuf.Struct feedback = 5;
+}
+
+message CompleteEvaluationResponse {
+  EvaluationSummary summary = 1;
+}
+
+message ListRetryItemsRequest {
+  optional RetryItemStatus status = 1;
+}
+
+message ListRetryItemsResponse {
+  repeated RetryItem items = 1;
+}
+
+message DismissRetryItemRequest {
+  string retry_item_id = 1;
+}
+
+message DismissRetryItemResponse {
+  RetryItem item = 1;
+}
+
+message StartRetrySessionRequest {
+  repeated string retry_item_ids = 1;
+}
+
+message StartRetrySessionResponse {
+  Session session = 1;
+  repeated SessionSection sections = 2;
+  repeated SessionTask tasks = 3;
+  Progress progress = 4;
+}
+
+message GetAttemptInternalRequest {
+  string attempt_id = 1;
+}
+
+message OutboxEvent {
+  string id = 1;
+  string event_name = 2;
+  google.protobuf.Struct payload = 3;
+  google.protobuf.Timestamp occurred_at = 4;
+}
+
+message ClaimOutboxEventsRequest {
+  int32 limit = 1;
+  optional string event_name = 2;
+}
+
+message ClaimOutboxEventsResponse {
+  repeated OutboxEvent events = 1;
+}
+
+message AckOutboxEventsRequest {
+  repeated string event_ids = 1;
+}
+
+message AckOutboxEventsResponse {}
+
+message FailOutboxEventRequest {
+  string event_id = 1;
+  string error = 2;
+}
+
+message FailOutboxEventResponse {}

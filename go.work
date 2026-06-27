@@ -1,7 +1,9 @@
 go 1.25.0
 
 use (
+	./services/ai
 	./services/content
 	./services/identity
+	./services/interview
 	./services/template
 )

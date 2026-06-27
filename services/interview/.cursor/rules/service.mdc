@@ -1,0 +1,20 @@
+---
+description: interview service — architecture and workflow
+alwaysApply: true
+---
+
+# interview service
+
+Module: `github.com/sedorofeevd/project-druzya/services/interview`. Work from service root only.
+
+## Layers
+
+```
+cmd/interview/app/run.go       → DI
+internal/app/api/interview/    → gRPC/HTTP (one RPC per file)
+internal/interview/            → model, repository, service
+internal/adapter/content/      → content-service gRPC client
+internal/adapter/events/       → EventPublisher
+```
+
+HTTP `:8082`, gRPC `:9092`. See `AGENTS.md`.
