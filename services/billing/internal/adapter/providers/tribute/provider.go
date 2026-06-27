@@ -47,7 +47,7 @@ type webhookPayload struct {
 // VerifyWebhook validates shared secret header when configured.
 func (p *Provider) VerifyWebhook(_ context.Context, headers map[string]string, _ []byte) error {
 	if p.cfg.WebhookSecret == "" {
-		return nil
+		return fmt.Errorf("tribute webhook secret not configured: %w", providers.ErrWebhookUnauthorized)
 	}
 	for _, key := range []string{"X-Tribute-Secret", "X-Webhook-Secret"} {
 		if headers[key] == p.cfg.WebhookSecret {

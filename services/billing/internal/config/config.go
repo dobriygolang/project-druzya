@@ -42,7 +42,7 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("INTERNAL_API_TOKEN is required")
 	}
 	tributeSecret := getEnv("TRIBUTE_WEBHOOK_SECRET", "")
-	if err := validateProduction(getEnv("APP_ENV", "development"), internalToken, tributeSecret); err != nil {
+	if err := validateProduction(getEnv("APP_ENV", "development"), internalToken); err != nil {
 		return nil, err
 	}
 
@@ -119,16 +119,12 @@ func loadPEM(envKey, fileKey string) ([]byte, error) {
 	return []byte(value), nil
 }
 
-func validateProduction(appEnv, internalToken, tributeSecret string) error {
+func validateProduction(appEnv, internalToken string) error {
 	if appEnv != "production" {
 		return nil
 	}
 	if internalToken == "dev-internal-token" {
 		return fmt.Errorf("INTERNAL_API_TOKEN must be changed in production")
-	}
-	// Without a secret the Tribute webhook accepts any caller; refuse to start.
-	if tributeSecret == "" {
-		return fmt.Errorf("TRIBUTE_WEBHOOK_SECRET is required in production")
 	}
 	return nil
 }

@@ -248,6 +248,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      identity:
+        condition: service_healthy
 
   sandbox:
     build:

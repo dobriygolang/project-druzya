@@ -43,3 +43,12 @@ func TestVerifyWebhookSecret(t *testing.T) {
 		t.Fatal("expected invalid secret error")
 	}
 }
+
+func TestVerifyWebhookRejectsWhenSecretNotConfigured(t *testing.T) {
+	t.Parallel()
+	p := tribute.New(tribute.Config{})
+	err := p.VerifyWebhook(context.Background(), map[string]string{"X-Tribute-Secret": "any"}, nil)
+	if err == nil {
+		t.Fatal("expected error when webhook secret is not configured")
+	}
+}
