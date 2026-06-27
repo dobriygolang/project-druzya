@@ -12,22 +12,18 @@ import (
 	"google.golang.org/grpc/reflection"
 )
 
-// RunAPI starts HTTP healthcheck and gRPC server, blocking until ctx is cancelled.
+// RunAPI starts HTTP gateway, custom HTTP routes, and gRPC server.
 func RunAPI(ctx context.Context, a *App) error {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	})
-
-	grpcAddr := fmt.Sprintf(":%d", a.Config.GRPCPort)
+	grpcAddr := fmt.Sprintf("127.0.0.1:%d", a.Config.GRPCPort)
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
 		return fmt.Errorf("listen grpc %s: %w", grpcAddr, err)
 	}
 
-	grpcSrv := grpc.NewServer()
-	identityapi.Register(grpcSrv, a.Service)
+	impl := identityapi.NewImplementation(a.Service)
+	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(identityapi.AuthInterceptor(a.Service)))
+	identityapi.Register(grpcSrv, impl)
+
 	reflection.Register(grpcSrv)
 
 	go func() {
@@ -37,10 +33,20 @@ func RunAPI(ctx context.Context, a *App) error {
 		}
 	}()
 
+	httpMux := http.NewServeMux()
+	httpMux.HandleFunc("/healthz", identityapi.HealthzHTTP())
+	httpMux.HandleFunc("/v1/auth/yandex/callback", impl.YandexCallbackHTTP())
+	httpMux.HandleFunc("/v1/jwt/public.pem", impl.PublicKeyHTTP(a.PublicKeyPEM))
+
+	if err := identityapi.RegisterGateway(ctx, httpMux, grpcAddr); err != nil {
+		grpcSrv.Stop()
+		return fmt.Errorf("register gateway: %w", err)
+	}
+
 	httpAddr := fmt.Sprintf(":%d", a.Config.HTTPPort)
 	srv := &http.Server{
 		Addr:              httpAddr,
-		Handler:           mux,
+		Handler:           httpMux,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

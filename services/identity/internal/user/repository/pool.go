@@ -1,4 +1,4 @@
-package postgres
+package repository
 
 import (
 	"context"
@@ -11,8 +11,8 @@ type Pool struct {
 	*pgxpool.Pool
 }
 
-// New creates a PostgreSQL connection pool.
-func New(ctx context.Context, dsn string) (*Pool, error) {
+// NewPool creates a PostgreSQL connection pool.
+func NewPool(ctx context.Context, dsn string) (*Pool, error) {
 	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, err

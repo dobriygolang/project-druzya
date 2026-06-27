@@ -4,6 +4,7 @@ SHELL := /bin/bash
 SERVICE := identity
 HTTP_PORT ?= 8080
 GRPC_PORT ?= 9090
+JWT_DIR := scripts/dev/jwt
 GOOSE_DSN ?= host=localhost port=5432 user=postgres password=postgres dbname=druzya sslmode=disable
 MIGRATIONS_DIR := scripts/migrations
 COMPOSE_FILE := scripts/dev/docker-compose.yml
@@ -41,8 +42,12 @@ migrate-new: ## Create migration. Usage: make migrate-new NAME=add_users_table
 	printf -- "-- +goose Up\n-- +goose StatementBegin\n\n-- +goose StatementEnd\n\n-- +goose Down\n-- +goose StatementBegin\nSELECT 1;\n-- +goose StatementEnd\n" > "$$FILE"; \
 	echo "created $$FILE"
 
+.PHONY: gen-jwt-keys
+gen-jwt-keys: ## Generate dev RS256 keys in scripts/dev/jwt/
+	@./scripts/dev/gen-jwt-keys.sh
+
 .PHONY: start
-start: start-deps migrate-up ## Deps + migrations + run API (foreground)
+start: start-deps migrate-up gen-jwt-keys ## Deps + migrations + run API (foreground)
 	@echo ""
 	@echo "  HTTP  http://localhost:$(HTTP_PORT)/healthz"
 	@echo "  gRPC  localhost:$(GRPC_PORT)"
@@ -54,8 +59,13 @@ dev-local: start-deps migrate-up ## Start deps only; run 'make run' yourself
 	@echo "  deps ready — run: make run"
 
 .PHONY: run
-run: ## Run API locally (GOWORK=off, no monorepo required)
+run: gen-jwt-keys ## Run API locally (GOWORK=off, no monorepo required)
+	JWT_PRIVATE_KEY_FILE=$(JWT_DIR)/private.pem JWT_PUBLIC_KEY_FILE=$(JWT_DIR)/public.pem \
 	GOWORK=off go run ./cmd/$(SERVICE)
+
+.PHONY: run-bot
+run-bot: ## Run Telegram login bot
+	GOWORK=off go run ./cmd/identity-bot
 
 .PHONY: stop
 stop: ## Stop docker deps
@@ -94,17 +104,25 @@ lint-tidy: ## Fail if go.mod drift (readonly)
 tidy: ## go mod tidy
 	GOWORK=off go mod tidy
 
-.PHONY: bin-buf bin-protoc-gen-go
+.PHONY: bin-buf bin-protoc-gen-go bin-protoc-gen-go-grpc bin-protoc-gen-grpc-gateway
 bin-buf: ## Build buf into .bin/
 	@mkdir -p $(BIN_DIR)
-	@GOWORK=off go build -o $(BIN_DIR)/buf github.com/bufbuild/buf/cmd/buf
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install github.com/bufbuild/buf/cmd/buf@v1.47.0
 
 bin-protoc-gen-go: ## Build protoc-gen-go into .bin/
 	@mkdir -p $(BIN_DIR)
-	@GOWORK=off go build -o $(BIN_DIR)/protoc-gen-go google.golang.org/protobuf/cmd/protoc-gen-go
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+
+bin-protoc-gen-go-grpc: ## Build protoc-gen-go-grpc into .bin/
+	@mkdir -p $(BIN_DIR)
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+
+bin-protoc-gen-grpc-gateway: ## Build protoc-gen-grpc-gateway into .bin/
+	@mkdir -p $(BIN_DIR)
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.29.0
 
 .PHONY: gen-proto
-gen-proto: bin-buf bin-protoc-gen-go ## Generate pkg/api from api/
+gen-proto: bin-buf bin-protoc-gen-go bin-protoc-gen-go-grpc bin-protoc-gen-grpc-gateway ## Generate pkg/api from api/
 	@GOWORK=off PATH="$(CURDIR)/$(BIN_DIR):$$PATH" $(BIN_DIR)/buf generate
 
 .PHONY: generate

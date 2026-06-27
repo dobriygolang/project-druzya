@@ -5,7 +5,15 @@ managed:
     - file_option: go_package_prefix
       value: github.com/sedorofeevd/project-druzya/services/identity/pkg/api
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  - local: protoc-gen-go
+    out: pkg/api
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: pkg/api
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-grpc-gateway
     out: pkg/api
     opt:
       - paths=source_relative

@@ -6,8 +6,8 @@ alwaysApply: false
 
 # Go
 
-- Domain: `internal/<service>/` (identity: model/repository/service)
-- Transport: `internal/app/api/<service>/`
-- Adapters: `internal/adapter/`
+- Domain: `internal/user/`, `internal/auth/` — model, repository, service
+- Transport: `internal/app/api/identity/`
+- External clients: `internal/adapter/`
 - Wiring: `cmd/<service>/app/run.go` only
 - `make lint` / `make test` from service root

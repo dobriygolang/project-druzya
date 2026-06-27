@@ -10,10 +10,11 @@ Module: `github.com/sedorofeevd/project-druzya/services/identity`. Work from ser
 ## Layers
 
 ```
-cmd/identity/app/run.go     → DI
-internal/app/api/identity/ → gRPC transport
-internal/identity/          → model, repository, service
-internal/adapter/postgres/  → persistence
+cmd/identity/app/run.go       → DI
+internal/app/api/identity/    → gRPC/HTTP transport
+internal/user/                → user model + postgres repository
+internal/auth/                → auth model + redis repository + service
+internal/adapter/yandex/      → external OAuth client
 ```
 
 ## Dev

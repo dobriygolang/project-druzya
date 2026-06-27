@@ -3,18 +3,24 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/sedorofeevd/project-druzya/services/identity/internal/adapter/postgres"
+
+	authservice "github.com/sedorofeevd/project-druzya/services/identity/internal/auth/service"
+	authrepo "github.com/sedorofeevd/project-druzya/services/identity/internal/auth/repository"
+	"github.com/sedorofeevd/project-druzya/services/identity/internal/adapter/yandex"
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/config"
-	identityservice "github.com/sedorofeevd/project-druzya/services/identity/internal/identity/service"
+	userrepo "github.com/sedorofeevd/project-druzya/services/identity/internal/user/repository"
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/tools/logger"
 )
 
 // App holds adapters and the domain service for identity.
 type App struct {
-	Config   *config.Config
-	Logger   logger.Logger
-	Postgres *postgres.Pool
-	Service  identityservice.Service
+	Config       *config.Config
+	Logger       logger.Logger
+	Postgres     *userrepo.Pool
+	Redis        *authrepo.Client
+	Service      authservice.Service
+	TokenManager *authservice.TokenManager
+	PublicKeyPEM []byte
 }
 
 // New wires adapters and the domain service.
@@ -29,20 +35,55 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init logger: %w", err)
 	}
 
-	pg, err := postgres.New(ctx, cfg.PostgresDSN)
+	pg, err := userrepo.NewPool(ctx, cfg.PostgresDSN)
 	if err != nil {
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
-	a := &App{
-		Config:   cfg,
-		Logger:   log,
-		Postgres: pg,
+	redisClient, err := authrepo.New(ctx, cfg.RedisAddr)
+	if err != nil {
+		pg.Close()
+		return nil, fmt.Errorf("init redis: %w", err)
 	}
 
-	a.Service = identityservice.New(identityservice.Deps{
-		Users: postgres.NewUserRepository(pg),
-		Log:   log,
+	tokenManager, err := authservice.NewTokenManager(
+		cfg.JWTPrivateKeyPEM,
+		cfg.JWTPublicKeyPEM,
+		cfg.JWTAccessTTL,
+		cfg.JWTRefreshTTL,
+	)
+	if err != nil {
+		_ = redisClient.Close()
+		pg.Close()
+		return nil, fmt.Errorf("init token manager: %w", err)
+	}
+
+	publicKeyPEM, err := tokenManager.PublicKeyPEM()
+	if err != nil {
+		_ = redisClient.Close()
+		pg.Close()
+		return nil, fmt.Errorf("encode public key: %w", err)
+	}
+
+	a := &App{
+		Config:       cfg,
+		Logger:       log,
+		Postgres:     pg,
+		Redis:        redisClient,
+		TokenManager: tokenManager,
+		PublicKeyPEM: publicKeyPEM,
+	}
+
+	a.Service = authservice.New(authservice.Deps{
+		Users:         userrepo.New(pg),
+		LoginCodes:    authrepo.NewLoginCodeRepository(redisClient),
+		RefreshTokens: authrepo.NewRefreshTokenRepository(redisClient),
+		OAuthStates:   authrepo.NewOAuthStateRepository(redisClient),
+		ExchangeCodes: authrepo.NewExchangeCodeRepository(redisClient),
+		Yandex:        yandex.NewClient(cfg.YandexClientID, cfg.YandexClientSecret, cfg.YandexRedirectURI),
+		Tokens:        tokenManager,
+		FrontendURL:   cfg.FrontendURL,
+		Log:           log,
 	})
 
 	return a, nil
@@ -50,6 +91,9 @@ func New(ctx context.Context) (*App, error) {
 
 // Close releases adapter resources.
 func (a *App) Close() {
+	if a.Redis != nil {
+		_ = a.Redis.Close()
+	}
 	if a.Postgres != nil {
 		a.Postgres.Close()
 	}
