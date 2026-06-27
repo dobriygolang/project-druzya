@@ -12,7 +12,8 @@ When working on a service, **open only that service folder** and read its local 
 | identity | [services/identity/AGENTS.md](services/identity/AGENTS.md) | auth, Redis, interceptors, custom HTTP |
 | content | [services/content/AGENTS.md](services/content/AGENTS.md) | catalog domain, many read RPCs |
 | interview | [services/interview/AGENTS.md](services/interview/AGENTS.md) | sessions, attempts, retry queue, content gRPC client |
-| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | attempt evaluation, LLM scoring, outbox worker |
+| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | attempt evaluation, LLM scoring, outbox worker; **AGENTS.md caveman-compressed** |
+| recommendation | [services/recommendation/AGENTS.md](services/recommendation/AGENTS.md) | skill profiles, outbox consumer; **AGENTS.md caveman-compressed** |
 | sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | |
 | billing | [services/billing/AGENTS.md](services/billing/AGENTS.md) | |
 
@@ -122,6 +123,7 @@ func NewRegisteredImplementation(s *grpc.Server, svc exampleservice.Service) *Im
 | content | 8081 | 9091 | 5433 | druzya_content |
 | interview | 8082 | 9092 | 5434 | druzya_interview |
 | ai | 8083 | 9093 | 5435 | druzya_ai |
+| recommendation | 8084 | 9094 | 5436 | druzya_recommendation |
 | template | 8099 | 9199 | 5439 | druzya_template |
 
 Pick unused ports for each new service. Update `Makefile`, `config.go`, `docker-compose.yml`.

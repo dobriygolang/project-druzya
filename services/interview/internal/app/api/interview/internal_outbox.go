@@ -34,8 +34,11 @@ func (i *Implementation) ClaimOutboxEvents(
 	req *interviewv1.ClaimOutboxEventsRequest,
 ) (*interviewv1.ClaimOutboxEventsResponse, error) {
 	eventName := string(eventsadapter.AttemptSubmitted)
-	if req.EventName != nil && req.GetEventName() != "" {
+	if req.EventName != nil {
 		eventName = req.GetEventName()
+		if eventName == "" {
+			eventName = string(eventsadapter.AttemptSubmitted)
+		}
 	}
 	items, err := i.service.ClaimOutboxEvents(ctx, eventName, int(req.GetLimit()))
 	if err != nil {

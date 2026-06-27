@@ -15,15 +15,20 @@ import (
 )
 
 type completeEvaluationResult struct {
-	summary          *interviewmodel.EvaluationSummary
-	retryItemCreated bool
-	sessionCompleted bool
-	sessionID        string
-	userID           string
-	attemptID        string
-	passed           bool
-	score            decimal.Decimal
-	alreadyDone      bool
+	summary           *interviewmodel.EvaluationSummary
+	retryItemCreated  bool
+	retryItemID       string
+	sessionCompleted  bool
+	sessionID         string
+	userID            string
+	taskID            string
+	attemptID         string
+	sessionMode       string
+	sessionTotalScore *decimal.Decimal
+	passed            bool
+	score             decimal.Decimal
+	occurredAt        time.Time
+	alreadyDone       bool
 }
 
 func (s *interviewService) CompleteEvaluation(ctx context.Context, input CompleteEvaluationInput) (*interviewmodel.EvaluationSummary, error) {
@@ -100,7 +105,7 @@ func (s *interviewService) CompleteEvaluation(ctx context.Context, input Complet
 
 		if !passed {
 			reason := "score below passing threshold"
-			created, err := s.repo.CreateRetryItemIfAbsent(txCtx, &interviewmodel.RetryItem{
+			retryItem := &interviewmodel.RetryItem{
 				ID:              uuid.NewString(),
 				UserID:          attempt.UserID,
 				TaskID:          attempt.TaskID,
@@ -109,11 +114,15 @@ func (s *interviewService) CompleteEvaluation(ctx context.Context, input Complet
 				Status:          interviewmodel.RetryStatusPending,
 				CreatedAt:       now,
 				UpdatedAt:       now,
-			})
+			}
+			created, err := s.repo.CreateRetryItemIfAbsent(txCtx, retryItem)
 			if err != nil {
 				return err
 			}
 			result.retryItemCreated = created
+			if created {
+				result.retryItemID = retryItem.ID
+			}
 		}
 
 		sessionCompleted, err := s.recalculateScores(txCtx, session)
@@ -125,9 +134,30 @@ func (s *interviewService) CompleteEvaluation(ctx context.Context, input Complet
 		result.sessionCompleted = sessionCompleted
 		result.sessionID = session.ID
 		result.userID = session.UserID
+		result.taskID = attempt.TaskID
 		result.attemptID = attempt.ID
+		result.sessionMode = string(session.Mode)
+		result.sessionTotalScore = session.TotalScore
 		result.passed = passed
 		result.score = score
+		result.occurredAt = now
+
+		if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.AttemptEvaluated),
+			attemptEvaluatedPayload(result.attemptID, result.userID, result.taskID, result.sessionID, result.passed, result.score, now)); err != nil {
+			return err
+		}
+		if result.retryItemCreated {
+			if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.RetryItemCreated),
+				retryItemCreatedPayload(result.retryItemID, result.userID, result.taskID, result.attemptID, now)); err != nil {
+				return err
+			}
+		}
+		if result.sessionCompleted {
+			if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.SessionCompleted),
+				sessionCompletedPayload(result.sessionID, result.userID, result.sessionMode, result.sessionTotalScore, now)); err != nil {
+				return err
+			}
+		}
 		return nil
 	})
 	if err != nil {
@@ -135,36 +165,6 @@ func (s *interviewService) CompleteEvaluation(ctx context.Context, input Complet
 	}
 	if result.alreadyDone {
 		return result.summary, nil
-	}
-
-	if result.retryItemCreated {
-		_ = s.events.Publish(ctx, eventsadapter.Event{
-			Name: eventsadapter.RetryItemCreated,
-			Payload: map[string]any{
-				"user_id":    result.userID,
-				"attempt_id": result.attemptID,
-			},
-		})
-	}
-
-	_ = s.events.Publish(ctx, eventsadapter.Event{
-		Name: eventsadapter.AttemptEvaluated,
-		Payload: map[string]any{
-			"attempt_id": result.attemptID,
-			"session_id": result.sessionID,
-			"passed":     result.passed,
-			"score":      result.score.String(),
-		},
-	})
-
-	if result.sessionCompleted {
-		_ = s.events.Publish(ctx, eventsadapter.Event{
-			Name: eventsadapter.SessionCompleted,
-			Payload: map[string]any{
-				"session_id": result.sessionID,
-				"user_id":    result.userID,
-			},
-		})
 	}
 
 	return result.summary, nil

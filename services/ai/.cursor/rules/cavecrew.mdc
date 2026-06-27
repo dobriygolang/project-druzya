@@ -1,0 +1,18 @@
+---
+description: Cavecrew delegation — save main-thread tokens in ai service
+alwaysApply: true
+---
+
+# cavecrew (ai-service)
+
+Prefer cavecrew subagents over inline explore when output would be long.
+
+| Task | Agent |
+|------|-------|
+| locate defs/callers/tests | `cavecrew-investigator` |
+| surgical ≤2 file edit | `cavecrew-builder` |
+| diff/PR review | `cavecrew-reviewer` |
+
+Subagent results caveman-compressed (~60% fewer tokens in main context).
+
+Read compressed `AGENTS.md` first. Full prose: `AGENTS.original.md`.

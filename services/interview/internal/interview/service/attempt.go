@@ -76,11 +76,6 @@ func (s *interviewService) SubmitAttempt(ctx context.Context, input SubmitAttemp
 		return nil, err
 	}
 
-	_ = s.events.Publish(ctx, eventsadapter.Event{
-		Name:    eventsadapter.AttemptSubmitted,
-		Payload: attemptSubmittedPayload(attempt, session.ID, sessionTask.ID, now),
-	})
-
 	return attempt, nil
 }
 

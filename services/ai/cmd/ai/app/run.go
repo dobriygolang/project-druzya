@@ -65,6 +65,7 @@ func New(ctx context.Context) (*App, error) {
 		Groq:     cfg.GroqAPIKey,
 		Cerebras: cfg.CerebrasAPIKey,
 		Google:   cfg.GoogleAPIKey,
+		Caveman:  cfg.LLMCavemanLevel,
 	}, slog.Default())
 	if err != nil {
 		_ = interviewClient.Close()

@@ -27,8 +27,10 @@ const (
   "summary": "<2-3 предложения>",
   "strengths": ["..."],
   "improvements": ["..."],
+  "criteria": [{"key": "<criterion key>", "score": <number>, "max_score": <number>}],
   "feedback": {}
 }
+criteria — оценка по каждому rubric criterion из промпта (key совпадает с rubric).
 По умолчанию FAIL. PASS только при доказательно сильном ответе.`
 )
 
@@ -68,10 +70,13 @@ func (j *LLMJudge) Evaluate(ctx context.Context, in Input) (*Output, error) {
 		waterScore = score
 	}
 
-	call2, corr, strengths, improvements, summary, err := j.pass2Correctness(ctx, in, userAnswer)
+	call2, corr, strengths, improvements, summary, criteria, err := j.pass2Correctness(ctx, in, userAnswer)
 	calls = append(calls, call2)
 	if err != nil {
 		return nil, fmt.Errorf("pass2 correctness: %w", err)
+	}
+	if len(criteria) == 0 {
+		criteria = fallbackCriterionScores(in, corr)
 	}
 
 	penalty := in.OffTopicPenalty
@@ -96,7 +101,7 @@ func (j *LLMJudge) Evaluate(ctx context.Context, in Input) (*Output, error) {
 		Feedback:     map[string]any{"water_score": waterScore},
 	}
 
-	return &Output{Result: result, WaterScore: waterScore, Calls: calls}, nil
+	return &Output{Result: result, WaterScore: waterScore, Criteria: criteria, Calls: calls}, nil
 }
 
 func (j *LLMJudge) pass1WaterScore(ctx context.Context, in Input, userAnswer string) (CallRecord, float64, error) {
@@ -136,7 +141,7 @@ func (j *LLMJudge) pass1WaterScore(ctx context.Context, in Input, userAnswer str
 	return call, parsed.WaterScore, nil
 }
 
-func (j *LLMJudge) pass2Correctness(ctx context.Context, in Input, userAnswer string) (CallRecord, float64, []string, []string, string, error) {
+func (j *LLMJudge) pass2Correctness(ctx context.Context, in Input, userAnswer string) (CallRecord, float64, []string, []string, string, []CriterionScore, error) {
 	criteriaJSON, _ := json.Marshal(in.Criteria)
 	solutionsJSON, _ := json.Marshal(in.Solutions)
 	user := fmt.Sprintf(
@@ -157,21 +162,26 @@ func (j *LLMJudge) pass2Correctness(ctx context.Context, in Input, userAnswer st
 	})
 	call := callRecordFromResponse("pass2_score", resp, start, err)
 	if err != nil {
-		return call, 0, nil, nil, "", err
+		return call, 0, nil, nil, "", nil, err
 	}
 
 	var parsed struct {
-		Score        float64        `json:"score"`
-		Passed       *bool          `json:"passed"`
-		Summary      string         `json:"summary"`
+		Score        float64 `json:"score"`
+		Passed       *bool   `json:"passed"`
+		Summary      string  `json:"summary"`
 		Strengths    []string       `json:"strengths"`
 		Improvements []string       `json:"improvements"`
-		Feedback     map[string]any `json:"feedback"`
+		Criteria     []struct {
+			Key      string  `json:"key"`
+			Score    float64 `json:"score"`
+			MaxScore float64 `json:"max_score"`
+		} `json:"criteria"`
+		Feedback map[string]any `json:"feedback"`
 	}
 	if err := parseLLMJSON(resp.Content, &parsed); err != nil {
 		errMsg := err.Error()
 		call.Error = &errMsg
-		return call, 0, nil, nil, "", err
+		return call, 0, nil, nil, "", nil, err
 	}
 	if parsed.Score < 0 {
 		parsed.Score = 0
@@ -191,7 +201,44 @@ func (j *LLMJudge) pass2Correctness(ctx context.Context, in Input, userAnswer st
 	if summary == "" {
 		summary = "Evaluation completed."
 	}
-	return call, parsed.Score, parsed.Strengths, parsed.Improvements, summary, nil
+	criteria := make([]CriterionScore, 0, len(parsed.Criteria))
+	for _, c := range parsed.Criteria {
+		if strings.TrimSpace(c.Key) == "" {
+			continue
+		}
+		maxScore := c.MaxScore
+		if maxScore <= 0 {
+			maxScore = 100
+		}
+		score := c.Score
+		if score < 0 {
+			score = 0
+		}
+		if score > maxScore {
+			score = maxScore
+		}
+		criteria = append(criteria, CriterionScore{Key: c.Key, Score: score, MaxScore: maxScore})
+	}
+	return call, parsed.Score, parsed.Strengths, parsed.Improvements, summary, criteria, nil
+}
+
+func fallbackCriterionScores(in Input, overall float64) []CriterionScore {
+	if len(in.Criteria) == 0 {
+		key := "overall"
+		if strings.TrimSpace(in.TaskType) != "" {
+			key = "overall"
+		}
+		return []CriterionScore{{Key: key, Score: overall, MaxScore: 100}}
+	}
+	out := make([]CriterionScore, 0, len(in.Criteria))
+	for _, c := range in.Criteria {
+		maxScore := float64(c.MaxScore)
+		if maxScore <= 0 {
+			maxScore = 100
+		}
+		out = append(out, CriterionScore{Key: c.Key, Score: overall, MaxScore: maxScore})
+	}
+	return out
 }
 
 func callRecordFromResponse(phase string, resp llmchain.Response, start time.Time, err error) CallRecord {

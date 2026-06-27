@@ -1,18 +1,16 @@
 ---
-description: template service — skeleton, not production
+description: ai service context
 alwaysApply: true
 ---
 
-# template service (skeleton)
+# ai service
 
-Module: `github.com/sedorofeevd/project-druzya/services/template`. **Copy to create new services** — see `AGENTS.md`.
+Module: `github.com/sedorofeevd/project-druzya/services/ai`
 
-## Layers
+HTTP `:8083` | gRPC `:9093` | PG `:5435`
 
-```
-cmd/template/app/run.go          → DI
-internal/app/api/template/       → gRPC/HTTP (one RPC per file)
-internal/example/model|repository|service/
-```
+Layers: `cmd/ai/app/run.go` → `internal/app/api/ai/` → `internal/evaluation/service/` → repository.
 
-HTTP `:8099`, gRPC `:9199`. Do not deploy as production.
+Outbox worker: `internal/outboxworker` — poll `interview.attempt_submitted` only.
+
+See `AGENTS.md` (compressed). `AGENTS.original.md` for full text.

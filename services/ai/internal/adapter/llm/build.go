@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain/caveman"
 )
 
 // BuildConfig holds provider keys and chain order for llmchain assembly.
@@ -16,6 +17,7 @@ type BuildConfig struct {
 	Cerebras string
 	Google   string
 	Mistral  string
+	Caveman  string
 }
 
 // BuildChain assembles the provider chain from environment config.
@@ -63,7 +65,7 @@ func BuildChain(cfg BuildConfig, log *slog.Logger) (llmchain.ChatClient, error) 
 	if err != nil {
 		return nil, fmt.Errorf("build llm chain: %w", err)
 	}
-	return chain, nil
+	return caveman.New(chain, caveman.ParseLevel(cfg.Caveman), log), nil
 }
 
 func parseChainOrder(raw string) []llmchain.Provider {

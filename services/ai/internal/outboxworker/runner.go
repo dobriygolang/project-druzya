@@ -15,9 +15,21 @@ func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Cli
 		return err
 	}
 	for _, ev := range events {
+		start := time.Now()
 		if err := h.HandleEvent(ctx, ev); err != nil {
-			log.Error("handle outbox event failed", "event_id", ev.ID, "err", err)
+			log.Error("outbox_failed",
+				"event_id", ev.ID,
+				"event_name", AttemptSubmittedEvent,
+				"duration_ms", time.Since(start).Milliseconds(),
+				"err", err,
+			)
+			continue
 		}
+		log.Info("outbox_processed",
+			"event_id", ev.ID,
+			"event_name", AttemptSubmittedEvent,
+			"duration_ms", time.Since(start).Milliseconds(),
+		)
 	}
 	return nil
 }

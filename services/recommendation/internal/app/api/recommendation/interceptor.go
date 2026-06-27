@@ -1,0 +1,34 @@
+package recommendationapi
+
+import (
+	"context"
+
+	recommendationv1 "github.com/sedorofeevd/project-druzya/services/recommendation/pkg/api/recommendation/v1"
+	"github.com/sedorofeevd/project-druzya/services/identity/pkg/jwt"
+	"google.golang.org/grpc"
+)
+
+var protectedMethods = map[string]struct{}{
+	recommendationv1.RecommendationService_GetDashboard_FullMethodName:             {},
+	recommendationv1.RecommendationService_DismissRecommendation_FullMethodName:    {},
+	recommendationv1.RecommendationService_CompleteRecommendation_FullMethodName:   {},
+	recommendationv1.RecommendationService_CompleteLearningPlanItem_FullMethodName: {},
+	recommendationv1.RecommendationService_DismissLearningPlanItem_FullMethodName:  {},
+}
+
+// AuthInterceptor validates Bearer JWT for user-facing RPC methods.
+func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		if _, ok := protectedMethods[info.FullMethod]; !ok {
+			return handler(ctx, req)
+		}
+
+		token := BearerTokenFromContext(ctx)
+		userID, err := v.UserID(token)
+		if err != nil {
+			return nil, unauthorized()
+		}
+
+		return handler(WithUserID(ctx, userID), req)
+	}
+}

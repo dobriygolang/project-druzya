@@ -27,6 +27,9 @@ func (r *Repository) InsertOutbox(ctx context.Context, eventName string, payload
 	return nil
 }
 
+// OutboxClaimAll claims every pending event type (pass as eventName).
+const OutboxClaimAll = "*"
+
 func (r *Repository) ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]interviewmodel.OutboxMessage, error) {
 	if limit <= 0 {
 		limit = 10
@@ -36,7 +39,7 @@ func (r *Repository) ClaimOutboxEvents(ctx context.Context, eventName string, li
 			SELECT id
 			FROM domain_outbox
 			WHERE status IN ('pending', 'failed')
-			  AND event_name = $1
+			  AND ($1 = '*' OR event_name = $1)
 			  AND (locked_until IS NULL OR locked_until <= now())
 			ORDER BY created_at
 			LIMIT $2

@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package recommendation.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/recommendation/pkg/api/recommendation/v1;recommendationv1";
+
+service RecommendationService {
+  rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse) {
+    option (google.api.http) = {get: "/v1/recommendations/dashboard"};
+  }
+
+  rpc DismissRecommendation(DismissRecommendationRequest) returns (DismissRecommendationResponse) {
+    option (google.api.http) = {
+      post: "/v1/recommendations/{id}/dismiss"
+      body: "*"
+    };
+  }
+
+  rpc CompleteRecommendation(CompleteRecommendationRequest) returns (CompleteRecommendationResponse) {
+    option (google.api.http) = {
+      post: "/v1/recommendations/{id}/complete"
+      body: "*"
+    };
+  }
+
+  rpc CompleteLearningPlanItem(CompleteLearningPlanItemRequest) returns (CompleteLearningPlanItemResponse) {
+    option (google.api.http) = {
+      post: "/v1/recommendations/learning-plan/{id}/complete"
+      body: "*"
+    };
+  }
+
+  rpc DismissLearningPlanItem(DismissLearningPlanItemRequest) returns (DismissLearningPlanItemResponse) {
+    option (google.api.http) = {
+      post: "/v1/recommendations/learning-plan/{id}/dismiss"
+      body: "*"
+    };
+  }
+}
+
+message GetDashboardRequest {}
+
+message GetDashboardResponse {
+  int32 readiness_score = 1;
+  repeated SkillInsight strengths = 2;
+  repeated SkillInsight weaknesses = 3;
+  repeated Recommendation recommendations = 4;
+  repeated LearningPlanItem learning_plan = 5;
+  int32 pending_retry_count = 6;
+}
+
+message SkillInsight {
+  string skill_key = 1;
+  int32 score = 2;
+  int32 confidence = 3;
+}
+
+message Recommendation {
+  string id = 1;
+  string type = 2;
+  string priority = 3;
+  optional string skill_key = 4;
+  string title = 5;
+  string description = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message LearningPlanItem {
+  string id = 1;
+  string type = 2;
+  optional string task_id = 3;
+  optional string skill_key = 4;
+  string title = 5;
+  optional string description = 6;
+  string status = 7;
+  int32 position = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+
+message DismissRecommendationRequest {
+  string id = 1;
+}
+
+message DismissRecommendationResponse {}
+
+message CompleteRecommendationRequest {
+  string id = 1;
+}
+
+message CompleteRecommendationResponse {}
+
+message CompleteLearningPlanItemRequest {
+  string id = 1;
+}
+
+message CompleteLearningPlanItemResponse {}
+
+message DismissLearningPlanItemRequest {
+  string id = 1;
+}
+
+message DismissLearningPlanItemResponse {}

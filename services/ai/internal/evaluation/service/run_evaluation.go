@@ -140,6 +140,18 @@ func (s *evaluationService) executeEvaluation(ctx context.Context, job *evaluati
 	if len(result.Improvements) > 0 {
 		feedback["improvements"] = result.Improvements
 	}
+	if len(evalOut.Criteria) > 0 {
+		criteria := make([]map[string]any, 0, len(evalOut.Criteria))
+		for _, c := range evalOut.Criteria {
+			criteria = append(criteria, map[string]any{
+				"key":       c.Key,
+				"score":     c.Score,
+				"max_score": c.MaxScore,
+				"task_type": taskType,
+			})
+		}
+		feedback["criteria"] = criteria
+	}
 
 	passed := result.Passed != nil && *result.Passed
 	return s.interview.CompleteEvaluation(ctx, interviewadapter.CompleteEvaluationInput{

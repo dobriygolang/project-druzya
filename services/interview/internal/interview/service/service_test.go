@@ -233,13 +233,6 @@ func TestSubmitAttempt_writesOutboxInTransaction(t *testing.T) {
 		Return(nil).
 		Once()
 
-	fx.events.EXPECT().
-		Publish(mock.Anything, mock.MatchedBy(func(ev eventsadapter.Event) bool {
-			return ev.Name == eventsadapter.AttemptSubmitted
-		})).
-		Return(nil).
-		Once()
-
 	answer := "answer"
 	attempt, err := fx.svc.SubmitAttempt(context.Background(), interviewservice.SubmitAttemptInput{
 		UserID:        userID,

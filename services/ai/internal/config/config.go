@@ -25,6 +25,7 @@ type Config struct {
 	GoogleAPIKey       string
 	EvalMaxRetries     int
 	WorkerPollInterval time.Duration
+	LLMCavemanLevel    string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -70,6 +71,7 @@ func Load() (*Config, error) {
 		GoogleAPIKey:       os.Getenv("GOOGLE_API_KEY"),
 		EvalMaxRetries:     evalMaxRetries,
 		WorkerPollInterval: workerPoll,
+		LLMCavemanLevel:    getEnv("LLM_CAVEMAN", "lite"),
 	}, nil
 }
 

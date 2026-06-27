@@ -26,6 +26,8 @@ type Service interface {
 	SkipTask(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SessionTask, interviewmodel.Progress, error)
 	DismissRetryItem(ctx context.Context, userID, retryItemID string) (*interviewmodel.RetryItem, error)
 	GetAttemptInternal(ctx context.Context, attemptID string) (*interviewmodel.Attempt, error)
+	GetEvaluationSummaryInternal(ctx context.Context, attemptID string) (*interviewmodel.EvaluationSummary, error)
+	ListRetryItemsInternal(ctx context.Context, userID string, status *interviewmodel.RetryItemStatus) ([]interviewmodel.RetryItem, error)
 	ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]interviewmodel.OutboxMessage, error)
 	AckOutboxEvents(ctx context.Context, ids []string) error
 	FailOutboxEvent(ctx context.Context, id, errMsg string) error

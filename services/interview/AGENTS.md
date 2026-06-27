@@ -77,6 +77,8 @@ databus/                    — reserved for outbox/events
 
 ai-service claims via internal gRPC (`ClaimOutboxEvents` / `AckOutboxEvents` / `FailOutboxEvent`) — **no direct DB access to interview**.
 
+Pass `event_name="*"` (`OutboxClaimAll`) to claim all pending event types in one round-trip.
+
 Internal RPCs on `InterviewInternalService` (`x-internal-token`):
 
 - `GetAttemptInternal`
@@ -114,13 +116,18 @@ Proto uses typed enums (`SessionMode`, `SessionStatus`, etc.) — map in `intern
 
 ## Events
 
-Published via `EventPublisher`:
+**Durable outbox** (`domain_outbox`, same transaction as domain write):
+
+| Event | When | Consumer |
+|-------|------|----------|
+| `interview.attempt_submitted` | SubmitAttempt | ai-service |
+| `interview.attempt_evaluated` | CompleteEvaluation | recommendation-service |
+| `interview.session_completed` | session fully evaluated | recommendation-service |
+| `interview.retry_item_created` | new retry item on fail | recommendation-service (reconcile) |
+
+**Logger only** (via `EventPublisher`, same payloads for debugging):
 
 - `interview.session_started`
-- `interview.attempt_submitted` → consumed by ai-service
-- `interview.attempt_evaluated`
-- `interview.session_completed`
-- `interview.retry_item_created`
 - `interview.task_skipped`
 
 ## Commands

@@ -1,123 +1,85 @@
 # AGENTS.md — ai service
 
-**Self-contained service.** Work from this directory only.
+Self-contained. Work from `services/ai/` only.
 
 Module: `github.com/sedorofeevd/project-druzya/services/ai`
 
 ## Purpose
 
-AI **evaluation** for interview attempts: consumes `interview.attempt_submitted` outbox events, calls content for task/rubric bundle, runs LLM scoring, completes evaluation via interview internal API.
+AI eval for interview attempts. Consume `interview.attempt_submitted` outbox → content rubric bundle → LLM score → interview `CompleteEvaluation`.
 
-Does **not** own: users/auth, catalog, interview sessions, billing.
+**Not own:** users/auth, catalog, sessions, billing.
 
-| Question | Service |
-|----------|---------|
-| What is the task/rubric? | content (`GetTaskBundle`) |
-| What did user submit? | interview (`GetAttemptInternal`) |
-| How to score? | **ai** |
-| Persist session score? | interview (`CompleteEvaluation`) |
+| Q | Owner |
+|---|-------|
+| task/rubric | content `GetTaskBundle` |
+| user answer | interview `GetAttemptInternal` |
+| score | **ai** |
+| persist result | interview `CompleteEvaluation` |
 
 ## Ports
 
-| Protocol | Default |
-|----------|---------|
-| HTTP | 8083 |
-| gRPC | 9093 |
-| Postgres | 5435 (`druzya_ai`) |
-| Interview gRPC | `127.0.0.1:9092` |
-| Content gRPC | `127.0.0.1:9091` |
+HTTP `8083` | gRPC `9093` | PG `5435` `druzya_ai` | interview gRPC `127.0.0.1:9092` | content `127.0.0.1:9091`
 
 ## Layout
 
 ```
-cmd/ai/app/                  DI, API server, outbox worker
-api/ai/v1/
-pkg/api/ai/v1/               — generated
-pkg/client/                  — InternalClient port
-internal/evaluation/
-  model/                     — EvaluationJob, ModelCall
-  repository/                — postgres
-  service/                   — Service interface + RunEvaluation
-  evaluator/                 — 2-pass judge (water + score) via llmchain
-internal/outboxworker/       — poll + Ack/Fail (testable without gRPC init)
-internal/adapter/
-  interview/                 — Client port + interview/grpc gRPC impl
-  content/                   — Client port + content/grpc gRPC impl
-  llm/                       — BuildChain wiring
-  llm/llmchain/              — ported druzya provider chain (fallback, multi-key)
-internal/app/api/ai/         — AiInternalService transport
-internal/config/
+cmd/ai/app/           DI + server + worker
+api/ai/v1/            proto
+internal/evaluation/  model, repository, service, evaluator (2-pass judge + llmchain)
+internal/outboxworker/
+internal/adapter/     interview, content, llm/llmchain
+internal/app/api/ai/
 scripts/migrations/
-scripts/dev/docker-compose.yml
 ```
 
 ## Tables
 
-- `evaluation_jobs` — one job per attempt (`attempt_id` UNIQUE)
-- `model_calls` — LLM audit trail per job
+`evaluation_jobs` (attempt_id UNIQUE) | `model_calls` (LLM audit)
 
-## Job status
+Job status: `pending` | `running` | `completed` | `failed`
 
-`pending` | `running` | `completed` | `failed`
-
-## API (internal gRPC + optional HTTP admin)
+## API
 
 | RPC | HTTP | Auth |
 |-----|------|------|
-| RunEvaluation | gRPC only | `x-internal-token` |
-| GetEvaluationJob | `GET /v1/admin/evaluation-jobs/{id}` | `x-internal-token` |
-| ListEvaluationJobs | `GET /v1/admin/evaluation-jobs` | `x-internal-token` |
+| RunEvaluation | gRPC | `x-internal-token` |
+| GetEvaluationJob | `GET /v1/admin/evaluation-jobs/{id}` | internal |
+| ListEvaluationJobs | `GET /v1/admin/evaluation-jobs` | internal |
 
 ## Worker
 
-`internal/outboxworker` polls interview `ClaimOutboxEvents(event=interview.attempt_submitted)` every `WORKER_POLL_INTERVAL` (default 2s). On success `AckOutboxEvents`; on failure `FailOutboxEvent`.
+Poll `ClaimOutboxEvents(event=interview.attempt_submitted)` every `WORKER_POLL_INTERVAL` (default 2s). Ack ok / Fail err. Structured logs: `outbox_processed`, `outbox_failed` + duration_ms.
 
-## Evaluation pipeline
+## Pipeline
 
-1. Worker claims outbox event
-2. `RunEvaluation` → content `GetTaskBundle` + interview `GetAttempt`
-3. **2-pass judge** (`evaluator.LLMJudge`):
-   - Pass 1: off-topic / water score (skipped for code submissions)
-   - Pass 2: rubric scoring → `final = correctness × (1 - water/100 × penalty)`
-4. Each pass → `model_calls` row
-5. `CompleteEvaluation` on interview
+1. claim outbox
+2. `RunEvaluation` → content bundle + interview attempt
+3. 2-pass judge: pass1 water (skip code) → pass2 rubric + `criteria[]` in feedback
+4. **caveman** (`llmchain/caveman`) compress prompts before external LLM — `LLM_CAVEMAN=lite|full|off`
+5. `model_calls` rows
+6. `CompleteEvaluation`
 
-## Mocks (mockery)
+## Mocks
 
-`//go:generate mockery` lives on interface definitions (same as search-performance), not separate `generate.go` files.
-
-```bash
-make gen-mocks
-```
+`//go:generate mockery` on interfaces. `make gen-mocks`
 
 ## Commands
 
 ```bash
 cd services/ai
 export INTERNAL_API_TOKEN=dev-internal-token
-make start
-make gen-proto
-make test
-make lint
-make build
+make start | gen-proto | test | lint | build
 ```
 
 ## Env
 
-| Variable | Default |
-|----------|---------|
-| HTTP_PORT | 8083 |
-| GRPC_PORT | 9093 |
-| POSTGRES_DSN | `postgres://postgres:postgres@localhost:5435/druzya_ai?sslmode=disable` |
-| INTERVIEW_GRPC_ADDR | `127.0.0.1:9092` |
-| CONTENT_GRPC_ADDR | `127.0.0.1:9091` |
-| INTERNAL_API_TOKEN | (required) |
-| LLM_CHAIN_ORDER | `groq,cerebras,openai,google` |
-| GROQ_API_KEY / CEREBRAS_API_KEY / OPENAI_API_KEY / GOOGLE_API_KEY | optional (fake LLM when none) |
-| EVAL_MAX_RETRIES | `3` |
-| WORKER_POLL_INTERVAL | `2s` |
-| LOG_LEVEL | info |
+`HTTP_PORT` `8083` | `GRPC_PORT` `9093` | `POSTGRES_DSN` localhost:5435 | `INTERVIEW_GRPC_ADDR` | `CONTENT_GRPC_ADDR` | `INTERNAL_API_TOKEN` (req) | `LLM_CHAIN_ORDER` | API keys optional (fake LLM if none) | `LLM_CAVEMAN` `lite` (`off`/`full`) | `EVAL_MAX_RETRIES` `3` | `WORKER_POLL_INTERVAL` `2s`
 
-## Dependencies
+Build: `GOWORK=off`
 
-`go.mod` replaces `../content` and `../interview` for gRPC clients. Build with `GOWORK=off`.
+## Agent tokens (cavecrew)
+
+Read `.cursor/rules/cavecrew.mdc`. Broad locate → `cavecrew-investigator`. ≤2 file edit → `cavecrew-builder`. Diff review → `cavecrew-reviewer`.
+
+Human backup: `AGENTS.original.md`

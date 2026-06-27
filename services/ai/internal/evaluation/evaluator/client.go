@@ -49,10 +49,18 @@ type CallRecord struct {
 	Error            *string
 }
 
+// CriterionScore is one rubric row score from the judge.
+type CriterionScore struct {
+	Key      string
+	Score    float64
+	MaxScore float64
+}
+
 // Output is the scored attempt plus LLM audit trail.
 type Output struct {
 	Result     *evaluationmodel.EvaluationResult
 	WaterScore float64
+	Criteria   []CriterionScore
 	Calls      []CallRecord
 }
 

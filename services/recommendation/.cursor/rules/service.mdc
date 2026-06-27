@@ -1,0 +1,16 @@
+---
+description: recommendation service context
+alwaysApply: true
+---
+
+# recommendation service
+
+Module: `github.com/sedorofeevd/project-druzya/services/recommendation`
+
+HTTP `:8084` | gRPC `:9094` | PG `:5436`
+
+Worker: single `ClaimOutboxEvents("*")` → route 3 interview events.
+
+Retry plan items: **only** via `retry_item_created` handler.
+
+See `AGENTS.md`.
