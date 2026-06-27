@@ -1,26 +1,35 @@
 # project-druzya
 
-Monorepo of **independent microservices**. Each service is a self-contained cell — open only its folder and work without the rest of the repo.
+Monorepo of **independent microservices**. Each service is self-contained — open its folder and follow local `AGENTS.md`.
 
 ## Services
 
-| Service | Path | HTTP | gRPC |
-|---------|------|------|------|
-| identity | [services/identity/](services/identity/) | :8080 | :9090 |
-| content | [services/content/](services/content/) | :8081 | :9091 |
-| interview | [services/interview/](services/interview/) | :8082 | :9092 |
-| ai | [services/ai/](services/ai/) | :8083 | :9093 |
-| sandbox | [services/sandbox/](services/sandbox/) | :8084 | :9094 |
-| billing | [services/billing/](services/billing/) | :8085 | :9095 |
+| Service | Path | HTTP | gRPC | Prod |
+|---------|------|------|------|------|
+| identity | [services/identity/](services/identity/) | 8080 | 9090 | yes |
+| content | [services/content/](services/content/) | 8081 | 9091 | yes |
+| interview | [services/interview/](services/interview/) | 8082 | 9092 | yes |
+| ai | [services/ai/](services/ai/) | 8083 | 9093 | yes |
+| recommendation | [services/recommendation/](services/recommendation/) | 8084 | 9094 | yes |
+| template | [services/template/](services/template/) | 8099 | 9199 | skeleton only |
 
-## Quick start (inside a service)
+## Local dev
 
 ```bash
 cd services/identity
-make help
 make start
 ```
 
-Each service has its own `Makefile`, `AGENTS.md`, `.golangci.yml`, `scripts/dev/docker-compose.yml`, and `.cursor/rules/`.
+## Production deploy
 
-Root `go.work` is optional — only for working across services in one IDE window. Every service uses `GOWORK=off` in its Makefile and builds standalone.
+See [deploy/README.md](deploy/README.md) and [deploy/PROD_PLAN.md](deploy/PROD_PLAN.md).
+
+Domains: **druz9.ru**, **druz9.online** — API at `api.druz9.ru`, app at `app.druz9.ru`.
+
+```bash
+cd deploy
+cp .env.example .env   # fill secrets
+make up
+```
+
+Root `go.work` is optional. Services build with `GOWORK=off`.

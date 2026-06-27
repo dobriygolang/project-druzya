@@ -875,6 +875,54 @@ func (_c *Repository_UpdateLearningPlanItemStatus_Call) RunAndReturn(run func(co
 	return _c
 }
 
+// UpdateProfileSummary provides a mock function with given fields: ctx, userID, summary
+func (_m *Repository) UpdateProfileSummary(ctx context.Context, userID string, summary string) error {
+	ret := _m.Called(ctx, userID, summary)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateProfileSummary")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
+		r0 = rf(ctx, userID, summary)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Repository_UpdateProfileSummary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateProfileSummary'
+type Repository_UpdateProfileSummary_Call struct {
+	*mock.Call
+}
+
+// UpdateProfileSummary is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - summary string
+func (_e *Repository_Expecter) UpdateProfileSummary(ctx interface{}, userID interface{}, summary interface{}) *Repository_UpdateProfileSummary_Call {
+	return &Repository_UpdateProfileSummary_Call{Call: _e.mock.On("UpdateProfileSummary", ctx, userID, summary)}
+}
+
+func (_c *Repository_UpdateProfileSummary_Call) Run(run func(ctx context.Context, userID string, summary string)) *Repository_UpdateProfileSummary_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_UpdateProfileSummary_Call) Return(_a0 error) *Repository_UpdateProfileSummary_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Repository_UpdateProfileSummary_Call) RunAndReturn(run func(context.Context, string, string) error) *Repository_UpdateProfileSummary_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpdateReadinessScore provides a mock function with given fields: ctx, userID, readiness
 func (_m *Repository) UpdateReadinessScore(ctx context.Context, userID string, readiness int) error {
 	ret := _m.Called(ctx, userID, readiness)

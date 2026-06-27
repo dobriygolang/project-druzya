@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
+	billinggrpc "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing/grpc"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
 	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/config"
@@ -19,6 +21,8 @@ type App struct {
 	Logger        logger.Logger
 	Postgres      *interviewrepo.Pool
 	ContentClient *contentadapter.GRPCClient
+	BillingClient billingadapter.Client
+	billingConn   *billinggrpc.Client
 	JWT           *jwt.Validator
 	Service       interviewservice.Service
 }
@@ -53,10 +57,23 @@ func New(ctx context.Context) (*App, error) {
 
 	events := eventsadapter.NewLoggerPublisher(log)
 
+	var billingClient billingadapter.Client
+	var billingConn *billinggrpc.Client
+	if cfg.BillingGRPCAddr != "" {
+		billingConn, err = billinggrpc.NewClient(ctx, cfg.BillingGRPCAddr, cfg.InternalAPIToken)
+		if err != nil {
+			_ = contentClient.Close()
+			pg.Close()
+			return nil, fmt.Errorf("init billing client: %w", err)
+		}
+		billingClient = billingConn
+	}
+
 	repo := interviewrepo.New(pg)
 	svc := interviewservice.New(interviewservice.Deps{
 		Repo:          repo,
 		Content:       contentClient,
+		Billing:       billingClient,
 		Events:        events,
 		SessionTTL:    cfg.SessionTTL,
 		TrainingLimit: cfg.TrainingLimit,
@@ -67,6 +84,8 @@ func New(ctx context.Context) (*App, error) {
 		Logger:        log,
 		Postgres:      pg,
 		ContentClient: contentClient,
+		BillingClient: billingClient,
+		billingConn:   billingConn,
 		JWT:           jwtValidator,
 		Service:       svc,
 	}, nil
@@ -74,6 +93,9 @@ func New(ctx context.Context) (*App, error) {
 
 // Close releases adapter resources.
 func (a *App) Close() {
+	if a.billingConn != nil {
+		_ = a.billingConn.Close()
+	}
 	if a.ContentClient != nil {
 		_ = a.ContentClient.Close()
 	}

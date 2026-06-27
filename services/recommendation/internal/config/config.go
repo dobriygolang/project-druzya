@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/ops"
 )
 
 // Config holds application configuration loaded from environment.
@@ -13,13 +15,16 @@ type Config struct {
 	LogLevel    string
 	HTTPPort    int
 	GRPCPort    int
+	GRPCHost    string
 	PostgresDSN string
 
 	JWTPublicKeyPEM    []byte
 	InterviewGRPCAddr  string
 	ContentGRPCAddr    string
+	AIGRPCAddr         string
 	InternalAPIToken   string
 	WorkerPollInterval time.Duration
+	CORSAllowedOrigins []string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -48,18 +53,24 @@ func Load() (*Config, error) {
 	if internalToken == "" {
 		return nil, fmt.Errorf("INTERNAL_API_TOKEN is required")
 	}
+	if err := validateProduction(getEnv("APP_ENV", "development"), internalToken); err != nil {
+		return nil, err
+	}
 
 	return &Config{
 		AppEnv:             getEnv("APP_ENV", "development"),
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 		HTTPPort:           httpPort,
 		GRPCPort:           grpcPort,
+		GRPCHost:           grpcListenHost(),
 		PostgresDSN:        getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5436/druzya_recommendation?sslmode=disable"),
 		JWTPublicKeyPEM:    publicKey,
 		InterviewGRPCAddr:  getEnv("INTERVIEW_GRPC_ADDR", "127.0.0.1:9092"),
 		ContentGRPCAddr:    getEnv("CONTENT_GRPC_ADDR", "127.0.0.1:9091"),
+		AIGRPCAddr:         getEnv("AI_GRPC_ADDR", "127.0.0.1:9093"),
 		InternalAPIToken:   internalToken,
 		WorkerPollInterval: workerPoll,
+		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 	}, nil
 }
 
@@ -68,6 +79,26 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func grpcListenHost() string {
+	if v := os.Getenv("GRPC_HOST"); v != "" {
+		return v
+	}
+	if getEnv("APP_ENV", "development") == "production" {
+		return "0.0.0.0"
+	}
+	return "127.0.0.1"
+}
+
+func validateProduction(appEnv, internalToken string) error {
+	if appEnv != "production" {
+		return nil
+	}
+	if internalToken == "dev-internal-token" {
+		return fmt.Errorf("INTERNAL_API_TOKEN must be changed in production")
+	}
+	return nil
 }
 
 func loadPEM(envKey, fileKey string) ([]byte, error) {

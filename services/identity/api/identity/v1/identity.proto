@@ -60,6 +60,7 @@ service IdentityService {
   
   // s2s
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc GetUserByTelegramID(GetUserByTelegramIDRequest) returns (GetUserResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
 }
 
@@ -68,6 +69,7 @@ message User {
   string username = 2;
   string avatar_url = 3;
   google.protobuf.Timestamp created_at = 4;
+  int64 telegram_id = 5;
 }
 
 message AuthResponse {
@@ -114,6 +116,10 @@ message LinkYandexRequest {
 
 message GetUserRequest {
   string id = 1;
+}
+
+message GetUserByTelegramIDRequest {
+  int64 telegram_id = 1;
 }
 
 message GetUserResponse {

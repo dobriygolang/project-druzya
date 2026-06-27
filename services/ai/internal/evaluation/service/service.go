@@ -3,10 +3,12 @@ package service
 import (
 	"context"
 
+	billingadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/summary"
 )
 
 // Service is AI evaluation use cases.
@@ -18,13 +20,16 @@ type Service interface {
 	GetEvaluationJob(ctx context.Context, id string) (*evaluationmodel.EvaluationJob, error)
 	GetEvaluationJobByAttemptID(ctx context.Context, attemptID string) (*evaluationmodel.EvaluationJob, error)
 	ListEvaluationJobs(ctx context.Context, status *evaluationmodel.JobStatus, limit int) ([]evaluationmodel.EvaluationJob, error)
+	GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []summary.SkillScore) (string, error)
 }
 
 type evaluationService struct {
 	repo       Repository
 	interview  interviewadapter.Client
 	content    contentadapter.Client
+	billing    billingadapter.Client
 	evaluator  evaluator.Client
+	summary    *summary.Generator
 	maxRetries int
 }
 
@@ -33,7 +38,9 @@ type Deps struct {
 	Repo       Repository
 	Interview  interviewadapter.Client
 	Content    contentadapter.Client
+	Billing    billingadapter.Client
 	Evaluator  evaluator.Client
+	Summary    *summary.Generator
 	MaxRetries int
 }
 
@@ -47,7 +54,9 @@ func New(deps Deps) Service {
 		repo:       deps.Repo,
 		interview:  deps.Interview,
 		content:    deps.Content,
+		billing:    deps.Billing,
 		evaluator:  deps.Evaluator,
+		summary:    deps.Summary,
 		maxRetries: maxRetries,
 	}
 }

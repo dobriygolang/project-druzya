@@ -1,0 +1,101 @@
+# Runbook — druz9 production
+
+## Restart order
+
+1. `postgres`, `redis`
+2. `migrate` (one-shot, only after schema change)
+3. `identity` → `content` → `interview`
+4. `ai`, `recommendation` (parallel)
+5. `identity-bot`, `caddy`
+
+```bash
+cd deploy
+docker compose -f docker-compose.prod.yml --env-file .env restart identity content interview ai recommendation caddy
+```
+
+## Health endpoints
+
+| Service | Liveness | Readiness |
+|---------|----------|-----------|
+| identity | `/healthz` | `/readyz` (PG + Redis) |
+| content | `/healthz` | `/readyz` (PG) |
+| interview | `/healthz` | `/readyz` (PG + content gRPC) |
+| ai | `/healthz` | `/readyz` (PG + interview + content) |
+| recommendation | `/healthz` | `/readyz` (PG + interview + content) |
+
+Public API health: `https://api.druz9.ru/healthz`
+
+## Logs
+
+```bash
+cd deploy
+docker compose -f docker-compose.prod.yml logs -f identity
+docker compose -f docker-compose.prod.yml logs -f ai
+docker compose -f docker-compose.prod.yml logs -f interview
+```
+
+## Common failures
+
+### ai fails to start in production
+
+- **Cause:** no LLM API keys or `INTERNAL_API_TOKEN=dev-internal-token`
+- **Fix:** set `GROQ_API_KEY` (or other provider) and generate a strong `INTERNAL_API_TOKEN` in `.env`
+
+### interview `/readyz` fails
+
+- **Cause:** content not ready or wrong `CONTENT_GRPC_ADDR`
+- **Fix:** `docker compose ps`, check content logs, verify `content:9091` in compose network
+
+### migrations failed
+
+```bash
+cd deploy
+docker compose -f docker-compose.prod.yml run --rm migrate
+```
+
+### JWT / auth errors
+
+- Ensure `deploy/secrets/jwt/` exists (`make keys`)
+- All services using JWT must mount the same `public.pem`
+
+### Caddy TLS issues
+
+- DNS must point to server before first start
+- Check `docker compose logs caddy`
+- Certificates stored in volume `caddy_data`
+
+## Backups
+
+```bash
+cd deploy
+set -a && source .env && set +a
+./scripts/backup-postgres.sh
+```
+
+Requires `pg_dump` on host, or run from a postgres client container.
+
+## Monitoring (optional)
+
+```bash
+cd deploy
+docker compose -f docker-compose.prod.yml --profile monitoring up -d
+```
+
+- Prometheus: http://server:9099
+- Grafana: http://server:3000 (default admin / see `GRAFANA_ADMIN_PASSWORD`)
+
+## Secret rotation
+
+### INTERNAL_API_TOKEN
+
+1. Generate new token
+2. Update `.env` for `ai`, `interview`, `recommendation`
+3. Restart those three services together
+
+### JWT keys
+
+Rotation requires signing new keys and redeploying all services that validate JWT. Plan a maintenance window.
+
+## Internal token doc
+
+`INTERNAL_API_TOKEN` is shared by ai ↔ interview ↔ recommendation for gRPC internal RPCs (`x-internal-token` header). Never expose publicly; rotate periodically.

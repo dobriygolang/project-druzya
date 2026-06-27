@@ -50,6 +50,7 @@ message GetDashboardResponse {
   repeated Recommendation recommendations = 4;
   repeated LearningPlanItem learning_plan = 5;
   int32 pending_retry_count = 6;
+  optional string profile_summary = 7;
 }
 
 message SkillInsight {

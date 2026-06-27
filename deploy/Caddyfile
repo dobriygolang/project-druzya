@@ -1,0 +1,62 @@
+{
+	email {$CADDY_EMAIL}
+}
+
+api.druz9.ru, api.druz9.online {
+	encode gzip
+
+	handle /v1/auth* {
+		reverse_proxy identity:8080
+	}
+	handle /v1/users* {
+		reverse_proxy identity:8080
+	}
+	handle /v1/jwt* {
+		reverse_proxy identity:8080
+	}
+	handle /v1/companies* {
+		reverse_proxy content:8081
+	}
+	handle /v1/interview-templates* {
+		reverse_proxy content:8081
+	}
+	handle /v1/tasks* {
+		reverse_proxy content:8081
+	}
+	handle /v1/rubrics* {
+		reverse_proxy content:8081
+	}
+	handle /v1/interview* {
+		reverse_proxy interview:8082
+	}
+	handle /v1/recommendations* {
+		reverse_proxy recommendation:8084
+	}
+	handle /v1/sandbox* {
+		reverse_proxy sandbox:8086
+	}
+	handle /v1/billing* {
+		reverse_proxy billing:8085
+	}
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	respond "not found" 404
+}
+
+app.druz9.ru, app.druz9.online {
+	encode gzip
+	root * /srv
+	try_files {path} /index.html
+	file_server
+}
+
+druz9.ru {
+	redir https://app.druz9.ru{uri} permanent
+}
+
+druz9.online {
+	redir https://app.druz9.online{uri} permanent
+}

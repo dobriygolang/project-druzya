@@ -5,6 +5,7 @@ import (
 	"time"
 
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
+	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
 	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
 	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
 )
@@ -55,6 +56,7 @@ type CompleteEvaluationInput struct {
 type interviewService struct {
 	repo           Repository
 	content        contentadapter.Client
+	billing        billingadapter.Client
 	events         eventsadapter.Publisher
 	sessionTTL     time.Duration
 	trainingLimit  int
@@ -64,6 +66,7 @@ type interviewService struct {
 type Deps struct {
 	Repo          Repository
 	Content       contentadapter.Client
+	Billing       billingadapter.Client
 	Events        eventsadapter.Publisher
 	SessionTTL    time.Duration
 	TrainingLimit int
@@ -82,6 +85,7 @@ func New(deps Deps) Service {
 	return &interviewService{
 		repo:          deps.Repo,
 		content:       deps.Content,
+		billing:       deps.Billing,
 		events:        deps.Events,
 		sessionTTL:    ttl,
 		trainingLimit: limit,

@@ -31,6 +31,9 @@ func (s *interviewService) StartInterviewSession(
 	if mode == interviewmodel.ModeRetryMistakes {
 		return nil, fmt.Errorf("use StartRetrySession for retry_mistakes: %w", ErrInvalidInput)
 	}
+	if err := s.gateSessionStart(ctx, userID, mode); err != nil {
+		return nil, err
+	}
 
 	now := time.Now().UTC()
 	sessionID := uuid.NewString()

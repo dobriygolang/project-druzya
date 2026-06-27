@@ -30,11 +30,13 @@ const (
 
 // UserSkillProfile tracks aggregate readiness for a user.
 type UserSkillProfile struct {
-	ID             string
-	UserID         string
-	ReadinessScore int
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	ID                string
+	UserID            string
+	ReadinessScore    int
+	ProfileSummary    *string
+	SummaryUpdatedAt  *time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // SkillScore tracks per-skill performance for a user.
@@ -134,6 +136,7 @@ type SkillInsight struct {
 // Dashboard aggregates user recommendation state.
 type Dashboard struct {
 	ReadinessScore    int
+	ProfileSummary    *string
 	Strengths         []SkillInsight
 	Weaknesses        []SkillInsight
 	Recommendations   []Recommendation

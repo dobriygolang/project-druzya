@@ -17,12 +17,16 @@ func toProtoUser(user *model.User) *identityv1.User {
 	if user == nil {
 		return nil
 	}
-	return &identityv1.User{
+	out := &identityv1.User{
 		Id:        user.ID,
 		Username:  user.Username,
 		AvatarUrl: user.AvatarURL,
 		CreatedAt: timestamppb.New(user.CreatedAt),
 	}
+	if user.TelegramID != nil {
+		out.TelegramId = *user.TelegramID
+	}
+	return out
 }
 
 func toAuthResponse(result *authservice.AuthResult) *identityv1.AuthResponse {

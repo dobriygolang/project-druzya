@@ -12,10 +12,12 @@ When working on a service, **open only that service folder** and read its local 
 | identity | [services/identity/AGENTS.md](services/identity/AGENTS.md) | auth, Redis, interceptors, custom HTTP |
 | content | [services/content/AGENTS.md](services/content/AGENTS.md) | catalog domain, many read RPCs |
 | interview | [services/interview/AGENTS.md](services/interview/AGENTS.md) | sessions, attempts, retry queue, content gRPC client |
-| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | attempt evaluation, LLM scoring, outbox worker; **AGENTS.md caveman-compressed** |
-| recommendation | [services/recommendation/AGENTS.md](services/recommendation/AGENTS.md) | skill profiles, outbox consumer; **AGENTS.md caveman-compressed** |
-| sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | |
-| billing | [services/billing/AGENTS.md](services/billing/AGENTS.md) | |
+| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | attempt evaluation, LLM scoring, outbox worker |
+| recommendation | [services/recommendation/AGENTS.md](services/recommendation/AGENTS.md) | skill profiles, outbox consumer |
+| billing | [services/billing/AGENTS.md](services/billing/AGENTS.md) | usage quotas, plan limits |
+| sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | code execution runs (MVP) |
+
+Prod deploy: [deploy/PROD_PLAN.md](deploy/PROD_PLAN.md)
 
 Root `go.work` is optional. Services build with `GOWORK=off`.
 
@@ -124,6 +126,8 @@ func NewRegisteredImplementation(s *grpc.Server, svc exampleservice.Service) *Im
 | interview | 8082 | 9092 | 5434 | druzya_interview |
 | ai | 8083 | 9093 | 5435 | druzya_ai |
 | recommendation | 8084 | 9094 | 5436 | druzya_recommendation |
+| billing | 8085 | 9095 | 5438 | druzya_billing |
+| sandbox | 8086 | 9096 | 5439 | druzya_sandbox |
 | template | 8099 | 9199 | 5439 | druzya_template |
 
 Pick unused ports for each new service. Update `Makefile`, `config.go`, `docker-compose.yml`.

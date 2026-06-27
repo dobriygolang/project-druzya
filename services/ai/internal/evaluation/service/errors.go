@@ -9,8 +9,9 @@ import (
 var (
 	ErrNotFound     = evaluationrepo.ErrNotFound
 	ErrConflict     = evaluationrepo.ErrConflict
-	ErrInvalidInput = errors.New("invalid input")
-	ErrEvaluation   = errors.New("evaluation failed")
+	ErrInvalidInput   = errors.New("invalid input")
+	ErrEvaluation     = errors.New("evaluation failed")
+	ErrQuotaExceeded  = errors.New("quota exceeded")
 )
 
 func IsNotFound(err error) bool     { return errors.Is(err, ErrNotFound) }

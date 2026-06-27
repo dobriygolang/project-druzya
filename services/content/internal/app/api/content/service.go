@@ -8,6 +8,7 @@ import (
 // Implementation implements ContentService gRPC handlers.
 type Implementation struct {
 	contentv1.UnimplementedContentServiceServer
+	contentv1.UnimplementedContentAdminServiceServer
 	service catalogservice.Service
 }
 

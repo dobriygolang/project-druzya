@@ -10,6 +10,7 @@ import (
 
 	contentadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/content"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
+	aiadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/ai"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/payload"
 )
@@ -34,6 +35,7 @@ type Repository interface {
 	InsertTakeMockRecommendation(ctx context.Context, rec model.Recommendation) (*model.Recommendation, error)
 	CreateRetryTaskPlanItem(ctx context.Context, item model.LearningPlanItem) (*model.LearningPlanItem, error)
 	NextLearningPlanPosition(ctx context.Context, userID string) (int, error)
+	UpdateProfileSummary(ctx context.Context, userID, summary string) error
 	FetchDashboardSnapshot(ctx context.Context, userID string) (*model.DashboardSnapshot, error)
 	ListActiveRecommendations(ctx context.Context, userID string) ([]model.Recommendation, error)
 	ListActiveLearningPlanItems(ctx context.Context, userID string) ([]model.LearningPlanItem, error)
@@ -61,6 +63,7 @@ type recommendationService struct {
 	repo      Repository
 	interview interviewadapter.Client
 	content   contentadapter.Client
+	ai        aiadapter.Client
 }
 
 // Deps wires recommendation service dependencies.
@@ -68,6 +71,7 @@ type Deps struct {
 	Repo      Repository
 	Interview interviewadapter.Client
 	Content   contentadapter.Client
+	AI        aiadapter.Client
 }
 
 // New constructs the recommendation service.
@@ -76,6 +80,7 @@ func New(deps Deps) Service {
 		repo:      deps.Repo,
 		interview: deps.Interview,
 		content:   deps.Content,
+		ai:        deps.AI,
 	}
 }
 
@@ -213,8 +218,27 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 		return nil, fmt.Errorf("list pending retries: %w", err)
 	}
 
+	summary := snap.Profile.ProfileSummary
+	if s.ai != nil && shouldRefreshSummary(snap.Profile.SummaryUpdatedAt) {
+		skills := make([]aiadapter.SkillScore, 0, len(snap.SkillScores))
+		for _, sc := range snap.SkillScores {
+			skills = append(skills, aiadapter.SkillScore{
+				SkillKey: sc.SkillKey, Score: sc.Score, Confidence: sc.Confidence,
+			})
+		}
+		llmCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+		text, err := s.ai.GenerateProfileSummary(llmCtx, userID, snap.Profile.ReadinessScore, skills)
+		cancel()
+		if err == nil && text != "" {
+			if saveErr := s.repo.UpdateProfileSummary(ctx, userID, text); saveErr == nil {
+				summary = &text
+			}
+		}
+	}
+
 	return &model.Dashboard{
 		ReadinessScore:    snap.Profile.ReadinessScore,
+		ProfileSummary:    summary,
 		Strengths:         computeStrengths(snap.SkillScores),
 		Weaknesses:        computeWeaknesses(snap.SkillScores),
 		Recommendations:   snap.Recommendations,

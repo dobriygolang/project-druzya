@@ -284,5 +284,11 @@ func mapServiceError(err error) error {
 	if errors.Is(err, interviewservice.ErrSessionClosed) {
 		return failedPrecondition("session closed")
 	}
+	if errors.Is(err, interviewservice.ErrQuotaExceeded) {
+		return failedPrecondition("quota exceeded")
+	}
+	if errors.Is(err, interviewservice.ErrFeatureDisabled) {
+		return failedPrecondition("feature not available on current plan")
+	}
 	return status.Error(codes.Internal, "internal error")
 }

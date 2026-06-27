@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: identity
+    static_configs:
+      - targets: ["identity:8080"]
+    metrics_path: /metrics
+
+  - job_name: content
+    static_configs:
+      - targets: ["content:8081"]
+    metrics_path: /metrics
+
+  - job_name: interview
+    static_configs:
+      - targets: ["interview:8082"]
+    metrics_path: /metrics
+
+  - job_name: ai
+    static_configs:
+      - targets: ["ai:8083"]
+    metrics_path: /metrics
+
+  - job_name: recommendation
+    static_configs:
+      - targets: ["recommendation:8084"]
+    metrics_path: /metrics

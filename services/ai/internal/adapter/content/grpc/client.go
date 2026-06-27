@@ -40,6 +40,13 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
+// Ping verifies content-service is reachable.
+func (c *Client) Ping(ctx context.Context) error {
+	limit := int32(1)
+	_, err := c.client.ListCompanies(ctx, &contentv1.ListCompaniesRequest{Limit: limit})
+	return err
+}
+
 func (c *Client) GetTaskBundle(ctx context.Context, taskID string) (*contentadapter.TaskBundle, error) {
 	resp, err := c.client.GetTaskBundle(ctx, &contentv1.GetTaskBundleRequest{TaskId: taskID})
 	if err != nil {

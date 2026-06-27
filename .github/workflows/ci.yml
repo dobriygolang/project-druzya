@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  service:
+    name: ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [identity, content, interview, ai, recommendation, billing, sandbox]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.x"
+          cache-dependency-path: services/${{ matrix.service }}/go.sum
+
+      - name: Install buf tooling
+        run: make gen-proto
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.6
+          working-directory: services/${{ matrix.service }}
+          args: --config=.golangci.yml --timeout=5m
+
+      - name: Test
+        run: GOWORK=off go test -race -count=1 ./...
+        env:
+          GOPROXY: https://proxy.golang.org,direct
+
+      - name: Build
+        run: GOWORK=off go build ./...

@@ -39,6 +39,13 @@ func (c *GRPCClient) Close() error {
 	return c.conn.Close()
 }
 
+// Ping verifies content-service is reachable.
+func (c *GRPCClient) Ping(ctx context.Context) error {
+	limit := int32(1)
+	_, err := c.client.ListCompanies(ctx, &contentv1.ListCompaniesRequest{Limit: limit})
+	return err
+}
+
 func (c *GRPCClient) GetTask(ctx context.Context, taskID string) (*Task, error) {
 	resp, err := c.client.GetTask(ctx, &contentv1.GetTaskRequest{Id: taskID})
 	if err != nil {

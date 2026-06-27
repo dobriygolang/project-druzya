@@ -9,6 +9,7 @@ import "google/protobuf/timestamp.proto";
 
 service AiInternalService {
   rpc RunEvaluation(RunEvaluationRequest) returns (RunEvaluationResponse);
+  rpc GenerateProfileSummary(GenerateProfileSummaryRequest) returns (GenerateProfileSummaryResponse);
 
   rpc GetEvaluationJob(GetEvaluationJobRequest) returns (EvaluationJob) {
     option (google.api.http) = {
@@ -66,4 +67,20 @@ message ListEvaluationJobsRequest {
 
 message ListEvaluationJobsResponse {
   repeated EvaluationJob jobs = 1;
+}
+
+message ProfileSkillScore {
+  string skill_key = 1;
+  int32 score = 2;
+  int32 confidence = 3;
+}
+
+message GenerateProfileSummaryRequest {
+  string user_id = 1;
+  int32 readiness_score = 2;
+  repeated ProfileSkillScore skills = 3;
+}
+
+message GenerateProfileSummaryResponse {
+  string summary = 1;
 }

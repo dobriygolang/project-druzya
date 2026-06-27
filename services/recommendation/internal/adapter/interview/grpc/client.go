@@ -9,6 +9,7 @@ import (
 	interviewv1 "github.com/sedorofeevd/project-druzya/services/interview/pkg/api/interview/v1"
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
@@ -49,6 +50,22 @@ func (c *Client) Close() error {
 
 func (c *Client) authCtx(ctx context.Context) context.Context {
 	return metadata.AppendToOutgoingContext(ctx, internalTokenHeader, c.token)
+}
+
+// Ping waits until the interview gRPC channel is ready.
+func (c *Client) Ping(ctx context.Context) error {
+	if c.conn == nil {
+		return fmt.Errorf("grpc not connected")
+	}
+	for {
+		state := c.conn.GetState()
+		if state == connectivity.Ready {
+			return nil
+		}
+		if !c.conn.WaitForStateChange(ctx, state) {
+			return ctx.Err()
+		}
+	}
 }
 
 func (c *Client) ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]interviewadapter.OutboxEvent, error) {

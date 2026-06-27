@@ -1,4 +1,9 @@
 # optional monorepo workspace
 go.work.sum
 
+# prod secrets
+deploy/.env
+deploy/secrets/
+deploy/backups/
+
 # each service ignores its own pkg/api/ and .bin/ via services/*/.gitignore

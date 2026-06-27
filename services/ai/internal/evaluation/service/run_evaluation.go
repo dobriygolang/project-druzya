@@ -2,10 +2,12 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	billingadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
@@ -24,30 +26,7 @@ func (s *evaluationService) RunEvaluation(ctx context.Context, attemptID string)
 		return nil
 	}
 
-	now := time.Now().UTC()
-	job.Status = evaluationmodel.JobStatusRunning
-	job.StartedAt = &now
-	job.UpdatedAt = now
-	job.Error = nil
-	if err := s.repo.UpdateJob(ctx, job); err != nil {
-		return err
-	}
-
-	runErr := s.executeEvaluation(ctx, job)
-	if runErr == nil {
-		completed := time.Now().UTC()
-		job.Status = evaluationmodel.JobStatusCompleted
-		job.CompletedAt = &completed
-		job.UpdatedAt = completed
-		job.Error = nil
-		return s.repo.UpdateJob(ctx, job)
-	}
-
-	return s.markJobFailed(ctx, job, runErr)
-}
-
-func (s *evaluationService) executeEvaluation(ctx context.Context, job *evaluationmodel.EvaluationJob) error {
-	attempt, err := s.interview.GetAttempt(ctx, job.AttemptID)
+	attempt, err := s.interview.GetAttempt(ctx, attemptID)
 	if err != nil {
 		return err
 	}
@@ -58,6 +37,53 @@ func (s *evaluationService) executeEvaluation(ctx context.Context, job *evaluati
 		job.UserID = attempt.UserID
 	}
 
+	if err := s.consumeBillingUsage(ctx, attempt.UserID); err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+	job.Status = evaluationmodel.JobStatusRunning
+	job.StartedAt = &now
+	job.UpdatedAt = now
+	job.Error = nil
+	if err := s.repo.UpdateJob(ctx, job); err != nil {
+		return err
+	}
+
+	runErr := s.executeEvaluation(ctx, job, attempt)
+	if runErr == nil {
+		completed := time.Now().UTC()
+		job.Status = evaluationmodel.JobStatusCompleted
+		job.CompletedAt = &completed
+		job.UpdatedAt = completed
+		job.Error = nil
+		if err := s.repo.UpdateJob(ctx, job); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	return s.markJobFailed(ctx, job, runErr)
+}
+
+func (s *evaluationService) consumeBillingUsage(ctx context.Context, userID string) error {
+	if s.billing == nil || userID == "" {
+		return nil
+	}
+	if err := s.billing.CheckAndConsumeUsage(ctx, userID, billingadapter.EntitlementAIEvaluationsPerDay, 1); err != nil {
+		if errors.Is(err, billingadapter.ErrQuotaExceeded) {
+			return ErrQuotaExceeded
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *evaluationService) executeEvaluation(
+	ctx context.Context,
+	job *evaluationmodel.EvaluationJob,
+	attempt *interviewadapter.Attempt,
+) error {
 	bundle, err := s.content.GetTaskBundle(ctx, attempt.TaskID)
 	if err != nil {
 		return err
@@ -198,7 +224,7 @@ func (s *evaluationService) markJobFailed(ctx context.Context, job *evaluationmo
 	job.RetryCount++
 	job.Error = &msg
 	job.UpdatedAt = now
-	job.Retryable = job.RetryCount < s.maxRetries
+	job.Retryable = job.RetryCount < s.maxRetries && !errors.Is(runErr, ErrQuotaExceeded)
 	if job.Retryable {
 		retryAt := now.Add(time.Minute * time.Duration(job.RetryCount))
 		job.NextRetryAt = &retryAt

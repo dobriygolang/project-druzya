@@ -2,9 +2,11 @@ go 1.25.0
 
 use (
 	./services/ai
+	./services/billing
 	./services/content
 	./services/identity
 	./services/interview
 	./services/recommendation
+	./services/sandbox
 	./services/template
 )

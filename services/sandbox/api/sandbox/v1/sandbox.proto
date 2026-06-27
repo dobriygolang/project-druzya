@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package sandbox.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/sandbox/pkg/api/sandbox/v1;sandboxv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service SandboxService {
+  rpc RunCode(RunCodeRequest) returns (RunCodeResponse) {
+    option (google.api.http) = {
+      post: "/v1/sandbox/code-runs"
+      body: "*"
+    };
+  }
+
+  rpc GetCodeRun(GetCodeRunRequest) returns (GetCodeRunResponse) {
+    option (google.api.http) = {
+      get: "/v1/sandbox/code-runs/{id}"
+    };
+  }
+
+  rpc ListCodeRuns(ListCodeRunsRequest) returns (ListCodeRunsResponse) {
+    option (google.api.http) = {
+      get: "/v1/sandbox/code-runs"
+    };
+  }
+
+  rpc SubmitAttemptFromCodeRun(SubmitAttemptFromCodeRunRequest) returns (SubmitAttemptFromCodeRunResponse) {
+    option (google.api.http) = {
+      post: "/v1/sandbox/code-runs/{id}/submit-attempt"
+      body: "*"
+    };
+  }
+}
+
+message RunCodeRequest {
+  optional string task_id = 1;
+  optional string session_task_id = 2;
+  string language = 3;
+  string code = 4;
+  optional string stdin = 5;
+  string run_type = 6;
+}
+
+message RunCodeResponse {
+  CodeRun run = 1;
+}
+
+message GetCodeRunRequest {
+  string id = 1;
+}
+
+message GetCodeRunResponse {
+  CodeRun run = 1;
+}
+
+message ListCodeRunsRequest {
+  optional string task_id = 1;
+  optional string session_task_id = 2;
+  int32 limit = 3;
+}
+
+message ListCodeRunsResponse {
+  repeated CodeRun runs = 1;
+}
+
+message SubmitAttemptFromCodeRunRequest {
+  string id = 1;
+  string session_task_id = 2;
+}
+
+message SubmitAttemptFromCodeRunResponse {
+  string attempt_id = 1;
+  string status = 2;
+}
+
+message CodeRun {
+  string id = 1;
+  string user_id = 2;
+  optional string task_id = 3;
+  optional string session_task_id = 4;
+  string language = 5;
+  string status = 6;
+  string run_type = 7;
+  optional string stdout = 8;
+  optional string stderr = 9;
+  optional string compile_output = 10;
+  optional string error = 11;
+  optional int32 exit_code = 12;
+  optional int32 time_ms = 13;
+  optional int32 memory_kb = 14;
+  int32 tests_total = 15;
+  int32 tests_passed = 16;
+  repeated TestResult test_results = 17;
+  optional string runner = 18;
+  google.protobuf.Timestamp created_at = 19;
+  google.protobuf.Timestamp updated_at = 20;
+}
+
+message TestResult {
+  string name = 1;
+  string status = 2;
+  optional string stdout = 3;
+  optional string stderr = 4;
+  optional string expected_output = 5;
+  optional string actual_output = 6;
+  optional int32 time_ms = 7;
+  optional string error = 8;
+}

@@ -12,6 +12,7 @@ func toProtoDashboard(d *model.Dashboard) *recommendationv1.GetDashboardResponse
 	}
 	return &recommendationv1.GetDashboardResponse{
 		ReadinessScore:    int32(d.ReadinessScore),
+		ProfileSummary:    optionalString(d.ProfileSummary),
 		Strengths:         toProtoInsights(d.Strengths),
 		Weaknesses:        toProtoInsights(d.Weaknesses),
 		Recommendations:   toProtoRecommendations(d.Recommendations),
@@ -75,4 +76,11 @@ func toProtoLearningPlan(items []model.LearningPlanItem) []*recommendationv1.Lea
 		out = append(out, plan)
 	}
 	return out
+}
+
+func optionalString(v *string) *string {
+	if v == nil || *v == "" {
+		return nil
+	}
+	return v
 }

@@ -1,0 +1,7 @@
+.git
+**/.bin
+**/scripts/dev/jwt
+deploy/.env
+deploy/secrets
+**/*_test.go
+.cursor

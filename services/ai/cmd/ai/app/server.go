@@ -8,16 +8,18 @@ import (
 	"time"
 
 	aiapi "github.com/sedorofeevd/project-druzya/services/ai/internal/app/api/ai"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/ops"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
 
 // RunAPI starts HTTP gateway and gRPC server.
 func RunAPI(ctx context.Context, a *App) error {
-	grpcAddr := fmt.Sprintf("127.0.0.1:%d", a.Config.GRPCPort)
-	lis, err := net.Listen("tcp", grpcAddr)
+	listenAddr := fmt.Sprintf("%s:%d", a.Config.GRPCHost, a.Config.GRPCPort)
+	dialAddr := fmt.Sprintf("127.0.0.1:%d", a.Config.GRPCPort)
+	lis, err := net.Listen("tcp", listenAddr)
 	if err != nil {
-		return fmt.Errorf("listen grpc %s: %w", grpcAddr, err)
+		return fmt.Errorf("listen grpc %s: %w", listenAddr, err)
 	}
 
 	grpcSrv := grpc.NewServer(grpc.UnaryInterceptor(aiapi.InternalAuthInterceptor(a.Config.InternalAPIToken)))
@@ -25,24 +27,32 @@ func RunAPI(ctx context.Context, a *App) error {
 	reflection.Register(grpcSrv)
 
 	go func() {
-		a.Logger.Info("grpc server starting", "addr", grpcAddr)
+		a.Logger.Info("grpc server starting", "addr", listenAddr)
 		if serveErr := grpcSrv.Serve(lis); serveErr != nil {
 			a.Logger.Error("grpc server stopped", "err", serveErr)
 		}
 	}()
 
 	httpMux := http.NewServeMux()
-	httpMux.HandleFunc("/healthz", aiapi.HealthzHTTP())
+	httpMux.HandleFunc("/healthz", ops.HealthzHandler())
+	httpMux.HandleFunc("/readyz", ops.ReadyzHandler(
+		ops.PingPostgres(a.Postgres.Pool),
+		func(ctx context.Context) error { return a.interviewConn.Ping(ctx) },
+		func(ctx context.Context) error { return a.contentConn.Ping(ctx) },
+	))
+	httpMux.Handle("/metrics", ops.MetricsHandler())
 
-	if err := aiapi.RegisterGateway(ctx, httpMux, grpcAddr); err != nil {
+	if err := aiapi.RegisterGateway(ctx, httpMux, dialAddr); err != nil {
 		grpcSrv.Stop()
 		return fmt.Errorf("register gateway: %w", err)
 	}
 
 	httpAddr := fmt.Sprintf(":%d", a.Config.HTTPPort)
+	handler := ops.InstrumentHTTP("ai", httpMux)
+	handler = ops.CORS(a.Config.CORSAllowedOrigins, handler)
 	srv := &http.Server{
 		Addr:              httpAddr,
-		Handler:           httpMux,
+		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

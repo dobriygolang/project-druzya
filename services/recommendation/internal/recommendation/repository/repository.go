@@ -183,14 +183,14 @@ func (r *Repository) GetUserProfile(ctx context.Context, userID string) (*model.
 		return nil, fmt.Errorf("invalid user_id: %w", err)
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT id, user_id, readiness_score, created_at, updated_at
+		SELECT id, user_id, readiness_score, profile_summary, summary_updated_at, created_at, updated_at
 		FROM user_skill_profiles
 		WHERE user_id = $1
 	`, uid)
 
 	var p model.UserSkillProfile
 	var id, rowUserID uuid.UUID
-	if err := row.Scan(&id, &rowUserID, &p.ReadinessScore, &p.CreatedAt, &p.UpdatedAt); err != nil {
+	if err := row.Scan(&id, &rowUserID, &p.ReadinessScore, &p.ProfileSummary, &p.SummaryUpdatedAt, &p.CreatedAt, &p.UpdatedAt); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -199,6 +199,20 @@ func (r *Repository) GetUserProfile(ctx context.Context, userID string) (*model.
 	p.ID = id.String()
 	p.UserID = rowUserID.String()
 	return &p, nil
+}
+
+// UpdateProfileSummary stores generated profile summary text.
+func (r *Repository) UpdateProfileSummary(ctx context.Context, userID, summary string) error {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("invalid user_id: %w", err)
+	}
+	_, err = r.conn(ctx).Exec(ctx, `
+		UPDATE user_skill_profiles
+		SET profile_summary = $2, summary_updated_at = now(), updated_at = now()
+		WHERE user_id = $1
+	`, uid, summary)
+	return err
 }
 
 // UpsertImproveSkillRecommendation creates or updates an active improve_skill recommendation.

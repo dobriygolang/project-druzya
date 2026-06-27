@@ -19,6 +19,7 @@ type Service interface {
 	GetMe(ctx context.Context, userID string) (*model.User, error)
 	LinkYandex(ctx context.Context, userID, code string) (*model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
+	GetUserByTelegramID(ctx context.Context, telegramID int64) (*model.User, error)
 	ValidateToken(ctx context.Context, accessToken string) (string, error)
 }
 

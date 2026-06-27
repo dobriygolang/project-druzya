@@ -27,6 +27,7 @@ type Service interface {
 	GetTask(ctx context.Context, id, slug string) (*catalogmodel.Task, error)
 	GetTaskBundle(ctx context.Context, taskID string) (*catalogmodel.TaskBundle, error)
 	GetRubric(ctx context.Context, rubricID string) (*catalogmodel.Rubric, []catalogmodel.RubricCriterion, error)
+	AdminService
 }
 
 type catalogService struct {

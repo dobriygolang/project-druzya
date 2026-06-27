@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	billingadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing"
+	billinggrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing/grpc"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content"
 	contentgrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content/grpc"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
@@ -14,6 +16,7 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationrepo "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/repository"
 	evaluationservice "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/service"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/summary"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/logger"
 )
 
@@ -24,8 +27,10 @@ type App struct {
 	Postgres        *evaluationrepo.Pool
 	InterviewClient interviewadapter.Client
 	ContentClient   contentadapter.Client
+	BillingClient   billingadapter.Client
 	interviewConn   *interviewgrpc.Client
 	contentConn     *contentgrpc.Client
+	billingConn     *billinggrpc.Client
 	Service         evaluationservice.Service
 }
 
@@ -59,6 +64,19 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init content client: %w", err)
 	}
 
+	var billingClient billingadapter.Client
+	var billingConn *billinggrpc.Client
+	if cfg.BillingGRPCAddr != "" {
+		billingConn, err = billinggrpc.NewClient(ctx, cfg.BillingGRPCAddr, cfg.InternalAPIToken)
+		if err != nil {
+			_ = contentClient.Close()
+			_ = interviewClient.Close()
+			pg.Close()
+			return nil, fmt.Errorf("init billing client: %w", err)
+		}
+		billingClient = billingConn
+	}
+
 	chain, err := llmadapter.BuildChain(llmadapter.BuildConfig{
 		Order:    cfg.LLMChainOrder,
 		OpenAI:   cfg.OpenAIAPIKey,
@@ -68,6 +86,10 @@ func New(ctx context.Context) (*App, error) {
 		Caveman:  cfg.LLMCavemanLevel,
 	}, slog.Default())
 	if err != nil {
+		if billingConn != nil {
+			_ = billingConn.Close()
+		}
+		_ = contentClient.Close()
 		_ = interviewClient.Close()
 		pg.Close()
 		return nil, err
@@ -86,7 +108,9 @@ func New(ctx context.Context) (*App, error) {
 		Repo:       repo,
 		Interview:  interviewClient,
 		Content:    contentClient,
+		Billing:    billingClient,
 		Evaluator:  evalClient,
+		Summary:    summary.New(chain),
 		MaxRetries: cfg.EvalMaxRetries,
 	})
 
@@ -96,14 +120,19 @@ func New(ctx context.Context) (*App, error) {
 		Postgres:        pg,
 		InterviewClient: interviewClient,
 		ContentClient:   contentClient,
+		BillingClient:   billingClient,
 		interviewConn:   interviewClient,
 		contentConn:     contentClient,
+		billingConn:     billingConn,
 		Service:         svc,
 	}, nil
 }
 
 // Close releases adapter resources.
 func (a *App) Close() {
+	if a.billingConn != nil {
+		_ = a.billingConn.Close()
+	}
 	if a.contentConn != nil {
 		_ = a.contentConn.Close()
 	}

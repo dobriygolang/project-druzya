@@ -233,3 +233,37 @@ message GetRubricRequest {
 message GetRubricResponse {
   Rubric rubric = 1;
 }
+
+// Internal admin API — no HTTP annotations; protect with x-admin-token.
+service ContentAdminService {
+  rpc UpsertCompany(UpsertCompanyRequest) returns (UpsertCompanyResponse);
+  rpc UpsertTask(UpsertTaskRequest) returns (UpsertTaskResponse);
+}
+
+message UpsertCompanyRequest {
+  optional string id = 1;
+  string slug = 2;
+  string name = 3;
+  optional string description = 4;
+  bool is_active = 5;
+}
+
+message UpsertCompanyResponse {
+  Company company = 1;
+}
+
+message UpsertTaskRequest {
+  optional string id = 1;
+  string slug = 2;
+  string type = 3;
+  string title = 4;
+  string description = 5;
+  string difficulty = 6;
+  optional int32 estimated_minutes = 7;
+  google.protobuf.Struct metadata = 8;
+  string status = 9;
+}
+
+message UpsertTaskResponse {
+  Task task = 1;
+}

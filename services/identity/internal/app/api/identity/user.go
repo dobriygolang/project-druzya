@@ -33,3 +33,16 @@ func (i *Implementation) GetUser(ctx context.Context, req *identityv1.GetUserReq
 	}
 	return &identityv1.GetUserResponse{User: toProtoUser(user)}, nil
 }
+
+// GetUserByTelegramID returns user by Telegram id for internal service-to-service calls.
+func (i *Implementation) GetUserByTelegramID(ctx context.Context, req *identityv1.GetUserByTelegramIDRequest) (*identityv1.GetUserResponse, error) {
+	if req.GetTelegramId() == 0 {
+		return nil, invalidArgument("telegram_id is required")
+	}
+
+	user, err := i.service.GetUserByTelegramID(ctx, req.GetTelegramId())
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	return &identityv1.GetUserResponse{User: toProtoUser(user)}, nil
+}

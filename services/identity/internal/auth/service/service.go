@@ -38,6 +38,7 @@ type Service interface {
 	GetMe(ctx context.Context, userID string) (*model.User, error)
 	LinkYandex(ctx context.Context, userID, code string) (*model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
+	GetUserByTelegramID(ctx context.Context, telegramID int64) (*model.User, error)
 	ValidateToken(ctx context.Context, accessToken string) (string, error)
 }
 
@@ -263,6 +264,20 @@ func (s *service) LinkYandex(ctx context.Context, userID, code string) (*model.U
 
 func (s *service) GetUser(ctx context.Context, id string) (*model.User, error) {
 	user, err := s.users.GetByID(ctx, id)
+	if err != nil {
+		if isUserNotFound(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *service) GetUserByTelegramID(ctx context.Context, telegramID int64) (*model.User, error) {
+	if telegramID == 0 {
+		return nil, ErrNotFound
+	}
+	user, err := s.users.GetByTelegramID(ctx, telegramID)
 	if err != nil {
 		if isUserNotFound(err) {
 			return nil, ErrNotFound

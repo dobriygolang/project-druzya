@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package billing.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/billing/pkg/api/billing/v1;billingv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service BillingService {
+  rpc GetMe(GetMeRequest) returns (GetMeResponse) {
+    option (google.api.http) = {
+      get: "/v1/billing/me"
+    };
+  }
+}
+
+service BillingInternalService {
+  rpc GetEntitlements(GetEntitlementsRequest) returns (GetEntitlementsResponse);
+  rpc CheckEntitlement(CheckEntitlementRequest) returns (CheckEntitlementResponse);
+  rpc CheckAndConsumeUsage(CheckAndConsumeUsageRequest) returns (CheckAndConsumeUsageResponse);
+}
+
+service BillingAdminService {
+  rpc GrantSubscription(GrantSubscriptionRequest) returns (GrantSubscriptionResponse) {
+    option (google.api.http) = {
+      post: "/v1/billing/admin/subscriptions/grant"
+      body: "*"
+    };
+  }
+  rpc RevokeSubscription(RevokeSubscriptionRequest) returns (RevokeSubscriptionResponse) {
+    option (google.api.http) = {
+      post: "/v1/billing/admin/subscriptions/revoke"
+      body: "*"
+    };
+  }
+}
+
+message GetMeRequest {}
+
+message GetMeResponse {
+  string user_id = 1;
+  string plan_slug = 2;
+  string plan_name = 3;
+  map<string, bool> features = 4;
+  map<string, UsageLimit> limits = 5;
+}
+
+message UsageLimit {
+  int32 used = 1;
+  optional int32 limit = 2;
+  optional int32 remaining = 3;
+  google.protobuf.Timestamp period_start = 4;
+  google.protobuf.Timestamp period_end = 5;
+  bool unlimited = 6;
+}
+
+message GetEntitlementsRequest {
+  string user_id = 1;
+}
+
+message GetEntitlementsResponse {
+  GetMeResponse entitlements = 1;
+}
+
+message CheckEntitlementRequest {
+  string user_id = 1;
+  string key = 2;
+}
+
+message CheckEntitlementResponse {
+  bool allowed = 1;
+  bool value = 2;
+  string reason = 3;
+}
+
+message CheckAndConsumeUsageRequest {
+  string user_id = 1;
+  string key = 2;
+  int32 amount = 3;
+}
+
+message CheckAndConsumeUsageResponse {
+  bool allowed = 1;
+  int32 used = 2;
+  optional int32 limit = 3;
+  optional int32 remaining = 4;
+  string reason = 5;
+}
+
+message GrantSubscriptionRequest {
+  string user_id = 1;
+  string plan_slug = 2;
+  google.protobuf.Timestamp current_period_end = 3;
+}
+
+message GrantSubscriptionResponse {
+  string subscription_id = 1;
+  string plan_slug = 2;
+  string status = 3;
+}
+
+message RevokeSubscriptionRequest {
+  string user_id = 1;
+}
+
+message RevokeSubscriptionResponse {
+  bool revoked = 1;
+}

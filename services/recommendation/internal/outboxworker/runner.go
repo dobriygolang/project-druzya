@@ -5,6 +5,7 @@ import (
 	"time"
 
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/ops"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/logger"
 )
 
@@ -17,6 +18,8 @@ func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Cli
 	for _, ev := range events {
 		start := time.Now()
 		if err := h.HandleEvent(ctx, ev); err != nil {
+			ops.IncOutboxEvent("recommendation", ev.EventName, "error")
+			ops.ObserveOutboxDuration("recommendation", ev.EventName, time.Since(start))
 			log.Error("outbox_failed",
 				"event_id", ev.ID,
 				"event_name", ev.EventName,
@@ -25,6 +28,8 @@ func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Cli
 			)
 			continue
 		}
+		ops.IncOutboxEvent("recommendation", ev.EventName, "ok")
+		ops.ObserveOutboxDuration("recommendation", ev.EventName, time.Since(start))
 		log.Info("outbox_processed",
 			"event_id", ev.ID,
 			"event_name", ev.EventName,

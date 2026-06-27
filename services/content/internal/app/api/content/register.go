@@ -9,6 +9,7 @@ import (
 // Register mounts ContentService on the gRPC server.
 func Register(s *grpc.Server, impl *Implementation) {
 	contentv1.RegisterContentServiceServer(s, impl)
+	contentv1.RegisterContentAdminServiceServer(s, impl)
 }
 
 // NewRegisteredImplementation constructs handlers and registers them on the gRPC server.
