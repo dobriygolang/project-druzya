@@ -21,13 +21,46 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.ref || github.event.workflow_run.head_sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Build SPA (Caddy image uses prebuilt dist)
+        run: |
+          cd apps/web
+          npm ci
+          npm run build
+        env:
+          VITE_API_BASE: /v1
+
+      - name: Upload SPA to server
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.DEPLOY_SSH_HOST }}
           username: ${{ secrets.DEPLOY_SSH_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
+          source: "apps/web/dist/*"
+          target: "/opt/project-druzya/apps/web/dist"
+          strip_components: 3
+          overwrite: true
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_GIT_TOKEN: ${{ secrets.DEPLOY_GIT_TOKEN }}
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          envs: DEPLOY_GIT_TOKEN
           script_stop: true
           command_timeout: 30m
           script: |
@@ -38,15 +71,20 @@ jobs:
             if [ -n "${{ secrets.DEPLOY_BRANCH }}" ]; then BRANCH="${{ secrets.DEPLOY_BRANCH }}"; fi
 
             if [ ! -d "$REPO_DIR/.git" ]; then
-              echo "ERROR: repo not found at $REPO_DIR"
-              echo ""
-              echo "Run one-time bootstrap ON THE SERVER (SSH in manually):"
-              echo "  git clone git@github.com:${{ github.repository }}.git $REPO_DIR"
-              echo "  cd $REPO_DIR/deploy && cp .env.example .env && nano .env && make keys && make up"
-              echo ""
-              echo "Or use deploy/scripts/bootstrap-server.sh"
-              echo "Then set GitHub secret DEPLOY_REPO_DIR if you used another path."
-              exit 1
+              echo "Bootstrapping $REPO_DIR ..."
+              PARENT="$(dirname "$REPO_DIR")"
+              mkdir -p "$PARENT"
+              CLONE_URL="https://github.com/${{ github.repository }}.git"
+              if [ -n "${DEPLOY_GIT_TOKEN:-}" ]; then
+                CLONE_URL="https://x-access-token:${DEPLOY_GIT_TOKEN}@github.com/${{ github.repository }}.git"
+              fi
+              git clone --branch "$BRANCH" "$CLONE_URL" "$REPO_DIR"
+              if [ ! -f "$REPO_DIR/deploy/.env" ]; then
+                cp "$REPO_DIR/deploy/.env.example" "$REPO_DIR/deploy/.env"
+                echo "ERROR: created deploy/.env from example — fill secrets on the server, then re-run deploy"
+                exit 1
+              fi
+              cd "$REPO_DIR/deploy" && make keys
             fi
 
             cd "$REPO_DIR"
@@ -56,6 +94,11 @@ jobs:
 
             if [ ! -f deploy/.env ]; then
               echo "ERROR: missing deploy/.env — copy deploy/.env.example and fill secrets"
+              exit 1
+            fi
+
+            if [ ! -f apps/web/dist/index.html ]; then
+              echo "ERROR: missing apps/web/dist — SPA upload step failed"
               exit 1
             fi
 
