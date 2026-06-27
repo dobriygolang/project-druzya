@@ -37,6 +37,8 @@ jobs:
 
       - name: Lint
         uses: golangci/golangci-lint-action@v7
+        env:
+          GOWORK: off
         with:
           version: v2.6.2
           working-directory: services/${{ matrix.service }}

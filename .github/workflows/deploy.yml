@@ -1,0 +1,52 @@
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event != 'pull_request')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_SSH_HOST }}
+          username: ${{ secrets.DEPLOY_SSH_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          script_stop: true
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+            REPO_DIR="/opt/project-druzya"
+            BRANCH="main"
+            if [ -n "${{ secrets.DEPLOY_REPO_DIR }}" ]; then REPO_DIR="${{ secrets.DEPLOY_REPO_DIR }}"; fi
+            if [ -n "${{ secrets.DEPLOY_BRANCH }}" ]; then BRANCH="${{ secrets.DEPLOY_BRANCH }}"; fi
+
+            cd "$REPO_DIR"
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+            git pull --ff-only origin "$BRANCH"
+
+            cd deploy
+            docker compose -f docker-compose.prod.yml --env-file .env build
+            docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
+
+            docker compose -f docker-compose.prod.yml --env-file .env ps
+
+            curl -sf -H "Host: api.druz9.ru" http://127.0.0.1/healthz
