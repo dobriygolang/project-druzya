@@ -10,10 +10,11 @@ Module: `github.com/sedorofeevd/project-druzya/services/content`. Work from serv
 ## Layers
 
 ```
-cmd/content/app/run.go     → DI
-internal/app/api/identity/ → gRPC transport
-internal/content/          → model, repository, service
-internal/adapter/postgres/  → persistence
+cmd/content/app/run.go       → DI
+internal/app/api/content/    → gRPC/HTTP transport (one RPC per file)
+internal/catalog/model/      → entities
+internal/catalog/repository/ → postgres
+internal/catalog/service/    → Service interface + use cases
 ```
 
 ## Dev

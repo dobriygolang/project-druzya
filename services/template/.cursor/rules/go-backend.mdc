@@ -1,0 +1,9 @@
+---
+description: Go backend conventions for template skeleton
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go backend — template
+
+Follow root [AGENTS.md](../../AGENTS.md#service-template-canonical). Transport thin; logic in `internal/<domain>/service/`.

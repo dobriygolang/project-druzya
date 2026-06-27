@@ -3,9 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/sedorofeevd/project-druzya/services/content/internal/adapter/postgres"
+
+	catalogrepo "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/repository"
+	catalogservice "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/service"
 	"github.com/sedorofeevd/project-druzya/services/content/internal/config"
-	domain "github.com/sedorofeevd/project-druzya/services/content/internal/content"
 	"github.com/sedorofeevd/project-druzya/services/content/internal/tools/logger"
 )
 
@@ -13,8 +14,8 @@ import (
 type App struct {
 	Config   *config.Config
 	Logger   logger.Logger
-	Postgres *postgres.Pool
-	Service  domain.Service
+	Postgres *catalogrepo.Pool
+	Service  catalogservice.Service
 }
 
 // New wires adapters and the domain service.
@@ -29,20 +30,20 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init logger: %w", err)
 	}
 
-	pg, err := postgres.New(ctx, cfg.PostgresDSN)
+	pg, err := catalogrepo.NewPool(ctx, cfg.PostgresDSN)
 	if err != nil {
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
-	a := &App{
+	repo := catalogrepo.New(pg)
+	svc := catalogservice.New(catalogservice.Deps{Repo: repo})
+
+	return &App{
 		Config:   cfg,
 		Logger:   log,
 		Postgres: pg,
-	}
-
-	a.Service = domain.NewService(pg, log)
-
-	return a, nil
+		Service:  svc,
+	}, nil
 }
 
 // Close releases adapter resources.

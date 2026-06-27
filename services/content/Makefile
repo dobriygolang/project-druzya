@@ -4,7 +4,7 @@ SHELL := /bin/bash
 SERVICE := content
 HTTP_PORT ?= 8081
 GRPC_PORT ?= 9091
-GOOSE_DSN ?= host=localhost port=5432 user=postgres password=postgres dbname=druzya sslmode=disable
+GOOSE_DSN ?= host=localhost port=5433 user=postgres password=postgres dbname=druzya_content sslmode=disable
 MIGRATIONS_DIR := scripts/migrations
 COMPOSE_FILE := scripts/dev/docker-compose.yml
 GOOSE := GOWORK=off go run github.com/pressly/goose/v3/cmd/goose@v3.19.2
@@ -15,10 +15,10 @@ help: ## Show this help
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: start-deps
-start-deps: ## Start postgres + redis (Docker)
-	docker compose -f $(COMPOSE_FILE) up -d postgres redis
+start-deps: ## Start postgres (Docker)
+	docker compose -f $(COMPOSE_FILE) up -d postgres
 	@echo "  waiting for postgres..."
-	@until docker compose -f $(COMPOSE_FILE) exec -T postgres pg_isready -U postgres -d druzya >/dev/null 2>&1; do sleep 1; done
+	@until docker compose -f $(COMPOSE_FILE) exec -T postgres pg_isready -U postgres -d druzya_content >/dev/null 2>&1; do sleep 1; done
 
 .PHONY: migrate-up
 migrate-up: ## Apply pending SQL migrations
@@ -33,7 +33,7 @@ migrate-status: ## Show migration status
 	$(GOOSE) -dir $(MIGRATIONS_DIR) postgres "$(GOOSE_DSN)" status
 
 .PHONY: migrate-new
-migrate-new: ## Create migration. Usage: make migrate-new NAME=add_users_table
+migrate-new: ## Create migration. Usage: make migrate-new NAME=add_foo
 	@if [ -z "$(NAME)" ]; then echo "Usage: make migrate-new NAME=<snake_name>"; exit 1; fi
 	@LAST=$$(ls $(MIGRATIONS_DIR)/[0-9]*.sql 2>/dev/null | sed -E 's|.*/0*([0-9]+)_.*|\1|' | sort -n | tail -1); \
 	LAST=$${LAST:-0}; NEXT=$$(printf "%05d" $$((LAST + 1))); \
@@ -42,28 +42,20 @@ migrate-new: ## Create migration. Usage: make migrate-new NAME=add_users_table
 	echo "created $$FILE"
 
 .PHONY: start
-start: start-deps migrate-up ## Deps + migrations + run API (foreground)
+start: start-deps migrate-up ## Deps + migrations + run API
 	@echo ""
 	@echo "  HTTP  http://localhost:$(HTTP_PORT)/healthz"
 	@echo "  gRPC  localhost:$(GRPC_PORT)"
 	@echo ""
 	@$(MAKE) run
 
-.PHONY: dev-local
-dev-local: start-deps migrate-up ## Start deps only; run 'make run' yourself
-	@echo "  deps ready — run: make run"
-
 .PHONY: run
-run: ## Run API locally (GOWORK=off, no monorepo required)
+run: ## Run API locally
 	GOWORK=off go run ./cmd/$(SERVICE)
 
 .PHONY: stop
 stop: ## Stop docker deps
 	docker compose -f $(COMPOSE_FILE) down
-
-.PHONY: logs
-logs: ## Tail postgres + redis logs
-	docker compose -f $(COMPOSE_FILE) logs -f postgres redis
 
 .PHONY: build
 build: ## Build binary to .bin/content
@@ -79,33 +71,37 @@ lint: lint-go lint-proto lint-tidy ## Run all linters
 
 .PHONY: lint-go
 lint-go: ## golangci-lint
-	@mkdir -p .cache/golangci-lint
-	@GOLANGCI_LINT_CACHE="$(CURDIR)/.cache/golangci-lint" GOWORK=off golangci-lint run --config=.golangci.yml --timeout=5m ./...
+	@GOWORK=off golangci-lint run --config=.golangci.yml --timeout=5m ./...
 
 .PHONY: lint-proto
 lint-proto: bin-buf ## buf lint
 	@GOWORK=off PATH="$(CURDIR)/$(BIN_DIR):$$PATH" $(BIN_DIR)/buf lint
 
 .PHONY: lint-tidy
-lint-tidy: ## Fail if go.mod drift (readonly)
+lint-tidy: ## Fail if go.mod drift
 	@GOWORK=off GOFLAGS="-mod=readonly" go build ./... >/dev/null 2>&1 || { echo "go.mod drift — run 'make tidy'"; exit 1; }
 
 .PHONY: tidy
 tidy: ## go mod tidy
 	GOWORK=off go mod tidy
 
-.PHONY: bin-buf bin-protoc-gen-go
-bin-buf: ## Build buf into .bin/
+.PHONY: bin-buf bin-protoc-gen-go bin-protoc-gen-go-grpc bin-protoc-gen-grpc-gateway
+bin-buf:
 	@mkdir -p $(BIN_DIR)
-	@GOWORK=off go build -o $(BIN_DIR)/buf github.com/bufbuild/buf/cmd/buf
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install github.com/bufbuild/buf/cmd/buf@v1.47.0
 
-bin-protoc-gen-go: ## Build protoc-gen-go into .bin/
+bin-protoc-gen-go:
 	@mkdir -p $(BIN_DIR)
-	@GOWORK=off go build -o $(BIN_DIR)/protoc-gen-go google.golang.org/protobuf/cmd/protoc-gen-go
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+
+bin-protoc-gen-go-grpc:
+	@mkdir -p $(BIN_DIR)
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+
+bin-protoc-gen-grpc-gateway:
+	@mkdir -p $(BIN_DIR)
+	@GOWORK=off GOBIN="$(CURDIR)/$(BIN_DIR)" go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.29.0
 
 .PHONY: gen-proto
-gen-proto: bin-buf bin-protoc-gen-go ## Generate pkg/api from api/
+gen-proto: bin-buf bin-protoc-gen-go bin-protoc-gen-go-grpc bin-protoc-gen-grpc-gateway ## Generate pkg/api
 	@GOWORK=off PATH="$(CURDIR)/$(BIN_DIR):$$PATH" $(BIN_DIR)/buf generate
-
-.PHONY: generate
-generate: gen-proto ## Run all code generators

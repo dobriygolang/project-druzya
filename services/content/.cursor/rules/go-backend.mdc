@@ -1,13 +1,12 @@
 ---
-description: Go conventions (service-local)
+description: Go backend conventions for content service
 globs: "**/*.go"
 alwaysApply: false
 ---
 
-# Go
+# Go backend — content
 
-- Domain: `internal/<service>/` (identity: model/repository/service)
-- Transport: `internal/app/api/<service>/`
-- Adapters: `internal/adapter/`
-- Wiring: `cmd/<service>/app/run.go` only
-- `make lint` / `make test` from service root
+- Transport: `internal/app/api/content/` — thin handlers, proto mapping in `mapper.go`
+- Business logic: `internal/catalog/service/` — `Service` interface
+- Persistence: `internal/catalog/repository/` — concrete postgres only
+- English code/logs; wrapped errors with `%w`

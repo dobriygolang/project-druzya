@@ -13,8 +13,6 @@ type Config struct {
 	HTTPPort    int
 	GRPCPort    int
 	PostgresDSN string
-	RedisAddr   string
-	QueueURL    string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -34,9 +32,7 @@ func Load() (*Config, error) {
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
 		HTTPPort:    httpPort,
 		GRPCPort:    grpcPort,
-		PostgresDSN: getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5432/druzya?sslmode=disable"),
-		RedisAddr:   getEnv("REDIS_ADDR", "localhost:6379"),
-		QueueURL:    getEnv("QUEUE_URL", "redis://localhost:6379/1"),
+		PostgresDSN: getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5433/druzya_content?sslmode=disable"),
 	}, nil
 }
 

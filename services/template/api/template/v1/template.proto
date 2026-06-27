@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package template.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/template/pkg/api/template/v1;templatev1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+service TemplateService {
+  rpc Ping(google.protobuf.Empty) returns (PingResponse) {
+    option (google.api.http) = {
+      get: "/v1/ping"
+    };
+  }
+
+  rpc GetItem(GetItemRequest) returns (GetItemResponse) {
+    option (google.api.http) = {
+      get: "/v1/items/{id}"
+      additional_bindings {
+        get: "/v1/items/by-slug/{slug}"
+      }
+    };
+  }
+
+  rpc ListItems(ListItemsRequest) returns (ListItemsResponse) {
+    option (google.api.http) = {
+      get: "/v1/items"
+    };
+  }
+}
+
+message Item {
+  string id = 1;
+  string slug = 2;
+  string title = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message PingResponse {
+  string message = 1;
+}
+
+message GetItemRequest {
+  string id = 1;
+  string slug = 2;
+}
+
+message GetItemResponse {
+  Item item = 1;
+}
+
+message ListItemsRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
+
+message ListItemsResponse {
+  repeated Item items = 1;
+}

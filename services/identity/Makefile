@@ -89,8 +89,7 @@ lint: lint-go lint-proto lint-tidy ## Run all linters
 
 .PHONY: lint-go
 lint-go: ## golangci-lint
-	@mkdir -p .cache/golangci-lint
-	@GOLANGCI_LINT_CACHE="$(CURDIR)/.cache/golangci-lint" GOWORK=off golangci-lint run --config=.golangci.yml --timeout=5m ./...
+	@GOWORK=off golangci-lint run --config=.golangci.yml --timeout=5m ./...
 
 .PHONY: lint-proto
 lint-proto: bin-buf ## buf lint

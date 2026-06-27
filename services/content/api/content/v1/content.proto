@@ -4,29 +4,232 @@ package content.v1;
 
 option go_package = "github.com/sedorofeevd/project-druzya/services/content/pkg/api/content/v1;contentv1";
 
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
 service ContentService {
-  rpc GetLesson(GetLessonRequest) returns (GetLessonResponse);
-  rpc ListLessons(ListLessonsRequest) returns (ListLessonsResponse);
+  rpc ListCompanies(ListCompaniesRequest) returns (ListCompaniesResponse) {
+    option (google.api.http) = {
+      get: "/v1/companies"
+    };
+  }
+
+  rpc GetCompany(GetCompanyRequest) returns (GetCompanyResponse) {
+    option (google.api.http) = {
+      get: "/v1/companies/{id}"
+      additional_bindings {
+        get: "/v1/companies/by-slug/{slug}"
+      }
+    };
+  }
+
+  rpc ListInterviewTemplates(ListInterviewTemplatesRequest) returns (ListInterviewTemplatesResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview-templates"
+    };
+  }
+
+  rpc GetInterviewTemplateDetail(GetInterviewTemplateDetailRequest) returns (GetInterviewTemplateDetailResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview-templates/{id}/detail"
+      additional_bindings {
+        get: "/v1/interview-templates/by-slug/{slug}/detail"
+      }
+    };
+  }
+
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks"
+    };
+  }
+
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks/{id}"
+      additional_bindings {
+        get: "/v1/tasks/by-slug/{slug}"
+      }
+    };
+  }
+
+  rpc GetTaskBundle(GetTaskBundleRequest) returns (GetTaskBundleResponse) {
+    option (google.api.http) = {
+      get: "/v1/tasks/{task_id}/bundle"
+    };
+  }
+
+  rpc GetRubric(GetRubricRequest) returns (GetRubricResponse) {
+    option (google.api.http) = {
+      get: "/v1/rubrics/{id}"
+    };
+  }
 }
 
-message Lesson {
+message Company {
   string id = 1;
-  string title = 2;
-  string body = 3;
+  string slug = 2;
+  string name = 3;
+  optional string description = 4;
+  bool is_active = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 
-message GetLessonRequest {
+message InterviewTemplate {
+  string id = 1;
+  optional string company_id = 2;
+  string slug = 3;
+  string title = 4;
+  optional string description = 5;
+  optional string target_role = 6;
+  optional string target_level = 7;
+  int32 passing_score = 8;
+  bool is_active = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message TemplateSection {
+  string id = 1;
+  string template_id = 2;
+  string section_type = 3;
+  string title = 4;
+  optional string description = 5;
+  int32 position = 6;
+  optional int32 passing_score = 7;
+  int32 tasks_count = 8;
+  repeated string task_ids = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message Task {
+  string id = 1;
+  string slug = 2;
+  string type = 3;
+  string title = 4;
+  string description = 5;
+  string difficulty = 6;
+  optional int32 estimated_minutes = 7;
+  google.protobuf.Struct metadata = 8;
+  string status = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message TaskSolution {
+  string id = 1;
+  string task_id = 2;
+  optional string language = 3;
+  string solution_text = 4;
+  optional string explanation = 5;
+  optional string complexity = 6;
+  bool is_primary = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message Rubric {
+  string id = 1;
+  string task_type = 2;
+  string title = 3;
+  int32 version = 4;
+  bool is_active = 5;
+  repeated RubricCriterion criteria = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message RubricCriterion {
+  string id = 1;
+  string rubric_id = 2;
+  string key = 3;
+  string title = 4;
+  optional string description = 5;
+  int32 weight = 6;
+  int32 max_score = 7;
+  int32 position = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ListCompaniesRequest {
+  bool active_only = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message ListCompaniesResponse {
+  repeated Company companies = 1;
+}
+
+message GetCompanyRequest {
+  string id = 1;
+  string slug = 2;
+}
+
+message GetCompanyResponse {
+  Company company = 1;
+}
+
+message ListInterviewTemplatesRequest {
+  optional string company_id = 1;
+  bool active_only = 2;
+  int32 limit = 3;
+  int32 offset = 4;
+}
+
+message ListInterviewTemplatesResponse {
+  repeated InterviewTemplate templates = 1;
+}
+
+message GetInterviewTemplateDetailRequest {
+  string id = 1;
+  string slug = 2;
+}
+
+message GetInterviewTemplateDetailResponse {
+  InterviewTemplate template = 1;
+  repeated TemplateSection sections = 2;
+}
+
+message ListTasksRequest {
+  optional string type = 1;
+  optional string difficulty = 2;
+  optional string status = 3;
+  int32 limit = 4;
+  int32 offset = 5;
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 1;
+}
+
+message GetTaskRequest {
+  string id = 1;
+  string slug = 2;
+}
+
+message GetTaskResponse {
+  Task task = 1;
+}
+
+message GetTaskBundleRequest {
+  string task_id = 1;
+}
+
+message GetTaskBundleResponse {
+  Task task = 1;
+  repeated TaskSolution solutions = 2;
+  Rubric rubric = 3;
+}
+
+message GetRubricRequest {
   string id = 1;
 }
 
-message GetLessonResponse {
-  Lesson lesson = 1;
-}
-
-message ListLessonsRequest {
-  string course_id = 1;
-}
-
-message ListLessonsResponse {
-  repeated Lesson lessons = 1;
+message GetRubricResponse {
+  Rubric rubric = 1;
 }

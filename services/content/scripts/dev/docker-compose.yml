@@ -4,16 +4,11 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: druzya
+      POSTGRES_DB: druzya_content
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d druzya"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d druzya_content"]
       interval: 2s
       timeout: 5s
       retries: 10
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
