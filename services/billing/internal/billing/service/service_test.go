@@ -207,7 +207,7 @@ func TestTributeWebhookCreatesSubscription(t *testing.T) {
 		plan: &model.Plan{ID: "pro-id", Slug: model.PlanProMonthly, Name: "Pro"},
 	}
 	identity := &fakeIdentity{user: &identityadapter.User{ID: "user-1", Username: "tester"}}
-	provider := tribute.New(tribute.Config{})
+	provider := tribute.New(tribute.Config{WebhookSecret: "test-secret"})
 	svc := New(Deps{
 		Repo:       repo,
 		Identity:   identity,
@@ -224,7 +224,8 @@ func TestTributeWebhookCreatesSubscription(t *testing.T) {
 		"tier":"tribute_pro_monthly",
 		"status":"active"
 	}`)
-	if err := svc.HandleProviderWebhook(context.Background(), "tribute", map[string]string{}, body); err != nil {
+	headers := map[string]string{"X-Tribute-Secret": "test-secret"}
+	if err := svc.HandleProviderWebhook(context.Background(), "tribute", headers, body); err != nil {
 		t.Fatal(err)
 	}
 	if repo.lastSub == nil || repo.lastSub.PlanSlug != model.PlanProMonthly {

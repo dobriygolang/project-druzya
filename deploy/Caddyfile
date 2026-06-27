@@ -2,9 +2,8 @@
 	email {$CADDY_EMAIL}
 }
 
-api.druz9.ru, api.druz9.online {
-	encode gzip
-
+# Shared API routing (used on api.* and on the SPA host for same-origin /v1).
+(api_v1) {
 	handle /v1/auth* {
 		reverse_proxy identity:8080
 	}
@@ -35,34 +34,42 @@ api.druz9.ru, api.druz9.online {
 	handle /v1/rooms* {
 		reverse_proxy rooms:8087
 	}
-	handle /ws/* {
-		reverse_proxy rooms:8087
-	}
 	handle /v1/sandbox* {
 		reverse_proxy sandbox:8086
 	}
 	handle /v1/billing* {
 		reverse_proxy billing:8085
 	}
+}
 
+(api_ws) {
+	handle /ws/* {
+		reverse_proxy rooms:8087
+	}
+}
+
+# API — primary: api.druz9.online; mirror: api.druz9.ru
+api.druz9.online, api.druz9.ru {
+	encode gzip
+	import api_v1
+	import api_ws
 	handle /healthz {
 		respond "ok" 200
 	}
-
 	respond "not found" 404
 }
 
-app.druz9.ru, app.druz9.online {
+# SPA — canonical: druz9.online (same-origin /v1 for VITE_API_BASE=/v1)
+druz9.online, app.druz9.online {
 	encode gzip
+	import api_v1
+	import api_ws
 	root * /srv
 	try_files {path} /index.html
 	file_server
 }
 
-druz9.ru {
-	redir https://app.druz9.ru{uri} permanent
-}
-
-druz9.online {
-	redir https://app.druz9.online{uri} permanent
+# RU apex + app → canonical .online
+druz9.ru, app.druz9.ru {
+	redir https://druz9.online{uri} permanent
 }

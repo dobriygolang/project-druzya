@@ -16,9 +16,11 @@
 
 | Host | Назначение |
 |------|------------|
-| `api.druz9.ru` | API + OAuth callback |
-| `app.druz9.ru` | SPA (через Caddy) |
-| `api.druz9.online`, `app.druz9.online` | Зеркала (опционально) |
+| `api.druz9.online` | API (primary) + OAuth callback |
+| `api.druz9.ru` | API mirror |
+| **`druz9.online`** | **SPA (canonical)** |
+| `app.druz9.online` | SPA alias (same site) |
+| `druz9.ru`, `app.druz9.ru` | 301 → `https://druz9.online` |
 
 ---
 
