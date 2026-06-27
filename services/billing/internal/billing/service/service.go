@@ -330,27 +330,6 @@ func (s *billingService) resolvePlan(ctx context.Context, userID string) (*model
 	return plan, nil, err
 }
 
-func (s *billingService) findEntitlement(ctx context.Context, planID, key string) (*model.PlanEntitlement, error) {
-	items, err := s.repo.ListPlanEntitlements(ctx, planID)
-	if err != nil {
-		return nil, err
-	}
-	for i := range items {
-		if items[i].Key == key {
-			return &items[i], nil
-		}
-	}
-	return nil, fmt.Errorf("entitlement %q: %w", key, ErrNotFound)
-}
-
-func normalizeUsageKey(key string) string {
-	key = strings.TrimSpace(key)
-	if key == "llm_evaluation" {
-		return model.EntitlementAIEvaluationsPerDay
-	}
-	return key
-}
-
 func parseTelegramID(raw string) (int64, error) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {

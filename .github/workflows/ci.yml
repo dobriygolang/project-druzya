@@ -53,12 +53,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
+          node-version: "22"
           cache: npm
           cache-dependency-path: apps/web/package-lock.json
 
       - name: Install
-        run: npm ci
+        run: npm ci --no-audit --no-fund
 
       - name: Typecheck and build
         run: npm run build
@@ -71,7 +71,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
       - name: Build production Caddy + SPA image
         run: |
-          cd apps/web && npm ci && npm run build
+          cd apps/web && npm ci --no-audit --no-fund && npm run build
           cd ../.. && docker build -f deploy/Dockerfile.caddy -t druzya-caddy:ci .
