@@ -7,12 +7,22 @@ FROM golang:1.25-alpine AS builder
 ARG SERVICE
 ARG CMD
 RUN apk add --no-cache git bash make
+# Monorepo replace ../sibling in go.mod — copy all services for cross-module imports.
+WORKDIR /src
+COPY services/ ./services/
 WORKDIR /src/services/${SERVICE}
-COPY services/${SERVICE}/ ./
 ENV GOWORK=off
-RUN make gen-proto
-RUN mkdir -p .bin
-RUN if [ -n "${CMD}" ]; then \
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    if find pkg/api -name '*.go' -print -quit 2>/dev/null | grep -q .; then \
+      echo "Using pre-generated pkg/api (skip make gen-proto)"; \
+    else \
+      make gen-proto; \
+    fi
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    mkdir -p .bin && \
+    if [ -n "${CMD}" ]; then \
       go build -ldflags="-s -w" -o .bin/${SERVICE} ./cmd/${CMD}; \
     else \
       go build -ldflags="-s -w" -o .bin/${SERVICE} ./cmd/${SERVICE}; \

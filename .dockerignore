@@ -1,0 +1,8 @@
+.git
+**/.bin
+**/node_modules
+**/scripts/dev/jwt
+deploy/.env
+deploy/secrets
+**/*_test.go
+.cursor
