@@ -72,11 +72,14 @@ func jobStatusFromProto(status aiv1.EvaluationJobStatus) *evaluationmodel.JobSta
 }
 
 func mapServiceError(err error) error {
-	if evaluationservice.IsNotFound(err) {
+	switch {
+	case evaluationservice.IsNotFound(err):
 		return notFound("not found")
-	}
-	if evaluationservice.IsInvalidInput(err) {
+	case evaluationservice.IsInvalidInput(err):
 		return invalidArgument(err.Error())
+	case evaluationservice.IsQuotaExceeded(err):
+		return status.Error(codes.ResourceExhausted, "quota exceeded")
+	default:
+		return status.Error(codes.Internal, "internal error")
 	}
-	return status.Error(codes.Internal, "internal error")
 }

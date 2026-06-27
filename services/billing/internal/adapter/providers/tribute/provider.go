@@ -3,7 +3,6 @@ package tribute
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -55,7 +54,7 @@ func (p *Provider) VerifyWebhook(_ context.Context, headers map[string]string, _
 			return nil
 		}
 	}
-	return errors.New("invalid tribute webhook secret")
+	return fmt.Errorf("invalid tribute webhook secret: %w", providers.ErrWebhookUnauthorized)
 }
 
 // ParseWebhook decodes a normalized Tribute payload.

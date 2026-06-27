@@ -21,12 +21,20 @@ func main() {
 	defer a.Close()
 
 	var wg sync.WaitGroup
-	errCh := make(chan error, 2)
+	errCh := make(chan error, 3)
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		if err := app.RunWorker(ctx, a); err != nil {
+			errCh <- err
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := app.RunRetryWorker(ctx, a); err != nil {
 			errCh <- err
 		}
 	}()

@@ -15,6 +15,7 @@ func NewFromConfig(cfg *config.Config) (CodeRunner, error) {
 		return &DockerRunner{
 			GoImage: cfg.DockerGoImage, PythonImage: cfg.DockerPythonImage,
 			JavaScriptImage: cfg.DockerNodeImage, MaxOutputBytes: cfg.MaxOutputBytes,
+			CPUs: cfg.DefaultCPUs,
 		}, nil
 	case "fake", "":
 		return DefaultFakeRunner(), nil

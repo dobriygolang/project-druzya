@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root,
+  .light {
+    --color-bg: 250 250 248;
+    --color-surface-1: 255 255 255;
+    --color-surface-2: 247 247 245;
+    --color-surface-3: 240 240 237;
+    --color-border: 232 232 230;
+    --color-border-strong: 215 215 212;
+    --color-text-primary: 15 15 15;
+    --color-text-secondary: 91 91 91;
+    --color-text-muted: 142 142 142;
+    --color-danger: 255 59 48;
+    --hair: rgba(15, 15, 15, 0.06);
+    --hair-2: rgba(15, 15, 15, 0.12);
+    --red: #ff3b30;
+    --motion-dur-small: 120ms;
+    --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --radius-outer: 14px;
+    --pad-inline: 16px;
+  }
+
+  html {
+    background: rgb(var(--color-bg));
+    color: rgb(var(--color-text-primary));
+  }
+
+  body {
+    @apply min-h-screen bg-bg font-sans text-text-primary antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  ::selection {
+    background: var(--red);
+    color: #fff;
+  }
+}
+
+@layer components {
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    font-feature-settings: 'zero', 'ss01';
+  }
+}
+
+@layer utilities {
+  .hair-b {
+    border-bottom: 1px solid var(--hair);
+  }
+}

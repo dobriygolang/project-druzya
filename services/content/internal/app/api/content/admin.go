@@ -79,5 +79,9 @@ func (i *Implementation) UpsertTask(ctx context.Context, req *contentv1.UpsertTa
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return &contentv1.UpsertTaskResponse{Task: toProtoTask(task)}, nil
+	protoTask, err := toProtoTask(task)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	return &contentv1.UpsertTaskResponse{Task: protoTask}, nil
 }

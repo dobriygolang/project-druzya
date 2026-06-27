@@ -8,6 +8,8 @@ import (
 	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
 	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
 	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
+	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/complete_evaluation"
+	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/submit_attempt"
 )
 
 const defaultTrainingTaskLimit = 10
@@ -53,6 +55,16 @@ type CompleteEvaluationInput struct {
 	Feedback  map[string]any
 }
 
+func completeEvaluationCommand(in CompleteEvaluationInput) complete_evaluation.Command {
+	return complete_evaluation.Command{
+		AttemptID: in.AttemptID,
+		Score:     in.Score,
+		Passed:    in.Passed,
+		Summary:   in.Summary,
+		Feedback:  in.Feedback,
+	}
+}
+
 type interviewService struct {
 	repo           Repository
 	content        contentadapter.Client
@@ -60,6 +72,11 @@ type interviewService struct {
 	events         eventsadapter.Publisher
 	sessionTTL     time.Duration
 	trainingLimit  int
+
+	// CQRS usecase handlers. Reference pattern: each write/read operation is its
+	// own package; the service is a thin orchestrator that delegates to them.
+	submitAttempt      *submit_attempt.Handler
+	completeEvaluation *complete_evaluation.Handler
 }
 
 // Deps holds service dependencies.
@@ -82,14 +99,19 @@ func New(deps Deps) Service {
 	if limit <= 0 {
 		limit = defaultTrainingTaskLimit
 	}
-	return &interviewService{
+	svc := &interviewService{
 		repo:          deps.Repo,
 		content:       deps.Content,
 		billing:       deps.Billing,
 		events:        deps.Events,
 		sessionTTL:    ttl,
 		trainingLimit: limit,
+		submitAttempt: submit_attempt.New(deps.Repo, deps.Content, ttl),
 	}
+	// complete_evaluation borrows the service's shared scoring rules (also used
+	// by SkipTask) via the SessionScorer port.
+	svc.completeEvaluation = complete_evaluation.New(deps.Repo, svc)
+	return svc
 }
 
 func (s *interviewService) ensureSessionActive(session *interviewmodel.Session) error {

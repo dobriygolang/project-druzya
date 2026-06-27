@@ -31,6 +31,7 @@ type App struct {
 	interviewConn   *interviewgrpc.Client
 	contentConn     *contentgrpc.Client
 	billingConn     *billinggrpc.Client
+	Repo            *evaluationrepo.Repository
 	Service         evaluationservice.Service
 }
 
@@ -124,6 +125,7 @@ func New(ctx context.Context) (*App, error) {
 		interviewConn:   interviewClient,
 		contentConn:     contentClient,
 		billingConn:     billingConn,
+		Repo:            repo,
 		Service:         svc,
 	}, nil
 }

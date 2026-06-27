@@ -2,6 +2,7 @@ package contentapi
 
 import (
 	"encoding/json"
+	"fmt"
 
 	catalogmodel "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/model"
 	catalogservice "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/service"
@@ -65,11 +66,14 @@ func toProtoSection(s *catalogmodel.TemplateSection) *contentv1.TemplateSection 
 	}
 }
 
-func toProtoTask(t *catalogmodel.Task) *contentv1.Task {
+func toProtoTask(t *catalogmodel.Task) (*contentv1.Task, error) {
 	if t == nil {
-		return nil
+		return nil, nil
 	}
-	metadata, _ := metadataToStruct(t.Metadata)
+	metadata, err := metadataToStruct(t.Metadata)
+	if err != nil {
+		return nil, fmt.Errorf("task %s metadata: %w", t.ID, err)
+	}
 	return &contentv1.Task{
 		Id:               t.ID,
 		Slug:             t.Slug,
@@ -82,7 +86,7 @@ func toProtoTask(t *catalogmodel.Task) *contentv1.Task {
 		Status:           t.Status,
 		CreatedAt:        timestamppb.New(t.CreatedAt),
 		UpdatedAt:        timestamppb.New(t.UpdatedAt),
-	}
+	}, nil
 }
 
 func toProtoSolution(s *catalogmodel.Solution) *contentv1.TaskSolution {
@@ -150,8 +154,13 @@ func toProtoTaskBundle(bundle *catalogmodel.TaskBundle) (*contentv1.GetTaskBundl
 		solutions = append(solutions, toProtoSolution(&bundle.Solutions[i]))
 	}
 
+	task, err := toProtoTask(bundle.Task)
+	if err != nil {
+		return nil, err
+	}
+
 	return &contentv1.GetTaskBundleResponse{
-		Task:      toProtoTask(bundle.Task),
+		Task:      task,
 		Solutions: solutions,
 		Rubric:    toProtoRubric(bundle.Rubric, bundle.Criteria),
 	}, nil
@@ -177,7 +186,7 @@ func metadataToStruct(raw json.RawMessage) (*structpb.Struct, error) {
 	}
 	var data map[string]any
 	if err := json.Unmarshal(raw, &data); err != nil {
-		return structpb.NewStruct(map[string]any{})
+		return nil, fmt.Errorf("unmarshal metadata: %w", err)
 	}
 	return structpb.NewStruct(data)
 }
@@ -191,10 +200,14 @@ func int32PtrToOptional(v *int) *int32 {
 }
 
 func mapServiceError(err error) error {
-	if catalogservice.IsNotFound(err) {
+	switch {
+	case catalogservice.IsNotFound(err):
 		return notFound("not found")
+	case catalogservice.IsInvalidArgument(err):
+		return invalidArgument(err.Error())
+	default:
+		return status.Error(codes.Internal, "internal error")
 	}
-	return status.Error(codes.Internal, "internal error")
 }
 
 func requireIDOrSlug(id, slug string) error {

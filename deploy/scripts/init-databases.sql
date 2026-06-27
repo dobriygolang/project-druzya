@@ -6,3 +6,4 @@ CREATE DATABASE druzya_ai;
 CREATE DATABASE druzya_recommendation;
 CREATE DATABASE druzya_billing;
 CREATE DATABASE druzya_sandbox;
+CREATE DATABASE druzya_rooms;

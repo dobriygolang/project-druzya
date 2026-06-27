@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [identity, content, interview, ai, recommendation, billing, sandbox]
+        service: [identity, content, interview, ai, recommendation, billing, sandbox, rooms]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -30,7 +30,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1.6
+          version: v2.6.2
           working-directory: services/${{ matrix.service }}
           args: --config=.golangci.yml --timeout=5m
 
@@ -41,3 +41,37 @@ jobs:
 
       - name: Build
         run: GOWORK=off go build ./...
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck and build
+        run: npm run build
+        env:
+          VITE_API_BASE: /v1
+
+  caddy-image:
+    name: caddy-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build production Caddy + SPA image
+        run: |
+          cd apps/web && npm ci && npm run build
+          cd ../.. && docker build -f deploy/Dockerfile.caddy -t druzya-caddy:ci .

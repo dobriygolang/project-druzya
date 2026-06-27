@@ -32,6 +32,12 @@ api.druz9.ru, api.druz9.online {
 	handle /v1/recommendations* {
 		reverse_proxy recommendation:8084
 	}
+	handle /v1/rooms* {
+		reverse_proxy rooms:8087
+	}
+	handle /ws/* {
+		reverse_proxy rooms:8087
+	}
 	handle /v1/sandbox* {
 		reverse_proxy sandbox:8086
 	}

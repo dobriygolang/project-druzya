@@ -3,10 +3,10 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	examplemodel "github.com/sedorofeevd/project-druzya/services/template/internal/example/model"
 	examplerepo "github.com/sedorofeevd/project-druzya/services/template/internal/example/repository"
+	"github.com/sedorofeevd/project-druzya/services/template/internal/example/usecase/query/get_item"
 )
 
 const (
@@ -17,7 +17,13 @@ const (
 // ErrNotFound is returned when an entity does not exist.
 var ErrNotFound = examplerepo.ErrNotFound
 
+// ErrInvalidArgument is returned when required input is missing or malformed.
+var ErrInvalidArgument = examplemodel.ErrInvalidArgument
+
 // Service is example domain use cases — rename and extend for your service.
+//
+// The service is a thin orchestrator: simple reads stay inline, while richer
+// operations delegate to a usecase package (see GetItem -> usecase/query/get_item).
 type Service interface {
 	Ping(ctx context.Context) (string, error)
 	ListItems(ctx context.Context, limit, offset int) ([]examplemodel.Item, error)
@@ -25,17 +31,22 @@ type Service interface {
 }
 
 type exampleService struct {
-	repo *examplerepo.Repository
+	repo    examplerepo.Store
+	getItem *get_item.Handler
 }
 
-// Deps holds service dependencies.
+// Deps holds service dependencies. Repo is the Store port so the service is
+// testable with a mock instead of a real database.
 type Deps struct {
-	Repo *examplerepo.Repository
+	Repo examplerepo.Store
 }
 
-// New constructs the domain service.
+// New constructs the domain service and wires usecase handlers.
 func New(deps Deps) Service {
-	return &exampleService{repo: deps.Repo}
+	return &exampleService{
+		repo:    deps.Repo,
+		getItem: get_item.New(deps.Repo),
+	}
 }
 
 func (s *exampleService) Ping(_ context.Context) (string, error) {
@@ -49,15 +60,9 @@ func (s *exampleService) ListItems(ctx context.Context, limit, offset int) ([]ex
 	})
 }
 
+// GetItem delegates to the get_item CQRS query handler (reference pattern).
 func (s *exampleService) GetItem(ctx context.Context, id, slug string) (*examplemodel.Item, error) {
-	switch {
-	case id != "":
-		return s.repo.GetItemByID(ctx, id)
-	case slug != "":
-		return s.repo.GetItemBySlug(ctx, slug)
-	default:
-		return nil, fmt.Errorf("id or slug is required: %w", ErrNotFound)
-	}
+	return s.getItem.Handle(ctx, get_item.Query{ID: id, Slug: slug})
 }
 
 func normalizeLimit(limit int) int {
@@ -81,4 +86,9 @@ func normalizeOffset(offset int) int {
 // IsNotFound reports whether err is a not-found error.
 func IsNotFound(err error) bool {
 	return errors.Is(err, ErrNotFound)
+}
+
+// IsInvalidArgument reports whether err is an invalid-argument error.
+func IsInvalidArgument(err error) bool {
+	return errors.Is(err, ErrInvalidArgument)
 }

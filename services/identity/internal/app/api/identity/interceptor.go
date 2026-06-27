@@ -3,6 +3,7 @@ package identityapi
 import (
 	"context"
 
+	authservice "github.com/sedorofeevd/project-druzya/services/identity/internal/auth/service"
 	identityv1 "github.com/sedorofeevd/project-druzya/services/identity/pkg/api/identity/v1"
 	"google.golang.org/grpc"
 )
@@ -14,7 +15,7 @@ var protectedMethods = map[string]struct{}{
 }
 
 // AuthInterceptor validates Bearer tokens for protected RPC methods.
-func AuthInterceptor(svc Service) grpc.UnaryServerInterceptor {
+func AuthInterceptor(svc authservice.Service) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if _, ok := protectedMethods[info.FullMethod]; !ok {
 			return handler(ctx, req)

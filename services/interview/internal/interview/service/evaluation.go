@@ -2,172 +2,24 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
-	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
 	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
 )
 
-type completeEvaluationResult struct {
-	summary           *interviewmodel.EvaluationSummary
-	retryItemCreated  bool
-	retryItemID       string
-	sessionCompleted  bool
-	sessionID         string
-	userID            string
-	taskID            string
-	attemptID         string
-	sessionMode       string
-	sessionTotalScore *decimal.Decimal
-	passed            bool
-	score             decimal.Decimal
-	occurredAt        time.Time
-	alreadyDone       bool
+// CompleteEvaluation delegates to the complete_evaluation CQRS command handler.
+func (s *interviewService) CompleteEvaluation(ctx context.Context, input CompleteEvaluationInput) (*interviewmodel.EvaluationSummary, error) {
+	return s.completeEvaluation.Handle(ctx, completeEvaluationCommand(input))
 }
 
-func (s *interviewService) CompleteEvaluation(ctx context.Context, input CompleteEvaluationInput) (*interviewmodel.EvaluationSummary, error) {
-	if input.AttemptID == "" {
-		return nil, fmt.Errorf("attempt_id required: %w", ErrInvalidInput)
-	}
-
-	var result completeEvaluationResult
-	err := s.repo.WithTx(ctx, func(txCtx context.Context) error {
-		attempt, err := s.repo.GetAttemptByID(txCtx, input.AttemptID)
-		if err != nil {
-			return err
-		}
-
-		if attempt.Status == interviewmodel.AttemptStatusEvaluated {
-			summary, err := s.repo.GetEvaluationSummaryByAttemptID(txCtx, attempt.ID)
-			if err != nil {
-				return err
-			}
-			result.summary = summary
-			result.alreadyDone = true
-			return nil
-		}
-		if attempt.Status != interviewmodel.AttemptStatusEvaluating {
-			return fmt.Errorf("attempt not evaluating: %w", ErrConflict)
-		}
-
-		sessionTask, err := s.repo.GetSessionTaskByID(txCtx, attempt.SessionTaskID)
-		if err != nil {
-			return err
-		}
-		session, err := s.repo.GetSessionByID(txCtx, sessionTask.SessionID)
-		if err != nil {
-			return err
-		}
-
-		score := decimal.NewFromFloat(input.Score)
-		passed := input.Passed != nil && *input.Passed
-		if input.Passed == nil {
-			passed = score.GreaterThanOrEqual(decimal.NewFromInt(int64(session.PassingScore)))
-		}
-
-		now := time.Now().UTC()
-		feedbackBytes, err := json.Marshal(input.Feedback)
-		if err != nil || len(input.Feedback) == 0 {
-			feedbackBytes = emptyFeedback()
-		}
-
-		summary := &interviewmodel.EvaluationSummary{
-			ID:        uuid.NewString(),
-			AttemptID: attempt.ID,
-			Score:     score,
-			Passed:    passed,
-			Summary:   input.Summary,
-			Feedback:  feedbackBytes,
-			CreatedAt: now,
-			UpdatedAt: now,
-		}
-		if err := s.repo.CreateEvaluationSummary(txCtx, summary); err != nil {
-			return err
-		}
-
-		attempt.Status = interviewmodel.AttemptStatusEvaluated
-		attempt.UpdatedAt = now
-		if err := s.repo.UpdateAttempt(txCtx, attempt); err != nil {
-			return err
-		}
-
-		sessionTask.Status = interviewmodel.SessionTaskEvaluated
-		sessionTask.UpdatedAt = now
-		if err := s.repo.UpdateSessionTask(txCtx, sessionTask); err != nil {
-			return err
-		}
-
-		if !passed {
-			reason := "score below passing threshold"
-			retryItem := &interviewmodel.RetryItem{
-				ID:              uuid.NewString(),
-				UserID:          attempt.UserID,
-				TaskID:          attempt.TaskID,
-				SourceAttemptID: attempt.ID,
-				Reason:          &reason,
-				Status:          interviewmodel.RetryStatusPending,
-				CreatedAt:       now,
-				UpdatedAt:       now,
-			}
-			created, err := s.repo.CreateRetryItemIfAbsent(txCtx, retryItem)
-			if err != nil {
-				return err
-			}
-			result.retryItemCreated = created
-			if created {
-				result.retryItemID = retryItem.ID
-			}
-		}
-
-		sessionCompleted, err := s.recalculateScores(txCtx, session)
-		if err != nil {
-			return err
-		}
-
-		result.summary = summary
-		result.sessionCompleted = sessionCompleted
-		result.sessionID = session.ID
-		result.userID = session.UserID
-		result.taskID = attempt.TaskID
-		result.attemptID = attempt.ID
-		result.sessionMode = string(session.Mode)
-		result.sessionTotalScore = session.TotalScore
-		result.passed = passed
-		result.score = score
-		result.occurredAt = now
-
-		if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.AttemptEvaluated),
-			attemptEvaluatedPayload(result.attemptID, result.userID, result.taskID, result.sessionID, result.passed, result.score, now)); err != nil {
-			return err
-		}
-		if result.retryItemCreated {
-			if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.RetryItemCreated),
-				retryItemCreatedPayload(result.retryItemID, result.userID, result.taskID, result.attemptID, now)); err != nil {
-				return err
-			}
-		}
-		if result.sessionCompleted {
-			if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.SessionCompleted),
-				sessionCompletedPayload(result.sessionID, result.userID, result.sessionMode, result.sessionTotalScore, now)); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if result.alreadyDone {
-		return result.summary, nil
-	}
-
-	return result.summary, nil
+// RecalculateScores satisfies the complete_evaluation.SessionScorer port; the
+// scoring rules are shared with SkipTask, so they stay in the domain service.
+func (s *interviewService) RecalculateScores(ctx context.Context, session *interviewmodel.Session) (bool, error) {
+	return s.recalculateScores(ctx, session)
 }
 
 func (s *interviewService) recalculateScores(ctx context.Context, session *interviewmodel.Session) (bool, error) {
@@ -195,11 +47,13 @@ func (s *interviewService) recalculateScores(ctx context.Context, session *inter
 	now := time.Now().UTC()
 	for i := range sections {
 		scores := sectionScores[sections[i].ID]
-		if len(scores) == 0 {
-			continue
+		// Only set an average when there are scored tasks, but still evaluate
+		// completion below: a section whose tasks were all skipped has no scores
+		// yet must be marked completed so the next section activates.
+		if len(scores) > 0 {
+			avg := averageDecimal(scores)
+			sections[i].Score = &avg
 		}
-		avg := averageDecimal(scores)
-		sections[i].Score = &avg
 		if sectionTasksDone(tasks, sections[i].ID) {
 			sections[i].Status = interviewmodel.SectionStatusCompleted
 			if i+1 < len(sections) && sections[i+1].Status == interviewmodel.SectionStatusPending {

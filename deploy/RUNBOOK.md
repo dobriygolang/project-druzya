@@ -4,13 +4,13 @@
 
 1. `postgres`, `redis`
 2. `migrate` (one-shot, only after schema change)
-3. `identity` → `content` → `interview`
+3. `identity` → `content` → `interview` → `billing` → `sandbox` → `rooms`
 4. `ai`, `recommendation` (parallel)
 5. `identity-bot`, `caddy`
 
 ```bash
 cd deploy
-docker compose -f docker-compose.prod.yml --env-file .env restart identity content interview ai recommendation caddy
+docker compose -f docker-compose.prod.yml --env-file .env restart identity content interview billing sandbox rooms ai recommendation caddy
 ```
 
 ## Health endpoints
@@ -22,6 +22,9 @@ docker compose -f docker-compose.prod.yml --env-file .env restart identity conte
 | interview | `/healthz` | `/readyz` (PG + content gRPC) |
 | ai | `/healthz` | `/readyz` (PG + interview + content) |
 | recommendation | `/healthz` | `/readyz` (PG + interview + content) |
+| billing | `/healthz` | `/readyz` (PG) |
+| sandbox | `/healthz` | `/readyz` (PG) |
+| rooms | `/healthz` | `/readyz` (PG + identity gRPC) |
 
 Public API health: `https://api.druz9.ru/healthz`
 

@@ -1,10 +1,11 @@
 package billingapi
 
 import (
+	"errors"
 	"io"
 	"net/http"
-	"strings"
 
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/providers"
 	billingservice "github.com/sedorofeevd/project-druzya/services/billing/internal/billing/service"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/tools/humanerror"
 )
@@ -27,15 +28,16 @@ func TributeWebhookHandler(svc billingservice.Service) http.HandlerFunc {
 				headers[k] = vals[0]
 			}
 		}
-		if err := svc.HandleProviderWebhook(r.Context(), "tribute", headers, body); err != nil {
-			if strings.Contains(err.Error(), "invalid tribute webhook secret") {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
+		err = svc.HandleProviderWebhook(r.Context(), "tribute", headers, body)
+		switch {
+		case err == nil, errors.Is(err, billingservice.ErrDuplicateEvent):
+			// Duplicate delivery is a no-op success so the provider stops retrying.
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
+		case errors.Is(err, providers.ErrWebhookUnauthorized):
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		default:
 			humanerror.WriteHTTP(w, mapServiceError(err))
-			return
 		}
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	}
 }

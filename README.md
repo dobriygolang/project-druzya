@@ -13,6 +13,16 @@ Monorepo of **independent microservices**. Each service is self-contained — op
 | recommendation | [services/recommendation/](services/recommendation/) | 8084 | 9094 | yes |
 | template | [services/template/](services/template/) | 8099 | 9199 | skeleton only |
 
+## Frontend (MVP)
+
+React SPA: [apps/web/](apps/web/) — auth, mock interview, dashboard, profile.
+
+```bash
+cd apps/web && npm install && npm run dev
+```
+
+Requires backend services on ports 8080–8084 (see `apps/web/README.md`).
+
 ## Local dev
 
 ```bash
@@ -24,7 +34,7 @@ make start
 
 See [deploy/README.md](deploy/README.md) and [deploy/PROD_PLAN.md](deploy/PROD_PLAN.md).
 
-Domains: **druz9.ru**, **druz9.online** — API at `api.druz9.ru`, app at `app.druz9.ru`.
+Domains: **druz9.ru**, **druz9.online** — API at `api.druz9.ru`, app at `app.druz9.ru` (SPA baked into caddy image).
 
 ```bash
 cd deploy

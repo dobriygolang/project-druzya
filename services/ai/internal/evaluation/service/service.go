@@ -8,6 +8,7 @@ import (
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/usecase/command/run_evaluation"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/summary"
 )
 
@@ -31,6 +32,9 @@ type evaluationService struct {
 	evaluator  evaluator.Client
 	summary    *summary.Generator
 	maxRetries int
+
+	// CQRS usecase handler. RunEvaluation/HandleAttemptSubmitted delegate here.
+	runEvaluation *run_evaluation.Handler
 }
 
 // Deps holds service dependencies.
@@ -58,5 +62,13 @@ func New(deps Deps) Service {
 		evaluator:  deps.Evaluator,
 		summary:    deps.Summary,
 		maxRetries: maxRetries,
+		runEvaluation: run_evaluation.New(run_evaluation.Deps{
+			Repo:       deps.Repo,
+			Interview:  deps.Interview,
+			Content:    deps.Content,
+			Billing:    deps.Billing,
+			Evaluator:  deps.Evaluator,
+			MaxRetries: maxRetries,
+		}),
 	}
 }

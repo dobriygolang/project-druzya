@@ -24,6 +24,14 @@ func (s *recommendationService) HandleRetryItemCreated(ctx context.Context, even
 	}
 
 	return s.repo.WithTx(ctx, func(txCtx context.Context) error {
+		claimed, err := s.repo.ClaimEvent(txCtx, model.ConsumerRetryItemCreated, eventID)
+		if err != nil {
+			return fmt.Errorf("claim event: %w", err)
+		}
+		if !claimed {
+			return nil
+		}
+
 		if err := s.repo.EnsureUserProfile(txCtx, event.UserID); err != nil {
 			return fmt.Errorf("ensure user profile: %w", err)
 		}
@@ -56,6 +64,6 @@ func (s *recommendationService) HandleRetryItemCreated(ctx context.Context, even
 			return fmt.Errorf("create retry plan item: %w", err)
 		}
 
-		return s.repo.MarkEventProcessed(txCtx, model.ConsumerRetryItemCreated, eventID)
+		return nil
 	})
 }

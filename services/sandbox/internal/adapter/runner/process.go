@@ -31,7 +31,7 @@ func (r *ProcessRunner) runOnce(ctx context.Context, req RunRequest, stdin, test
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	filename, cmdArgs, compileArgs, err := languageSpec(req.Language, dir)
 	if err != nil {

@@ -16,5 +16,6 @@ run_migrate ai "${AI_POSTGRES_DSN}" /migrations/ai
 run_migrate recommendation "${RECOMMENDATION_POSTGRES_DSN}" /migrations/recommendation
 run_migrate billing "${BILLING_POSTGRES_DSN}" /migrations/billing
 run_migrate sandbox "${SANDBOX_POSTGRES_DSN}" /migrations/sandbox
+run_migrate rooms "${ROOMS_POSTGRES_DSN}" /migrations/rooms
 
 echo "all migrations applied"

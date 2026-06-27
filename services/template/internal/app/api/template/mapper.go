@@ -23,10 +23,14 @@ func toProtoItem(item *examplemodel.Item) *templatev1.Item {
 }
 
 func mapServiceError(err error) error {
-	if exampleservice.IsNotFound(err) {
+	switch {
+	case exampleservice.IsNotFound(err):
 		return notFound("not found")
+	case exampleservice.IsInvalidArgument(err):
+		return invalidArgument(err.Error())
+	default:
+		return status.Error(codes.Internal, "internal error")
 	}
-	return status.Error(codes.Internal, "internal error")
 }
 
 func requireIDOrSlug(id, slug string) error {

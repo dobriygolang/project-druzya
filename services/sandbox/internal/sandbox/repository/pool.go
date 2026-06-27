@@ -2,9 +2,7 @@ package repository
 
 import (
 	"context"
-	"errors"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -24,8 +22,4 @@ func NewPool(ctx context.Context, dsn string) (*Pool, error) {
 		return nil, err
 	}
 	return &Pool{Pool: pool}, nil
-}
-
-func isNoRows(err error) bool {
-	return errors.Is(err, pgx.ErrNoRows)
 }

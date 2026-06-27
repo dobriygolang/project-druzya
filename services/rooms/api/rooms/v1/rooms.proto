@@ -1,0 +1,152 @@
+syntax = "proto3";
+
+package rooms.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/rooms/pkg/api/rooms/v1;roomsv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+// Live coding collab rooms. WebSocket Yjs sync: GET /ws/editor/{room_id}?token=JWT
+// (custom HTTP handler, not grpc-gateway).
+
+service RoomsService {
+  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms"
+      body: "*"
+    };
+  }
+
+  rpc GetRoom(GetRoomRequest) returns (GetRoomResponse) {
+    option (google.api.http) = {
+      get: "/v1/rooms/{room_id}"
+    };
+  }
+
+  rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/{room_id}/join"
+      body: "*"
+    };
+  }
+
+  rpc FreezeRoom(FreezeRoomRequest) returns (FreezeRoomResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/{room_id}/freeze"
+      body: "*"
+    };
+  }
+
+  rpc CreateInvite(CreateInviteRequest) returns (CreateInviteResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/{room_id}/invite"
+      body: "*"
+    };
+  }
+
+  rpc GetReplay(GetReplayRequest) returns (GetReplayResponse) {
+    option (google.api.http) = {
+      get: "/v1/rooms/{room_id}/replay"
+    };
+  }
+
+  rpc GuestJoin(GuestJoinRequest) returns (GuestJoinResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/{room_id}/guest-join"
+      body: "*"
+    };
+  }
+}
+
+message Participant {
+  string user_id = 1;
+  string role = 2;
+  google.protobuf.Timestamp joined_at = 3;
+}
+
+message Room {
+  string id = 1;
+  string owner_id = 2;
+  string room_type = 3;
+  optional string task_id = 4;
+  string language = 5;
+  bool is_frozen = 6;
+  string visibility = 7;
+  string ws_url = 8;
+  google.protobuf.Timestamp expires_at = 9;
+  repeated Participant participants = 10;
+}
+
+message CreateRoomRequest {
+  string room_type = 1;
+  optional string task_id = 2;
+  string language = 3;
+  optional string session_id = 4;
+}
+
+message CreateRoomResponse {
+  Room room = 1;
+}
+
+message GetRoomRequest {
+  string room_id = 1;
+}
+
+message GetRoomResponse {
+  Room room = 1;
+}
+
+message JoinRoomRequest {
+  string room_id = 1;
+  string role = 2;
+  string invite_token = 3;
+}
+
+message JoinRoomResponse {
+  Room room = 1;
+}
+
+message FreezeRoomRequest {
+  string room_id = 1;
+  bool frozen = 2;
+}
+
+message FreezeRoomResponse {
+  Room room = 1;
+}
+
+message InviteLink {
+  string url = 1;
+  string token = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message CreateInviteRequest {
+  string room_id = 1;
+}
+
+message CreateInviteResponse {
+  InviteLink invite = 1;
+}
+
+message GetReplayRequest {
+  string room_id = 1;
+}
+
+message GetReplayResponse {
+  bytes payload_jsonl = 1;
+  int32 op_count = 2;
+}
+
+message GuestJoinRequest {
+  string room_id = 1;
+  string invite_token = 2;
+  string display_name = 3;
+}
+
+message GuestJoinResponse {
+  string access_token = 1;
+  Room room = 2;
+  int32 expires_in = 3;
+}

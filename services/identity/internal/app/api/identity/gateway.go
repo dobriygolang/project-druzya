@@ -48,11 +48,3 @@ func RegisterGateway(ctx context.Context, mux *http.ServeMux, endpoint string) e
 	mux.Handle("/v1/", gwMux)
 	return nil
 }
-
-// HealthzHTTP returns service health.
-func HealthzHTTP() http.HandlerFunc {
-	return func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
-	}
-}

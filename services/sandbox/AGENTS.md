@@ -37,11 +37,23 @@ Isolated code execution for live-coding tasks. Users run Go/Python/JavaScript ag
 
 ## Runner modes (`RUNNER_MODE`)
 
-| Mode | Use |
-|------|-----|
-| `fake` | Default dev/CI — deterministic stub |
-| `process` | Local subprocess in temp dir (dev only) |
-| `docker` | Stub — not implemented yet |
+| Mode | Use | Isolation |
+|------|-----|-----------|
+| `fake` | Default dev/CI — deterministic stub | none |
+| `process` | Local subprocess in temp dir | **none — host execution, dev only** |
+| `docker` | Container per run | network off, mem/cpu/pids limits, `--cap-drop ALL`, `--read-only` + tmpfs, `no-new-privileges`, killed on timeout |
+
+**Production guards:** the service refuses to start unless `RUNNER_MODE=docker`
+when `APP_ENV=production`. `process` runs untrusted code directly on the host and
+must never be used outside local dev. Docker requires the host docker daemon.
+
+## Input limits
+
+`SANDBOX_MAX_CODE_BYTES` (128KiB), `SANDBOX_MAX_STDIN_BYTES` (64KiB),
+`SANDBOX_MAX_TESTS` (50), per-run `SANDBOX_DEFAULT_TIMEOUT_MS`,
+`SANDBOX_DEFAULT_MEMORY_MB`, `SANDBOX_DEFAULT_CPUS`.
+
+`SubmitAttemptFromCodeRun` only accepts a successful `submit`-type run.
 
 ## Commands
 
@@ -56,5 +68,8 @@ make lint
 ## Env
 
 - `JWT_PUBLIC_KEY` / `JWT_PUBLIC_KEY_FILE`
-- `CONTENT_GRPC_ADDR`, `INTERVIEW_GRPC_ADDR`
+- `CONTENT_GRPC_ADDR`, `INTERVIEW_GRPC_ADDR`, `BILLING_GRPC_ADDR` (optional)
 - `RUNNER_MODE`, `SANDBOX_MAX_OUTPUT_BYTES`, `SANDBOX_DEFAULT_TIMEOUT_MS`
+- `SANDBOX_DEFAULT_MEMORY_MB`, `SANDBOX_DEFAULT_CPUS`
+- `SANDBOX_MAX_CODE_BYTES`, `SANDBOX_MAX_STDIN_BYTES`, `SANDBOX_MAX_TESTS`
+- `SANDBOX_DOCKER_GO_IMAGE`, `SANDBOX_DOCKER_PYTHON_IMAGE`, `SANDBOX_DOCKER_NODE_IMAGE`

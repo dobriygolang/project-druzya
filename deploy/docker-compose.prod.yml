@@ -286,8 +286,44 @@ services:
       billing:
         condition: service_healthy
 
+  rooms:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: rooms
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      <<: *service-env
+      HTTP_PORT: 8087
+      GRPC_PORT: 9097
+      POSTGRES_DSN: ${ROOMS_POSTGRES_DSN}
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
+      ROOM_INVITE_SECRET: ${ROOM_INVITE_SECRET}
+      ROOM_TTL: ${ROOM_TTL:-6h}
+      ROOM_FREE_MAX_ACTIVE: ${ROOM_FREE_MAX_ACTIVE:-3}
+      IDENTITY_GRPC_ADDR: identity:9090
+      BILLING_GRPC_ADDR: billing:9095
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+    volumes:
+      - ./secrets/jwt:/run/secrets/jwt:ro
+    healthcheck:
+      <<: *health-ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8087/healthz"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      identity:
+        condition: service_healthy
+      billing:
+        condition: service_healthy
+
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.caddy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -295,8 +331,6 @@ services:
     environment:
       CADDY_EMAIL: ${CADDY_EMAIL:-}
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./static:/srv:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -309,6 +343,8 @@ services:
       recommendation:
         condition: service_healthy
       ai:
+        condition: service_healthy
+      rooms:
         condition: service_healthy
 
   prometheus:

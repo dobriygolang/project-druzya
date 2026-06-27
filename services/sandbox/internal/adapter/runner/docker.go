@@ -19,6 +19,7 @@ type DockerRunner struct {
 	PythonImage     string
 	JavaScriptImage string
 	MaxOutputBytes  int
+	CPUs            string
 }
 
 func (r *DockerRunner) Name() string { return "docker" }
@@ -33,7 +34,7 @@ func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ str
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(dir)
+	defer func() { _ = os.RemoveAll(dir) }()
 
 	filename, image, cmd, err := dockerLanguageSpec(req.Language, r)
 	if err != nil {
@@ -50,7 +51,12 @@ func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ str
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	args := dockerRunArgs(image, dir, req.MemoryMB, cmd...)
+	containerName := fmt.Sprintf("sbx-%d", time.Now().UnixNano())
+	// Killing the container on timeout/cleanup prevents orphaned containers when
+	// the docker CLI process is terminated by the context.
+	defer killContainer(containerName)
+
+	args := dockerRunArgs(containerName, image, dir, req.MemoryMB, r.CPUs, cmd...)
 	command := exec.CommandContext(runCtx, "docker", args...)
 	command.Stdin = strings.NewReader(stdin)
 
@@ -95,23 +101,43 @@ func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ str
 	return res, nil
 }
 
-func dockerRunArgs(image, workDir string, memoryMB int, cmd ...string) []string {
+func dockerRunArgs(name, image, workDir string, memoryMB int, cpus string, cmd ...string) []string {
 	if memoryMB <= 0 {
 		memoryMB = 128
+	}
+	if cpus == "" {
+		cpus = "1.0"
 	}
 	mem := fmt.Sprintf("%dm", memoryMB)
 	args := []string{
 		"run", "--rm", "-i",
+		"--name", name,
 		"--network", "none",
 		"--memory", mem,
 		"--memory-swap", mem,
+		"--cpus", cpus,
 		"--pids-limit", "64",
+		"--cap-drop", "ALL",
 		"--security-opt", "no-new-privileges",
+		// Read-only root with a small writable tmpfs; the code dir is the only
+		// rw bind mount. Caches are redirected there so compilers can run.
+		"--read-only",
+		"--tmpfs", "/tmp:rw,size=64m,exec",
+		"-e", "HOME=/work",
+		"-e", "GOCACHE=/work/.gocache",
+		"-e", "GOFLAGS=-mod=mod",
 		"-v", workDir + ":/work:rw",
 		"-w", "/work",
 		image,
 	}
 	return append(args, cmd...)
+}
+
+// killContainer best-effort removes a container that may have outlived the run.
+func killContainer(name string) {
+	killCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_ = exec.CommandContext(killCtx, "docker", "kill", name).Run()
 }
 
 func dockerLanguageSpec(language string, r *DockerRunner) (filename, image string, cmd []string, err error) {

@@ -24,18 +24,23 @@ func (r *Repository) IsEventProcessed(ctx context.Context, consumer, eventID str
 	return exists, err
 }
 
-// MarkEventProcessed records successful event handling.
-func (r *Repository) MarkEventProcessed(ctx context.Context, consumer, eventID string) error {
+// ClaimEvent atomically records an event as processed. It returns true only for
+// the caller that inserted the row, so handlers can use it as the idempotency
+// guard at the start of their transaction (closing the check-then-act race).
+func (r *Repository) ClaimEvent(ctx context.Context, consumer, eventID string) (bool, error) {
 	id, err := uuid.NewRandom()
 	if err != nil {
-		return err
+		return false, err
 	}
-	_, err = r.conn(ctx).Exec(ctx, `
+	tag, err := r.conn(ctx).Exec(ctx, `
 		INSERT INTO processed_events (id, consumer, event_id)
 		VALUES ($1, $2, $3)
 		ON CONFLICT (consumer, event_id) DO NOTHING
 	`, id, consumer, eventID)
-	return err
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
 }
 
 // EnsureUserProfile creates a profile row when missing.
@@ -81,27 +86,14 @@ func (r *Repository) GetSkillScore(ctx context.Context, userID, skillKey string)
 	return &s, nil
 }
 
-// UpsertSkillScore inserts or updates a skill score with moving average.
+// UpsertSkillScore inserts or updates a skill score, computing the moving
+// average atomically in SQL so concurrent updates for the same skill cannot
+// lose increments. The new score is round-free integer division matching the
+// previous Go formula: (old_score*old_attempts + normalized) / (old_attempts+1).
 func (r *Repository) UpsertSkillScore(ctx context.Context, userID, skillKey string, normalized int, seenAt time.Time) (*model.SkillScore, error) {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user_id: %w", err)
-	}
-
-	existing, err := r.GetSkillScore(ctx, userID, skillKey)
-	if err != nil && !errors.Is(err, ErrNotFound) {
-		return nil, err
-	}
-
-	var score, confidence, attempts int
-	if existing != nil {
-		attempts = existing.AttemptsCount + 1
-		score = (existing.Score*existing.AttemptsCount + normalized) / attempts
-		confidence = min(100, attempts*10)
-	} else {
-		attempts = 1
-		score = normalized
-		confidence = min(100, attempts*10)
 	}
 
 	id, err := uuid.NewRandom()
@@ -109,17 +101,19 @@ func (r *Repository) UpsertSkillScore(ctx context.Context, userID, skillKey stri
 		return nil, err
 	}
 
+	// Insert values represent the first observation (attempts=1). On conflict the
+	// moving average is derived from the existing row plus EXCLUDED.score (=normalized).
 	row := r.conn(ctx).QueryRow(ctx, `
 		INSERT INTO skill_scores (id, user_id, skill_key, score, confidence, attempts_count, last_seen_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, LEAST(100, 10), 1, $5)
 		ON CONFLICT (user_id, skill_key) DO UPDATE SET
-			score = EXCLUDED.score,
-			confidence = EXCLUDED.confidence,
-			attempts_count = EXCLUDED.attempts_count,
+			attempts_count = skill_scores.attempts_count + 1,
+			score = (skill_scores.score * skill_scores.attempts_count + EXCLUDED.score) / (skill_scores.attempts_count + 1),
+			confidence = LEAST(100, (skill_scores.attempts_count + 1) * 10),
 			last_seen_at = EXCLUDED.last_seen_at,
 			updated_at = now()
 		RETURNING id, user_id, skill_key, score, confidence, attempts_count, last_seen_at, created_at, updated_at
-	`, id, uid, skillKey, score, confidence, attempts, seenAt)
+	`, id, uid, skillKey, normalized, seenAt)
 
 	var s model.SkillScore
 	var rowID, rowUserID uuid.UUID
@@ -629,13 +623,6 @@ func (r *Repository) FetchDashboardSnapshot(ctx context.Context, userID string) 
 		Recommendations: recs,
 		LearningPlan:    plan,
 	}, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // InsertTakeMockRecommendation creates an active mock interview recommendation when none exists.

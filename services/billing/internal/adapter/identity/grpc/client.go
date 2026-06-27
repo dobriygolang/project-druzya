@@ -9,8 +9,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+const internalTokenHeader = "x-internal-token"
 
 // Client calls identity-service gRPC APIs.
 type Client struct {
@@ -18,9 +21,13 @@ type Client struct {
 	conn   *grpc.ClientConn
 }
 
-// NewClient dials identity-service.
-func NewClient(ctx context.Context, addr string) (*Client, error) {
-	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+// NewClient dials identity-service. The internal token authenticates
+// service-to-service RPCs (GetUser, GetUserByTelegramID).
+func NewClient(ctx context.Context, addr, internalToken string) (*Client, error) {
+	conn, err := grpc.NewClient(addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(internalTokenInterceptor(internalToken)),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("dial identity grpc: %w", err)
 	}
@@ -59,6 +66,15 @@ func (c *Client) GetUserByTelegramID(ctx context.Context, telegramID int64) (*id
 		return nil, err
 	}
 	return toUser(resp.GetUser()), nil
+}
+
+func internalTokenInterceptor(token string) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if token != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx, internalTokenHeader, token)
+		}
+		return invoker(ctx, method, req, reply, cc, opts...)
+	}
 }
 
 func toUser(u *identityv1.User) *identityadapter.User {

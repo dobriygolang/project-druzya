@@ -71,7 +71,14 @@ func (r *Repository) Create(ctx context.Context, user *model.User) (*model.User,
 		now,
 		now,
 	)
-	return scanUser(row)
+	created, err := scanUser(row)
+	if err != nil {
+		if uniqueViolation(err) {
+			return nil, ErrAlreadyExists
+		}
+		return nil, err
+	}
+	return created, nil
 }
 
 func (r *Repository) Update(ctx context.Context, user *model.User) (*model.User, error) {

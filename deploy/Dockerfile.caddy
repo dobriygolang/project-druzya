@@ -1,0 +1,5 @@
+# syntax=docker/dockerfile:1
+# Caddy reverse proxy + prebuilt SPA (run `npm run build` in apps/web before deploy).
+FROM caddy:2-alpine
+COPY apps/web/dist /srv
+COPY deploy/Caddyfile /etc/caddy/Caddyfile

@@ -6,6 +6,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/adapter/yandex"
 	authrepo "github.com/sedorofeevd/project-druzya/services/identity/internal/auth/repository"
@@ -40,6 +43,7 @@ type Service interface {
 	GetUser(ctx context.Context, id string) (*model.User, error)
 	GetUserByTelegramID(ctx context.Context, telegramID int64) (*model.User, error)
 	ValidateToken(ctx context.Context, accessToken string) (string, error)
+	MintScopedAccessToken(ctx context.Context, role, scope, displayName string, ttlSeconds int32) (accessToken, userID string, expiresIn int32, err error)
 }
 
 // Deps lists dependencies for the identity service.
@@ -127,7 +131,14 @@ func (s *service) AuthTelegram(ctx context.Context, code string) (*AuthResult, e
 			AvatarURL:  loginCode.AvatarURL,
 		})
 		if err != nil {
-			return nil, err
+			// A concurrent login may have created this user first; recover by
+			// fetching the winner instead of surfacing a unique-violation error.
+			if errors.Is(err, userrepo.ErrAlreadyExists) {
+				user, err = s.users.GetByTelegramID(ctx, telegramID)
+			}
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else if loginCode.AvatarURL != "" {
 		user.AvatarURL = pickAvatar(user.AvatarURL, loginCode.AvatarURL, "")
@@ -232,7 +243,11 @@ func (s *service) RefreshToken(ctx context.Context, refreshToken string) (*AuthR
 		return nil, err
 	}
 
-	_ = s.refreshTokens.Delete(ctx, HashRefreshToken(refreshToken))
+	// Best-effort rotation: if deleting the old token fails it stays valid until
+	// TTL expiry, so log it for visibility instead of dropping the error.
+	if err := s.refreshTokens.Delete(ctx, HashRefreshToken(refreshToken)); err != nil && s.log != nil {
+		s.log.Error("failed to delete rotated refresh token", "err", err)
+	}
 	return result, nil
 }
 
@@ -304,6 +319,36 @@ func (s *service) ValidateToken(ctx context.Context, accessToken string) (string
 	return userID, nil
 }
 
+func (s *service) MintScopedAccessToken(
+	_ context.Context,
+	role, scope, displayName string,
+	ttlSeconds int32,
+) (string, string, int32, error) {
+	if scope == "" {
+		return "", "", 0, errors.New("scope is required")
+	}
+	if role == "" {
+		role = "guest"
+	}
+	ttl := time.Duration(ttlSeconds) * time.Second
+	if ttl <= 0 {
+		ttl = s.tokens.AccessTTL()
+	}
+	guestID, err := newGuestID()
+	if err != nil {
+		return "", "", 0, err
+	}
+	token, err := s.tokens.IssueScopedAccessToken(guestID, role, scope, displayName, ttl)
+	if err != nil {
+		return "", "", 0, err
+	}
+	return token, guestID, int32(ttl.Seconds()), nil
+}
+
+func newGuestID() (string, error) {
+	return uuid.New().String(), nil
+}
+
 func (s *service) upsertYandexUser(ctx context.Context, profile *yandex.Profile) (*model.User, error) {
 	user, err := s.users.GetByYandexID(ctx, profile.ID)
 	if err != nil && !isUserNotFound(err) {
@@ -321,11 +366,19 @@ func (s *service) upsertYandexUser(ctx context.Context, profile *yandex.Profile)
 	}
 
 	yandexID := profile.ID
-	return s.users.Create(ctx, &model.User{
+	created, err := s.users.Create(ctx, &model.User{
 		Username:  username,
 		YandexID:  &yandexID,
 		AvatarURL: profile.AvatarURL,
 	})
+	if err != nil {
+		// Concurrent login already created this user; return the winner.
+		if errors.Is(err, userrepo.ErrAlreadyExists) {
+			return s.users.GetByYandexID(ctx, profile.ID)
+		}
+		return nil, err
+	}
+	return created, nil
 }
 
 func (s *service) linkYandexProfile(ctx context.Context, userID string, profile *yandex.Profile) (*model.User, error) {

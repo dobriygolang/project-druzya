@@ -24,7 +24,7 @@ var ErrInvalidInput = errors.New("invalid input")
 type Repository interface {
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 	IsEventProcessed(ctx context.Context, consumer, eventID string) (bool, error)
-	MarkEventProcessed(ctx context.Context, consumer, eventID string) error
+	ClaimEvent(ctx context.Context, consumer, eventID string) (bool, error)
 	EnsureUserProfile(ctx context.Context, userID string) error
 	UpsertSkillScore(ctx context.Context, userID, skillKey string, normalized int, seenAt time.Time) (*model.SkillScore, error)
 	ListSkillScoresByUser(ctx context.Context, userID string) ([]model.SkillScore, error)
@@ -112,7 +112,17 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 		seenAt = summary.CreatedAt
 	}
 
-	return s.repo.WithTx(ctx, func(txCtx context.Context) error {
+	if err := s.repo.WithTx(ctx, func(txCtx context.Context) error {
+		// Authoritative idempotency guard: only the caller that claims the event
+		// inside the transaction proceeds; concurrent duplicates no-op.
+		claimed, err := s.repo.ClaimEvent(txCtx, model.ConsumerAttemptEvaluated, eventID)
+		if err != nil {
+			return fmt.Errorf("claim event: %w", err)
+		}
+		if !claimed {
+			return nil
+		}
+
 		if err := s.repo.EnsureUserProfile(txCtx, event.UserID); err != nil {
 			return fmt.Errorf("ensure user profile: %w", err)
 		}
@@ -156,8 +166,40 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 			}
 		}
 
-		return s.repo.MarkEventProcessed(txCtx, model.ConsumerAttemptEvaluated, eventID)
-	})
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	// Refresh the LLM profile summary out of band so the read path stays pure.
+	s.refreshProfileSummary(ctx, event.UserID)
+	return nil
+}
+
+// refreshProfileSummary regenerates the cached LLM profile summary when stale.
+// Best-effort: failures are ignored so they never break event processing.
+func (s *recommendationService) refreshProfileSummary(ctx context.Context, userID string) {
+	if s.ai == nil {
+		return
+	}
+	profile, err := s.repo.GetUserProfile(ctx, userID)
+	if err != nil || profile == nil || !shouldRefreshSummary(profile.SummaryUpdatedAt) {
+		return
+	}
+	scores, err := s.repo.ListSkillScoresByUser(ctx, userID)
+	if err != nil {
+		return
+	}
+	skills := make([]aiadapter.SkillScore, 0, len(scores))
+	for _, sc := range scores {
+		skills = append(skills, aiadapter.SkillScore{SkillKey: sc.SkillKey, Score: sc.Score, Confidence: sc.Confidence})
+	}
+	llmCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	defer cancel()
+	text, err := s.ai.GenerateProfileSummary(llmCtx, userID, profile.ReadinessScore, skills)
+	if err == nil && text != "" {
+		_ = s.repo.UpdateProfileSummary(ctx, userID, text)
+	}
 }
 
 func (s *recommendationService) applySpecialRules(ctx context.Context, event model.AttemptEvaluatedEvent, c model.CriterionScore) error {
@@ -218,27 +260,11 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 		return nil, fmt.Errorf("list pending retries: %w", err)
 	}
 
-	summary := snap.Profile.ProfileSummary
-	if s.ai != nil && shouldRefreshSummary(snap.Profile.SummaryUpdatedAt) {
-		skills := make([]aiadapter.SkillScore, 0, len(snap.SkillScores))
-		for _, sc := range snap.SkillScores {
-			skills = append(skills, aiadapter.SkillScore{
-				SkillKey: sc.SkillKey, Score: sc.Score, Confidence: sc.Confidence,
-			})
-		}
-		llmCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-		text, err := s.ai.GenerateProfileSummary(llmCtx, userID, snap.Profile.ReadinessScore, skills)
-		cancel()
-		if err == nil && text != "" {
-			if saveErr := s.repo.UpdateProfileSummary(ctx, userID, text); saveErr == nil {
-				summary = &text
-			}
-		}
-	}
-
+	// Read-only path: return the cached summary. Regeneration happens out of band
+	// in refreshProfileSummary after an attempt is evaluated.
 	return &model.Dashboard{
 		ReadinessScore:    snap.Profile.ReadinessScore,
-		ProfileSummary:    summary,
+		ProfileSummary:    snap.Profile.ProfileSummary,
 		Strengths:         computeStrengths(snap.SkillScores),
 		Weaknesses:        computeWeaknesses(snap.SkillScores),
 		Recommendations:   snap.Recommendations,

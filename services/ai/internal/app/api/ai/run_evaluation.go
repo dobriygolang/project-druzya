@@ -19,7 +19,7 @@ func (i *Implementation) RunEvaluation(
 	}
 	job, err := i.service.GetEvaluationJobByAttemptID(ctx, req.GetAttemptId())
 	if err != nil {
-		return &aiv1.RunEvaluationResponse{}, nil
+		return nil, mapServiceError(err)
 	}
 	return &aiv1.RunEvaluationResponse{Job: toProtoJob(job)}, nil
 }

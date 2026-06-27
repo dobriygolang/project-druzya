@@ -41,7 +41,8 @@ func Load() (*Config, error) {
 	if internalToken == "" {
 		return nil, fmt.Errorf("INTERNAL_API_TOKEN is required")
 	}
-	if err := validateProduction(getEnv("APP_ENV", "development"), internalToken); err != nil {
+	tributeSecret := getEnv("TRIBUTE_WEBHOOK_SECRET", "")
+	if err := validateProduction(getEnv("APP_ENV", "development"), internalToken, tributeSecret); err != nil {
 		return nil, err
 	}
 
@@ -60,7 +61,7 @@ func Load() (*Config, error) {
 		InternalAPIToken:     internalToken,
 		JWTPublicKeyPEM:      publicKey,
 		IdentityGRPCAddr:     getEnv("IDENTITY_GRPC_ADDR", "127.0.0.1:9090"),
-		TributeWebhookSecret: getEnv("TRIBUTE_WEBHOOK_SECRET", ""),
+		TributeWebhookSecret: tributeSecret,
 		TributeTierToPlan:    parseTierMap(getEnv("TRIBUTE_TIER_MAP", "tribute_pro_monthly:pro_monthly")),
 		CORSAllowedOrigins:   ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 	}, nil
@@ -118,12 +119,16 @@ func loadPEM(envKey, fileKey string) ([]byte, error) {
 	return []byte(value), nil
 }
 
-func validateProduction(appEnv, internalToken string) error {
+func validateProduction(appEnv, internalToken, tributeSecret string) error {
 	if appEnv != "production" {
 		return nil
 	}
 	if internalToken == "dev-internal-token" {
 		return fmt.Errorf("INTERNAL_API_TOKEN must be changed in production")
+	}
+	// Without a secret the Tribute webhook accepts any caller; refuse to start.
+	if tributeSecret == "" {
+		return fmt.Errorf("TRIBUTE_WEBHOOK_SECRET is required in production")
 	}
 	return nil
 }

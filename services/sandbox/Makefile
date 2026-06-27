@@ -18,7 +18,7 @@ help: ## Show this help
 start-deps: ## Start postgres (Docker)
 	docker compose -f $(COMPOSE_FILE) up -d postgres
 	@echo "  waiting for postgres..."
-	@until docker compose -f $(COMPOSE_FILE) exec -T postgres pg_isready -U postgres -d druzya_template >/dev/null 2>&1; do sleep 1; done
+	@until docker compose -f $(COMPOSE_FILE) exec -T postgres pg_isready -U postgres -d druzya_sandbox >/dev/null 2>&1; do sleep 1; done
 
 .PHONY: migrate-up
 migrate-up: ## Apply pending SQL migrations

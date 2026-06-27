@@ -3,8 +3,12 @@ package providers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 )
+
+// ErrWebhookUnauthorized indicates webhook verification failed (bad/missing secret).
+var ErrWebhookUnauthorized = errors.New("webhook verification failed")
 
 // Event is a provider-normalized billing event.
 type Event struct {

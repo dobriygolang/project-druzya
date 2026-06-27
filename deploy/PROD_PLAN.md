@@ -41,7 +41,9 @@
 | `/v1/companies*`, `/v1/interview-templates*`, `/v1/tasks*`, `/v1/rubrics*` | content | 8081 |
 | `/v1/interview/*` | interview | 8082 |
 | `/v1/recommendations/*` | recommendation | 8084 |
-| ai admin HTTP | ai | 8083 — **internal only**, not exposed publicly |
+| `/v1/sandbox/*` | sandbox | 8086 |
+| `/v1/rooms/*`, `/ws/editor/*` | rooms | 8087 |
+| `/v1/billing/*` | billing | 8085 |
 
 gRPC (9090–9094): Docker internal network only, not via Caddy.
 
@@ -135,8 +137,11 @@ Internet
 - [x] `deploy/.dockerignore`
 - [x] `deploy/Makefile` — `make up`, `build`, `keys`
 
-#### 1.4 Placeholder frontend
-- [x] `deploy/static/index.html` — "coming soon" on `app.druz9.*`
+#### 1.4 Frontend (SPA)
+
+- [x] `apps/web/` — MVP React SPA (auth, interview, dashboard, sandbox run)
+- [x] `deploy/Dockerfile.caddy` — builds `apps/web` into caddy `/srv`
+- [ ] Wire `app.druz9.*` after first `docker compose build caddy`
 
 #### 1.5 First deploy (needs server access)
 - [ ] Clone repo on server
@@ -214,12 +219,12 @@ Internet
 | Item | When |
 |------|------|
 | DNS records → server IP | Phase 1 deploy |
-| `.env` secrets (see `.env.example`) | Phase 1 |
+| `.env` secrets (see `.env.example`, [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md)) | Phase 1 |
 | SSH access to server | Phase 1 deploy |
 | Yandex OAuth app + redirect URIs | Phase 1 |
 | Telegram bot token + username | Phase 1 |
 | LLM API keys (Groq etc.) | Phase 1 |
-| Frontend codebase | Later — wire to `app.druz9.ru` |
+| Frontend codebase | **MVP in `apps/web/`** — wire build to `app.druz9.ru` |
 
 ---
 

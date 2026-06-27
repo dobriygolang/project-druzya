@@ -62,6 +62,7 @@ service IdentityService {
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
   rpc GetUserByTelegramID(GetUserByTelegramIDRequest) returns (GetUserResponse);
   rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+  rpc MintScopedAccessToken(MintScopedAccessTokenRequest) returns (MintScopedAccessTokenResponse);
 }
 
 message User {
@@ -133,4 +134,17 @@ message ValidateTokenRequest {
 message ValidateTokenResponse {
   string user_id = 1;
   bool valid = 2;
+}
+
+message MintScopedAccessTokenRequest {
+  string role = 1;
+  string scope = 2;
+  string display_name = 3;
+  int32 ttl_seconds = 4;
+}
+
+message MintScopedAccessTokenResponse {
+  string access_token = 1;
+  string user_id = 2;
+  int32 expires_in = 3;
 }

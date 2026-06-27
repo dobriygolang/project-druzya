@@ -23,7 +23,10 @@ func RunAPI(ctx context.Context, a *App) error {
 	}
 
 	impl := identityapi.NewImplementation(a.Service)
-	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(identityapi.AuthInterceptor(a.Service)))
+	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		identityapi.InternalAuthInterceptor(a.Config.InternalAPIToken),
+		identityapi.AuthInterceptor(a.Service),
+	))
 	identityapi.Register(grpcSrv, impl)
 
 	reflection.Register(grpcSrv)

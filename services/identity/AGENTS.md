@@ -121,6 +121,7 @@ Extra HTTP routes (not in gateway): `/healthz`, `/v1/jwt/public.pem`.
 |-----|---------|
 | `GetUser` | fetch user by id (service-to-service) |
 | `ValidateToken` | optional token check via identity |
+| `MintScopedAccessToken` | guest/scoped JWT for live rooms (`scp=editor:{roomId}`) |
 
 ## Commands
 

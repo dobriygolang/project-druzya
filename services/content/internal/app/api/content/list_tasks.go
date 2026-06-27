@@ -22,7 +22,11 @@ func (i *Implementation) ListTasks(ctx context.Context, req *contentv1.ListTasks
 
 	tasks := make([]*contentv1.Task, 0, len(items))
 	for idx := range items {
-		tasks = append(tasks, toProtoTask(&items[idx]))
+		protoTask, err := toProtoTask(&items[idx])
+		if err != nil {
+			return nil, mapServiceError(err)
+		}
+		tasks = append(tasks, protoTask)
 	}
 	return &contentv1.ListTasksResponse{Tasks: tasks}, nil
 }

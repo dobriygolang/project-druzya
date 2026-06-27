@@ -12,11 +12,11 @@ func (s *evaluationService) HandleAttemptSubmitted(ctx context.Context, event ev
 		return fmt.Errorf("attempt_id required: %w", ErrInvalidInput)
 	}
 
-	job, err := s.ensureJobForAttempt(ctx, event.AttemptID, event.UserID, event.TaskID)
+	completed, err := s.runEvaluation.EnsureJob(ctx, event.AttemptID, event.UserID, event.TaskID)
 	if err != nil {
 		return err
 	}
-	if job.Status == evaluationmodel.JobStatusCompleted {
+	if completed {
 		return nil
 	}
 	return s.RunEvaluation(ctx, event.AttemptID)

@@ -34,6 +34,7 @@ type Config struct {
 	FrontendURL            string
 	CORSAllowedOrigins     []string
 	AuthRateLimitPerMinute int
+	InternalAPIToken       string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -76,8 +77,16 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("jwt public key: %w", err)
 	}
 
+	appEnv := getEnv("APP_ENV", "development")
+	internalToken := getEnv("INTERNAL_API_TOKEN", "dev-internal-token")
+	if appEnv == "production" {
+		if os.Getenv("INTERNAL_API_TOKEN") == "" || internalToken == "dev-internal-token" {
+			return nil, fmt.Errorf("INTERNAL_API_TOKEN must be set in production")
+		}
+	}
+
 	return &Config{
-		AppEnv:              getEnv("APP_ENV", "development"),
+		AppEnv:              appEnv,
 		LogLevel:            getEnv("LOG_LEVEL", "info"),
 		HTTPPort:            httpPort,
 		GRPCPort:            grpcPort,
@@ -96,6 +105,7 @@ func Load() (*Config, error) {
 		FrontendURL:            getEnv("FRONTEND_URL", "http://localhost:3000"),
 		CORSAllowedOrigins:     ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 		AuthRateLimitPerMinute: authRateLimit,
+		InternalAPIToken:       internalToken,
 	}, nil
 }
 

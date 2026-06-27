@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
@@ -92,6 +93,48 @@ func (r *Repository) UpdateJob(ctx context.Context, job *evaluationmodel.Evaluat
 		return ErrNotFound
 	}
 	return nil
+}
+
+// ListRetryableAttemptIDs returns attempt IDs of pending jobs whose backoff has elapsed.
+func (r *Repository) ListRetryableAttemptIDs(ctx context.Context, now time.Time, limit int) ([]string, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	rows, err := r.conn(ctx).Query(ctx, `
+		SELECT attempt_id FROM evaluation_jobs
+		WHERE status = 'pending' AND retryable = true
+		  AND next_retry_at IS NOT NULL AND next_retry_at <= $1
+		ORDER BY next_retry_at ASC
+		LIMIT $2
+	`, now.UTC(), limit)
+	if err != nil {
+		return nil, fmt.Errorf("list retryable jobs: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan retryable attempt id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+// ResetStuckRunningJobs moves jobs stuck in 'running' past the threshold back to
+// 'pending' so they can be retried after a crash mid-evaluation.
+func (r *Repository) ResetStuckRunningJobs(ctx context.Context, olderThan time.Time) (int64, error) {
+	tag, err := r.conn(ctx).Exec(ctx, `
+		UPDATE evaluation_jobs
+		SET status = 'pending', next_retry_at = now(), updated_at = now()
+		WHERE status = 'running' AND started_at IS NOT NULL AND started_at < $1
+	`, olderThan.UTC())
+	if err != nil {
+		return 0, fmt.Errorf("reset stuck running jobs: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 func scanJob(row pgx.Row) (*evaluationmodel.EvaluationJob, error) {

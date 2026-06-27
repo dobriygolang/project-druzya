@@ -61,6 +61,7 @@ type sandboxService struct {
 	runner    runner.CodeRunner
 	events    events.Publisher
 	defaults  runDefaults
+	limits    runLimits
 	asyncRuns bool
 }
 
@@ -69,17 +70,24 @@ type runDefaults struct {
 	memoryMB  int
 }
 
+type runLimits struct {
+	maxCodeBytes  int
+	maxStdinBytes int
+}
+
 // Deps holds service dependencies.
 type Deps struct {
-	Repo      *repository.Repository
-	Content   contentadapter.Client
-	Interview interviewadapter.Client
-	Billing   billingadapter.Client
-	Runner    runner.CodeRunner
-	Events    events.Publisher
-	TimeoutMS int
-	MemoryMB  int
-	AsyncRuns bool
+	Repo          *repository.Repository
+	Content       contentadapter.Client
+	Interview     interviewadapter.Client
+	Billing       billingadapter.Client
+	Runner        runner.CodeRunner
+	Events        events.Publisher
+	TimeoutMS     int
+	MemoryMB      int
+	MaxCodeBytes  int
+	MaxStdinBytes int
+	AsyncRuns     bool
 }
 
 // New constructs sandbox service.
@@ -96,6 +104,14 @@ func New(deps Deps) Service {
 	if mem <= 0 {
 		mem = 128
 	}
+	maxCode := deps.MaxCodeBytes
+	if maxCode <= 0 {
+		maxCode = 131072
+	}
+	maxStdin := deps.MaxStdinBytes
+	if maxStdin <= 0 {
+		maxStdin = 65536
+	}
 	return &sandboxService{
 		repo:      deps.Repo,
 		content:   deps.Content,
@@ -104,6 +120,7 @@ func New(deps Deps) Service {
 		runner:    deps.Runner,
 		events:    pub,
 		defaults:  runDefaults{timeoutMS: timeout, memoryMB: mem},
+		limits:    runLimits{maxCodeBytes: maxCode, maxStdinBytes: maxStdin},
 		asyncRuns: deps.AsyncRuns,
 	}
 }
@@ -111,6 +128,12 @@ func New(deps Deps) Service {
 func (s *sandboxService) RunCode(ctx context.Context, input RunCodeInput) (*model.CodeRun, error) {
 	if input.UserID == "" || input.Code == "" {
 		return nil, fmt.Errorf("user_id and code required: %w", ErrInvalidInput)
+	}
+	if len(input.Code) > s.limits.maxCodeBytes {
+		return nil, fmt.Errorf("code exceeds %d bytes: %w", s.limits.maxCodeBytes, ErrInvalidInput)
+	}
+	if len(input.Stdin) > s.limits.maxStdinBytes {
+		return nil, fmt.Errorf("stdin exceeds %d bytes: %w", s.limits.maxStdinBytes, ErrInvalidInput)
 	}
 	lang, err := normalizeLanguage(input.Language)
 	if err != nil {
@@ -276,6 +299,13 @@ func (s *sandboxService) SubmitAttemptFromCodeRun(ctx context.Context, input Sub
 	}
 	if run.SessionTaskID != nil && *run.SessionTaskID != "" && *run.SessionTaskID != input.SessionTaskID {
 		return nil, fmt.Errorf("session_task_id mismatch: %w", ErrInvalidInput)
+	}
+	// Only a successful submit-type run may be turned into an interview attempt.
+	if run.RunType != model.RunTypeSubmit {
+		return nil, fmt.Errorf("only submit runs can be submitted, got %q: %w", run.RunType, ErrInvalidInput)
+	}
+	if run.Status != model.StatusSuccess {
+		return nil, fmt.Errorf("run is not successful (status %q): %w", run.Status, ErrInvalidInput)
 	}
 
 	lang := run.Language

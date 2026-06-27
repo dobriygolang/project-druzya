@@ -96,10 +96,12 @@ func New(ctx context.Context) (*App, error) {
 		Content:   contentClient,
 		Interview: interviewClient,
 		Billing:   billingClient,
-		Runner:    codeRunner,
-		TimeoutMS: cfg.DefaultTimeoutMS,
-		MemoryMB:  cfg.DefaultMemoryMB,
-		AsyncRuns: cfg.AsyncRuns,
+		Runner:        codeRunner,
+		TimeoutMS:     cfg.DefaultTimeoutMS,
+		MemoryMB:      cfg.DefaultMemoryMB,
+		MaxCodeBytes:  cfg.MaxCodeBytes,
+		MaxStdinBytes: cfg.MaxStdinBytes,
+		AsyncRuns:     cfg.AsyncRuns,
 	})
 
 	return &App{

@@ -16,5 +16,9 @@ func (i *Implementation) GetTask(ctx context.Context, req *contentv1.GetTaskRequ
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return &contentv1.GetTaskResponse{Task: toProtoTask(task)}, nil
+	protoTask, err := toProtoTask(task)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	return &contentv1.GetTaskResponse{Task: protoTask}, nil
 }

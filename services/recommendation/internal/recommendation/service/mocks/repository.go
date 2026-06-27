@@ -24,6 +24,64 @@ func (_m *Repository) EXPECT() *Repository_Expecter {
 	return &Repository_Expecter{mock: &_m.Mock}
 }
 
+// ClaimEvent provides a mock function with given fields: ctx, consumer, eventID
+func (_m *Repository) ClaimEvent(ctx context.Context, consumer string, eventID string) (bool, error) {
+	ret := _m.Called(ctx, consumer, eventID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ClaimEvent")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (bool, error)); ok {
+		return rf(ctx, consumer, eventID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) bool); ok {
+		r0 = rf(ctx, consumer, eventID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, consumer, eventID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ClaimEvent_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ClaimEvent'
+type Repository_ClaimEvent_Call struct {
+	*mock.Call
+}
+
+// ClaimEvent is a helper method to define mock.On call
+//   - ctx context.Context
+//   - consumer string
+//   - eventID string
+func (_e *Repository_Expecter) ClaimEvent(ctx interface{}, consumer interface{}, eventID interface{}) *Repository_ClaimEvent_Call {
+	return &Repository_ClaimEvent_Call{Call: _e.mock.On("ClaimEvent", ctx, consumer, eventID)}
+}
+
+func (_c *Repository_ClaimEvent_Call) Run(run func(ctx context.Context, consumer string, eventID string)) *Repository_ClaimEvent_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_ClaimEvent_Call) Return(_a0 bool, _a1 error) *Repository_ClaimEvent_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ClaimEvent_Call) RunAndReturn(run func(context.Context, string, string) (bool, error)) *Repository_ClaimEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateRetryTaskPlanItem provides a mock function with given fields: ctx, item
 func (_m *Repository) CreateRetryTaskPlanItem(ctx context.Context, item model.LearningPlanItem) (*model.LearningPlanItem, error) {
 	ret := _m.Called(ctx, item)
@@ -717,54 +775,6 @@ func (_c *Repository_ListSkillScoresByUser_Call) Return(_a0 []model.SkillScore, 
 }
 
 func (_c *Repository_ListSkillScoresByUser_Call) RunAndReturn(run func(context.Context, string) ([]model.SkillScore, error)) *Repository_ListSkillScoresByUser_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// MarkEventProcessed provides a mock function with given fields: ctx, consumer, eventID
-func (_m *Repository) MarkEventProcessed(ctx context.Context, consumer string, eventID string) error {
-	ret := _m.Called(ctx, consumer, eventID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for MarkEventProcessed")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, consumer, eventID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Repository_MarkEventProcessed_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkEventProcessed'
-type Repository_MarkEventProcessed_Call struct {
-	*mock.Call
-}
-
-// MarkEventProcessed is a helper method to define mock.On call
-//   - ctx context.Context
-//   - consumer string
-//   - eventID string
-func (_e *Repository_Expecter) MarkEventProcessed(ctx interface{}, consumer interface{}, eventID interface{}) *Repository_MarkEventProcessed_Call {
-	return &Repository_MarkEventProcessed_Call{Call: _e.mock.On("MarkEventProcessed", ctx, consumer, eventID)}
-}
-
-func (_c *Repository_MarkEventProcessed_Call) Run(run func(ctx context.Context, consumer string, eventID string)) *Repository_MarkEventProcessed_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *Repository_MarkEventProcessed_Call) Return(_a0 error) *Repository_MarkEventProcessed_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Repository_MarkEventProcessed_Call) RunAndReturn(run func(context.Context, string, string) error) *Repository_MarkEventProcessed_Call {
 	_c.Call.Return(run)
 	return _c
 }

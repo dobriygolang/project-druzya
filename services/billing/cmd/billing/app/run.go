@@ -46,7 +46,7 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
-	identityClient, err := identitygrpc.NewClient(ctx, cfg.IdentityGRPCAddr)
+	identityClient, err := identitygrpc.NewClient(ctx, cfg.IdentityGRPCAddr, cfg.InternalAPIToken)
 	if err != nil {
 		pg.Close()
 		return nil, fmt.Errorf("init identity client: %w", err)

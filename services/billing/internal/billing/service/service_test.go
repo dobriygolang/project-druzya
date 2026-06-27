@@ -24,6 +24,10 @@ type fakeRepo struct {
 	lastSub      *model.Subscription
 }
 
+func (f *fakeRepo) WithTx(ctx context.Context, fn func(ctx context.Context) error) error {
+	return fn(ctx)
+}
+
 func (f *fakeRepo) GetPlanBySlug(_ context.Context, slug string) (*model.Plan, error) {
 	if f.plan != nil && f.plan.Slug == slug {
 		return f.plan, nil

@@ -27,6 +27,10 @@ type Config struct {
 	MaxOutputBytes     int
 	DefaultTimeoutMS   int
 	DefaultMemoryMB    int
+	DefaultCPUs        string
+	MaxCodeBytes       int
+	MaxStdinBytes      int
+	MaxTests           int
 	DockerGoImage      string
 	DockerPythonImage  string
 	DockerNodeImage    string
@@ -72,7 +76,26 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid SANDBOX_WORKER_BATCH_SIZE: %w", err)
 	}
 
+	maxCodeBytes, err := strconv.Atoi(getEnv("SANDBOX_MAX_CODE_BYTES", "131072"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid SANDBOX_MAX_CODE_BYTES: %w", err)
+	}
+	maxStdinBytes, err := strconv.Atoi(getEnv("SANDBOX_MAX_STDIN_BYTES", "65536"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid SANDBOX_MAX_STDIN_BYTES: %w", err)
+	}
+	maxTests, err := strconv.Atoi(getEnv("SANDBOX_MAX_TESTS", "50"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid SANDBOX_MAX_TESTS: %w", err)
+	}
+
+	appEnv := getEnv("APP_ENV", "development")
 	runnerMode := getEnv("RUNNER_MODE", "fake")
+	// Untrusted code must never run on the host in production: only the
+	// container-isolated runner is allowed there.
+	if appEnv == "production" && runnerMode != "docker" {
+		return nil, fmt.Errorf("RUNNER_MODE must be 'docker' in production, got %q", runnerMode)
+	}
 	asyncRuns, err := parseAsyncRuns(getEnv("SANDBOX_ASYNC_RUNS", ""), runnerMode)
 	if err != nil {
 		return nil, err
@@ -84,7 +107,7 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		AppEnv:             getEnv("APP_ENV", "development"),
+		AppEnv:             appEnv,
 		LogLevel:           getEnv("LOG_LEVEL", "info"),
 		HTTPPort:           httpPort,
 		GRPCPort:           grpcPort,
@@ -99,6 +122,10 @@ func Load() (*Config, error) {
 		MaxOutputBytes:     maxOutput,
 		DefaultTimeoutMS:   timeoutMS,
 		DefaultMemoryMB:    memoryMB,
+		DefaultCPUs:        getEnv("SANDBOX_DEFAULT_CPUS", "1.0"),
+		MaxCodeBytes:       maxCodeBytes,
+		MaxStdinBytes:      maxStdinBytes,
+		MaxTests:           maxTests,
 		DockerGoImage:      getEnv("SANDBOX_DOCKER_GO_IMAGE", "golang:1.25-alpine"),
 		DockerPythonImage:  getEnv("SANDBOX_DOCKER_PYTHON_IMAGE", "python:3.12-alpine"),
 		DockerNodeImage:    getEnv("SANDBOX_DOCKER_NODE_IMAGE", "node:22-alpine"),

@@ -45,6 +45,7 @@ type CallRecord struct {
 	PromptTokens     *int
 	CompletionTokens *int
 	TotalTokens      *int
+	CostUSD          *float64
 	LatencyMS        int
 	Error            *string
 }

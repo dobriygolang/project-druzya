@@ -17,6 +17,9 @@ const (
 // ErrNotFound is returned when a catalog entity does not exist.
 var ErrNotFound = catalogrepo.ErrNotFound
 
+// ErrInvalidArgument is returned when required input is missing or malformed.
+var ErrInvalidArgument = errors.New("invalid argument")
+
 // Service is catalog read use cases.
 type Service interface {
 	ListCompanies(ctx context.Context, activeOnly bool, limit, offset int) ([]catalogmodel.Company, error)
@@ -31,12 +34,12 @@ type Service interface {
 }
 
 type catalogService struct {
-	repo *catalogrepo.Repository
+	repo Store
 }
 
 // Deps holds catalog service dependencies.
 type Deps struct {
-	Repo *catalogrepo.Repository
+	Repo Store
 }
 
 // New constructs a catalog service.
@@ -77,7 +80,7 @@ func (s *catalogService) GetCompany(ctx context.Context, id, slug string) (*cata
 	case slug != "":
 		return s.repo.GetCompanyBySlug(ctx, slug)
 	default:
-		return nil, fmt.Errorf("id or slug is required: %w", ErrNotFound)
+		return nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
 	}
 }
 
@@ -106,7 +109,7 @@ func (s *catalogService) GetInterviewTemplateDetail(ctx context.Context, id, slu
 	case slug != "":
 		template, err = s.repo.GetInterviewTemplateBySlug(ctx, slug)
 	default:
-		return nil, fmt.Errorf("id or slug is required: %w", ErrNotFound)
+		return nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
 	}
 	if err != nil {
 		return nil, err
@@ -144,13 +147,13 @@ func (s *catalogService) GetTask(ctx context.Context, id, slug string) (*catalog
 	case slug != "":
 		return s.repo.GetTaskBySlug(ctx, slug)
 	default:
-		return nil, fmt.Errorf("id or slug is required: %w", ErrNotFound)
+		return nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
 	}
 }
 
 func (s *catalogService) GetTaskBundle(ctx context.Context, taskID string) (*catalogmodel.TaskBundle, error) {
 	if taskID == "" {
-		return nil, fmt.Errorf("task_id is required: %w", ErrNotFound)
+		return nil, fmt.Errorf("task_id is required: %w", ErrInvalidArgument)
 	}
 
 	task, err := s.repo.GetTaskByID(ctx, taskID)
@@ -183,7 +186,7 @@ func (s *catalogService) GetTaskBundle(ctx context.Context, taskID string) (*cat
 
 func (s *catalogService) GetRubric(ctx context.Context, rubricID string) (*catalogmodel.Rubric, []catalogmodel.RubricCriterion, error) {
 	if rubricID == "" {
-		return nil, nil, fmt.Errorf("rubric_id is required: %w", ErrNotFound)
+		return nil, nil, fmt.Errorf("rubric_id is required: %w", ErrInvalidArgument)
 	}
 
 	rubric, err := s.repo.GetRubricByID(ctx, rubricID)
@@ -202,4 +205,9 @@ func (s *catalogService) GetRubric(ctx context.Context, rubricID string) (*catal
 // IsNotFound reports whether err is a catalog not-found error.
 func IsNotFound(err error) bool {
 	return errors.Is(err, ErrNotFound)
+}
+
+// IsInvalidArgument reports whether err is a catalog invalid-argument error.
+func IsInvalidArgument(err error) bool {
+	return errors.Is(err, ErrInvalidArgument)
 }

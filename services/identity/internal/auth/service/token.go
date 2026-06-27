@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	identityjwt "github.com/sedorofeevd/project-druzya/services/identity/pkg/jwt"
 )
 
 const tokenKeyID = "v1"
@@ -76,6 +77,32 @@ func (m *TokenManager) IssueAccessToken(userID string) (string, error) {
 		return "", fmt.Errorf("sign access token: %w", err)
 	}
 	return signed, nil
+}
+
+// IssueScopedAccessToken mints a short-lived JWT bound to a resource scope.
+// Used for guest room access: role=guest, scp=editor:{roomID}.
+func (m *TokenManager) IssueScopedAccessToken(userID, role, scope, displayName string, ttl time.Duration) (string, error) {
+	if userID == "" || scope == "" {
+		return "", errors.New("user id and scope are required")
+	}
+	now := time.Now().UTC()
+	if ttl <= 0 {
+		ttl = m.accessTTL
+	}
+	claims := jwt.MapClaims{
+		"sub": userID,
+		"iat": now.Unix(),
+		"exp": now.Add(ttl).Unix(),
+		identityjwt.ClaimRole:  role,
+		identityjwt.ClaimScope: scope,
+	}
+	if displayName != "" {
+		claims[identityjwt.ClaimDisplayName] = displayName
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+	token.Header["kid"] = tokenKeyID
+	return token.SignedString(m.privateKey)
 }
 
 // ValidateAccessToken verifies JWT and returns the subject user ID.

@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -15,14 +14,16 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/entitlement"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/model"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/repository"
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/consume_usage"
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/grant_subscription"
 )
 
 var (
-	ErrInvalidInput   = errors.New("invalid input")
+	ErrInvalidInput   = model.ErrInvalidInput
 	ErrLimitExceeded  = repository.ErrLimitExceeded
 	ErrNotFound       = repository.ErrNotFound
-	ErrUnknownUser    = errors.New("unknown user")
-	ErrDuplicateEvent = errors.New("duplicate provider event")
+	ErrUnknownUser    = model.ErrUnknownUser
+	ErrDuplicateEvent = model.ErrDuplicateEvent
 )
 
 // Service is billing domain logic.
@@ -43,6 +44,11 @@ type billingService struct {
 	tierToPlan   map[string]string
 	events       events.Publisher
 	now          func() time.Time
+
+	// CQRS usecase handlers. Reads + webhook stay in the service; the two clear
+	// write commands delegate here.
+	consumeUsage      *consume_usage.Handler
+	grantSubscription *grant_subscription.Handler
 }
 
 // Deps holds service dependencies.
@@ -66,7 +72,7 @@ func New(deps Deps) Service {
 			providerMap[p.ProviderName()] = p
 		}
 	}
-	return &billingService{
+	svc := &billingService{
 		repo:       deps.Repo,
 		identity:   deps.Identity,
 		providers:  providerMap,
@@ -74,6 +80,10 @@ func New(deps Deps) Service {
 		events:     pub,
 		now:        time.Now,
 	}
+	svc.grantSubscription = grant_subscription.New(deps.Repo, pub)
+	// consume_usage borrows the service's shared plan resolution via PlanResolver.
+	svc.consumeUsage = consume_usage.New(deps.Repo, svc, pub)
+	return svc
 }
 
 func (s *billingService) GetCurrentPlan(ctx context.Context, userID string) (*model.Plan, error) {
@@ -151,96 +161,21 @@ func (s *billingService) CheckEntitlement(ctx context.Context, userID, key strin
 	return &model.CheckEntitlementResult{Allowed: false, Value: false, Reason: "unknown_entitlement"}, nil
 }
 
+// CheckAndConsumeUsage delegates to the consume_usage CQRS command handler.
 func (s *billingService) CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) (*model.ConsumeUsageResult, error) {
-	if userID == "" || key == "" {
-		return nil, fmt.Errorf("user_id and key required: %w", ErrInvalidInput)
-	}
-	if amount <= 0 {
-		amount = 1
-	}
-	key = normalizeUsageKey(key)
-
-	plan, _, err := s.resolvePlan(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	ent, err := s.findEntitlement(ctx, plan.ID, key)
-	if err != nil {
-		return nil, err
-	}
-	val, err := entitlement.Parse(ent.ValueJSON)
-	if err != nil {
-		return nil, err
-	}
-	if val.Type != entitlement.TypeCounter {
-		return &model.ConsumeUsageResult{Allowed: false, Reason: "not_a_usage_entitlement"}, nil
-	}
-	start, end, err := entitlement.PeriodWindow(val.Period, s.now())
-	if err != nil {
-		return nil, err
-	}
-	if val.Limit == nil {
-		used, err := s.repo.ConsumeUsageUnlimited(ctx, userID, key, start, end, amount)
-		if err != nil {
-			return nil, err
-		}
-		_ = s.events.UsageConsumed(ctx, userID, key, used)
-		return &model.ConsumeUsageResult{Allowed: true, Used: used, Remaining: nil, Limit: nil}, nil
-	}
-
-	used, err := s.repo.ConsumeUsage(ctx, userID, key, start, end, amount, *val.Limit)
-	if errors.Is(err, ErrLimitExceeded) {
-		current, _ := s.repo.GetUsage(ctx, userID, key, start, end)
-		remaining := entitlement.Remaining(val.Limit, current)
-		return &model.ConsumeUsageResult{
-			Allowed:   false,
-			Used:      current,
-			Remaining: remaining,
-			Limit:     val.Limit,
-			Reason:    "limit_exceeded",
-		}, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	_ = s.events.UsageConsumed(ctx, userID, key, used)
-	remaining := entitlement.Remaining(val.Limit, used)
-	return &model.ConsumeUsageResult{
-		Allowed:   true,
-		Used:      used,
-		Remaining: remaining,
-		Limit:     val.Limit,
-	}, nil
+	return s.consumeUsage.Handle(ctx, consume_usage.Command{UserID: userID, Key: key, Amount: amount})
 }
 
+// GrantSubscription delegates to the grant_subscription CQRS command handler.
 func (s *billingService) GrantSubscription(ctx context.Context, userID, planSlug string, periodEnd *time.Time) (*model.Subscription, error) {
-	if userID == "" || planSlug == "" {
-		return nil, fmt.Errorf("user_id and plan_slug required: %w", ErrInvalidInput)
-	}
-	plan, err := s.repo.GetPlanBySlug(ctx, planSlug)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.repo.CancelActiveSubscriptions(ctx, userID); err != nil {
-		return nil, err
-	}
-	now := s.now().UTC()
-	sub := &model.Subscription{
-		ID:                 uuid.NewString(),
-		UserID:             userID,
-		PlanID:             plan.ID,
-		PlanSlug:           plan.Slug,
-		Provider:           model.ProviderInternal,
-		Status:             model.SubStatusActive,
-		CurrentPeriodStart: &now,
-		CurrentPeriodEnd:   periodEnd,
-		Metadata:           json.RawMessage(`{}`),
-	}
-	if err := s.repo.UpsertSubscription(ctx, sub); err != nil {
-		return nil, err
-	}
-	_ = s.events.SubscriptionCreated(ctx, sub)
-	return sub, nil
+	return s.grantSubscription.Handle(ctx, grant_subscription.Command{UserID: userID, PlanSlug: planSlug, PeriodEnd: periodEnd})
+}
+
+// ResolvePlan satisfies consume_usage.PlanResolver, keeping plan-resolution
+// rules shared with the read paths (GetEntitlements/GetCurrentPlan).
+func (s *billingService) ResolvePlan(ctx context.Context, userID string) (*model.Plan, error) {
+	plan, _, err := s.resolvePlan(ctx, userID)
+	return plan, err
 }
 
 func (s *billingService) RevokeSubscription(ctx context.Context, userID string) error {
@@ -266,17 +201,9 @@ func (s *billingService) HandleProviderWebhook(ctx context.Context, providerName
 	if err != nil {
 		return err
 	}
-	first, err := s.repo.MarkProviderEventProcessed(ctx, event.Provider, event.ProviderEventID, event.EventType, event.RawPayload)
-	if err != nil {
-		return err
-	}
-	if !first {
-		return ErrDuplicateEvent
-	}
-	return s.applyProviderEvent(ctx, event)
-}
 
-func (s *billingService) applyProviderEvent(ctx context.Context, event providers.Event) error {
+	// Resolve the user before opening the transaction: the identity lookup is a
+	// read-only external call and must not hold a DB transaction open.
 	if s.identity == nil {
 		return fmt.Errorf("identity client not configured")
 	}
@@ -289,21 +216,38 @@ func (s *billingService) applyProviderEvent(ctx context.Context, event providers
 		return fmt.Errorf("%w: %v", ErrUnknownUser, err)
 	}
 
+	// Mark-processed and apply run in one transaction. If apply fails, the
+	// provider_events row is rolled back too, so redelivery can retry safely.
+	return s.repo.WithTx(ctx, func(ctx context.Context) error {
+		first, err := s.repo.MarkProviderEventProcessed(ctx, event.Provider, event.ProviderEventID, event.EventType, event.RawPayload)
+		if err != nil {
+			return err
+		}
+		if !first {
+			return ErrDuplicateEvent
+		}
+		return s.applyProviderEvent(ctx, user.ID, event)
+	})
+}
+
+func (s *billingService) applyProviderEvent(ctx context.Context, userID string, event providers.Event) error {
 	username := optionalString(event.ProviderUsername)
-	_ = s.repo.UpsertProviderAccount(ctx, &model.ProviderAccount{
+	if err := s.repo.UpsertProviderAccount(ctx, &model.ProviderAccount{
 		ID:               uuid.NewString(),
-		UserID:           user.ID,
+		UserID:           userID,
 		Provider:         event.Provider,
 		ProviderUserID:   event.ProviderUserID,
 		ProviderUsername: username,
 		Metadata:         event.RawPayload,
-	})
+	}); err != nil {
+		return fmt.Errorf("upsert provider account: %w", err)
+	}
 
 	switch event.EventType {
 	case providers.EventSubscriptionCreated, providers.EventSubscriptionRenewed, providers.EventPaymentSucceeded:
-		return s.activateProviderSubscription(ctx, user.ID, event)
+		return s.activateProviderSubscription(ctx, userID, event)
 	case providers.EventSubscriptionCancelled, providers.EventSubscriptionExpired, providers.EventPaymentFailed:
-		return s.cancelProviderSubscription(ctx, user.ID, event)
+		return s.cancelProviderSubscription(ctx, userID, event)
 	default:
 		return fmt.Errorf("unsupported event type %q", event.EventType)
 	}

@@ -21,27 +21,27 @@ func (s *stubBilling) CheckAndConsumeUsage(context.Context, string, string, int)
 	return s.usageErr
 }
 
-func TestGateSessionStartCompanyRequiresEntitlement(t *testing.T) {
+func TestCheckSessionEntitlementCompanyRequiresEntitlement(t *testing.T) {
 	t.Parallel()
 	svc := New(Deps{
 		Repo:    nil,
 		Billing: &stubBilling{entitlementErr: billingadapter.ErrFeatureDisabled},
 	}).(*interviewService)
 
-	err := svc.gateSessionStart(context.Background(), "user-1", interviewmodel.ModeCompanyInterview)
+	err := svc.checkSessionEntitlement(context.Background(), "user-1", interviewmodel.ModeCompanyInterview)
 	if err != ErrFeatureDisabled {
 		t.Fatalf("expected feature disabled, got %v", err)
 	}
 }
 
-func TestGateSessionStartConsumesUsage(t *testing.T) {
+func TestConsumeSessionQuotaRejectsOverLimit(t *testing.T) {
 	t.Parallel()
 	svc := New(Deps{
 		Repo:    nil,
 		Billing: &stubBilling{usageErr: billingadapter.ErrQuotaExceeded},
 	}).(*interviewService)
 
-	err := svc.gateSessionStart(context.Background(), "user-1", interviewmodel.ModeAlgorithmsTraining)
+	err := svc.consumeSessionQuota(context.Background(), "user-1")
 	if err != ErrQuotaExceeded {
 		t.Fatalf("expected quota exceeded, got %v", err)
 	}

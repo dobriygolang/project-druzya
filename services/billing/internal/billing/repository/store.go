@@ -10,6 +10,7 @@ import (
 
 // Store is the persistence port used by billing domain logic.
 type Store interface {
+	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 	GetPlanBySlug(ctx context.Context, slug string) (*model.Plan, error)
 	GetPlanByID(ctx context.Context, id string) (*model.Plan, error)
 	ListPlanEntitlements(ctx context.Context, planID string) ([]model.PlanEntitlement, error)

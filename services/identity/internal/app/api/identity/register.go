@@ -1,6 +1,7 @@
 package identityapi
 
 import (
+	authservice "github.com/sedorofeevd/project-druzya/services/identity/internal/auth/service"
 	identityv1 "github.com/sedorofeevd/project-druzya/services/identity/pkg/api/identity/v1"
 	"google.golang.org/grpc"
 )
@@ -11,7 +12,7 @@ func Register(s *grpc.Server, impl *Implementation) {
 }
 
 // NewRegisteredImplementation constructs handlers and registers them on the gRPC server.
-func NewRegisteredImplementation(s *grpc.Server, svc Service) *Implementation {
+func NewRegisteredImplementation(s *grpc.Server, svc authservice.Service) *Implementation {
 	impl := NewImplementation(svc)
 	Register(s, impl)
 	return impl

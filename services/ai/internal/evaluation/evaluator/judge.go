@@ -267,6 +267,12 @@ func callRecordFromResponse(phase string, resp llmchain.Response, start time.Tim
 		v := resp.TokensIn + resp.TokensOut
 		call.TotalTokens = &v
 	}
+	if resp.Model != "" && resp.TokensIn+resp.TokensOut > 0 {
+		cost := llmchain.EstimateCostUSD(resp.Model, resp.TokensIn, resp.TokensOut)
+		if cost > 0 {
+			call.CostUSD = &cost
+		}
+	}
 	if err != nil {
 		msg := err.Error()
 		call.Error = &msg

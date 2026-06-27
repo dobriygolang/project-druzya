@@ -37,7 +37,7 @@ make gen-proto && make tidy && make lint && make build
 
 On Linux drop `''` after `-i` in `sed`.
 
-## Layout (canonical)
+## Layout (canonical — target CQRS/DDD shape)
 
 ```
 cmd/template/
@@ -45,15 +45,22 @@ api/template/v1/template.proto
 pkg/api/                    — generated
 pkg/client/
 internal/example/           — rename to your bounded context
-  model/
-  repository/
-  service/                  — Service interface
-internal/app/api/template/  — transport, one RPC per file
+  model/                    — entities + errors.go (domain sentinels)
+  repository/               — Postgres + store.go (Store port, satisfied by Repository)
+  service/                  — thin Service: simple reads inline, rich ops delegate to usecase
+  usecase/
+    query/get_item/         — Query+Validate, Handler(New+Handle), mocks/  (READ exemplar)
+    command/<op>/           — Command+Validate, Handler(New+Handle), mocks/ (WRITE pattern)
+internal/app/api/template/  — transport, one RPC per file, proto<->domain + error mapping
 internal/config/
 internal/tools/
 scripts/migrations/
 scripts/dev/docker-compose.yml
 ```
+
+See `.cursor/rules/architecture-standard.mdc` for the full standard. The
+`get_item` query here and `services/interview/.../usecase/command/submit_attempt/`
+are the copy-paste exemplars for new read/write operations.
 
 ## Example API
 

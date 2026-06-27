@@ -1,0 +1,64 @@
+---
+description: Target service architecture (CQRS + DDD + Clean Architecture) for all services
+alwaysApply: true
+---
+
+# project-druzya — service architecture standard
+
+All services target the same layered shape, modelled on the reference service
+`search-performance`. New services start from `services/template/`.
+
+## Layering
+
+```
+client → internal/app/api/<name>/        transport: 1 RPC = 1 file, proto<->domain mapping, error mapping
+       → internal/<domain>/service/        thin orchestrator: Service interface, wires usecase handlers
+       → internal/<domain>/usecase/command/<op>/   write op:  command.go (Command+Validate) + handler.go (New+Handle) + mocks/
+         internal/<domain>/usecase/query/<op>/     read op:   query.go   (Query+Validate)   + handler.go (New+Handle) + mocks/
+       → internal/<domain>/repository/      concrete Postgres/Redis behind a Store/port interface
+       | internal/adapter/<vendor>/         external gRPC/HTTP clients (one per vendor) + mocks/
+```
+
+Per-domain folders: `model/` (+ `errors.go` sentinels), `repository/` (+ `store.go` port),
+`service/`, `usecase/{command,query}/`. Add `dto/`, `enum/`, `converter/` when mapping
+or typing grows. Cross-cutting: `internal/config/`, `internal/tools/`, background workers
+under `internal/<worker>/` or `internal/services/`.
+
+## Reference exemplars (copy these shapes)
+
+- Query: `services/template/internal/example/usecase/query/get_item/`
+- Command: `services/interview/internal/interview/usecase/command/submit_attempt/`
+- Repository port: `services/billing/internal/billing/repository/store.go`
+
+## Conventions
+
+- **Consumer-side interfaces**: declare the narrow interface a handler needs in the
+  handler package; the concrete repo/adapter satisfies it. Never depend on a concrete
+  `*Repository` from the service/usecase layer.
+- **Mocks**: `//go:generate go run github.com/vektra/mockery/v2@... --case=underscore --with-expecter`
+  on each port; run `go generate ./...` after changing an interface.
+- **Validation**: each `Command`/`Query` has a `Validate()`; missing/bad input wraps a
+  sentinel (`ErrInvalidArgument`/`ErrInvalidInput`), mapped to gRPC `InvalidArgument`.
+- **Errors**: wrap with `%w`; domain sentinels live in `model/errors.go` (shared by
+  service + usecase to avoid import cycles); transport `mapServiceError` maps them to codes.
+- **Transactions**: multi-write operations use the repository `WithTx(ctx, fn)` +
+  context-aware connection (`conn(ctx)`); idempotency guards (outbox/processed_events)
+  run inside the transaction (INSERT ... ON CONFLICT DO NOTHING RETURNING).
+- **Quotas / external side effects**: gate (no consume) before work; consume after the
+  durable write succeeds; compensate on later failure.
+- **One RPC per transport file**; thin handlers (validate → call service → map error).
+- English code/logs/comments; user commits manually; minimal diffs.
+
+## Migration posture
+
+Don't big-bang. Per service: fix correctness first, then add repository ports + mocks
++ tests, then extract the highest-complexity operations into `usecase/` packages.
+Keep trivial CRUD reads inline — don't over-engineer.
+
+## Build / verify (per service, from its root)
+
+```bash
+cd services/<name>
+GOPROXY=https://proxy.golang.org,direct GOWORK=off go build ./...
+GOPROXY=https://proxy.golang.org,direct GOWORK=off go test ./...
+```

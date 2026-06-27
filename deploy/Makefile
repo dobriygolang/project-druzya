@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose -f docker-compose.prod.yml --env-file .env
 
-.PHONY: help keys build up down logs migrate ps monitoring backup
+.PHONY: help keys build web-build up down logs migrate ps monitoring backup
 
 help: ## Show deploy commands
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -9,7 +9,12 @@ help: ## Show deploy commands
 keys: ## Generate JWT RS256 keys in secrets/jwt/
 	@./scripts/gen-jwt-keys.sh
 
-build: ## Build all prod images
+web-build: ## Build apps/web into deploy/static (local preview without Docker)
+	cd ../apps/web && npm ci && npm run build
+	rm -rf static/*
+	cp -r ../apps/web/dist/* static/
+
+build: ## Build all prod images (includes SPA in caddy image)
 	$(COMPOSE) build
 
 up: keys ## Start full prod stack (generates JWT keys if missing)

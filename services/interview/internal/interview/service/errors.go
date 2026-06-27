@@ -3,6 +3,7 @@ package service
 import (
 	"errors"
 
+	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
 	interviewrepo "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/repository"
 )
 
@@ -12,8 +13,8 @@ var (
 	ErrConflict                = interviewrepo.ErrConflict
 	ErrRetryItemsUnavailable   = interviewrepo.ErrRetryItemsUnavailable
 	ErrForbidden               = errors.New("forbidden")
-	ErrInvalidInput            = errors.New("invalid input")
-	ErrSessionClosed           = errors.New("session closed")
+	ErrInvalidInput            = interviewmodel.ErrInvalidInput
+	ErrSessionClosed           = interviewmodel.ErrSessionClosed
 	ErrQuotaExceeded           = errors.New("quota exceeded")
 	ErrFeatureDisabled         = errors.New("feature disabled")
 )

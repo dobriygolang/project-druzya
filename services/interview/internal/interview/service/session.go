@@ -4,7 +4,6 @@ import (
 	"context"
 	cryptorand "crypto/rand"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	mathrand "math/rand/v2"
 	"time"
@@ -31,7 +30,9 @@ func (s *interviewService) StartInterviewSession(
 	if mode == interviewmodel.ModeRetryMistakes {
 		return nil, fmt.Errorf("use StartRetrySession for retry_mistakes: %w", ErrInvalidInput)
 	}
-	if err := s.gateSessionStart(ctx, userID, mode); err != nil {
+	// Feature gate first (no side effects). Quota is consumed only after the
+	// session is created so failures never burn quota.
+	if err := s.checkSessionEntitlement(ctx, userID, mode); err != nil {
 		return nil, err
 	}
 
@@ -82,6 +83,15 @@ func (s *interviewService) StartInterviewSession(
 		Sections: sections,
 		Tasks:    tasks,
 	}); err != nil {
+		return nil, err
+	}
+
+	// Consume quota after the session exists. If the user is over quota, cancel
+	// the just-created session so it does not occupy the single active slot.
+	if err := s.consumeSessionQuota(ctx, userID); err != nil {
+		session.Status = interviewmodel.SessionStatusCancelled
+		session.UpdatedAt = time.Now().UTC()
+		_ = s.repo.UpdateSession(ctx, &session)
 		return nil, err
 	}
 
@@ -260,12 +270,4 @@ func shuffleTasks(tasks []contentadapter.Task) {
 	rng.Shuffle(len(tasks), func(i, j int) {
 		tasks[i], tasks[j] = tasks[j], tasks[i]
 	})
-}
-
-func encodeAttachments(items []interviewmodel.Attachment) json.RawMessage {
-	if len(items) == 0 {
-		return json.RawMessage("[]")
-	}
-	b, _ := json.Marshal(items)
-	return b
 }

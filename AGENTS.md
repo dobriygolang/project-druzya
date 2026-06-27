@@ -16,6 +16,7 @@ When working on a service, **open only that service folder** and read its local 
 | recommendation | [services/recommendation/AGENTS.md](services/recommendation/AGENTS.md) | skill profiles, outbox consumer |
 | billing | [services/billing/AGENTS.md](services/billing/AGENTS.md) | usage quotas, plan limits |
 | sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | code execution runs (MVP) |
+| **rooms** | [services/rooms/AGENTS.md](services/rooms/AGENTS.md) | live coding collab, WS + Yjs |
 
 Prod deploy: [deploy/PROD_PLAN.md](deploy/PROD_PLAN.md)
 
@@ -26,6 +27,14 @@ Root `go.work` is optional. Services build with `GOWORK=off`.
 ## Service template (canonical)
 
 Pattern from **search-performance** + **identity** + **content**. **Start new services by copying `services/template/`.**
+
+> **Target architecture (CQRS + DDD + Clean Architecture):** see
+> [.cursor/rules/architecture-standard.mdc](.cursor/rules/architecture-standard.mdc).
+> Per domain add `usecase/{command,query}/<op>/` packages (each = `command|query.go`
+> with `Validate()` + `handler.go` with `New`/`Handle` + `mocks/`) and a `repository/store.go`
+> port. Reference exemplars: `services/template/internal/example/usecase/query/get_item/`
+> (read) and `services/interview/internal/interview/usecase/command/submit_attempt/` (write).
+> The directory tree below is the minimal skeleton; grow it toward the standard as a service matures.
 
 ### Directory tree
 
@@ -128,6 +137,7 @@ func NewRegisteredImplementation(s *grpc.Server, svc exampleservice.Service) *Im
 | recommendation | 8084 | 9094 | 5436 | druzya_recommendation |
 | billing | 8085 | 9095 | 5438 | druzya_billing |
 | sandbox | 8086 | 9096 | 5439 | druzya_sandbox |
+| **rooms** | **8087** | **9097** | **5440** | **druzya_rooms** |
 | template | 8099 | 9199 | 5439 | druzya_template |
 
 Pick unused ports for each new service. Update `Makefile`, `config.go`, `docker-compose.yml`.
