@@ -1,4 +1,5 @@
 .git
+deploy/.proto-bin
 **/.bin
 **/node_modules
 **/scripts/dev/jwt

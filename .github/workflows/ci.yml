@@ -24,16 +24,22 @@ jobs:
           go-version: "1.25.x"
           cache-dependency-path: services/${{ matrix.service }}/go.sum
 
+      - uses: bufbuild/buf-setup-action@v1.50.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          version: "1.47.0"
+
+      - name: Cache protoc plugins
+        uses: actions/cache@v4
+        with:
+          path: deploy/.proto-bin
+          key: proto-plugins-v1-${{ runner.os }}-${{ hashFiles('deploy/scripts/install-proto-tools.sh') }}
+
       - name: Generate protobuf (all services)
         shell: bash
         env:
           GOPROXY: https://proxy.golang.org,direct
-        run: |
-          set -euo pipefail
-          for svc in identity content interview ai recommendation billing sandbox rooms; do
-            echo "gen-proto: $svc"
-            (cd "$GITHUB_WORKSPACE/services/$svc" && make gen-proto)
-          done
+        run: bash deploy/scripts/gen-all-proto.sh
 
       - name: Lint
         uses: golangci/golangci-lint-action@v7

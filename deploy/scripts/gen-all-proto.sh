@@ -3,12 +3,17 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+BIN_DIR="$ROOT/deploy/.proto-bin"
 SERVICES=(identity content interview ai recommendation billing sandbox rooms)
+
+# shellcheck source=/dev/null
+source "$ROOT/deploy/scripts/install-proto-tools.sh"
+export PATH="$BIN_DIR:$PATH"
 
 gen_one() {
   local svc="$1"
-  echo "gen-proto: $svc"
-  (cd "$ROOT/services/$svc" && GOWORK=off make gen-proto)
+  echo "buf generate: $svc"
+  (cd "$ROOT/services/$svc" && buf generate)
 }
 
 pids=()
