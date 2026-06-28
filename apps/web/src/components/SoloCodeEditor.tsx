@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react'
 import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { cmLanguageExt } from '@/lib/codemirror/langExtension'
+import { cmLanguageExt, normalizeEditorLang } from '@/lib/codemirror/langExtension'
 import { editorAssistExtensions } from '@/lib/codemirror/editorAssist'
 import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
+import { goLspEnabled } from '@/lib/codemirror/lsp/goLspTransport'
+import { createGoLspExtension } from '@/lib/codemirror/lsp/goLsp'
 
 type Props = {
   value: string
@@ -30,6 +32,8 @@ export function SoloCodeEditor({
   const mountRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const readOnlyCompartment = useRef(new Compartment())
+  const lspCompartment = useRef(new Compartment())
+  const languageCompartment = useRef(new Compartment())
   const onChangeRef = useRef(onChange)
   const onRunRef = useRef(onRun)
   const onFormatRef = useRef(onFormat)
@@ -42,15 +46,18 @@ export function SoloCodeEditor({
     const mount = mountRef.current
     if (!mount) return
 
+    const useLsp = goLspEnabled() && normalizeEditorLang(language) === 'go'
+
     const state = EditorState.create({
       doc: value,
       extensions: [
         lineNumbers(),
         history(),
         keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
-        cmLanguageExt(language),
+        languageCompartment.current.of(cmLanguageExt(language)),
         editorAssistExtensions,
         ...vscodeEditorExtensions,
+        lspCompartment.current.of([]),
         readOnlyCompartment.current.of(EditorView.editable.of(!readOnly)),
         EditorView.updateListener.of((u) => {
           if (!u.docChanged || syncingRef.current) return
@@ -61,7 +68,25 @@ export function SoloCodeEditor({
     const view = new EditorView({ state, parent: mount })
     viewRef.current = view
 
+    let lspDispose: (() => void) | undefined
+    if (useLsp) {
+      void createGoLspExtension().then((lsp) => {
+        if (!lsp || !viewRef.current) {
+          lsp?.dispose()
+          return
+        }
+        lspDispose = lsp.dispose
+        viewRef.current.dispatch({
+          effects: [
+            languageCompartment.current.reconfigure(cmLanguageExt(language, { lsp: true })),
+            lspCompartment.current.reconfigure(lsp.extension),
+          ],
+        })
+      })
+    }
+
     return () => {
+      lspDispose?.()
       view.destroy()
       viewRef.current = null
     }

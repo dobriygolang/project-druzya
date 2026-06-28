@@ -8,6 +8,7 @@ import (
 	"time"
 
 	sandboxapi "github.com/sedorofeevd/project-druzya/services/sandbox/internal/app/api/sandbox"
+	lspws "github.com/sedorofeevd/project-druzya/services/sandbox/internal/lsp/ws"
 	"github.com/sedorofeevd/project-druzya/services/sandbox/internal/tools/ops"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -43,6 +44,9 @@ func RunAPI(ctx context.Context, a *App) error {
 		func(ctx context.Context) error { return a.InterviewConn.Ping(ctx) },
 	))
 	httpMux.Handle("/metrics", ops.MetricsHandler())
+
+	lspHandler := lspws.NewHandler(a.JWT, a.Config.DockerWorkRoot, a.Config.GoplsPath, nil)
+	httpMux.Handle("GET /ws/lsp/go", lspHandler)
 
 	if err := sandboxapi.RegisterGateway(ctx, httpMux, dialAddr); err != nil {
 		grpcSrv.Stop()

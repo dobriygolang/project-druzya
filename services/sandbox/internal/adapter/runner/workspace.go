@@ -20,5 +20,14 @@ func isGoLanguage(language string) bool {
 }
 
 func prepareGoWorkspace(dir string) error {
+	return PrepareGoWorkspace(dir)
+}
+
+// PrepareGoWorkspace writes sandbox go.mod for isolated Go workspaces (runs, LSP).
+func PrepareGoWorkspace(dir string) error {
+	return writeGoMod(dir)
+}
+
+func writeGoMod(dir string) error {
 	return os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goModContents), 0o600)
 }

@@ -36,6 +36,7 @@ type Config struct {
 	DockerNodeImage    string
 	DockerWorkRoot     string
 	DockerGoCacheDir   string
+	GoplsPath          string
 	CORSAllowedOrigins []string
 	AsyncRuns          bool
 	WorkerInterval     time.Duration
@@ -133,6 +134,7 @@ func Load() (*Config, error) {
 		DockerNodeImage:    getEnv("SANDBOX_DOCKER_NODE_IMAGE", "node:22-alpine"),
 		DockerWorkRoot:     getEnv("SANDBOX_DOCKER_WORK_ROOT", ""),
 		DockerGoCacheDir:   dockerGoCacheDir(getEnv("SANDBOX_DOCKER_WORK_ROOT", ""), getEnv("SANDBOX_DOCKER_GOCACHE_DIR", "")),
+		GoplsPath:          getEnv("SANDBOX_GOPLS_PATH", "gopls"),
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 		AsyncRuns:          asyncRuns,
 		WorkerInterval:     time.Duration(workerIntervalMS) * time.Millisecond,

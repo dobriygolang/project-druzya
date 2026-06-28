@@ -29,6 +29,8 @@ function baseLanguageExt(language: string): Extension {
   }
 }
 
-export function cmLanguageExt(language: string): Extension {
-  return [baseLanguageExt(language), smartCompletionFor(language)]
+export function cmLanguageExt(language: string, opts?: { lsp?: boolean }): Extension {
+  const base = baseLanguageExt(language)
+  if (opts?.lsp) return base
+  return [base, smartCompletionFor(language)]
 }

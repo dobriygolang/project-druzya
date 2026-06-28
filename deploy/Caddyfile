@@ -52,6 +52,9 @@
 }
 
 (api_ws) {
+	handle /ws/lsp/* {
+		reverse_proxy sandbox:8086
+	}
 	handle /ws/* {
 		reverse_proxy rooms:8087
 	}

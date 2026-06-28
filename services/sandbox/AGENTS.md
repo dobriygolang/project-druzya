@@ -28,6 +28,10 @@ Isolated code execution for live-coding tasks. Users run Go/Python/JavaScript ag
 | GetCodeRun | `GET /v1/sandbox/code-runs/{id}` | Bearer JWT |
 | ListCodeRuns | `GET /v1/sandbox/code-runs` | Bearer JWT |
 | SubmitAttemptFromCodeRun | `POST /v1/sandbox/code-runs/{id}/submit-attempt` | Bearer JWT |
+| FormatCode | `POST /v1/sandbox/format` | Bearer JWT |
+| Go LSP (gopls) | `GET /ws/lsp/go?token=JWT` | JWT query param |
+
+WebSocket `/ws/lsp/go` proxies JSON-RPC to per-session `gopls` (`SANDBOX_GOPLS_PATH`, default `gopls`).
 
 ## Run types
 
