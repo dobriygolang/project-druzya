@@ -4,6 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN_DIR="${PROTO_BIN_DIR:-$ROOT/deploy/.proto-bin}"
+# Tool installs need a module; repo root has go.work only (GOWORK=off has no go.mod).
+TOOL_MOD_DIR="$ROOT/services/identity"
 
 mkdir -p "$BIN_DIR"
 export GOWORK=off
@@ -20,20 +22,23 @@ done
 
 if [ "$need_plugins" -eq 1 ]; then
   echo "install-proto-tools: installing protoc plugins into $BIN_DIR"
-  go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11 &
-  pid_go=$!
-  go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2 &
-  pid_grpc=$!
-  go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.29.0 &
-  pid_gw=$!
-  wait "$pid_go" "$pid_grpc" "$pid_gw"
+  (
+    cd "$TOOL_MOD_DIR"
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11 &
+    pid_go=$!
+    go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2 &
+    pid_grpc=$!
+    go install github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-grpc-gateway@v2.29.0 &
+    pid_gw=$!
+    wait "$pid_go" "$pid_grpc" "$pid_gw"
+  )
 else
   echo "install-proto-tools: protoc plugins cached"
 fi
 
 if ! command -v buf >/dev/null 2>&1; then
   echo "install-proto-tools: buf not on PATH, installing via go install"
-  go install github.com/bufbuild/buf/cmd/buf@v1.47.0
+  (cd "$TOOL_MOD_DIR" && go install github.com/bufbuild/buf/cmd/buf@v1.47.0)
 fi
 
 echo "install-proto-tools: $(buf --version)"

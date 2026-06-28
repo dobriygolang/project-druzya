@@ -6,6 +6,8 @@ import { cn } from '@/lib/cn'
 
 type Props = {
   closeTo: string
+  onClose: () => void
+  closeLoading?: boolean
   isOwner: boolean
   inviteLoading: boolean
   inviteCopied: boolean
@@ -23,6 +25,8 @@ type Props = {
 
 export function LiveRoomTopBar({
   closeTo,
+  onClose,
+  closeLoading,
   isOwner,
   inviteLoading,
   inviteCopied,
@@ -51,7 +55,12 @@ export function LiveRoomTopBar({
         </Link>
 
         <div className="hidden items-center gap-2 sm:flex">
-          <TopBarButton to={closeTo} variant="outline" icon={<X className="h-3.5 w-3.5" />}>
+          <TopBarButton
+            variant="outline"
+            icon={<X className="h-3.5 w-3.5" />}
+            loading={closeLoading}
+            onClick={onClose}
+          >
             Close room
           </TopBarButton>
         </div>
@@ -108,21 +117,25 @@ export function LiveRoomTopBar({
 }
 
 function TopBarButton({
-  to,
   variant,
   icon,
   children,
+  onClick,
+  loading,
 }: {
-  to: string
   variant: 'outline' | 'solid'
   icon: React.ReactNode
   children: React.ReactNode
+  onClick: () => void
+  loading?: boolean
 }) {
   return (
-    <Link
-      to={to}
+    <button
+      type="button"
+      disabled={loading}
+      onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium no-underline transition-colors',
+        'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-50',
         variant === 'outline'
           ? 'border border-border-strong bg-surface-1 text-text-primary hover:bg-surface-2'
           : 'border border-text-primary bg-text-primary text-bg hover:bg-text-primary/90',
@@ -130,7 +143,7 @@ function TopBarButton({
     >
       {icon}
       {children}
-    </Link>
+    </button>
   )
 }
 

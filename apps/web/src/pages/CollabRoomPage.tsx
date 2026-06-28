@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import {
@@ -19,6 +19,7 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
 import { getMe } from '@/lib/api/auth'
 import {
+  closeRoom,
   createInvite,
   freezeRoom,
   getRoom,
@@ -43,6 +44,7 @@ function jwtSubject(token: string): string | null {
 
 export default function CollabRoomPage() {
   const { roomId = '' } = useParams()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const inviteToken = searchParams.get('invite') ?? undefined
   const sessionTaskId = searchParams.get('sessionTaskId') ?? undefined
@@ -96,6 +98,13 @@ export default function CollabRoomPage() {
       await navigator.clipboard.writeText(invite.url)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
+    },
+  })
+
+  const closeM = useMutation({
+    mutationFn: () => closeRoom(roomId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['my-active-rooms'] })
     },
   })
 
@@ -188,6 +197,14 @@ export default function CollabRoomPage() {
   const panelHeight = runPanelHeight(run.panelOpen)
   const displayName = meQ.data?.username ?? (guestName || 'Guest')
 
+  const handleClose = () => {
+    if (isOwner) {
+      closeM.mutate(undefined, { onSettled: () => navigate(closeTo) })
+      return
+    }
+    navigate(closeTo)
+  }
+
   const handleRun = () => {
     const code = editorRef.current?.getCode() ?? ''
     if (!code.trim()) return
@@ -209,6 +226,8 @@ export default function CollabRoomPage() {
     <div className="flex h-[100dvh] flex-col bg-bg text-text-primary">
       <LiveRoomTopBar
         closeTo={closeTo}
+        onClose={handleClose}
+        closeLoading={closeM.isPending}
         isOwner={isOwner}
         inviteLoading={inviteM.isPending}
         inviteCopied={copied}

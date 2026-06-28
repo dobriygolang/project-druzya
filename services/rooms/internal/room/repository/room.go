@@ -264,3 +264,31 @@ WHERE archived_at IS NULL AND expires_at <= now()`
 	}
 	return tag.RowsAffected(), nil
 }
+
+func (r *Repository) ArchiveRoom(ctx context.Context, id, ownerID uuid.UUID) error {
+	const q = `
+UPDATE code_rooms
+SET archived_at = now(), updated_at = now()
+WHERE id = $1 AND owner_id = $2 AND archived_at IS NULL`
+	tag, err := r.pg.Exec(ctx, q, id, ownerID)
+	if err != nil {
+		return fmt.Errorf("ArchiveRoom: %w", err)
+	}
+	if tag.RowsAffected() > 0 {
+		return nil
+	}
+
+	const checkQ = `SELECT owner_id FROM code_rooms WHERE id = $1 AND archived_at IS NULL`
+	var actualOwner uuid.UUID
+	err = r.pg.QueryRow(ctx, checkQ, id).Scan(&actualOwner)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("ArchiveRoom check: %w", err)
+	}
+	if actualOwner != ownerID {
+		return ErrForbidden
+	}
+	return ErrNotFound
+}

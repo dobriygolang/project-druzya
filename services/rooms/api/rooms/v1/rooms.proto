@@ -71,6 +71,13 @@ service RoomsService {
       get: "/v1/rooms/mine/active"
     };
   }
+
+  rpc CloseRoom(CloseRoomRequest) returns (CloseRoomResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/{room_id}/close"
+      body: "*"
+    };
+  }
 }
 
 message Participant {
@@ -198,3 +205,9 @@ message ListMyActiveRoomsResponse {
   optional int32 concurrent_limit = 3;
   bool concurrent_unlimited = 4;
 }
+
+message CloseRoomRequest {
+  string room_id = 1;
+}
+
+message CloseRoomResponse {}

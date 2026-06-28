@@ -230,6 +230,12 @@ export async function createInvite(roomId: string): Promise<InviteLink> {
   return res.invite
 }
 
+export async function closeRoom(roomId: string): Promise<void> {
+  const token = bearerForRoom(roomId)
+  if (!token) throw new Error('not authenticated')
+  await apiWithBearer(`/rooms/${encodeURIComponent(roomId)}/close`, { method: 'POST', body: '{}' }, token)
+}
+
 export async function getReplay(roomId: string): Promise<{ payload_jsonl: string; op_count: number }> {
   const token = bearerForRoom(roomId)
   if (!token) throw new Error('not authenticated')

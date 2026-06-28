@@ -55,6 +55,7 @@ type Service interface {
 	JoinRoom(ctx context.Context, userID, roomID, roleHint, inviteToken string) (*RoomView, error)
 	FreezeRoom(ctx context.Context, userID, roomID string, frozen bool) (*RoomView, error)
 	CreateInvite(ctx context.Context, userID, roomID string) (*model.InviteLink, error)
+	CloseRoom(ctx context.Context, userID, roomID string) error
 	GuestJoin(ctx context.Context, roomID, inviteToken, displayName string) (*GuestJoinResult, error)
 }
 
@@ -359,6 +360,17 @@ func (s *roomService) CreateInvite(ctx context.Context, userID, roomID string) (
 	}
 	url := fmt.Sprintf("%s/live/%s?invite=%s", s.publicBaseURL, rid, tok)
 	return &model.InviteLink{URL: url, Token: tok, ExpiresAt: expires}, nil
+}
+
+func (s *roomService) CloseRoom(ctx context.Context, userID, roomID string) error {
+	uid, rid, room, _, err := s.loadRoom(ctx, userID, roomID)
+	if err != nil {
+		return err
+	}
+	if uid != room.OwnerID {
+		return repository.ErrForbidden
+	}
+	return s.repo.ArchiveRoom(ctx, rid, uid)
 }
 
 func (s *roomService) GuestJoin(ctx context.Context, roomID, inviteToken, displayName string) (*GuestJoinResult, error) {

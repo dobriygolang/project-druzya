@@ -165,6 +165,27 @@ func (h *Hub) BroadcastFreeze(roomID uuid.UUID, frozen bool, actor uuid.UUID) {
 	})
 }
 
+// CloseRoom disconnects all clients in the room and drops in-memory state.
+func (h *Hub) CloseRoom(roomID uuid.UUID) {
+	h.mu.Lock()
+	rh := h.rooms[roomID]
+	delete(h.rooms, roomID)
+	h.mu.Unlock()
+	h.seqCounters.Delete(roomID)
+	if rh == nil {
+		return
+	}
+	rh.mu.RLock()
+	clients := make([]*wsConn, 0, len(rh.clients))
+	for c := range rh.clients {
+		clients = append(clients, c)
+	}
+	rh.mu.RUnlock()
+	for _, c := range clients {
+		_ = c.ws.Close()
+	}
+}
+
 func (h *Hub) nextSeq(roomID uuid.UUID) int64 {
 	v, _ := h.seqCounters.LoadOrStore(roomID, new(atomic.Int64))
 	return v.(*atomic.Int64).Add(1)

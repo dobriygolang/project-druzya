@@ -16,6 +16,7 @@ var protectedMethods = map[string]struct{}{
 	roomsv1.RoomsService_CreateInvite_FullMethodName:         {},
 	roomsv1.RoomsService_GetReplay_FullMethodName:            {},
 	roomsv1.RoomsService_ListMyActiveRooms_FullMethodName:    {},
+	roomsv1.RoomsService_CloseRoom_FullMethodName:            {},
 }
 
 func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {
