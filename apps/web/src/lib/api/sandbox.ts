@@ -1,4 +1,5 @@
 import { api } from '@/lib/apiClient'
+import { normalizeCodeRun } from '@/lib/api/normalize'
 import type { CodeRun } from '@/lib/types'
 
 export type RunType = 'custom' | 'sample' | 'submit'
@@ -21,11 +22,13 @@ export function runCode(input: {
       stdin: input.stdin,
       run_type: input.runType,
     }),
-  })
+  }).then((res) => ({ run: normalizeCodeRun(res.run) }))
 }
 
 export function getCodeRun(id: string) {
-  return api<{ run: CodeRun }>(`/sandbox/code-runs/${id}`)
+  return api<{ run: CodeRun }>(`/sandbox/code-runs/${id}`).then((res) => ({
+    run: normalizeCodeRun(res.run),
+  }))
 }
 
 export function submitAttemptFromCodeRun(codeRunId: string, sessionTaskId: string) {

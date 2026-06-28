@@ -1,4 +1,6 @@
-import { api } from '@/lib/apiClient'
+import { API_BASE, api, parseAuthTokens } from '@/lib/apiClient'
+import { asArray } from '@/lib/api/normalize'
+import { normalizeProtoJson } from '@/lib/protoJson'
 
 export type RoomParticipant = {
   user_id: string
@@ -38,6 +40,13 @@ export type GuestJoinResult = {
   room: CodeRoom
 }
 
+function normalizeRoom(raw: CodeRoom): CodeRoom {
+  return {
+    ...raw,
+    participants: asArray(raw.participants),
+  }
+}
+
 const guestTokenKey = (roomId: string) => `druzya_guest_token_${roomId}`
 
 export function readGuestToken(roomId: string): string | null {
@@ -69,12 +78,12 @@ export async function createRoom(payload: CreateRoomPayload): Promise<CodeRoom> 
     method: 'POST',
     body: JSON.stringify(payload),
   })
-  return res.room
+  return normalizeRoom(res.room)
 }
 
 export async function getRoom(roomId: string): Promise<CodeRoom> {
   const res = await api<{ room: CodeRoom }>(`/rooms/${encodeURIComponent(roomId)}`)
-  return res.room
+  return normalizeRoom(res.room)
 }
 
 export async function joinRoom(
@@ -88,7 +97,7 @@ export async function joinRoom(
       invite_token: opts?.inviteToken ?? '',
     }),
   })
-  return res.room
+  return normalizeRoom(res.room)
 }
 
 export async function guestJoin(
@@ -96,7 +105,7 @@ export async function guestJoin(
   inviteToken: string,
   displayName: string,
 ): Promise<GuestJoinResult> {
-  const res = await fetch(`/v1/rooms/${encodeURIComponent(roomId)}/guest-join`, {
+  const res = await fetch(`${API_BASE}/rooms/${encodeURIComponent(roomId)}/guest-join`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ invite_token: inviteToken, display_name: displayName }),
@@ -105,7 +114,14 @@ export async function guestJoin(
     const text = await res.text().catch(() => '')
     throw new Error(text || `guest join ${res.status}`)
   }
-  return res.json() as Promise<GuestJoinResult>
+  const body = normalizeProtoJson(await res.json()) as Record<string, unknown>
+  const tokens = parseAuthTokens(body)
+  const room = normalizeRoom(body.room as CodeRoom)
+  return {
+    access_token: tokens.access_token,
+    expires_in: Number(body.expires_in ?? body.expiresIn ?? 0),
+    room,
+  }
 }
 
 export async function freezeRoom(roomId: string, frozen: boolean): Promise<CodeRoom> {
@@ -113,7 +129,7 @@ export async function freezeRoom(roomId: string, frozen: boolean): Promise<CodeR
     method: 'POST',
     body: JSON.stringify({ frozen }),
   })
-  return res.room
+  return normalizeRoom(res.room)
 }
 
 export async function createInvite(roomId: string): Promise<InviteLink> {
@@ -128,5 +144,8 @@ export async function getReplay(roomId: string): Promise<{ payload_jsonl: string
   const res = await api<{ payload_jsonl: string; op_count: number }>(
     `/rooms/${encodeURIComponent(roomId)}/replay`,
   )
-  return res
+  return {
+    payload_jsonl: res.payload_jsonl ?? '',
+    op_count: res.op_count ?? 0,
+  }
 }

@@ -1,34 +1,40 @@
 import { api } from '@/lib/apiClient'
+import {
+  asArray,
+  normalizeCurrentSessionState,
+  normalizeSessionBundle,
+  normalizeSessionResults,
+} from '@/lib/api/normalize'
 import type {
   Attempt,
-  EvaluationResult,
   Progress,
   RetryItem,
   Session,
   SessionMode,
   SessionSection,
   SessionTask,
+  EvaluationResult,
 } from '@/lib/types'
 
 export function startSession(templateId: string, mode: SessionMode = 'SESSION_MODE_COMPANY_INTERVIEW') {
   return api<{
     session: Session
-    sections: SessionSection[]
-    tasks: SessionTask[]
-    progress: Progress
+    sections?: SessionSection[]
+    tasks?: SessionTask[]
+    progress?: Progress
   }>('/interview/sessions', {
     method: 'POST',
     body: JSON.stringify({ template_id: templateId, mode }),
-  })
+  }).then(normalizeSessionBundle)
 }
 
 export function getSession(sessionId: string) {
   return api<{
     session: Session
-    sections: SessionSection[]
-    tasks: SessionTask[]
-    progress: Progress
-  }>(`/interview/sessions/${sessionId}`)
+    sections?: SessionSection[]
+    tasks?: SessionTask[]
+    progress?: Progress
+  }>(`/interview/sessions/${sessionId}`).then(normalizeSessionBundle)
 }
 
 export function getCurrentSessionState(sessionId: string) {
@@ -36,18 +42,18 @@ export function getCurrentSessionState(sessionId: string) {
     session: Session
     current_section?: SessionSection
     current_task?: SessionTask
-    progress: Progress
-  }>(`/interview/sessions/${sessionId}/current`)
+    progress?: Progress
+  }>(`/interview/sessions/${sessionId}/current`).then(normalizeCurrentSessionState)
 }
 
 export function getSessionResults(sessionId: string) {
   return api<{
     session: Session
-    sections: SessionSection[]
-    tasks: SessionTask[]
-    evaluations: EvaluationResult[]
-    progress: Progress
-  }>(`/interview/sessions/${sessionId}/results`)
+    sections?: SessionSection[]
+    tasks?: SessionTask[]
+    evaluations?: EvaluationResult[]
+    progress?: Progress
+  }>(`/interview/sessions/${sessionId}/results`).then(normalizeSessionResults)
 }
 
 export function cancelSession(sessionId: string) {
@@ -75,10 +81,19 @@ export function submitAttempt(input: {
 }
 
 export function skipTask(sessionTaskId: string) {
-  return api<{ task: SessionTask; progress: Progress }>(
+  return api<{ task: SessionTask; progress?: Progress }>(
     `/interview/session-tasks/${sessionTaskId}/skip`,
     { method: 'POST', body: '{}' },
-  )
+  ).then((res) => ({
+    task: res.task,
+    progress: res.progress ?? {
+      total_tasks: 0,
+      evaluated_tasks: 0,
+      skipped_tasks: 0,
+      total_sections: 0,
+      done_sections: 0,
+    },
+  }))
 }
 
 export function getAttempt(attemptId: string) {
@@ -87,7 +102,7 @@ export function getAttempt(attemptId: string) {
 
 export function listRetryItems() {
   return api<{ items?: RetryItem[] }>('/interview/retry-items').then((res) => ({
-    items: res.items ?? [],
+    items: asArray(res.items),
   }))
 }
 
@@ -101,11 +116,11 @@ export function dismissRetryItem(retryItemId: string) {
 export function startRetrySession(retryItemIds: string[]) {
   return api<{
     session: Session
-    sections: SessionSection[]
-    tasks: SessionTask[]
-    progress: Progress
+    sections?: SessionSection[]
+    tasks?: SessionTask[]
+    progress?: Progress
   }>('/interview/retry-sessions', {
     method: 'POST',
     body: JSON.stringify({ retry_item_ids: retryItemIds }),
-  })
+  }).then(normalizeSessionBundle)
 }

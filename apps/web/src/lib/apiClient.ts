@@ -90,7 +90,7 @@ async function performRefresh(): Promise<string | null> {
       body: JSON.stringify({ refresh_token: refresh }),
     })
     if (!res.ok) return null
-    const body = (await res.json()) as Record<string, unknown>
+    const body = normalizeProtoJson(await res.json()) as Record<string, unknown>
     const tokens = parseAuthTokens(body)
     persistTokens(tokens.access_token, tokens.refresh_token || refresh)
     return tokens.access_token

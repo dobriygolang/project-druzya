@@ -1,4 +1,6 @@
 import { API_BASE, api, clearTokens, parseAuthTokens, persistTokens } from '@/lib/apiClient'
+import { normalizeUser } from '@/lib/api/normalize'
+import { normalizeProtoJson } from '@/lib/protoJson'
 import type { AuthResponse, User } from '@/lib/types'
 
 export type AuthConfig = {
@@ -11,7 +13,7 @@ export async function getAuthConfig(): Promise<AuthConfig> {
     const text = await res.text().catch(() => '')
     throw new Error(`auth config ${res.status}: ${text}`)
   }
-  const body = (await res.json()) as AuthConfig & { telegramBotUsername?: string }
+  const body = normalizeProtoJson(await res.json()) as AuthConfig & { telegram_bot_username?: string }
   return { telegram_bot_username: readTelegramBotUsername(body) }
 }
 
@@ -28,11 +30,37 @@ function mapAuthResponse(body: Record<string, unknown>): AuthResponse {
     user: {
       id: String(rawUser.id ?? ''),
       username: String(rawUser.username ?? ''),
-      avatar_url: typeof rawUser.avatar_url === 'string' ? rawUser.avatar_url : typeof rawUser.avatarUrl === 'string' ? rawUser.avatarUrl : undefined,
-      created_at: typeof rawUser.created_at === 'string' ? rawUser.created_at : typeof rawUser.createdAt === 'string' ? rawUser.createdAt : undefined,
-      telegram_id: rawUser.telegram_id != null ? String(rawUser.telegram_id) : rawUser.telegramId != null ? String(rawUser.telegramId) : undefined,
+      avatar_url:
+        typeof rawUser.avatar_url === 'string'
+          ? rawUser.avatar_url
+          : typeof rawUser.avatarUrl === 'string'
+            ? rawUser.avatarUrl
+            : undefined,
+      created_at:
+        typeof rawUser.created_at === 'string'
+          ? rawUser.created_at
+          : typeof rawUser.createdAt === 'string'
+            ? rawUser.createdAt
+            : undefined,
+      telegram_id:
+        rawUser.telegram_id != null
+          ? String(rawUser.telegram_id)
+          : rawUser.telegramId != null
+            ? String(rawUser.telegramId)
+            : undefined,
     },
   }
+}
+
+async function readAuthResponse(res: Response, errorPrefix: string): Promise<AuthResponse> {
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`${errorPrefix} ${res.status}: ${text}`)
+  }
+  const body = normalizeProtoJson(await res.json()) as Record<string, unknown>
+  const auth = mapAuthResponse(body)
+  persistTokens(auth.access_token, auth.refresh_token)
+  return auth
 }
 
 export async function authTelegram(code: string): Promise<AuthResponse> {
@@ -41,14 +69,7 @@ export async function authTelegram(code: string): Promise<AuthResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code: code.trim() }),
   })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`telegram auth ${res.status}: ${text}`)
-  }
-  const body = (await res.json()) as Record<string, unknown>
-  const auth = mapAuthResponse(body)
-  persistTokens(auth.access_token, auth.refresh_token)
-  return auth
+  return readAuthResponse(res, 'telegram auth')
 }
 
 export async function getYandexAuthURL(): Promise<{ url: string; state: string }> {
@@ -57,7 +78,7 @@ export async function getYandexAuthURL(): Promise<{ url: string; state: string }
     const text = await res.text().catch(() => '')
     throw new Error(`yandex url ${res.status}: ${text}`)
   }
-  return res.json() as Promise<{ url: string; state: string }>
+  return normalizeProtoJson(await res.json()) as { url: string; state: string }
 }
 
 export async function exchangeYandexCode(exchangeCode: string): Promise<AuthResponse> {
@@ -66,14 +87,7 @@ export async function exchangeYandexCode(exchangeCode: string): Promise<AuthResp
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ exchange_code: exchangeCode }),
   })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`yandex exchange ${res.status}: ${text}`)
-  }
-  const body = (await res.json()) as Record<string, unknown>
-  const auth = mapAuthResponse(body)
-  persistTokens(auth.access_token, auth.refresh_token)
-  return auth
+  return readAuthResponse(res, 'yandex exchange')
 }
 
 export async function logout(): Promise<void> {
@@ -91,6 +105,6 @@ export async function logout(): Promise<void> {
 }
 
 export async function getMe(): Promise<User> {
-  const res = await api<{ user: User }>('/me')
-  return res.user
+  const res = await api<{ user?: User }>('/me')
+  return normalizeUser(res.user)
 }
