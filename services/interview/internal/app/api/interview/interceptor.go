@@ -17,6 +17,7 @@ var protectedMethods = map[string]struct{}{
 	interviewv1.InterviewService_GetCurrentSessionState_FullMethodName: {},
 	interviewv1.InterviewService_GetSessionResults_FullMethodName:     {},
 	interviewv1.InterviewService_CancelSession_FullMethodName:           {},
+	interviewv1.InterviewService_GetActiveSession_FullMethodName:      {},
 	interviewv1.InterviewService_SubmitAttempt_FullMethodName:           {},
 	interviewv1.InterviewService_SkipTask_FullMethodName:                {},
 	interviewv1.InterviewService_GetAttempt_FullMethodName:              {},
