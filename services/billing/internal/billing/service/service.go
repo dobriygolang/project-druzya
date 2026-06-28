@@ -11,6 +11,7 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/events"
 	identityadapter "github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/identity"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/providers"
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/catalog"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/entitlement"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/model"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/repository"
@@ -30,6 +31,7 @@ var (
 type Service interface {
 	GetCurrentPlan(ctx context.Context, userID string) (*model.Plan, error)
 	GetEntitlements(ctx context.Context, userID string) (*model.EntitlementsView, error)
+	ListPlans(ctx context.Context) ([]catalog.PlanCatalogItem, error)
 	CheckEntitlement(ctx context.Context, userID, key string) (*model.CheckEntitlementResult, error)
 	CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) (*model.ConsumeUsageResult, error)
 	GrantSubscription(ctx context.Context, userID, planSlug string, periodEnd *time.Time) (*model.Subscription, error)
@@ -150,6 +152,26 @@ func (s *billingService) GetEntitlements(ctx context.Context, userID string) (*m
 		}
 	}
 	return view, nil
+}
+
+func (s *billingService) ListPlans(ctx context.Context) ([]catalog.PlanCatalogItem, error) {
+	plans, err := s.repo.ListActivePlans(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]catalog.PlanCatalogItem, 0, len(plans))
+	for _, plan := range plans {
+		entitlements, err := s.repo.ListPlanEntitlements(ctx, plan.ID)
+		if err != nil {
+			return nil, err
+		}
+		item, err := catalog.BuildPlanCatalog(plan, entitlements)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, item)
+	}
+	return out, nil
 }
 
 func (s *billingService) CheckEntitlement(ctx context.Context, userID, key string) (*model.CheckEntitlementResult, error) {

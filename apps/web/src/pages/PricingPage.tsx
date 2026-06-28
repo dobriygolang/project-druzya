@@ -4,8 +4,7 @@ import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { brand } from '@/lib/brand/tokens'
 import { readAccessToken } from '@/lib/apiClient'
-import { getBillingMe } from '@/lib/api/billing'
-import { PLAN_CATALOG } from '@/lib/billing/planCatalog'
+import { getBillingMe, getBillingPlans } from '@/lib/api/billing'
 import {
   entitlementLabel,
   formatLimitUsage,
@@ -23,6 +22,11 @@ export default function PricingPage() {
     queryKey: ['billing-me'],
     queryFn: getBillingMe,
     enabled: isAuthed,
+  })
+  const plansQ = useQuery({
+    queryKey: ['billing-plans'],
+    queryFn: getBillingPlans,
+    staleTime: 5 * 60_000,
   })
 
   return (
@@ -48,6 +52,10 @@ export default function PricingPage() {
           <ErrorMessage message={formatApiError(billingQ.error)} onRetry={() => void billingQ.refetch()} />
         ) : null}
 
+        {plansQ.isError ? (
+          <ErrorMessage message={formatApiError(plansQ.error)} onRetry={() => void plansQ.refetch()} />
+        ) : null}
+
         {isAuthed && billingQ.data ? (
           <section className="sdvg-card p-5">
             <h2 className="text-base font-semibold">Твой план</h2>
@@ -66,7 +74,13 @@ export default function PricingPage() {
         ) : null}
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {PLAN_CATALOG.map((plan) => {
+          {plansQ.isLoading ? (
+            <>
+              <PlanCardSkeleton />
+              <PlanCardSkeleton />
+            </>
+          ) : null}
+          {(plansQ.data?.plans ?? []).map((plan) => {
             const isCurrent = billingQ.data?.plan_slug === plan.slug
             return (
               <article
@@ -119,5 +133,11 @@ export default function PricingPage() {
         </section>
       </PageContent>
     </PublicPageShell>
+  )
+}
+
+function PlanCardSkeleton() {
+  return (
+    <div className="h-[320px] animate-pulse rounded-2xl border bg-surface-2" style={{ borderColor: brand.hair }} />
   )
 }

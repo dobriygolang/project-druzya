@@ -40,6 +40,27 @@ func (r *Repository) GetPlanByID(ctx context.Context, id string) (*model.Plan, e
 	`, planID))
 }
 
+func (r *Repository) ListActivePlans(ctx context.Context) ([]model.Plan, error) {
+	rows, err := r.conn(ctx).Query(ctx, `
+		SELECT id, slug, name, description, priority, is_active, metadata, created_at, updated_at
+		FROM plans WHERE is_active = true ORDER BY priority ASC, slug ASC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("ListActivePlans: %w", err)
+	}
+	defer rows.Close()
+
+	var out []model.Plan
+	for rows.Next() {
+		plan, err := r.scanPlan(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *plan)
+	}
+	return out, rows.Err()
+}
+
 func (r *Repository) ListPlanEntitlements(ctx context.Context, planID string) ([]model.PlanEntitlement, error) {
 	pid, err := uuid.Parse(planID)
 	if err != nil {

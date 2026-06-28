@@ -208,6 +208,24 @@ export interface BillingMe {
   >
 }
 
+export interface PlanEntitlementSpec {
+  type: string
+  limit?: number
+  unlimited?: boolean
+  period?: string
+  value?: boolean
+}
+
+export interface PlanCatalogEntry {
+  slug: string
+  name: string
+  tagline: string
+  highlight?: boolean
+  highlights: string[]
+  features?: Record<string, boolean>
+  limits?: Record<string, PlanEntitlementSpec>
+}
+
 export interface TestResult {
   name: string
   status: string

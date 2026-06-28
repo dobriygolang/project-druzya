@@ -13,6 +13,13 @@ service BillingService {
       get: "/v1/billing/me"
     };
   }
+
+  // Public catalog — plan cards for pricing UI (limits from plan_entitlements).
+  rpc ListPlans(ListPlansRequest) returns (ListPlansResponse) {
+    option (google.api.http) = {
+      get: "/v1/billing/plans"
+    };
+  }
 }
 
 service BillingInternalService {
@@ -44,6 +51,30 @@ message GetMeResponse {
   string plan_name = 3;
   map<string, bool> features = 4;
   map<string, UsageLimit> limits = 5;
+}
+
+message ListPlansRequest {}
+
+message PlanEntitlementSpec {
+  string type = 1;
+  optional int32 limit = 2;
+  bool unlimited = 3;
+  string period = 4;
+  bool value = 5;
+}
+
+message PlanCatalog {
+  string slug = 1;
+  string name = 2;
+  string tagline = 3;
+  bool highlight = 4;
+  repeated string highlights = 5;
+  map<string, bool> features = 6;
+  map<string, PlanEntitlementSpec> limits = 7;
+}
+
+message ListPlansResponse {
+  repeated PlanCatalog plans = 1;
 }
 
 message UsageLimit {

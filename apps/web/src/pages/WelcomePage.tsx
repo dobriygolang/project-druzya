@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
 import { brand } from '@/lib/brand/tokens'
-import { PLAN_CATALOG } from '@/lib/billing/planCatalog'
+import { getBillingPlans } from '@/lib/api/billing'
 
 function DashboardMock() {
   return (
@@ -67,6 +68,12 @@ function Bullet({ children }: { children: ReactNode }) {
 }
 
 export default function WelcomePage() {
+  const plansQ = useQuery({
+    queryKey: ['billing-plans'],
+    queryFn: getBillingPlans,
+    staleTime: 5 * 60_000,
+  })
+
   useEffect(() => {
     const html = document.documentElement
     const prev = html.style.scrollBehavior
@@ -174,7 +181,13 @@ export default function WelcomePage() {
           </p>
         </div>
         <div className="pricing-grid mx-auto mt-12 grid max-w-[760px] gap-6 sm:grid-cols-2">
-          {PLAN_CATALOG.map((plan) => (
+          {plansQ.isLoading ? (
+            <>
+              <div className="h-[280px] animate-pulse rounded-[18px] bg-surface-2" />
+              <div className="h-[280px] animate-pulse rounded-[18px] bg-surface-2" />
+            </>
+          ) : null}
+          {(plansQ.data?.plans ?? []).map((plan) => (
             <div
               key={plan.slug}
               className="relative rounded-[18px] border bg-surface-1 p-7"
