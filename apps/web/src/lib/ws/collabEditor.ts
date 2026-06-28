@@ -7,14 +7,27 @@ export type EditorWsEnvelope = {
 
 export type EditorWsStatus = 'connecting' | 'open' | 'reconnecting' | 'failed' | 'closed'
 
-export function useEditorWs(roomId: string | undefined, token: string | undefined) {
+export function decodeYjsPayload(payload: unknown): Uint8Array | null {
+  if (payload == null) return null
+  if (typeof payload === 'string') return b64ToBytes(payload)
+  if (payload instanceof Uint8Array) return payload
+  if (Array.isArray(payload)) return new Uint8Array(payload as number[])
+  return null
+}
+
+export function useEditorWs(
+  roomId: string | undefined,
+  token: string | undefined,
+  onEnvelope?: (env: EditorWsEnvelope) => void,
+) {
   const [status, setStatus] = useState<EditorWsStatus>('connecting')
-  const [lastMessage, setLastMessage] = useState<EditorWsEnvelope | null>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const attemptsRef = useRef(0)
   const timerRef = useRef<number | null>(null)
   const closedByUser = useRef(false)
   const [reconnectKey, setReconnectKey] = useState(0)
+  const onEnvelopeRef = useRef(onEnvelope)
+  onEnvelopeRef.current = onEnvelope
 
   useEffect(() => {
     if (!roomId || !token) {
@@ -40,7 +53,7 @@ export function useEditorWs(roomId: string | undefined, token: string | undefine
       ws.onmessage = (ev) => {
         try {
           const env = JSON.parse(ev.data) as EditorWsEnvelope
-          setLastMessage(env)
+          onEnvelopeRef.current?.(env)
         } catch {
           /* ignore */
         }
@@ -84,7 +97,7 @@ export function useEditorWs(roomId: string | undefined, token: string | undefine
     setReconnectKey((n) => n + 1)
   }, [])
 
-  return { status, lastMessage, send, reconnect }
+  return { status, send, reconnect }
 }
 
 export function bytesToB64(bytes: Uint8Array): string {

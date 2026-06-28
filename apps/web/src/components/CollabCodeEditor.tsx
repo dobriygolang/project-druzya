@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import * as Y from 'yjs'
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { yCollab } from 'y-codemirror.next'
@@ -9,7 +9,7 @@ import { cmLanguageExt } from '@/lib/codemirror/langExtension'
 import { editorAssistExtensions } from '@/lib/codemirror/editorAssist'
 import { collabUserColors } from '@/lib/codemirror/collabColors'
 import { peersFromAwareness, type CollabPeer } from '@/lib/codemirror/collabPresence'
-import { b64ToBytes, bytesToB64, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
+import { b64ToBytes, bytesToB64, decodeYjsPayload, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
 import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
 
 export type CollabCodeEditorHandle = {
@@ -31,6 +31,33 @@ type Props = {
   onFormat?: () => void
   onPeersChange?: (peers: CollabPeer[]) => void
   onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
+}
+
+function applyWsEnvelope(
+  env: EditorWsEnvelope,
+  ydoc: Y.Doc,
+  awareness: Awareness | null,
+): void {
+  if (env.kind === 'snapshot' || env.kind === 'op') {
+    const data = env.data as { payload?: unknown } | undefined
+    const bytes = decodeYjsPayload(data?.payload)
+    if (bytes && bytes.byteLength > 0) {
+      Y.applyUpdate(ydoc, bytes, 'remote')
+    }
+    return
+  }
+
+  if (env.kind === 'presence' && awareness) {
+    const data = env.data as { data?: { update?: string }; update?: string } | undefined
+    const b64 = data?.data?.update ?? data?.update
+    if (typeof b64 === 'string') {
+      try {
+        applyAwarenessUpdate(awareness, b64ToBytes(b64), 'remote')
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 }
 
 function isTabActive(): boolean {
@@ -67,12 +94,36 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
   const onRunRef = useRef(onRun)
   const onFormatRef = useRef(onFormat)
   const onPeersChangeRef = useRef(onPeersChange)
+  const pendingEnvelopesRef = useRef<EditorWsEnvelope[]>([])
   onRunRef.current = onRun
   onFormatRef.current = onFormat
   onPeersChangeRef.current = onPeersChange
 
   const token = accessToken ?? ''
-  const { lastMessage, send, status, reconnect } = useEditorWs(roomId, token || undefined)
+
+  const handleWsEnvelope = useCallback((env: EditorWsEnvelope) => {
+    const ydoc = ydocRef.current
+    const awareness = awarenessRef.current
+    if (!ydoc) {
+      pendingEnvelopesRef.current.push(env)
+      return
+    }
+    applyWsEnvelope(env, ydoc, awareness)
+  }, [])
+
+  const flushPendingEnvelopes = useCallback(() => {
+    const ydoc = ydocRef.current
+    const awareness = awarenessRef.current
+    if (!ydoc) return
+    const pending = pendingEnvelopesRef.current
+    if (pending.length === 0) return
+    pendingEnvelopesRef.current = []
+    for (const env of pending) {
+      applyWsEnvelope(env, ydoc, awareness)
+    }
+  }, [])
+
+  const { send, status, reconnect } = useEditorWs(roomId, token || undefined, handleWsEnvelope)
 
   wsSendRef.current = send
 
@@ -93,33 +144,6 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
     },
     reconnect,
   }))
-
-  useEffect(() => {
-    if (!lastMessage) return
-    const ydoc = ydocRef.current
-    const awareness = awarenessRef.current
-    if (!ydoc) return
-
-    if (lastMessage.kind === 'snapshot' || lastMessage.kind === 'op') {
-      const data = lastMessage.data as { payload?: string | Uint8Array } | undefined
-      const payload = data?.payload
-      if (typeof payload === 'string') {
-        Y.applyUpdate(ydoc, b64ToBytes(payload), 'remote')
-      } else if (payload instanceof Uint8Array) {
-        Y.applyUpdate(ydoc, payload, 'remote')
-      }
-    } else if (lastMessage.kind === 'presence' && awareness) {
-      const data = lastMessage.data as { data?: { update?: string }; update?: string } | undefined
-      const b64 = data?.data?.update ?? data?.update
-      if (typeof b64 === 'string') {
-        try {
-          applyAwarenessUpdate(awareness, b64ToBytes(b64), 'remote')
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-  }, [lastMessage])
 
   useEffect(() => {
     const mount = mountRef.current
@@ -217,8 +241,10 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
     })
     const view = new EditorView({ state, parent: mount })
     viewRef.current = view
+    flushPendingEnvelopes()
 
     return () => {
+      pendingEnvelopesRef.current = []
       try {
         sendFullSnapshot()
       } catch {
@@ -240,7 +266,7 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
       awarenessRef.current = null
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- token/room/language only
-  }, [roomId, language, token])
+  }, [roomId, language, token, flushPendingEnvelopes])
 
   useEffect(() => {
     const view = viewRef.current
