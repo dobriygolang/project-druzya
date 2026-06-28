@@ -29,6 +29,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     else \
       go build -ldflags="${LDFLAGS}" -o .bin/${SERVICE} ./cmd/${SERVICE}; \
     fi
+RUN mkdir -p /out/migrations && \
+    if [ -d scripts/migrations ]; then cp -a scripts/migrations/. /out/migrations/; fi
 
 FROM alpine:3.20
 ARG SERVICE
@@ -36,7 +38,7 @@ RUN apk add --no-cache ca-certificates tzdata wget \
   && if [ "$SERVICE" = "sandbox" ]; then apk add --no-cache docker-cli; fi
 COPY --from=builder /src/services/${SERVICE}/.bin/${SERVICE} /usr/local/bin/service
 COPY --from=gopls /go/bin/gopls /usr/local/bin/gopls
-COPY services/${SERVICE}/scripts/migrations /migrations
+COPY --from=builder /out/migrations /migrations
 USER nobody
 EXPOSE 8080 9090
 ENTRYPOINT ["/usr/local/bin/service"]
