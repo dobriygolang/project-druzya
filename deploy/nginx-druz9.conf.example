@@ -1,0 +1,89 @@
+# druz9 — add alongside your existing nginx (VPN/VLESS config untouched).
+# Caddy listens on 127.0.0.1:18080 only (see docker-compose.prod.yml).
+#
+#   sudo cp deploy/nginx-druz9.conf.example /etc/nginx/sites-available/druz9
+#   sudo ln -sf /etc/nginx/sites-available/druz9 /etc/nginx/sites-enabled/druz9
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# TLS: certbot for druz9 domains, e.g.
+#   certbot certonly --nginx -d druz9.online -d app.druz9.online -d api.druz9.online \
+#     -d druz9.ru -d app.druz9.ru -d api.druz9.ru
+
+map $http_upgrade $connection_upgrade {
+	default upgrade;
+	''      close;
+}
+
+upstream druzya_caddy {
+	server 127.0.0.1:18080;
+	keepalive 32;
+}
+
+# --- API ---
+server {
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+	server_name api.druz9.online api.druz9.ru;
+
+	ssl_certificate     /etc/letsencrypt/live/druz9.online/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/druz9.online/privkey.pem;
+
+	location / {
+		proxy_pass http://druzya_caddy;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection $connection_upgrade;
+	}
+}
+
+# --- SPA (+ same-origin /v1, /ws) ---
+server {
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+	server_name druz9.online app.druz9.online;
+
+	ssl_certificate     /etc/letsencrypt/live/druz9.online/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/druz9.online/privkey.pem;
+
+	location / {
+		proxy_pass http://druzya_caddy;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header Upgrade $http_upgrade;
+		proxy_set_header Connection $connection_upgrade;
+	}
+}
+
+# --- RU → redirect handled by Caddy; still need TLS + proxy for Host header ---
+server {
+	listen 443 ssl http2;
+	listen [::]:443 ssl http2;
+	server_name druz9.ru app.druz9.ru;
+
+	ssl_certificate     /etc/letsencrypt/live/druz9.online/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/druz9.online/privkey.pem;
+
+	location / {
+		proxy_pass http://druzya_caddy;
+		proxy_http_version 1.1;
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+		proxy_set_header X-Forwarded-Proto $scheme;
+	}
+}
+
+# HTTP → HTTPS (only druz9 hosts; your VPN config on :80 stays separate)
+server {
+	listen 80;
+	listen [::]:80;
+	server_name druz9.online app.druz9.online api.druz9.online druz9.ru app.druz9.ru api.druz9.ru;
+	return 301 https://$host$request_uri;
+}

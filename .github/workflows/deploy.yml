@@ -169,5 +169,5 @@ jobs:
 
             docker compose -f docker-compose.prod.yml --env-file .env ps
 
-            curl -sf -H "Host: api.druz9.online" http://127.0.0.1/healthz
-            curl -sfI -H "Host: druz9.online" http://127.0.0.1/ | head -1
+            curl -sf -H "Host: api.druz9.online" "http://127.0.0.1:${CADDY_HTTP_PORT:-18080}/healthz"
+            curl -sfI -H "Host: druz9.online" "http://127.0.0.1:${CADDY_HTTP_PORT:-18080}/" | head -1

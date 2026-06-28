@@ -9,7 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-const readyTimeout = 2 * time.Second
+const readyTimeout = 5 * time.Second
 
 // Checker verifies a dependency for readiness probes.
 type Checker func(ctx context.Context) error
@@ -25,14 +25,14 @@ func HealthzHandler() http.HandlerFunc {
 // ReadyzHandler returns 200 only when all checkers succeed.
 func ReadyzHandler(checkers ...Checker) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), readyTimeout)
-		defer cancel()
-
 		for _, check := range checkers {
 			if check == nil {
 				continue
 			}
-			if err := check(ctx); err != nil {
+			ctx, cancel := context.WithTimeout(r.Context(), readyTimeout)
+			err := check(ctx)
+			cancel()
+			if err != nil {
 				http.Error(w, "not ready", http.StatusServiceUnavailable)
 				return
 			}

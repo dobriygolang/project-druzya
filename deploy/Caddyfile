@@ -1,5 +1,7 @@
 {
 	email {$CADDY_EMAIL}
+	# Host nginx keeps :80/:443 (e.g. VPN). TLS terminates in nginx; Caddy is HTTP-only behind it.
+	auto_https off
 }
 
 # Shared API routing (used on api.* and on the SPA host for same-origin /v1).
@@ -49,7 +51,7 @@
 }
 
 # API — primary: api.druz9.online; mirror: api.druz9.ru
-api.druz9.online, api.druz9.ru {
+http://api.druz9.online, http://api.druz9.ru {
 	encode gzip
 	import api_v1
 	import api_ws
@@ -60,7 +62,7 @@ api.druz9.online, api.druz9.ru {
 }
 
 # SPA — canonical: druz9.online (same-origin /v1 for VITE_API_BASE=/v1)
-druz9.online, app.druz9.online {
+http://druz9.online, http://app.druz9.online {
 	encode gzip
 	import api_v1
 	import api_ws
@@ -70,6 +72,6 @@ druz9.online, app.druz9.online {
 }
 
 # RU apex + app → canonical .online
-druz9.ru, app.druz9.ru {
+http://druz9.ru, http://app.druz9.ru {
 	redir https://druz9.online{uri} permanent
 }

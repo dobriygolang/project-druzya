@@ -10,7 +10,7 @@
 | **SSH user** | `root` / `deploy` | Пользователь на VPS |
 | **SSH private key** | содержимое `~/.ssh/id_ed25519` | Доступ без пароля (или пароль, если без ключа) |
 | **OS** | Ubuntu 22.04+ / Debian 12+ | Docker + Compose v2 |
-| **Открытые порты** | 80, 443 (и 22 для SSH) | Caddy + Let's Encrypt |
+| **Открытые порты** | 80, 443 (и 22 для SSH) | nginx на хосте (TLS + VPN); Caddy только `127.0.0.1:18080` |
 
 **DNS (вы уже сделали A-записи):**
 
@@ -124,6 +124,12 @@ cd /opt/project-druzya/deploy
 cp .env.example .env
 nano .env          # заполнить по таблице выше
 make keys
+
+# 3b. nginx на хосте (если :80/:443 уже заняты VPN и т.п.)
+# Caddy слушает только 127.0.0.1:18080 — см. deploy/nginx-druz9.conf.example
+# sudo cp nginx-druz9.conf.example /etc/nginx/sites-available/druz9
+# sudo ln -sf /etc/nginx/sites-available/druz9 /etc/nginx/sites-enabled/druz9
+# sudo nginx -t && sudo systemctl reload nginx
 
 # 4. Поднять
 make up

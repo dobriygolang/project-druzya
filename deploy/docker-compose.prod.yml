@@ -215,7 +215,8 @@ services:
       - ./secrets/jwt:/run/secrets/jwt:ro
     healthcheck:
       <<: *health-ready
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8084/readyz"]
+      timeout: 15s
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8084/healthz"]
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -285,7 +286,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       <<: *health-ready
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8086/readyz"]
+      timeout: 15s
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8086/healthz"]
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -331,9 +333,9 @@ services:
       context: ..
       dockerfile: deploy/Dockerfile.caddy
     restart: unless-stopped
+    # Do not bind host :80/:443 — nginx on the host uses them (e.g. VPN). Proxy druz9 → 127.0.0.1:CADDY_HTTP_PORT.
     ports:
-      - "80:80"
-      - "443:443"
+      - "127.0.0.1:${CADDY_HTTP_PORT:-18080}:80"
     environment:
       CADDY_EMAIL: ${CADDY_EMAIL:-}
     volumes:
