@@ -9,14 +9,6 @@ import (
 	catalogrepo "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/repository"
 )
 
-func optionalSearchQuery(raw string) *string {
-	q := strings.TrimSpace(raw)
-	if q == "" {
-		return nil
-	}
-	return &q
-}
-
 func (s *catalogService) ListArticles(ctx context.Context, skillKey, query *string, limit, offset int) ([]catalogmodel.Article, error) {
 	return s.repo.ListArticles(ctx, catalogrepo.ListArticlesFilter{
 		SkillKey: skillKey,
