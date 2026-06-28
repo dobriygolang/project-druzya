@@ -3,10 +3,15 @@ import { Excalidraw } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import * as Y from 'yjs'
 import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
-import { patchSystemDesignWorkspace } from '@/lib/api/systemDesign'
+import {
+  EXCALIDRAW_MOUNT_CLASS,
+  EXCALIDRAW_THEME,
+  EXCALIDRAW_UI_OPTIONS,
+  excalidrawSiteAppState,
+} from '@/components/system-design/excalidrawTheme'
 import { collabUserColors } from '@/lib/codemirror/collabColors'
 import { peersFromAwareness, type CollabPeer } from '@/lib/codemirror/collabPresence'
-import { getSystemDesignWorkspace } from '@/lib/api/systemDesign'
+import { getSystemDesignWorkspace, patchSystemDesignWorkspace } from '@/lib/api/systemDesign'
 import {
   applyWsEnvelope,
   bytesToB64,
@@ -322,19 +327,21 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
     }
 
     return (
-      <div className="hone-excalidraw-mount-web h-full w-full">
+      <div className={`${EXCALIDRAW_MOUNT_CLASS} h-full w-full`}>
         {ready ? (
           <Excalidraw
+            theme={EXCALIDRAW_THEME}
             initialData={{
               elements: initialScene.elements as never[],
               files: initialScene.files as never,
+              appState: excalidrawSiteAppState(),
             }}
             onChange={handleChange}
             viewModeEnabled={frozen}
             excalidrawAPI={(api) => {
               apiRef.current = api as typeof apiRef.current
             }}
-            UIOptions={{ canvasActions: { loadScene: false, export: false } }}
+            UIOptions={EXCALIDRAW_UI_OPTIONS}
           />
         ) : (
           <div className="grid h-full place-items-center text-sm text-text-muted">Connecting…</div>

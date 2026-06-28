@@ -199,13 +199,43 @@
   }
 }
 
-/* Collab Excalidraw — dark canvas in live rooms (ported from druzya/frontend) */
-.hone-excalidraw-mount-web .excalidraw {
-  --color-canvas-background: rgb(var(--color-bg));
-  --theme-filter: invert(100%) hue-rotate(180deg) !important;
+/* Excalidraw — sdvg.io light theme (Inter, warm surfaces, soft shadows) */
+.druzya-excalidraw .excalidraw {
+  --theme-filter: none;
+  --ui-font: 'Inter', system-ui, -apple-system, sans-serif;
+  --island-bg-color: rgb(var(--color-surface-1));
+  --default-bg-color: rgb(var(--color-surface-1));
+  --input-bg-color: rgb(var(--color-surface-1));
+  --input-border-color: rgb(var(--color-border));
+  --input-hover-bg-color: rgb(var(--color-surface-2));
+  --input-label-color: rgb(var(--color-text-secondary));
+  --default-border-color: rgb(var(--color-border));
+  --popup-secondary-bg-color: rgb(var(--color-surface-2));
+  --popup-text-color: rgb(var(--color-text-primary));
+  --icon-fill-color: rgb(var(--color-text-primary));
+  --link-color: rgb(var(--color-text-primary));
+  --select-highlight-color: rgb(var(--color-text-primary));
+  --focus-highlight-color: rgba(15, 15, 15, 0.1);
+  --button-gray-1: rgb(var(--color-surface-2));
+  --button-gray-2: rgb(var(--color-border));
+  --button-gray-3: rgb(var(--color-border-strong));
+  --button-hover-bg: rgb(var(--color-surface-2));
+  --button-active-bg: rgb(var(--color-surface-3));
+  --shadow-island:
+    0 1px 2px rgba(15, 15, 15, 0.04),
+    0 4px 12px rgba(15, 15, 15, 0.06);
+  --modal-shadow:
+    0 12px 40px rgba(15, 15, 15, 0.08),
+    0 2px 8px rgba(15, 15, 15, 0.04);
+  --sidebar-shadow: var(--shadow-island);
+  --avatar-border-color: rgb(var(--color-border));
+  --keybinding-color: rgb(var(--color-text-muted));
+  --scrollbar-thumb: rgb(var(--color-border));
+  --scrollbar-thumb-hover: rgb(var(--color-border-strong));
 }
-.hone-excalidraw-mount-web .excalidraw .layer-ui__wrapper__top-right,
-.hone-excalidraw-mount-web .excalidraw .scroll-back-to-content,
-.hone-excalidraw-mount-web .excalidraw .help-icon {
+
+.druzya-excalidraw .excalidraw .layer-ui__wrapper__top-right,
+.druzya-excalidraw .excalidraw .scroll-back-to-content,
+.druzya-excalidraw .excalidraw .help-icon {
   display: none !important;
 }

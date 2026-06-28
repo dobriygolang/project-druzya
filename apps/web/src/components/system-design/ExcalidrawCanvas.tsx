@@ -1,6 +1,12 @@
 import { Excalidraw, exportToBlob } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 import { useCallback, useMemo, useRef } from 'react'
+import {
+  EXCALIDRAW_MOUNT_CLASS,
+  EXCALIDRAW_THEME,
+  EXCALIDRAW_UI_OPTIONS,
+  excalidrawSiteAppState,
+} from '@/components/system-design/excalidrawTheme'
 
 export type ExcalidrawSceneAPI = {
   getSceneElements: () => readonly unknown[]
@@ -22,6 +28,7 @@ export function ExcalidrawCanvas({ initialData, onChange, onApiReady }: Props) {
     const elements = initialData?.elements
     return {
       elements: Array.isArray(elements) ? elements : [],
+      appState: excalidrawSiteAppState(),
     }
   }, [initialData])
 
@@ -37,8 +44,9 @@ export function ExcalidrawCanvas({ initialData, onChange, onApiReady }: Props) {
   )
 
   return (
-    <div className="h-full w-full">
+    <div className={`${EXCALIDRAW_MOUNT_CLASS} h-full w-full`}>
       <Excalidraw
+        theme={EXCALIDRAW_THEME}
         initialData={initialElements as never}
         onChange={handleChange}
         excalidrawAPI={(api) => {
@@ -46,7 +54,7 @@ export function ExcalidrawCanvas({ initialData, onChange, onApiReady }: Props) {
           apiRef.current = sceneApi
           onApiReady?.(sceneApi)
         }}
-        UIOptions={{ canvasActions: { loadScene: false, export: false } }}
+        UIOptions={EXCALIDRAW_UI_OPTIONS}
       />
     </div>
   )
