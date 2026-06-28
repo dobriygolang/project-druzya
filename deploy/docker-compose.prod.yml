@@ -55,6 +55,7 @@ services:
       args:
         SERVICE: identity
     restart: unless-stopped
+    user: "0:0"
     env_file: .env
     environment:
       <<: *service-env
@@ -352,6 +353,10 @@ services:
       recommendation:
         condition: service_healthy
       ai:
+        condition: service_healthy
+      billing:
+        condition: service_healthy
+      sandbox:
         condition: service_healthy
       rooms:
         condition: service_healthy
