@@ -110,7 +110,7 @@
 | `/checkout/*` | `absent` | Stripe/Tribute checkout UI — **нет** |
 | `/billing/welcome` | `absent` | post-checkout |
 
-- [x] `planCatalog.ts` — зеркало `00002_entitlements.sql`
+- [x] `planCatalog.ts` — mirrors billing `00001_init.sql` entitlements
 - [x] PricingPage — catalog + live limits when logged in
 - [x] Welcome pricing section uses shared catalog
 - [x] Profile — billing limits from `/v1/billing/me` only

@@ -28,9 +28,9 @@ AI scoring (ai). It only resolves Telegram → user via the identity gRPC client
 - `{"type":"bool","value":true}` — feature gate
 - `{"type":"counter","limit":100,"period":"day"|"month"}` — quota (omit `limit` for unlimited)
 
-Seeded plans (`scripts/migrations/00001_init.sql`, `00002_free_code_runs_limit.sql`): `free`, `pro_monthly`.
+Seeded plans (`scripts/migrations/00001_init.sql`): `free`, `pro_monthly`.
 
-Free plan defaults include `code_runs_per_day` limit **50/day**; Pro **500/day**. Hidden tests (`hidden_tests_enabled`) are Pro-only; sandbox still allows `submit` runs on Free against public tests.
+Free plan defaults: `ai_evaluations_per_day` **25/day**, `mock_interviews_per_month` **3/month**, `code_runs_per_day` **50/day**. Pro: **100/day**, **30/month**, **500/day**. Hidden tests (`hidden_tests_enabled`) are Pro-only; sandbox still allows `submit` runs on Free against public tests.
 
 ## API
 
@@ -56,8 +56,7 @@ Consumers: **ai** (`ai_evaluations_per_day`), **interview** (`mock_interviews_pe
   change run in one `WithTx`; failure rolls back the dedup row so retries work.
   Duplicate deliveries return HTTP 200 (idempotent).
 - **Grant/revoke are transactional** — cancel previous + upsert new in one tx.
-- **One active subscription per user** — enforced by partial unique index
-  (`00003_one_active_subscription.sql`).
+- **One active subscription per user** — enforced by partial unique index on `subscriptions`.
 - **Expired subscriptions are ignored** — `GetActiveSubscription` filters
   `current_period_end > now()`.
 - In `production`, `INTERNAL_API_TOKEN` and `TRIBUTE_WEBHOOK_SECRET` are required.

@@ -132,8 +132,6 @@ certbot certonly --webroot -w /var/www/html --cert-name druz9.online --expand \
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-`migrate-all.sh` uses `goose -allow-missing` so out-of-order billing migrations (e.g. `00009` before `00002`) do not block deploy.
-
 **Grafana Cloud (optional):**
 
 Useful eval-flow metrics:
@@ -150,14 +148,14 @@ Operator snapshot metrics (users, DB size, LLM chain ping) live in **admin UI** 
 Eval routes by **billing plan**: free users → free chain keys; `pro_monthly` → paid chain keys.
 Two separate key sets — you never pay for free-user traffic on DeepSeek/Groq paid.
 
-### Free plan limits (billing migration `00010`)
+### Free plan limits (billing `00001_init.sql`)
 
 | Entitlement | Free | Pro |
 |-------------|------|-----|
-| AI eval / day | **5** | 100 |
+| AI eval / day | **25** | 100 |
 | Mock interviews / month | **3** | 30 |
 
-5 eval/day × ~2 LLM calls ≈ 10 API calls/user — ~100 active free users stay within Groq free org quota.
+25 eval/day × ~2 LLM calls ≈ 50 API calls/user — tuned for mock prep days while staying within Groq free org quota.
 
 ### Env: split chains
 
@@ -197,7 +195,7 @@ Admin LLM probes show `free/groq`, `pro/deepseek`, etc.
 
 ### `.env` checklist (paid keys on prod)
 
-Apply migration `00010` on billing DB, then set keys above and restart `ai` + `billing`.
+Apply billing init migration (or `make reset-db` + migrate on empty prod), then set keys above and restart `ai` + `billing`.
 
 Watch Grafana **AI & LLM** dashboard: `llm_calls_total`, `outbox_lag_seconds`.
 

@@ -137,6 +137,59 @@ CREATE TABLE rubric_criteria (
 );
 
 CREATE INDEX rubric_criteria_rubric_id_idx ON rubric_criteria (rubric_id);
+
+CREATE TABLE articles (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    slug             TEXT NOT NULL UNIQUE,
+    title            TEXT NOT NULL,
+    summary          TEXT NOT NULL,
+    body             TEXT NOT NULL,
+    status           TEXT NOT NULL DEFAULT 'draft',
+    reading_minutes  INT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT articles_status_check CHECK (
+        status IN ('draft', 'published', 'archived')
+    )
+);
+
+CREATE INDEX articles_status_updated_idx ON articles (status, updated_at DESC);
+
+CREATE TABLE article_skill_keys (
+    article_id UUID NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    skill_key  TEXT NOT NULL,
+    PRIMARY KEY (article_id, skill_key)
+);
+
+CREATE INDEX article_skill_keys_skill_key_idx ON article_skill_keys (skill_key);
+
+CREATE TABLE article_videos (
+    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    article_id       UUID NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    title            TEXT NOT NULL,
+    url              TEXT NOT NULL,
+    provider         TEXT NOT NULL DEFAULT 'youtube',
+    position         INT NOT NULL,
+    duration_seconds INT,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    CONSTRAINT article_videos_provider_check CHECK (
+        provider IN ('youtube', 'vimeo', 'other')
+    ),
+    CONSTRAINT article_videos_position_unique UNIQUE (article_id, position)
+);
+
+CREATE INDEX article_videos_article_id_idx ON article_videos (article_id);
+
+CREATE TABLE article_tasks (
+    article_id UUID NOT NULL REFERENCES articles(id) ON DELETE CASCADE,
+    task_id    UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    position   INT NOT NULL,
+    PRIMARY KEY (article_id, task_id),
+    CONSTRAINT article_tasks_position_unique UNIQUE (article_id, position)
+);
+
+CREATE INDEX article_tasks_task_id_idx ON article_tasks (task_id);
 -- +goose StatementEnd
 
 -- +goose Down

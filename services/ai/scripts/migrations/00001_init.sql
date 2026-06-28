@@ -40,6 +40,15 @@ CREATE TABLE model_calls (
 );
 
 CREATE INDEX model_calls_evaluation_job_id_idx ON model_calls (evaluation_job_id);
+
+CREATE TABLE llm_runtime_config (
+    id         INT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    version    BIGINT NOT NULL DEFAULT 0,
+    config     JSONB NOT NULL DEFAULT '{}',
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO llm_runtime_config (id, version, config) VALUES (1, 0, '{}');
 -- +goose StatementEnd
 
 -- +goose Down

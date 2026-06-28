@@ -76,7 +76,7 @@ Other services use `pkg/client.ContentClient` or gRPC — never read content tab
 | `editor_preset.{lang}.harness` | Wrapped around `{{SOLUTION}}` for sandbox runs (stdin/stdout I/O) |
 | `prompt` / `hints` | Shown to user or passed into evaluation context |
 
-Seed catalog: `00002_seed.sql` + `00010_seed_catalog_excellence.sql` (5 algorithm + live_coding track + 2 system design + Yandex/Google templates).
+Seed catalog: `00002_seed.sql` (MVP catalog + algorithm/live_coding/system_design tasks, Yandex/Google templates, articles).
 | `articles` + `article_skill_keys` + `article_videos` + `article_tasks` | Knowledge-base articles; videos; linked catalog tasks |
 
 Rubrics resolve by active rubric for `task.type` (no per-task override table).

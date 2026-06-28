@@ -59,6 +59,8 @@ CREATE TABLE session_tasks (
     session_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
     section_id UUID NOT NULL REFERENCES interview_session_sections(id) ON DELETE CASCADE,
     task_id    UUID NOT NULL,
+    task_title TEXT,
+    task_type  TEXT,
     position   INT NOT NULL,
     status     TEXT NOT NULL DEFAULT 'assigned',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
