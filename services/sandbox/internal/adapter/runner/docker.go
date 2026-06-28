@@ -20,6 +20,9 @@ type DockerRunner struct {
 	JavaScriptImage string
 	MaxOutputBytes  int
 	CPUs            string
+	// WorkRoot is a host-visible directory for bind mounts when sandbox uses
+	// docker.sock from inside a container (must match a bind-mounted path).
+	WorkRoot string
 }
 
 func (r *DockerRunner) Name() string { return "docker" }
@@ -30,7 +33,14 @@ func (r *DockerRunner) Run(ctx context.Context, req RunRequest) (*RunResult, err
 
 func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ string) (*RunResult, error) {
 	start := time.Now()
-	dir, err := os.MkdirTemp("", "sandbox-docker-*")
+	workRoot := r.WorkRoot
+	if workRoot == "" {
+		workRoot = os.TempDir()
+	}
+	if err := os.MkdirAll(workRoot, 0o700); err != nil {
+		return nil, err
+	}
+	dir, err := os.MkdirTemp(workRoot, "sandbox-docker-*")
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +53,7 @@ func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ str
 	if err := os.WriteFile(filepath.Join(dir, filename), []byte(req.Code), 0o600); err != nil {
 		return nil, err
 	}
-	if strings.EqualFold(strings.TrimSpace(req.Language), model.LangGo) {
+	if isGoLanguage(req.Language) {
 		if err := prepareGoWorkspace(dir); err != nil {
 			return nil, err
 		}
@@ -130,7 +140,6 @@ func dockerRunArgs(name, image, workDir string, memoryMB int, cpus string, cmd .
 		"--tmpfs", "/tmp:rw,size=64m,exec",
 		"-e", "HOME=/work",
 		"-e", "GOCACHE=/work/.gocache",
-		"-e", "GOFLAGS=-mod=mod",
 		"-v", workDir + ":/work:rw",
 		"-w", "/work",
 		image,
@@ -147,8 +156,8 @@ func killContainer(name string) {
 
 func dockerLanguageSpec(language string, r *DockerRunner) (filename, image string, cmd []string, err error) {
 	switch strings.ToLower(strings.TrimSpace(language)) {
-	case model.LangGo:
-		return "main.go", r.GoImage, []string{"go", "run", "."}, nil
+	case model.LangGo, "golang":
+		return "main.go", r.GoImage, []string{"go", "run", "main.go"}, nil
 	case model.LangPython:
 		return "main.py", r.PythonImage, []string{"python3", "main.py"}, nil
 	case model.LangJavaScript:
@@ -161,7 +170,7 @@ func dockerLanguageSpec(language string, r *DockerRunner) (filename, image strin
 func looksLikeCompileError(output, language string) bool {
 	lower := strings.ToLower(output)
 	switch strings.ToLower(strings.TrimSpace(language)) {
-	case model.LangGo:
+	case model.LangGo, "golang":
 		return strings.Contains(lower, "syntax error") ||
 			strings.Contains(lower, "cannot find") ||
 			strings.Contains(lower, "undefined:") ||

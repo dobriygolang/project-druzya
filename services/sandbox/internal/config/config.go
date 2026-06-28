@@ -34,6 +34,7 @@ type Config struct {
 	DockerGoImage      string
 	DockerPythonImage  string
 	DockerNodeImage    string
+	DockerWorkRoot     string
 	CORSAllowedOrigins []string
 	AsyncRuns          bool
 	WorkerInterval     time.Duration
@@ -129,6 +130,7 @@ func Load() (*Config, error) {
 		DockerGoImage:      getEnv("SANDBOX_DOCKER_GO_IMAGE", "golang:1.24-alpine"),
 		DockerPythonImage:  getEnv("SANDBOX_DOCKER_PYTHON_IMAGE", "python:3.12-alpine"),
 		DockerNodeImage:    getEnv("SANDBOX_DOCKER_NODE_IMAGE", "node:22-alpine"),
+		DockerWorkRoot:     getEnv("SANDBOX_DOCKER_WORK_ROOT", ""),
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 		AsyncRuns:          asyncRuns,
 		WorkerInterval:     time.Duration(workerIntervalMS) * time.Millisecond,

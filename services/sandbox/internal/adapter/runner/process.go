@@ -41,7 +41,7 @@ func (r *ProcessRunner) runOnce(ctx context.Context, req RunRequest, stdin, test
 	if err := os.WriteFile(filepath.Join(dir, filename), []byte(req.Code), 0o600); err != nil {
 		return nil, err
 	}
-	if strings.EqualFold(strings.TrimSpace(req.Language), model.LangGo) {
+	if isGoLanguage(req.Language) {
 		if err := prepareGoWorkspace(dir); err != nil {
 			return nil, err
 		}
@@ -110,8 +110,8 @@ func (r *ProcessRunner) runOnce(ctx context.Context, req RunRequest, stdin, test
 
 func languageSpec(language, dir string) (filename string, runArgs, compileArgs []string, err error) {
 	switch strings.ToLower(strings.TrimSpace(language)) {
-	case model.LangGo:
-		return "main.go", []string{"go", "run", "."}, nil, nil
+	case model.LangGo, "golang":
+		return "main.go", []string{"go", "run", "main.go"}, nil, nil
 	case model.LangPython:
 		return "main.py", []string{"python3", "main.py"}, nil, nil
 	case model.LangJavaScript:

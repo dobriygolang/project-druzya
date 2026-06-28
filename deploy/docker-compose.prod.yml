@@ -283,8 +283,11 @@ services:
       SANDBOX_DOCKER_GO_IMAGE: ${SANDBOX_DOCKER_GO_IMAGE:-golang:1.24-alpine}
       SANDBOX_DOCKER_PYTHON_IMAGE: ${SANDBOX_DOCKER_PYTHON_IMAGE:-python:3.12-alpine}
       SANDBOX_DOCKER_NODE_IMAGE: ${SANDBOX_DOCKER_NODE_IMAGE:-node:22-alpine}
+      SANDBOX_DOCKER_WORK_ROOT: /var/lib/sandbox-work
     volumes:
       - ./secrets/jwt:/run/secrets/jwt:ro
+      # Host path must match SANDBOX_DOCKER_WORK_ROOT so docker.sock bind mounts resolve on the host.
+      - /var/lib/sandbox-work:/var/lib/sandbox-work
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       <<: *health-ready

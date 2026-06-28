@@ -49,6 +49,11 @@ docker compose -f docker-compose.prod.yml logs -f interview
 - **Cause:** content not ready or wrong `CONTENT_GRPC_ADDR`
 - **Fix:** `docker compose ps`, check content logs, verify `content:9091` in compose network
 
+### sandbox Go compile_error: go.mod file not found
+
+- **Cause:** sandbox runs code via host Docker (`/var/run/docker.sock`). Work dirs must live on a **host path** bind-mounted into the sandbox container at the same path (`/var/lib/sandbox-work`).
+- **Fix:** on the host once: `mkdir -p /var/lib/sandbox-work && chmod 700 /var/lib/sandbox-work`, rebuild/restart sandbox after deploy.
+
 ### migrations failed
 
 ```bash
