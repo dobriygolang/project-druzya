@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from 'react'
 import * as Y from 'yjs'
-import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
+import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { yCollab } from 'y-codemirror.next'
 import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
@@ -9,7 +9,7 @@ import { cmLanguageExt } from '@/lib/codemirror/langExtension'
 import { editorAssistExtensions } from '@/lib/codemirror/editorAssist'
 import { collabUserColors } from '@/lib/codemirror/collabColors'
 import { peersFromAwareness, type CollabPeer } from '@/lib/codemirror/collabPresence'
-import { b64ToBytes, bytesToB64, decodeYjsPayload, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
+import { bytesToB64, applyWsEnvelope, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
 import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
 
 export type CollabCodeEditorHandle = {
@@ -31,33 +31,6 @@ type Props = {
   onFormat?: () => void
   onPeersChange?: (peers: CollabPeer[]) => void
   onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
-}
-
-function applyWsEnvelope(
-  env: EditorWsEnvelope,
-  ydoc: Y.Doc,
-  awareness: Awareness | null,
-): void {
-  if (env.kind === 'snapshot' || env.kind === 'op') {
-    const data = env.data as { payload?: unknown } | undefined
-    const bytes = decodeYjsPayload(data?.payload)
-    if (bytes && bytes.byteLength > 0) {
-      Y.applyUpdate(ydoc, bytes, 'remote')
-    }
-    return
-  }
-
-  if (env.kind === 'presence' && awareness) {
-    const data = env.data as { data?: { update?: string }; update?: string } | undefined
-    const b64 = data?.data?.update ?? data?.update
-    if (typeof b64 === 'string') {
-      try {
-        applyAwarenessUpdate(awareness, b64ToBytes(b64), 'remote')
-      } catch {
-        /* ignore */
-      }
-    }
-  }
 }
 
 function isTabActive(): boolean {

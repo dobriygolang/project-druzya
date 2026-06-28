@@ -25,7 +25,7 @@ func RoleForInvitee(room Room, existing []Participant) Role {
 			}
 		}
 		return RoleInterviewer
-	case RoomTypePairMock, RoomTypePractice:
+	case RoomTypePairMock, RoomTypePractice, RoomTypeSystemDesign:
 		return RoleParticipant
 	}
 	return RoleViewer

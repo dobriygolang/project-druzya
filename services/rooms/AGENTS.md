@@ -6,7 +6,9 @@ Module: `github.com/sedorofeevd/project-druzya/services/rooms`
 
 ## Purpose
 
-Live coding collab: REST lifecycle + WebSocket Yjs sync.
+Live collab rooms: REST lifecycle + WebSocket Yjs sync for **code** (`Y.Text code`) and **system design** (`Y.Text scene` / Excalidraw JSON).
+
+Room types: `practice`, `interview`, `pair_mock`, `system_design`. Languages include `diagram` for Excalidraw boards.
 
 ## Ports
 
@@ -18,7 +20,7 @@ REST: `POST/GET /v1/rooms/*`, guest join, invite. WS: `GET /ws/editor/{room_id}?
 
 Roles: `owner`, `interviewer`, `participant`, `viewer`.
 
-Frontend: `/live/:roomId` → `CollabRoomPage.tsx`.
+Frontend: `/live/:roomId` → `CollabRoomPage.tsx` (CodeMirror or Excalidraw by `room_type`).
 
 ## Scale
 

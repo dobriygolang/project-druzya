@@ -7,11 +7,12 @@ const (
 	LanguagePython     Language = "python"
 	LanguageJavaScript Language = "javascript"
 	LanguageTypeScript Language = "typescript"
+	LanguageDiagram    Language = "diagram"
 )
 
 func (l Language) IsValid() bool {
 	switch l {
-	case LanguageGo, LanguagePython, LanguageJavaScript, LanguageTypeScript:
+	case LanguageGo, LanguagePython, LanguageJavaScript, LanguageTypeScript, LanguageDiagram:
 		return true
 	}
 	return false

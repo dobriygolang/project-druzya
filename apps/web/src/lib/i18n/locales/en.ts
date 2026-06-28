@@ -355,6 +355,7 @@ export const en: Messages = {
     savedOffline: 'Saved locally — will sync when back online.',
     restoredDraft: 'Restored unsynced local draft.',
     versionConflict: 'Someone else updated this workspace — refresh to continue.',
+    liveRoom: 'Collaborative board',
   },
   sdDebrief: {
     title: 'System design debrief',
@@ -513,6 +514,10 @@ export const en: Messages = {
     newCardGuest: 'Name is visible to your partner. No account needed.',
     yourName: 'Your name',
     language: 'Language',
+    roomMode: 'Room type',
+    roomModeCode: 'Live coding',
+    roomModeDiagram: 'System design board',
+    diagramRoom: 'Excalidraw',
     createRoom: 'Create room',
     hasAccountShort: 'Have an account?',
     ttlNote: 'Room lives for a few hours. Data is not kept after TTL expires.',

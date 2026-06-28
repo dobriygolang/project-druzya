@@ -5,4 +5,10 @@ export const LIVE_LANGS = [
   { id: 'typescript', label: 'TypeScript' },
 ] as const
 
+export const LIVE_ROOM_MODES = [
+  { id: 'code', roomType: 'interview', language: 'go' },
+  { id: 'diagram', roomType: 'system_design', language: 'diagram' },
+] as const
+
 export type LiveLanguageId = (typeof LIVE_LANGS)[number]['id']
+export type LiveRoomModeId = (typeof LIVE_ROOM_MODES)[number]['id']

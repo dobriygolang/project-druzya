@@ -357,6 +357,7 @@ export const ru = {
     savedOffline: 'Сохранено локально — синхронизируем при подключении.',
     restoredDraft: 'Восстановлен локальный черновик.',
     versionConflict: 'Workspace обновлён — обнови страницу.',
+    liveRoom: 'Совместная доска',
   },
   sdDebrief: {
     title: 'System design debrief',
@@ -515,6 +516,10 @@ export const ru = {
     newCardGuest: 'Имя видно напарнику в редакторе. Аккаунт не нужен.',
     yourName: 'Ваше имя',
     language: 'Язык',
+    roomMode: 'Тип комнаты',
+    roomModeCode: 'Live coding',
+    roomModeDiagram: 'System design доска',
+    diagramRoom: 'Excalidraw',
     createRoom: 'Создать комнату',
     hasAccountShort: 'Есть аккаунт?',
     ttlNote: 'Комната живёт несколько часов. Данные не сохраняются после истечения TTL.',

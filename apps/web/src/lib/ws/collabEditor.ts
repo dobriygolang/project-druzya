@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import * as Y from 'yjs'
+import { applyAwarenessUpdate } from 'y-protocols/awareness'
+import type { Awareness } from 'y-protocols/awareness'
 
 export type EditorWsEnvelope = {
   kind: string
@@ -111,4 +114,31 @@ export function b64ToBytes(b64: string): Uint8Array {
   const out = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i)
   return out
+}
+
+export function applyWsEnvelope(
+  env: EditorWsEnvelope,
+  ydoc: Y.Doc,
+  awareness: Awareness | null,
+): void {
+  if (env.kind === 'snapshot' || env.kind === 'op') {
+    const data = env.data as { payload?: unknown } | undefined
+    const bytes = decodeYjsPayload(data?.payload)
+    if (bytes && bytes.byteLength > 0) {
+      Y.applyUpdate(ydoc, bytes, 'remote')
+    }
+    return
+  }
+
+  if (env.kind === 'presence' && awareness) {
+    const data = env.data as { data?: { update?: string }; update?: string } | undefined
+    const b64 = data?.data?.update ?? data?.update
+    if (typeof b64 === 'string') {
+      try {
+        applyAwarenessUpdate(awareness, b64ToBytes(b64), 'remote')
+      } catch {
+        /* ignore */
+      }
+    }
+  }
 }

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { getMe } from '@/lib/api/auth'
 import { formatApiError, readAccessToken } from '@/lib/apiClient'
-import { LIVE_LANGS } from '@/lib/live/constants'
+import { LIVE_LANGS, LIVE_ROOM_MODES, type LiveRoomModeId } from '@/lib/live/constants'
 import { readGuestDisplayName, persistGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
 import { useI18n } from '@/lib/i18n'
@@ -18,7 +18,11 @@ export function LiveNewPage() {
   const { t } = useI18n()
   const authed = !!readAccessToken()
   const [displayName, setDisplayName] = useState(() => readGuestDisplayName())
+  const [roomMode, setRoomMode] = useState<LiveRoomModeId>('code')
   const [language, setLanguage] = useState('go')
+
+  const modeConfig = LIVE_ROOM_MODES.find((m) => m.id === roomMode) ?? LIVE_ROOM_MODES[0]
+  const isDiagram = roomMode === 'diagram'
 
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe, enabled: authed })
   const createM = useCreateLiveRoom()
@@ -33,7 +37,8 @@ export function LiveNewPage() {
   function handleCreate() {
     if (!authed) persistGuestDisplayName(displayName || t('common.guest'))
     createM.mutate({
-      language,
+      language: isDiagram ? 'diagram' : language,
+      roomType: modeConfig.roomType,
       displayName: displayName || undefined,
     })
   }
@@ -107,25 +112,48 @@ export function LiveNewPage() {
             ) : null}
 
             <div className="mt-5">
-              <span className="block text-sm font-medium">{t('live.language')}</span>
+              <span className="block text-sm font-medium">{t('live.roomMode')}</span>
               <div className="mt-2 flex flex-wrap gap-2">
-                {LIVE_LANGS.map((lang) => (
+                {LIVE_ROOM_MODES.map((mode) => (
                   <button
-                    key={lang.id}
+                    key={mode.id}
                     type="button"
-                    onClick={() => setLanguage(lang.id)}
+                    onClick={() => setRoomMode(mode.id)}
                     className={[
                       'rounded-lg border px-3 py-1.5 text-sm transition-colors',
-                      language === lang.id
+                      roomMode === mode.id
                         ? 'border-border-strong bg-surface-2 font-medium text-text-primary'
                         : 'border-border text-text-secondary hover:border-border-strong',
                     ].join(' ')}
                   >
-                    {lang.label}
+                    {mode.id === 'code' ? t('live.roomModeCode') : t('live.roomModeDiagram')}
                   </button>
                 ))}
               </div>
             </div>
+
+            {!isDiagram ? (
+              <div className="mt-5">
+                <span className="block text-sm font-medium">{t('live.language')}</span>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {LIVE_LANGS.map((lang) => (
+                    <button
+                      key={lang.id}
+                      type="button"
+                      onClick={() => setLanguage(lang.id)}
+                      className={[
+                        'rounded-lg border px-3 py-1.5 text-sm transition-colors',
+                        language === lang.id
+                          ? 'border-border-strong bg-surface-2 font-medium text-text-primary'
+                          : 'border-border text-text-secondary hover:border-border-strong',
+                      ].join(' ')}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             {createM.error ? (
               <div className="mt-4">

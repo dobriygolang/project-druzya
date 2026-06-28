@@ -10,6 +10,7 @@ const FONT_MIN = 12
 const FONT_MAX = 20
 
 type Props = {
+  mode?: 'code' | 'diagram'
   language: string
   fontSize: number
   onFontSizeChange: (size: number) => void
@@ -27,6 +28,7 @@ type Props = {
 }
 
 export function LiveRoomBottomBar({
+  mode = 'code',
   language,
   fontSize,
   onFontSizeChange,
@@ -43,7 +45,10 @@ export function LiveRoomBottomBar({
   onToggleOutput,
 }: Props) {
   const { t } = useI18n()
-  const langLabel = LIVE_LANGS.find((l) => l.id === language)?.label ?? language
+  const isDiagram = mode === 'diagram'
+  const langLabel = isDiagram
+    ? t('live.diagramRoom')
+    : (LIVE_LANGS.find((l) => l.id === language)?.label ?? language)
 
   return (
     <footer
@@ -51,7 +56,7 @@ export function LiveRoomBottomBar({
       style={{ borderColor: brand.hair }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
-        {canRun ? (
+        {canRun && !isDiagram ? (
           <button
             type="button"
             onClick={onRun}
@@ -67,7 +72,7 @@ export function LiveRoomBottomBar({
           </button>
         ) : null}
 
-        {canFormat ? (
+        {canFormat && !isDiagram ? (
           <button
             type="button"
             onClick={onFormat}
@@ -82,18 +87,20 @@ export function LiveRoomBottomBar({
           </button>
         ) : null}
 
-        <button
-          type="button"
-          onClick={onToggleOutput}
-          className={cn(
-            'hidden rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors sm:inline-flex',
-            outputOpen
-              ? 'border-border-strong bg-surface-2 text-text-primary'
-              : 'border-border text-text-secondary hover:bg-surface-2',
-          )}
-        >
-          {t('live.output')}
-        </button>
+        {!isDiagram ? (
+          <button
+            type="button"
+            onClick={onToggleOutput}
+            className={cn(
+              'hidden rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors sm:inline-flex',
+              outputOpen
+                ? 'border-border-strong bg-surface-2 text-text-primary'
+                : 'border-border text-text-secondary hover:bg-surface-2',
+            )}
+          >
+            {t('live.output')}
+          </button>
+        ) : null}
 
         <div
           className="hidden items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-text-secondary sm:flex"
@@ -102,25 +109,27 @@ export function LiveRoomBottomBar({
           <span>{langLabel}</span>
         </div>
 
-        <div className="flex items-center gap-1 rounded-lg border border-border bg-surface-2 px-1 py-0.5">
-          <IconButton
-            aria-label={t('live.fontDecrease')}
-            disabled={fontSize <= FONT_MIN}
-            onClick={() => onFontSizeChange(Math.max(FONT_MIN, fontSize - 1))}
-          >
-            <Minus className="h-3.5 w-3.5" />
-          </IconButton>
-          <span className="min-w-[1.5rem] text-center font-mono text-[13px] text-text-primary">
-            {fontSize}
-          </span>
-          <IconButton
-            aria-label={t('live.fontIncrease')}
-            disabled={fontSize >= FONT_MAX}
-            onClick={() => onFontSizeChange(Math.min(FONT_MAX, fontSize + 1))}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </IconButton>
-        </div>
+        {!isDiagram ? (
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-surface-2 px-1 py-0.5">
+            <IconButton
+              aria-label={t('live.fontDecrease')}
+              disabled={fontSize <= FONT_MIN}
+              onClick={() => onFontSizeChange(Math.max(FONT_MIN, fontSize - 1))}
+            >
+              <Minus className="h-3.5 w-3.5" />
+            </IconButton>
+            <span className="min-w-[1.5rem] text-center font-mono text-[13px] text-text-primary">
+              {fontSize}
+            </span>
+            <IconButton
+              aria-label={t('live.fontIncrease')}
+              disabled={fontSize >= FONT_MAX}
+              onClick={() => onFontSizeChange(Math.min(FONT_MAX, fontSize + 1))}
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </IconButton>
+          </div>
+        ) : null}
 
         <span className="hidden items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted md:inline-flex">
           <span className="h-1.5 w-1.5 rounded-full" style={{ background: statusColor }} />

@@ -30,10 +30,15 @@ export function useCreateLiveRoom() {
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe, enabled: authed })
 
   return useMutation({
-    mutationFn: async (input: { language: string; displayName?: string }) => {
+    mutationFn: async (input: {
+      language: string
+      displayName?: string
+      roomType?: string
+    }) => {
+      const roomType = input.roomType ?? 'interview'
       if (authed) {
         const room = await createRoom({
-          room_type: 'interview',
+          room_type: roomType,
           language: input.language,
         })
         let inviteUrl: string | null = null
@@ -52,7 +57,11 @@ export function useCreateLiveRoom() {
         meQ.data?.username ||
         'Guest'
       persistGuestDisplayName(name)
-      const result = await createGuestRoom({ displayName: name, language: input.language })
+      const result = await createGuestRoom({
+        displayName: name,
+        language: input.language,
+        roomType,
+      })
       return {
         room: result.room,
         access_token: result.access_token,

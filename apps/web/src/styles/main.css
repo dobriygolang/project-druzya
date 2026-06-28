@@ -198,3 +198,14 @@
     border-radius: 2px;
   }
 }
+
+/* Collab Excalidraw — dark canvas in live rooms (ported from druzya/frontend) */
+.hone-excalidraw-mount-web .excalidraw {
+  --color-canvas-background: rgb(var(--color-bg));
+  --theme-filter: invert(100%) hue-rotate(180deg) !important;
+}
+.hone-excalidraw-mount-web .excalidraw .layer-ui__wrapper__top-right,
+.hone-excalidraw-mount-web .excalidraw .scroll-back-to-content,
+.hone-excalidraw-mount-web .excalidraw .help-icon {
+  display: none !important;
+}

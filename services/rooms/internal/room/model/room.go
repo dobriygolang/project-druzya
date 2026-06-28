@@ -9,14 +9,15 @@ import (
 type RoomType string
 
 const (
-	RoomTypePractice  RoomType = "practice"
-	RoomTypeInterview RoomType = "interview"
-	RoomTypePairMock  RoomType = "pair_mock"
+	RoomTypePractice     RoomType = "practice"
+	RoomTypeInterview    RoomType = "interview"
+	RoomTypePairMock     RoomType = "pair_mock"
+	RoomTypeSystemDesign RoomType = "system_design"
 )
 
 func (t RoomType) IsValid() bool {
 	switch t {
-	case RoomTypePractice, RoomTypeInterview, RoomTypePairMock:
+	case RoomTypePractice, RoomTypeInterview, RoomTypePairMock, RoomTypeSystemDesign:
 		return true
 	}
 	return false

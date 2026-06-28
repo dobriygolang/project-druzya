@@ -379,6 +379,100 @@ func (_c *Repository_CreateSessionBundle_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// CreateSystemDesignTurn provides a mock function with given fields: ctx, turn
+func (_m *Repository) CreateSystemDesignTurn(ctx context.Context, turn *model.SystemDesignTurn) error {
+	ret := _m.Called(ctx, turn)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateSystemDesignTurn")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *model.SystemDesignTurn) error); ok {
+		r0 = rf(ctx, turn)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Repository_CreateSystemDesignTurn_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateSystemDesignTurn'
+type Repository_CreateSystemDesignTurn_Call struct {
+	*mock.Call
+}
+
+// CreateSystemDesignTurn is a helper method to define mock.On call
+//   - ctx context.Context
+//   - turn *model.SystemDesignTurn
+func (_e *Repository_Expecter) CreateSystemDesignTurn(ctx interface{}, turn interface{}) *Repository_CreateSystemDesignTurn_Call {
+	return &Repository_CreateSystemDesignTurn_Call{Call: _e.mock.On("CreateSystemDesignTurn", ctx, turn)}
+}
+
+func (_c *Repository_CreateSystemDesignTurn_Call) Run(run func(ctx context.Context, turn *model.SystemDesignTurn)) *Repository_CreateSystemDesignTurn_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*model.SystemDesignTurn))
+	})
+	return _c
+}
+
+func (_c *Repository_CreateSystemDesignTurn_Call) Return(_a0 error) *Repository_CreateSystemDesignTurn_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Repository_CreateSystemDesignTurn_Call) RunAndReturn(run func(context.Context, *model.SystemDesignTurn) error) *Repository_CreateSystemDesignTurn_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CreateSystemDesignWorkspace provides a mock function with given fields: ctx, ws
+func (_m *Repository) CreateSystemDesignWorkspace(ctx context.Context, ws *model.SystemDesignWorkspace) error {
+	ret := _m.Called(ctx, ws)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateSystemDesignWorkspace")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, *model.SystemDesignWorkspace) error); ok {
+		r0 = rf(ctx, ws)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Repository_CreateSystemDesignWorkspace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateSystemDesignWorkspace'
+type Repository_CreateSystemDesignWorkspace_Call struct {
+	*mock.Call
+}
+
+// CreateSystemDesignWorkspace is a helper method to define mock.On call
+//   - ctx context.Context
+//   - ws *model.SystemDesignWorkspace
+func (_e *Repository_Expecter) CreateSystemDesignWorkspace(ctx interface{}, ws interface{}) *Repository_CreateSystemDesignWorkspace_Call {
+	return &Repository_CreateSystemDesignWorkspace_Call{Call: _e.mock.On("CreateSystemDesignWorkspace", ctx, ws)}
+}
+
+func (_c *Repository_CreateSystemDesignWorkspace_Call) Run(run func(ctx context.Context, ws *model.SystemDesignWorkspace)) *Repository_CreateSystemDesignWorkspace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(*model.SystemDesignWorkspace))
+	})
+	return _c
+}
+
+func (_c *Repository_CreateSystemDesignWorkspace_Call) Return(_a0 error) *Repository_CreateSystemDesignWorkspace_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Repository_CreateSystemDesignWorkspace_Call) RunAndReturn(run func(context.Context, *model.SystemDesignWorkspace) error) *Repository_CreateSystemDesignWorkspace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ExpireStaleActiveSessions provides a mock function with given fields: ctx, idleBefore, maxAgeBefore
 func (_m *Repository) ExpireStaleActiveSessions(ctx context.Context, idleBefore time.Time, maxAgeBefore time.Time) (int64, error) {
 	ret := _m.Called(ctx, idleBefore, maxAgeBefore)
@@ -1081,6 +1175,65 @@ func (_c *Repository_GetSessionTaskForUser_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// GetSystemDesignWorkspace provides a mock function with given fields: ctx, sessionTaskID
+func (_m *Repository) GetSystemDesignWorkspace(ctx context.Context, sessionTaskID string) (*model.SystemDesignWorkspace, error) {
+	ret := _m.Called(ctx, sessionTaskID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSystemDesignWorkspace")
+	}
+
+	var r0 *model.SystemDesignWorkspace
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*model.SystemDesignWorkspace, error)); ok {
+		return rf(ctx, sessionTaskID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.SystemDesignWorkspace); ok {
+		r0 = rf(ctx, sessionTaskID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.SystemDesignWorkspace)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, sessionTaskID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_GetSystemDesignWorkspace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSystemDesignWorkspace'
+type Repository_GetSystemDesignWorkspace_Call struct {
+	*mock.Call
+}
+
+// GetSystemDesignWorkspace is a helper method to define mock.On call
+//   - ctx context.Context
+//   - sessionTaskID string
+func (_e *Repository_Expecter) GetSystemDesignWorkspace(ctx interface{}, sessionTaskID interface{}) *Repository_GetSystemDesignWorkspace_Call {
+	return &Repository_GetSystemDesignWorkspace_Call{Call: _e.mock.On("GetSystemDesignWorkspace", ctx, sessionTaskID)}
+}
+
+func (_c *Repository_GetSystemDesignWorkspace_Call) Run(run func(ctx context.Context, sessionTaskID string)) *Repository_GetSystemDesignWorkspace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_GetSystemDesignWorkspace_Call) Return(_a0 *model.SystemDesignWorkspace, _a1 error) *Repository_GetSystemDesignWorkspace_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_GetSystemDesignWorkspace_Call) RunAndReturn(run func(context.Context, string) (*model.SystemDesignWorkspace, error)) *Repository_GetSystemDesignWorkspace_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InsertOutbox provides a mock function with given fields: ctx, eventName, payload
 func (_m *Repository) InsertOutbox(ctx context.Context, eventName string, payload map[string]interface{}) error {
 	ret := _m.Called(ctx, eventName, payload)
@@ -1484,6 +1637,66 @@ func (_c *Repository_ListSectionsBySession_Call) RunAndReturn(run func(context.C
 	return _c
 }
 
+// ListSystemDesignTurns provides a mock function with given fields: ctx, sessionTaskID, limit
+func (_m *Repository) ListSystemDesignTurns(ctx context.Context, sessionTaskID string, limit int) ([]model.SystemDesignTurn, error) {
+	ret := _m.Called(ctx, sessionTaskID, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListSystemDesignTurns")
+	}
+
+	var r0 []model.SystemDesignTurn
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]model.SystemDesignTurn, error)); ok {
+		return rf(ctx, sessionTaskID, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []model.SystemDesignTurn); ok {
+		r0 = rf(ctx, sessionTaskID, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.SystemDesignTurn)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, sessionTaskID, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ListSystemDesignTurns_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListSystemDesignTurns'
+type Repository_ListSystemDesignTurns_Call struct {
+	*mock.Call
+}
+
+// ListSystemDesignTurns is a helper method to define mock.On call
+//   - ctx context.Context
+//   - sessionTaskID string
+//   - limit int
+func (_e *Repository_Expecter) ListSystemDesignTurns(ctx interface{}, sessionTaskID interface{}, limit interface{}) *Repository_ListSystemDesignTurns_Call {
+	return &Repository_ListSystemDesignTurns_Call{Call: _e.mock.On("ListSystemDesignTurns", ctx, sessionTaskID, limit)}
+}
+
+func (_c *Repository_ListSystemDesignTurns_Call) Run(run func(ctx context.Context, sessionTaskID string, limit int)) *Repository_ListSystemDesignTurns_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *Repository_ListSystemDesignTurns_Call) Return(_a0 []model.SystemDesignTurn, _a1 error) *Repository_ListSystemDesignTurns_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ListSystemDesignTurns_Call) RunAndReturn(run func(context.Context, string, int) ([]model.SystemDesignTurn, error)) *Repository_ListSystemDesignTurns_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListTasksBySession provides a mock function with given fields: ctx, sessionID
 func (_m *Repository) ListTasksBySession(ctx context.Context, sessionID string) ([]model.SessionTask, error) {
 	ret := _m.Called(ctx, sessionID)
@@ -1539,6 +1752,65 @@ func (_c *Repository_ListTasksBySession_Call) Return(_a0 []model.SessionTask, _a
 }
 
 func (_c *Repository_ListTasksBySession_Call) RunAndReturn(run func(context.Context, string) ([]model.SessionTask, error)) *Repository_ListTasksBySession_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PatchSystemDesignWorkspace provides a mock function with given fields: ctx, in
+func (_m *Repository) PatchSystemDesignWorkspace(ctx context.Context, in model.PatchSystemDesignWorkspaceInput) (*model.SystemDesignWorkspace, error) {
+	ret := _m.Called(ctx, in)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PatchSystemDesignWorkspace")
+	}
+
+	var r0 *model.SystemDesignWorkspace
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, model.PatchSystemDesignWorkspaceInput) (*model.SystemDesignWorkspace, error)); ok {
+		return rf(ctx, in)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, model.PatchSystemDesignWorkspaceInput) *model.SystemDesignWorkspace); ok {
+		r0 = rf(ctx, in)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.SystemDesignWorkspace)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, model.PatchSystemDesignWorkspaceInput) error); ok {
+		r1 = rf(ctx, in)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_PatchSystemDesignWorkspace_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PatchSystemDesignWorkspace'
+type Repository_PatchSystemDesignWorkspace_Call struct {
+	*mock.Call
+}
+
+// PatchSystemDesignWorkspace is a helper method to define mock.On call
+//   - ctx context.Context
+//   - in model.PatchSystemDesignWorkspaceInput
+func (_e *Repository_Expecter) PatchSystemDesignWorkspace(ctx interface{}, in interface{}) *Repository_PatchSystemDesignWorkspace_Call {
+	return &Repository_PatchSystemDesignWorkspace_Call{Call: _e.mock.On("PatchSystemDesignWorkspace", ctx, in)}
+}
+
+func (_c *Repository_PatchSystemDesignWorkspace_Call) Run(run func(ctx context.Context, in model.PatchSystemDesignWorkspaceInput)) *Repository_PatchSystemDesignWorkspace_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(model.PatchSystemDesignWorkspaceInput))
+	})
+	return _c
+}
+
+func (_c *Repository_PatchSystemDesignWorkspace_Call) Return(_a0 *model.SystemDesignWorkspace, _a1 error) *Repository_PatchSystemDesignWorkspace_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_PatchSystemDesignWorkspace_Call) RunAndReturn(run func(context.Context, model.PatchSystemDesignWorkspaceInput) (*model.SystemDesignWorkspace, error)) *Repository_PatchSystemDesignWorkspace_Call {
 	_c.Call.Return(run)
 	return _c
 }

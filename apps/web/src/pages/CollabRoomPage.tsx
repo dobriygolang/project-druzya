@@ -7,6 +7,11 @@ import {
   wsStatusColor,
   type CollabCodeEditorHandle,
 } from '@/components/CollabCodeEditor'
+import {
+  CollabExcalidrawEditor,
+  type CollabExcalidrawHandle,
+} from '@/components/CollabExcalidrawEditor'
+import { isDesignRoom } from '@/lib/live/roomKind'
 import type { CollabPeer } from '@/lib/codemirror/collabPresence'
 import { LiveNewPage } from '@/components/live/LiveNewPage'
 import { LiveRoomBottomBar } from '@/components/live/LiveRoomBottomBar'
@@ -54,7 +59,8 @@ export default function CollabRoomPage() {
   const inviteToken = searchParams.get('invite') ?? undefined
   const sessionTaskId = searchParams.get('sessionTaskId') ?? undefined
   const qc = useQueryClient()
-  const editorRef = useRef<CollabCodeEditorHandle>(null)
+  const codeEditorRef = useRef<CollabCodeEditorHandle>(null)
+  const diagramEditorRef = useRef<CollabExcalidrawHandle>(null)
   const [copied, setCopied] = useState(false)
   const [showInviteBanner, setShowInviteBanner] = useState(false)
   const [wsStatus, setWsStatus] = useState<import('@/lib/ws/collabEditor').EditorWsStatus>('connecting')
@@ -208,7 +214,8 @@ export default function CollabRoomPage() {
   const canFreeze = myRole === 'owner' || myRole === 'interviewer' || isOwner
   const canRun = !!hasSession
   const closeTo = authed ? '/today' : '/welcome'
-  const panelHeight = runPanelHeight(run.panelOpen)
+  const designRoom = isDesignRoom(room)
+  const panelHeight = designRoom ? 0 : runPanelHeight(run.panelOpen)
   const displayName = meQ.data?.username ?? (guestName || t('common.guest'))
 
   const handleClose = () => {
@@ -219,15 +226,20 @@ export default function CollabRoomPage() {
     navigate(closeTo)
   }
 
+  const editorReconnect = () => {
+    if (designRoom) diagramEditorRef.current?.reconnect()
+    else codeEditorRef.current?.reconnect()
+  }
+
   const handleFormat = async () => {
-    const code = editorRef.current?.getCode() ?? ''
+    const code = codeEditorRef.current?.getCode() ?? ''
     if (!code.trim() || fmt.formatting || room.is_frozen) return
     const formatted = await fmt.format(room.language, code)
-    if (formatted != null) editorRef.current?.setCode(formatted)
+    if (formatted != null) codeEditorRef.current?.setCode(formatted)
   }
 
   const handleRun = () => {
-    const code = editorRef.current?.getCode() ?? ''
+    const code = codeEditorRef.current?.getCode() ?? ''
     if (!code.trim()) return
     run.setPanelOpen(true)
     void run.executeRun({
@@ -259,7 +271,7 @@ export default function CollabRoomPage() {
         frozen={room.is_frozen}
         onFreeze={() => freezeM.mutate(!room.is_frozen)}
         wsFailed={wsStatus === 'failed'}
-        onReconnect={() => editorRef.current?.reconnect()}
+        onReconnect={editorReconnect}
         timerMode={authed ? 'elapsed' : 'countdown'}
         createdAt={room.created_at}
         expiresAt={room.expires_at}
@@ -281,53 +293,70 @@ export default function CollabRoomPage() {
         </div>
       ) : null}
 
-      <div className="relative min-h-0 flex-1 bg-[#1e1e1e]">
-        <CollabCodeEditor
-          ref={editorRef}
-          roomId={room.id}
-          language={room.language}
-          frozen={room.is_frozen}
-          userId={sessionUserId ?? guestName}
-          displayName={displayName}
-          accessToken={wsToken}
-          bottomInset={panelHeight}
-          fontSize={fontSize}
-          onRun={canRun ? handleRun : undefined}
-          onFormat={isGo && !room.is_frozen ? () => void handleFormat() : undefined}
-          onPeersChange={setPeers}
-          onWsStatusChange={setWsStatus}
-        />
+      <div className={['relative min-h-0 flex-1', designRoom ? 'bg-bg' : 'bg-[#1e1e1e]'].join(' ')}>
+        {designRoom ? (
+          <CollabExcalidrawEditor
+            ref={diagramEditorRef}
+            roomId={room.id}
+            frozen={room.is_frozen}
+            userId={sessionUserId ?? guestName}
+            displayName={displayName}
+            accessToken={wsToken}
+            sessionTaskId={sessionTaskId}
+            onPeersChange={setPeers}
+            onWsStatusChange={setWsStatus}
+          />
+        ) : (
+          <>
+            <CollabCodeEditor
+              ref={codeEditorRef}
+              roomId={room.id}
+              language={room.language}
+              frozen={room.is_frozen}
+              userId={sessionUserId ?? guestName}
+              displayName={displayName}
+              accessToken={wsToken}
+              bottomInset={panelHeight}
+              fontSize={fontSize}
+              onRun={canRun ? handleRun : undefined}
+              onFormat={isGo && !room.is_frozen ? () => void handleFormat() : undefined}
+              onPeersChange={setPeers}
+              onWsStatusChange={setWsStatus}
+            />
 
-        {fmt.formatError ? (
-          <div className="pointer-events-none absolute left-4 top-4 z-[25] rounded-lg border border-danger/30 bg-surface-1 px-3 py-2 text-xs text-danger shadow-sm">
-            {fmt.formatError}
-          </div>
-        ) : null}
+            {fmt.formatError ? (
+              <div className="pointer-events-none absolute left-4 top-4 z-[25] rounded-lg border border-danger/30 bg-surface-1 px-3 py-2 text-xs text-danger shadow-sm">
+                {fmt.formatError}
+              </div>
+            ) : null}
 
-        <RunOutputPanel
-          open={run.panelOpen}
-          onClose={() => run.setPanelOpen(false)}
-          tab={run.outputTab}
-          onTabChange={run.setOutputTab}
-          run={run.activeRun}
-          running={run.running}
-          error={run.runError}
-          theme="light"
-          placement="contained"
-        />
+            <RunOutputPanel
+              open={run.panelOpen}
+              onClose={() => run.setPanelOpen(false)}
+              tab={run.outputTab}
+              onTabChange={run.setOutputTab}
+              run={run.activeRun}
+              running={run.running}
+              error={run.runError}
+              theme="light"
+              placement="contained"
+            />
+          </>
+        )}
       </div>
 
       <LiveRoomBottomBar
+        mode={designRoom ? 'diagram' : 'code'}
         language={room.language}
         fontSize={fontSize}
         onFontSizeChange={setFontSize}
         peers={peers}
         statusLabel={statusLabel}
         statusColor={statusColor}
-        canRun={canRun}
+        canRun={canRun && !designRoom}
         running={run.running}
         onRun={handleRun}
-        canFormat={isGo && !room.is_frozen}
+        canFormat={isGo && !room.is_frozen && !designRoom}
         formatting={fmt.formatting}
         onFormat={() => void handleFormat()}
         outputOpen={run.panelOpen}

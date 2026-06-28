@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { PageContent } from '@/components/PageContent'
+import { createRoom } from '@/lib/api/rooms'
 import { getTask } from '@/lib/api/content'
 import { getAttempt, getCurrentSessionState } from '@/lib/api/interview'
 import {
@@ -200,6 +201,20 @@ export default function SystemDesignRoomPage() {
     onSuccess: (res) => setTurns((prev) => [...prev, res.system_turn]),
   })
 
+  const collabM = useMutation({
+    mutationFn: () =>
+      createRoom({
+        room_type: 'system_design',
+        task_id: taskId,
+        language: 'diagram',
+        session_id: sessionId,
+      }),
+    onSuccess: (room) => {
+      const qs = sessionTaskId ? `?sessionTaskId=${encodeURIComponent(sessionTaskId)}` : ''
+      window.open(`/live/${room.id}${qs}`, '_blank', 'noopener,noreferrer')
+    },
+  })
+
   const submitM = useMutation({
     mutationFn: async () => {
       const png = await exportDiagramPngBase64(excalidrawApi.current)
@@ -251,6 +266,13 @@ export default function SystemDesignRoomPage() {
           {offlineNote ? <p className="text-xs text-amber-600">{offlineNote}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            loading={collabM.isPending}
+            onClick={() => collabM.mutate()}
+          >
+            {t('sdRoom.liveRoom')}
+          </Button>
           <Button variant="secondary" onClick={() => checkpointM.mutate()} disabled={checkpointM.isPending}>
             {t('sdRoom.checkpoint')}
           </Button>
@@ -388,6 +410,16 @@ export default function SystemDesignRoomPage() {
           </form>
         </Card>
       </div>
+
+      {collabM.isError ? (
+        <div className="mt-4">
+          <ErrorMessage
+            message={
+              collabM.error instanceof Error ? collabM.error.message : t('session.roomError')
+            }
+          />
+        </div>
+      ) : null}
 
       {(patchM.isError || chatM.isError || submitM.isError) && (
         <div className="mt-4">
