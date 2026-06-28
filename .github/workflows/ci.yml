@@ -41,7 +41,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: deploy/.proto-bin
-          key: proto-plugins-v1-${{ runner.os }}-${{ hashFiles('deploy/scripts/gen-all-proto.sh') }}
+          key: proto-plugins-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('deploy/scripts/gen-all-proto.sh') }}
 
       - name: Generate protobuf (all services)
         working-directory: ${{ github.workspace }}

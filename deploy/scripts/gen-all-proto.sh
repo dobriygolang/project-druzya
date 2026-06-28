@@ -14,11 +14,36 @@ install_proto_tools() {
   export GOBIN="$BIN_DIR"
   export PATH="$BIN_DIR:$PATH"
 
+  proto_plugin_valid() {
+    local bin="$1"
+    [ -x "$bin" ] || return 1
+    if ! command -v file >/dev/null 2>&1; then
+      return 0
+    fi
+    local info
+    info="$(file -b "$bin")"
+    case "$(uname -s)/$(uname -m)" in
+      Linux/x86_64|Linux/amd64)
+        [[ "$info" == *"ELF"* && "$info" == *"x86-64"* ]]
+        ;;
+      Linux/aarch64|Linux/arm64)
+        [[ "$info" == *"ELF"* && ( "$info" == *"aarch64"* || "$info" == *"ARM"* ) ]]
+        ;;
+      Darwin/arm64)
+        [[ "$info" == *"Mach-O"* && "$info" == *"arm64"* ]]
+        ;;
+      Darwin/x86_64)
+        [[ "$info" == *"Mach-O"* && "$info" == *"x86_64"* ]]
+        ;;
+      *) return 0 ;;
+    esac
+  }
+
   local need_plugins=0
   for bin in protoc-gen-go protoc-gen-go-grpc protoc-gen-grpc-gateway; do
-    if [ ! -x "$BIN_DIR/$bin" ]; then
+    if ! proto_plugin_valid "$BIN_DIR/$bin"; then
       need_plugins=1
-      break
+      rm -f "$BIN_DIR/$bin"
     fi
   done
 
@@ -36,6 +61,10 @@ install_proto_tools() {
     )
   else
     echo "gen-all-proto: protoc plugins cached"
+  fi
+
+  if [ -x "$BIN_DIR/buf" ] && ! proto_plugin_valid "$BIN_DIR/buf"; then
+    rm -f "$BIN_DIR/buf"
   fi
 
   if ! command -v buf >/dev/null 2>&1; then
