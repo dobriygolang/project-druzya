@@ -5,6 +5,8 @@ import clsx from 'clsx'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { PageContent } from '@/components/PageContent'
+import { SectionCard } from '@/components/SectionCard'
 import { getBillingMe } from '@/lib/api/billing'
 import {
   getInterviewTemplateDetail,
@@ -46,27 +48,41 @@ export default function InterviewStartPage() {
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })
 
-  if (companiesQ.isLoading) return <p className="text-sm text-text-muted">Загрузка компаний…</p>
+  if (companiesQ.isLoading) {
+    return (
+      <PageContent>
+        <p className="text-sm text-text-muted">Загрузка компаний…</p>
+      </PageContent>
+    )
+  }
   if (companiesQ.isError) {
     return (
-      <ErrorMessage
-        message={companiesQ.error instanceof Error ? companiesQ.error.message : 'Ошибка'}
-        onRetry={() => void companiesQ.refetch()}
-      />
+      <PageContent>
+        <ErrorMessage
+          message={companiesQ.error instanceof Error ? companiesQ.error.message : 'Ошибка'}
+          onRetry={() => void companiesQ.refetch()}
+        />
+      </PageContent>
     )
   }
 
   const companies = companiesQ.data?.companies
-  if (!companies) return <p className="text-sm text-text-muted">Нет данных.</p>
+  if (!companies) {
+    return (
+      <PageContent>
+        <p className="text-sm text-text-muted">Нет данных.</p>
+      </PageContent>
+    )
+  }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Mock-интервью</h1>
-        <p className="mt-1 text-sm text-text-muted">
+    <PageContent>
+      <header className="flex flex-col gap-2">
+        <h1 className="font-display text-3xl font-bold leading-tight">Mock-интервью</h1>
+        <p className="text-[14px] text-text-secondary">
           Выбери компанию и шаблон интервью. Сессия включает алгоритмы и behavioral-секции.
         </p>
-      </div>
+      </header>
 
       {startM.isError ? (
         <ErrorMessage message={formatStartError(startM.error)} />
@@ -91,8 +107,7 @@ export default function InterviewStartPage() {
         </Card>
       ) : null}
 
-      <section className="space-y-3">
-        <h2 className="font-medium">Компания</h2>
+      <SectionCard title="Компания">
         {companies.length === 0 ? (
           <p className="text-sm text-text-muted">Каталог пуст. Запусти seed в content-service.</p>
         ) : (
@@ -104,7 +119,7 @@ export default function InterviewStartPage() {
                 type="button"
                 elevation={companyId === c.id ? 'e2' : 'e1'}
                 className={clsx(
-                  'w-full text-left transition-colors',
+                  'w-full text-left transition-colors card-lift',
                   companyId === c.id ? 'ring-1 ring-text-primary/20' : 'hover:bg-surface-2',
                 )}
                 onClick={() => {
@@ -118,11 +133,10 @@ export default function InterviewStartPage() {
             ))}
           </div>
         )}
-      </section>
+      </SectionCard>
 
       {companyId ? (
-        <section className="space-y-3">
-          <h2 className="font-medium">Шаблон</h2>
+        <SectionCard title="Шаблон">
           {templatesQ.isLoading ? (
             <p className="text-sm text-text-muted">Загрузка шаблонов…</p>
           ) : templatesQ.isError ? (
@@ -143,7 +157,7 @@ export default function InterviewStartPage() {
                   type="button"
                   elevation={templateId === t.id ? 'e2' : 'e1'}
                   className={clsx(
-                    'w-full text-left transition-colors',
+                    'w-full text-left transition-colors card-lift',
                     templateId === t.id ? 'ring-1 ring-text-primary/20' : 'hover:bg-surface-2',
                   )}
                   onClick={() => setTemplateId(t.id)}
@@ -160,13 +174,12 @@ export default function InterviewStartPage() {
               ))}
             </div>
           )}
-        </section>
+        </SectionCard>
       ) : null}
 
       {detailQ.data ? (
-        <Card elevation="e2">
-          <h2 className="font-medium">Секции</h2>
-          <ol className="mt-3 space-y-2">
+        <SectionCard title="Секции">
+          <ol className="space-y-2">
             {detailQ.data.sections
               .slice()
               .sort((a, b) => a.position - b.position)
@@ -180,7 +193,7 @@ export default function InterviewStartPage() {
                 </li>
               ))}
           </ol>
-        </Card>
+        </SectionCard>
       ) : null}
 
       <Button
@@ -190,7 +203,7 @@ export default function InterviewStartPage() {
       >
         Начать интервью
       </Button>
-    </div>
+    </PageContent>
   )
 }
 

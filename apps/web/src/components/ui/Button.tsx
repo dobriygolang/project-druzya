@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { forwardRef, type ButtonHTMLAttributes } from 'react'
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 type Size = 'sm' | 'md' | 'lg'
@@ -8,6 +8,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
   size?: Size
   loading?: boolean
+  icon?: ReactNode
+  iconRight?: ReactNode
 }
 
 const variantClass: Record<Variant, string> = {
@@ -24,7 +26,18 @@ const sizeClass: Record<Size, string> = {
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant = 'primary', size = 'md', loading, disabled, children, type = 'button', ...props },
+  {
+    className,
+    variant = 'primary',
+    size = 'md',
+    loading,
+    disabled,
+    children,
+    icon,
+    iconRight,
+    type = 'button',
+    ...props
+  },
   ref,
 ) {
   const isDisabled = disabled || loading
@@ -49,8 +62,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
           className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
           aria-hidden
         />
-      ) : null}
+      ) : (
+        icon
+      )}
       {children}
+      {!loading && iconRight}
     </button>
   )
 })

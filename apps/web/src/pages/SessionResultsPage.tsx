@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { PageContent } from '@/components/PageContent'
+import { SectionCard } from '@/components/SectionCard'
 import { getSessionResults } from '@/lib/api/interview'
 import type { EvaluationResult, SessionSection } from '@/lib/types'
 
@@ -13,90 +17,108 @@ export default function SessionResultsPage() {
     enabled: !!sessionId,
   })
 
-  if (resultsQ.isLoading) return <p className="text-sm text-muted">Загрузка результатов…</p>
+  if (resultsQ.isLoading) {
+    return (
+      <PageContent>
+        <p className="text-sm text-text-muted">Загрузка результатов…</p>
+      </PageContent>
+    )
+  }
   if (resultsQ.isError) {
     return (
-      <ErrorMessage
-        message={resultsQ.error instanceof Error ? resultsQ.error.message : 'Ошибка'}
-        onRetry={() => void resultsQ.refetch()}
-      />
+      <PageContent>
+        <ErrorMessage
+          message={resultsQ.error instanceof Error ? resultsQ.error.message : 'Ошибка'}
+          onRetry={() => void resultsQ.refetch()}
+        />
+      </PageContent>
     )
   }
 
   const results = resultsQ.data
-  if (!results) return <p className="text-sm text-muted">Результаты не найдены.</p>
+  if (!results) {
+    return (
+      <PageContent>
+        <p className="text-sm text-text-muted">Результаты не найдены.</p>
+      </PageContent>
+    )
+  }
 
   const { session, sections, evaluations, progress } = results
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Результаты интервью</h1>
-        <p className="mt-1 text-sm text-muted">
+    <PageContent>
+      <header className="flex flex-col gap-2">
+        <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+          Mock-интервью
+        </p>
+        <h1 className="font-display text-3xl font-bold leading-tight">Результаты</h1>
+        <p className="text-[14px] text-text-secondary">
           Статус: {session.status.replace('SESSION_STATUS_', '').toLowerCase()}
           {session.total_score ? ` · score ${session.total_score}` : ''}
         </p>
-        <p className="mt-1 text-sm text-muted">
+        <p className="text-[13px] text-text-muted">
           {progress.evaluated_tasks} оценено · {progress.skipped_tasks} пропущено ·{' '}
           {progress.total_tasks} всего
         </p>
-      </div>
+      </header>
 
-      <section className="space-y-3">
-        <h2 className="font-medium">Секции</h2>
-        {sections
-          .slice()
-          .sort((a: SessionSection, b: SessionSection) => a.position - b.position)
-          .map((s: SessionSection) => (
-            <div key={s.id} className="rounded-xl border border-border bg-surface-1 p-4 text-sm">
-              <div className="flex justify-between gap-4">
+      <SectionCard title="Секции">
+        <ul className="space-y-3">
+          {sections
+            .slice()
+            .sort((a: SessionSection, b: SessionSection) => a.position - b.position)
+            .map((s: SessionSection) => (
+              <li
+                key={s.id}
+                className="flex justify-between gap-4 border-b border-border pb-3 text-sm last:border-0 last:pb-0"
+              >
                 <span className="font-medium">
                   {s.position}. {s.title}
                 </span>
-                <span className="text-muted">
+                <span className="text-text-muted">
                   {s.status.replace('SECTION_STATUS_', '').toLowerCase()}
                   {s.score ? ` · ${s.score}` : ''}
                 </span>
-              </div>
-            </div>
-          ))}
-      </section>
+              </li>
+            ))}
+        </ul>
+      </SectionCard>
 
-      <section className="space-y-3">
-        <h2 className="font-medium">Оценки</h2>
+      <SectionCard title="Оценки">
         {evaluations.length === 0 ? (
-          <p className="text-sm text-muted">Оценок пока нет — возможно, задачи были пропущены.</p>
+          <p className="text-[13px] text-text-muted">
+            Оценок пока нет — возможно, задачи были пропущены.
+          </p>
         ) : (
-          evaluations.map((ev: EvaluationResult) => (
-            <article key={ev.summary.id} className="rounded-xl border border-border bg-surface-1 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-xs text-muted">{ev.task_id.slice(0, 8)}…</span>
-                <span className={ev.summary.passed ? 'text-ink font-medium' : 'text-danger'}>
-                  {ev.summary.score} · {ev.summary.passed ? 'pass' : 'fail'}
-                </span>
-              </div>
-              {ev.summary.summary ? (
-                <p className="mt-2 text-sm leading-relaxed">{ev.summary.summary}</p>
-              ) : null}
-            </article>
-          ))
+          <ul className="space-y-4">
+            {evaluations.map((ev: EvaluationResult) => (
+              <li key={ev.summary.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-mono text-xs text-text-muted">{ev.task_id.slice(0, 8)}…</span>
+                  <span className={ev.summary.passed ? 'font-medium text-text-primary' : 'text-danger'}>
+                    {ev.summary.score} · {ev.summary.passed ? 'pass' : 'fail'}
+                  </span>
+                </div>
+                {ev.summary.summary ? (
+                  <p className="mt-2 text-[13px] leading-relaxed text-text-secondary">
+                    {ev.summary.summary}
+                  </p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         )}
-      </section>
+      </SectionCard>
 
       <div className="flex flex-wrap gap-3">
-        <Link
-          to="/dashboard"
-          className="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white"
-        >
-          На главную
+        <Link to="/dashboard">
+          <Button icon={<ArrowRight className="h-4 w-4" />}>На главную</Button>
         </Link>
-        <Link
-          to="/interview"
-          className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-surface-2"
-        >
-          Новое интервью
+        <Link to="/interview">
+          <Button variant="secondary">Новое интервью</Button>
         </Link>
       </div>
-    </div>
+    </PageContent>
   )
 }

@@ -5,6 +5,8 @@ import { CollabCodeEditor } from '@/components/CollabCodeEditor'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { PageContent } from '@/components/PageContent'
+import { SectionCard } from '@/components/SectionCard'
 import { getMe } from '@/lib/api/auth'
 import {
   createInvite,
@@ -86,20 +88,26 @@ export default function CollabRoomPage() {
   if (isNew) {
     if (!authed) {
       return (
-        <Card className="space-y-3">
-          <p className="text-sm">Войдите, чтобы создать live-комнату.</p>
-          <Link to="/login" className="text-sm text-blue-600 underline">
-            Войти
-          </Link>
-        </Card>
+        <PageContent wide>
+          <SectionCard title="Live-комната">
+            <p className="text-[13px] text-text-secondary">Войдите, чтобы создать live-комнату.</p>
+            <Link to="/login">
+              <Button variant="secondary" size="sm" className="self-start">
+                Войти
+              </Button>
+            </Link>
+          </SectionCard>
+        </PageContent>
       )
     }
     return (
-      <Card className="space-y-4">
-        <h1 className="text-xl font-semibold">Новая live-комната</h1>
-        <p className="text-sm text-text-muted">
-          Общий редактор с синхронизацией через Yjs. Лимит — billing + до 3 активных комнат.
-        </p>
+      <PageContent wide>
+        <header className="flex flex-col gap-2">
+          <h1 className="font-display text-3xl font-bold leading-tight">Новая live-комната</h1>
+          <p className="text-[14px] text-text-secondary">
+            Общий редактор с синхронизацией через Yjs. Лимит — billing + до 3 активных комнат.
+          </p>
+        </header>
         {createM.error ? (
           <ErrorMessage
             message={createM.error instanceof Error ? createM.error.message : 'Ошибка создания'}
@@ -108,62 +116,74 @@ export default function CollabRoomPage() {
         <Button onClick={() => createM.mutate(undefined)} loading={createM.isPending}>
           Создать комнату
         </Button>
-      </Card>
+      </PageContent>
     )
   }
 
   if (!authed && inviteToken && !guestToken) {
     return (
-      <Card className="max-w-md space-y-4">
-        <h1 className="text-xl font-semibold">Вход как гость</h1>
-        <p className="text-sm text-text-muted">
-          Введите имя для отображения в редакторе. Доступ только на время сессии.
-        </p>
-        <div>
-          <label htmlFor="guest-name" className="block text-sm font-medium">
-            Имя
-          </label>
-          <input
-            id="guest-name"
-            value={guestName}
-            onChange={(e) => setGuestName(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm"
-            placeholder="Кандидат"
-          />
-        </div>
-        {guestJoinM.error ? (
-          <ErrorMessage
-            message={
-              guestJoinM.error instanceof Error ? guestJoinM.error.message : 'Ошибка входа'
-            }
-          />
-        ) : null}
-        <Button loading={guestJoinM.isPending} onClick={() => guestJoinM.mutate()}>
-          Войти в комнату
-        </Button>
-        <p className="text-xs text-text-muted">
-          Уже есть аккаунт?{' '}
-          <Link to={`/login?next=/live/${roomId}?invite=${encodeURIComponent(inviteToken)}`} className="underline">
-            Войти
-          </Link>
-        </p>
-      </Card>
+      <PageContent>
+        <SectionCard title="Вход как гость">
+          <p className="text-[13px] text-text-secondary">
+            Введите имя для отображения в редакторе. Доступ только на время сессии.
+          </p>
+          <div>
+            <label htmlFor="guest-name" className="block text-sm font-medium">
+              Имя
+            </label>
+            <input
+              id="guest-name"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-border-strong"
+              placeholder="Кандидат"
+            />
+          </div>
+          {guestJoinM.error ? (
+            <ErrorMessage
+              message={
+                guestJoinM.error instanceof Error ? guestJoinM.error.message : 'Ошибка входа'
+              }
+            />
+          ) : null}
+          <Button loading={guestJoinM.isPending} onClick={() => guestJoinM.mutate()}>
+            Войти в комнату
+          </Button>
+          <p className="text-xs text-text-muted">
+            Уже есть аккаунт?{' '}
+            <Link
+              to={`/login?next=/live/${roomId}?invite=${encodeURIComponent(inviteToken)}`}
+              className="underline"
+            >
+              Войти
+            </Link>
+          </p>
+        </SectionCard>
+      </PageContent>
     )
   }
 
   if (!authed && !guestToken) {
     return (
-      <Card className="space-y-3">
-        <ErrorMessage message="Нужна ссылка-приглашение или вход в аккаунт." />
-        <Link to="/login" className="text-sm text-blue-600 underline">
-          Войти
-        </Link>
-      </Card>
+      <PageContent>
+        <SectionCard title="Доступ ограничен">
+          <ErrorMessage message="Нужна ссылка-приглашение или вход в аккаунт." />
+          <Link to="/login">
+            <Button variant="secondary" size="sm" className="self-start">
+              Войти
+            </Button>
+          </Link>
+        </SectionCard>
+      </PageContent>
     )
   }
 
   if (roomQ.isLoading || (authed && meQ.isLoading)) {
-    return <p className="text-sm text-text-muted">Загрузка комнаты…</p>
+    return (
+      <PageContent wide>
+        <p className="text-sm text-text-muted">Загрузка комнаты…</p>
+      </PageContent>
+    )
   }
 
   const room =
@@ -183,16 +203,20 @@ export default function CollabRoomPage() {
       : null)
   if (!room) {
     return (
-      <Card className="space-y-3">
-        <ErrorMessage
-          message={roomQ.error instanceof Error ? roomQ.error.message : 'Комната не найдена'}
-        />
-        {authed ? (
-          <Link to="/live/new" className="text-sm text-blue-600 underline">
-            Создать новую
-          </Link>
-        ) : null}
-      </Card>
+      <PageContent wide>
+        <SectionCard title="Комната не найдена">
+          <ErrorMessage
+            message={roomQ.error instanceof Error ? roomQ.error.message : 'Комната не найдена'}
+          />
+          {authed ? (
+            <Link to="/live/new">
+              <Button variant="secondary" size="sm" className="self-start">
+                Создать новую
+              </Button>
+            </Link>
+          ) : null}
+        </SectionCard>
+      </PageContent>
     )
   }
 
@@ -203,12 +227,16 @@ export default function CollabRoomPage() {
   const wsToken = guestToken ?? readAccessToken() ?? ''
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <PageContent wide className="gap-6 py-6 sm:py-10">
+      <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-text-muted">Live coding</p>
-          <h1 className="text-xl font-semibold">Комната {room.id.slice(0, 8)}…</h1>
-          <p className="text-sm text-text-muted">
+          <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+            Live coding
+          </p>
+          <h1 className="font-display text-2xl font-bold leading-tight">
+            Комната {room.id.slice(0, 8)}…
+          </h1>
+          <p className="text-[13px] text-text-muted">
             {room.language} · {room.participants.length} участник(ов)
             {room.is_frozen ? ' · заморожена' : ''}
             {guestToken ? ' · гость' : ''}
@@ -230,9 +258,9 @@ export default function CollabRoomPage() {
             </Button>
           ) : null}
         </div>
-      </div>
+      </header>
 
-      <Card>
+      <Card elevation="e2" padding="sm" className="overflow-hidden">
         <CollabCodeEditor
           roomId={room.id}
           language={room.language}
@@ -243,8 +271,7 @@ export default function CollabRoomPage() {
       </Card>
 
       {authed ? (
-        <Card>
-          <h2 className="mb-2 font-medium">Участники</h2>
+        <SectionCard title="Участники">
           <ul className="space-y-1 text-sm">
             {room.participants.map((p) => (
               <li key={p.user_id}>
@@ -253,8 +280,8 @@ export default function CollabRoomPage() {
               </li>
             ))}
           </ul>
-        </Card>
+        </SectionCard>
       ) : null}
-    </div>
+    </PageContent>
   )
 }

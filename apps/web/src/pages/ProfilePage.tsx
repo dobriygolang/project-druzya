@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { PageContent } from '@/components/PageContent'
+import { SectionCard } from '@/components/SectionCard'
 import { getBillingMe } from '@/lib/api/billing'
 import { getMe } from '@/lib/api/auth'
 import { formatApiError } from '@/lib/apiClient'
@@ -18,48 +20,43 @@ export default function ProfilePage() {
   const limitEntries = billingQ.data ? sortLimitEntries(Object.entries(billingQ.data.limits)) : []
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Профиль</h1>
-        <p className="mt-1 text-sm text-muted">Аккаунт и подписка.</p>
-      </div>
+    <PageContent>
+      <header className="flex flex-col gap-2">
+        <h1 className="font-display text-3xl font-bold leading-tight">Профиль</h1>
+        <p className="text-[14px] text-text-secondary">Аккаунт и подписка.</p>
+      </header>
 
       {meQ.isLoading ? (
-        <p className="text-sm text-muted">Загрузка…</p>
+        <p className="text-sm text-text-muted">Загрузка…</p>
       ) : meQ.isError ? (
-        <ErrorMessage
-          message={formatApiError(meQ.error)}
-          onRetry={() => void meQ.refetch()}
-        />
+        <ErrorMessage message={formatApiError(meQ.error)} onRetry={() => void meQ.refetch()} />
       ) : meQ.data ? (
-        <section className="rounded-xl border border-border bg-surface-1 p-5">
-          <h2 className="font-medium">Аккаунт</h2>
-          <dl className="mt-3 space-y-2 text-sm">
+        <SectionCard title="Аккаунт">
+          <dl className="space-y-2 text-sm">
             <div className="flex justify-between gap-4">
-              <dt className="text-muted">Имя</dt>
+              <dt className="text-text-muted">Имя</dt>
               <dd>{meQ.data.username}</dd>
             </div>
             {meQ.data.telegram_id ? (
               <div className="flex justify-between gap-4">
-                <dt className="text-muted">Telegram</dt>
+                <dt className="text-text-muted">Telegram</dt>
                 <dd className="font-mono">{meQ.data.telegram_id}</dd>
               </div>
             ) : null}
           </dl>
-        </section>
+        </SectionCard>
       ) : null}
 
       {billingQ.isLoading ? (
-        <p className="text-sm text-muted">Загрузка подписки…</p>
+        <p className="text-sm text-text-muted">Загрузка подписки…</p>
       ) : billingQ.isError ? (
         <ErrorMessage
           message={formatApiError(billingQ.error)}
           onRetry={() => void billingQ.refetch()}
         />
       ) : billingQ.data ? (
-        <section className="rounded-xl border border-border bg-surface-1 p-5">
-          <h2 className="font-medium">Подписка</h2>
-          <p className="mt-2 text-sm">
+        <SectionCard title="Подписка">
+          <p className="text-sm">
             Тариф:{' '}
             <span className="font-medium">
               {formatPlanName(billingQ.data.plan_name, billingQ.data.plan_slug)}
@@ -75,7 +72,7 @@ export default function ProfilePage() {
                   <li key={key}>
                     <div className="flex items-baseline justify-between gap-4 text-sm">
                       <span>{entitlementLabel(key)}</span>
-                      <span className={exhausted ? 'text-danger' : 'text-muted'}>
+                      <span className={exhausted ? 'text-danger' : 'text-text-muted'}>
                         {formatLimitUsage(key, lim)}
                       </span>
                     </div>
@@ -99,10 +96,10 @@ export default function ProfilePage() {
               })}
             </ul>
           ) : (
-            <p className="mt-2 text-sm text-muted">Лимиты не настроены.</p>
+            <p className="mt-2 text-sm text-text-muted">Лимиты не настроены.</p>
           )}
-        </section>
+        </SectionCard>
       ) : null}
-    </div>
+    </PageContent>
   )
 }

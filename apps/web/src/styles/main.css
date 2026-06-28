@@ -6,6 +6,7 @@
 
 @layer base {
   :root,
+  html.light,
   .light {
     --color-bg: 250 250 248;
     --color-surface-1: 255 255 255;
@@ -16,14 +17,21 @@
     --color-text-primary: 15 15 15;
     --color-text-secondary: 91 91 91;
     --color-text-muted: 142 142 142;
+    --color-accent: 15 15 15;
+    --color-accent-hover: 35 35 35;
+    --color-success: 15 15 15;
     --color-danger: 255 59 48;
+    --color-warn: 91 91 91;
+    --ink: 15 15 15;
     --hair: rgba(15, 15, 15, 0.06);
     --hair-2: rgba(15, 15, 15, 0.12);
     --red: #ff3b30;
     --motion-dur-small: 120ms;
+    --motion-dur-medium: 200ms;
     --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
     --radius-outer: 14px;
     --pad-inline: 16px;
+    --pad-container: 24px;
   }
 
   html {
@@ -36,21 +44,42 @@
     font-feature-settings: 'cv11', 'ss01';
   }
 
-  ::selection {
+  body.v2 ::selection {
     background: var(--red);
     color: #fff;
   }
 }
 
 @layer components {
-  .mono {
-    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-    font-feature-settings: 'zero', 'ss01';
+  .v2-card {
+    @apply rounded-xl border border-border bg-surface-1 p-5;
   }
 }
 
 @layer utilities {
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    font-feature-settings: 'zero', 'ss01';
+  }
+
   .hair-b {
     border-bottom: 1px solid var(--hair);
+  }
+
+  .card-lift {
+    transition:
+      transform var(--motion-dur-small) var(--motion-ease-standard),
+      border-color var(--motion-dur-small) var(--motion-ease-standard);
+  }
+
+  .card-lift:hover {
+    transform: translateY(-1px);
+    border-color: var(--hair-2);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-lift:hover {
+      transform: none;
+    }
   }
 }

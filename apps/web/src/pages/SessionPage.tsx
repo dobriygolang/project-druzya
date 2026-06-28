@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { CodeEditorPanel } from '@/components/CodeEditorPanel'
-import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { PageContent } from '@/components/PageContent'
+import { SectionCard } from '@/components/SectionCard'
 import { getTask } from '@/lib/api/content'
 import { createRoom } from '@/lib/api/rooms'
 import {
@@ -115,18 +117,32 @@ export default function SessionPage() {
     },
   })
 
-  if (stateQ.isLoading) return <p className="text-sm text-text-muted">Загрузка сессии…</p>
+  if (stateQ.isLoading) {
+    return (
+      <PageContent wide>
+        <p className="text-sm text-text-muted">Загрузка сессии…</p>
+      </PageContent>
+    )
+  }
   if (stateQ.isError) {
     return (
-      <ErrorMessage
-        message={stateQ.error instanceof Error ? stateQ.error.message : 'Ошибка сессии'}
-        onRetry={() => void stateQ.refetch()}
-      />
+      <PageContent wide>
+        <ErrorMessage
+          message={stateQ.error instanceof Error ? stateQ.error.message : 'Ошибка сессии'}
+          onRetry={() => void stateQ.refetch()}
+        />
+      </PageContent>
     )
   }
 
   const state = stateQ.data
-  if (!state) return <p className="text-sm text-text-muted">Сессия не найдена.</p>
+  if (!state) {
+    return (
+      <PageContent wide>
+        <p className="text-sm text-text-muted">Сессия не найдена.</p>
+      </PageContent>
+    )
+  }
 
   const { session, current_section, current_task, progress } = state
   const task = taskQ.data?.task
@@ -134,23 +150,29 @@ export default function SessionPage() {
 
   if (!current_task) {
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Сессия завершена</h1>
-        <p className="text-sm text-text-muted">Все задачи пройдены или пропущены.</p>
+      <PageContent wide>
+        <header className="flex flex-col gap-2">
+          <h1 className="font-display text-3xl font-bold leading-tight">Сессия завершена</h1>
+          <p className="text-[14px] text-text-secondary">Все задачи пройдены или пропущены.</p>
+        </header>
         <Button onClick={() => navigate(`/interview/session/${sessionId}/results`)}>
           Смотреть результаты
         </Button>
-      </div>
+      </PageContent>
     )
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <PageContent wide className="gap-8">
+      <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-wide text-text-muted">Mock-интервью</p>
-          <h1 className="text-2xl font-semibold">{current_section?.title ?? 'Задача'}</h1>
-          <p className="mt-1 text-sm text-text-muted">
+          <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+            Mock-интервью
+          </p>
+          <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">
+            {current_section?.title ?? 'Задача'}
+          </h1>
+          <p className="mt-1 text-[13px] text-text-muted">
             Прогресс: {progress.evaluated_tasks + progress.skipped_tasks}/{progress.total_tasks}{' '}
             задач
           </p>
@@ -158,30 +180,29 @@ export default function SessionPage() {
         <button
           type="button"
           onClick={() => cancelM.mutate()}
-          className="text-sm text-text-muted underline"
+          className="text-sm text-text-muted underline transition-colors hover:text-text-primary"
         >
           Отменить сессию
         </button>
-      </div>
+      </header>
 
       {taskQ.isLoading ? (
         <p className="text-sm text-text-muted">Загрузка задачи…</p>
       ) : task ? (
-        <Card as="article" elevation="e2">
+        <SectionCard title={task.title}>
           <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
             <span className="mono rounded bg-surface-2 px-2 py-0.5">{task.type}</span>
             <span>{task.difficulty}</span>
             {task.estimated_minutes ? <span>{task.estimated_minutes} min</span> : null}
           </div>
-          <h2 className="mt-3 text-lg font-medium">{task.title}</h2>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-text-secondary">
+          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-text-secondary">
             {task.description}
           </p>
-        </Card>
+        </SectionCard>
       ) : null}
 
       {evaluating ? (
-        <Card elevation="e1">
+        <Card elevation="e2">
           <p className="text-sm font-medium">Оцениваем ответ…</p>
           <p className="mt-1 text-sm text-text-muted">
             Статус: {attemptQ.data?.attempt.status ?? 'ATTEMPT_STATUS_SUBMITTED'}
@@ -190,7 +211,7 @@ export default function SessionPage() {
       ) : task?.type === 'algorithm' && taskId && sessionTaskId ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-text-muted">
+            <p className="text-[13px] text-text-secondary">
               Решай solo или открой live-комнату для парного coding с интервьюером.
             </p>
             <Button
@@ -228,20 +249,15 @@ export default function SessionPage() {
           ) : null}
         </>
       ) : (
-        <div className="space-y-4">
-          <div>
-            <label htmlFor="answer" className="block text-sm font-medium">
-              Ответ
-            </label>
-            <textarea
-              id="answer"
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              rows={10}
-              className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm"
-              placeholder="Опиши свой опыт и подход…"
-            />
-          </div>
+        <SectionCard title="Ответ">
+          <textarea
+            id="answer"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            rows={10}
+            className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-border-strong"
+            placeholder="Опиши свой опыт и подход…"
+          />
 
           {(submitM.isError || skipM.isError) && (
             <ErrorMessage
@@ -265,7 +281,7 @@ export default function SessionPage() {
               Пропустить
             </Button>
           </div>
-        </div>
+        </SectionCard>
       )}
 
       {task?.type === 'algorithm' && !evaluating ? (
@@ -276,9 +292,9 @@ export default function SessionPage() {
         </div>
       ) : null}
 
-      <p className="text-xs text-text-muted">
+      <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
         Session {session.id.slice(0, 8)}… · {session.mode.replace('SESSION_MODE_', '').toLowerCase()}
       </p>
-    </div>
+    </PageContent>
   )
 }

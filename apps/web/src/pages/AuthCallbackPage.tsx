@@ -40,23 +40,31 @@ export default function AuthCallbackPage() {
   }, [params, navigate])
 
   return (
-    <div className="grid min-h-screen place-items-center px-4">
-      <div className="max-w-md text-center">
-        {error ? (
-          <>
-            <h1 className="text-xl font-semibold">Не удалось войти</h1>
-            <p className="mt-2 text-sm text-muted">{error}</p>
-            <Link to="/login" className="mt-4 inline-block text-sm underline">
-              Вернуться к входу
-            </Link>
-          </>
-        ) : (
-          <>
-            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-ink/20 border-t-ink" />
-            <p className="mt-4 text-sm text-muted">Завершаем вход через Yandex…</p>
-          </>
-        )}
-      </div>
+    <div className="flex min-h-screen flex-col bg-bg text-text-primary">
+      <header className="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">
+        <Link to="/welcome" className="inline-flex items-center gap-2 no-underline">
+          <span className="h-[7px] w-[7px] rounded-full bg-danger" />
+          <span className="text-sm font-medium">druz9.online</span>
+        </Link>
+      </header>
+      <main className="flex flex-1 items-center justify-center px-6">
+        <div className="max-w-md text-center">
+          {error ? (
+            <>
+              <h1 className="text-xl font-semibold">Не удалось войти</h1>
+              <p className="mt-2 text-sm text-text-muted">{error}</p>
+              <Link to="/login" className="mt-4 inline-block text-sm underline">
+                Вернуться к входу
+              </Link>
+            </>
+          ) : (
+            <>
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-text-primary/20 border-t-text-primary" />
+              <p className="mt-4 text-sm text-text-muted">Завершаем вход через Yandex…</p>
+            </>
+          )}
+        </div>
+      </main>
     </div>
   )
 }
