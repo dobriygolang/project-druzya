@@ -2,6 +2,7 @@ import { go } from '@codemirror/lang-go'
 import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
 import type { Extension } from '@codemirror/state'
+import { smartCompletionFor } from '@/lib/codemirror/smartCompletion'
 
 export type EditorLangShort = 'go' | 'python' | 'javascript' | 'typescript'
 
@@ -13,7 +14,7 @@ export function normalizeEditorLang(language: string | undefined): EditorLangSho
   return 'go'
 }
 
-export function cmLanguageExt(language: string): Extension {
+function baseLanguageExt(language: string): Extension {
   switch (normalizeEditorLang(language)) {
     case 'go':
       return go()
@@ -26,4 +27,8 @@ export function cmLanguageExt(language: string): Extension {
     default:
       return go()
   }
+}
+
+export function cmLanguageExt(language: string): Extension {
+  return [baseLanguageExt(language), smartCompletionFor(language)]
 }
