@@ -43,6 +43,11 @@ func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ str
 	if err := os.WriteFile(filepath.Join(dir, filename), []byte(req.Code), 0o600); err != nil {
 		return nil, err
 	}
+	if strings.EqualFold(strings.TrimSpace(req.Language), model.LangGo) {
+		if err := prepareGoWorkspace(dir); err != nil {
+			return nil, err
+		}
+	}
 
 	timeout := time.Duration(req.TimeoutMS) * time.Millisecond
 	if timeout <= 0 {
@@ -160,7 +165,8 @@ func looksLikeCompileError(output, language string) bool {
 		return strings.Contains(lower, "syntax error") ||
 			strings.Contains(lower, "cannot find") ||
 			strings.Contains(lower, "undefined:") ||
-			strings.Contains(lower, "build constraints exclude")
+			strings.Contains(lower, "build constraints exclude") ||
+			strings.Contains(lower, "go.mod file not found")
 	case model.LangPython:
 		return strings.Contains(lower, "syntaxerror") ||
 			strings.Contains(lower, "indentationerror") ||
