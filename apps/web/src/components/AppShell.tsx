@@ -2,16 +2,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { Bell, HelpCircle, LogOut, Menu, Search, User, X } from 'lucide-react'
+import { Bell, CreditCard, HelpCircle, LogOut, Menu, User, X } from 'lucide-react'
 import { getMe, logout } from '@/lib/api/auth'
 import { cn } from '@/lib/cn'
+import { PRIMARY_NAV } from '@/lib/migration/nav'
 import { useMotion } from '@/lib/motion-presets'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
-
-const NAV_ITEMS = [
-  { to: '/today', label: 'Today' },
-  { to: '/mock', label: 'Mock' },
-] as const
 
 const IMMERSIVE: RegExp[] = [/^\/interview\/session\//, /^\/live\//]
 
@@ -70,8 +66,9 @@ function UserMenu({ onClose }: { onClose: () => void }) {
   }
 
   const items = [
-    { to: '/profile', label: 'Profile', icon: User },
-    { to: '/welcome', label: 'Help', icon: HelpCircle },
+    { to: '/profile', label: 'Профиль', icon: User },
+    { to: '/pricing', label: 'Тарифы', icon: CreditCard },
+    { to: '/welcome', label: 'О продукте', icon: HelpCircle },
   ]
 
   return (
@@ -105,7 +102,7 @@ function UserMenu({ onClose }: { onClose: () => void }) {
   )
 }
 
-function TopNav({ onOpenPalette }: { onOpenPalette: () => void }) {
+function TopNav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
@@ -128,36 +125,18 @@ function TopNav({ onOpenPalette }: { onOpenPalette: () => void }) {
       <div className="flex min-w-0 items-center gap-4 lg:gap-8">
         <Logo />
         <nav className="hidden items-center gap-1 lg:flex">
-          {NAV_ITEMS.map((item) => (
-            <NavItem key={item.to} {...item} />
+          {PRIMARY_NAV.map((item) => (
+            <NavItem key={item.to} to={item.to} label={item.label} />
           ))}
         </nav>
       </div>
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <button
           type="button"
-          onClick={onOpenPalette}
-          className="hidden h-9 w-[240px] items-center gap-2 rounded-md border border-border bg-surface-2 px-3 text-left transition-colors hover:border-border-strong lg:flex"
-          aria-label="Search"
-          title="⌘K"
-        >
-          <Search className="h-4 w-4 shrink-0 text-text-muted" />
-          <span className="flex-1 truncate font-sans text-[13px] text-text-muted">Search…</span>
-          <span className="font-mono text-[10px] text-text-muted">⌘K</span>
-        </button>
-        <button
-          type="button"
-          onClick={onOpenPalette}
-          className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-2 lg:hidden"
-          aria-label="Open search"
-        >
-          <Search className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
           className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-2"
           aria-label="Notifications"
           disabled
+          title="Уведомления — скоро"
         >
           <Bell className="h-5 w-5" />
         </button>
@@ -202,11 +181,14 @@ function TopNav({ onOpenPalette }: { onOpenPalette: () => void }) {
               </button>
             </div>
             <nav className="flex flex-col gap-1">
-              {NAV_ITEMS.map((item) => (
-                <NavItem key={item.to} {...item} onClick={() => setMenuOpen(false)} />
+              {PRIMARY_NAV.map((item) => (
+                <NavItem
+                  key={item.to}
+                  to={item.to}
+                  label={item.label}
+                  onClick={() => setMenuOpen(false)}
+                />
               ))}
-              <div className="my-2 border-t border-border" />
-              <NavItem to="/profile" label="Profile" onClick={() => setMenuOpen(false)} />
             </nav>
           </div>
         </div>
@@ -233,7 +215,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-bg text-text-primary">
-      {!immersive ? <TopNav onOpenPalette={() => {}} /> : null}
+      {!immersive ? <TopNav /> : null}
       <AnimatePresence mode="wait">
         <motion.main
           key={location.pathname}

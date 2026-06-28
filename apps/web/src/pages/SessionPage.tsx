@@ -13,9 +13,12 @@ import {
   cancelSession,
   getAttempt,
   getCurrentSessionState,
+  getSession,
   skipTask,
   submitAttempt,
 } from '@/lib/api/interview'
+import { isCodeTask } from '@/lib/interview/taskKind'
+import { SessionSectionsProgress } from '@/components/session/SessionSectionsProgress'
 
 export default function SessionPage() {
   const { sessionId = '' } = useParams()
@@ -31,6 +34,12 @@ export default function SessionPage() {
     queryFn: () => getCurrentSessionState(sessionId),
     enabled: !!sessionId,
     refetchInterval: attemptId ? 2000 : false,
+  })
+
+  const sessionQ = useQuery({
+    queryKey: ['session', sessionId],
+    queryFn: () => getSession(sessionId),
+    enabled: !!sessionId,
   })
 
   const taskId = stateQ.data?.current_task?.task_id
@@ -80,7 +89,7 @@ export default function SessionPage() {
   const submitM = useMutation({
     mutationFn: () => {
       if (!sessionTaskId) throw new Error('no current task')
-      const isCode = taskQ.data?.task.type === 'algorithm'
+      const isCode = isCodeTask(taskQ.data?.task.type)
       return submitAttempt({
         sessionTaskId,
         answerText: isCode ? undefined : answer,
@@ -145,8 +154,10 @@ export default function SessionPage() {
   }
 
   const { session, current_section, current_task, progress } = state
+  const sections = sessionQ.data?.sections ?? []
   const task = taskQ.data?.task
   const evaluating = !!attemptId
+  const codeTask = isCodeTask(task?.type)
 
   if (!current_task) {
     return (
@@ -186,6 +197,12 @@ export default function SessionPage() {
         </button>
       </header>
 
+      <SessionSectionsProgress
+        sections={sections}
+        currentSectionId={current_section?.id}
+        progress={progress}
+      />
+
       {taskQ.isLoading ? (
         <p className="text-sm text-text-muted">Загрузка задачи…</p>
       ) : task ? (
@@ -208,7 +225,7 @@ export default function SessionPage() {
             Статус: {attemptQ.data?.attempt.status ?? 'ATTEMPT_STATUS_SUBMITTED'}
           </p>
         </Card>
-      ) : task?.type === 'algorithm' && taskId && sessionTaskId ? (
+      ) : codeTask && taskId && sessionTaskId ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-[13px] text-text-secondary">
@@ -284,7 +301,7 @@ export default function SessionPage() {
         </SectionCard>
       )}
 
-      {task?.type === 'algorithm' && !evaluating ? (
+      {codeTask && !evaluating ? (
         <div className="flex justify-end">
           <Button variant="ghost" loading={skipM.isPending} onClick={() => skipM.mutate()}>
             Пропустить задачу

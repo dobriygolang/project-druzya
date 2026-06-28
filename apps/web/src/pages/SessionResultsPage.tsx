@@ -1,11 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, RefreshCw, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { PageContent } from '@/components/PageContent'
 import { SectionCard } from '@/components/SectionCard'
-import { getSessionResults } from '@/lib/api/interview'
+import { getTask } from '@/lib/api/content'
+import { getSessionResults, listRetryItems } from '@/lib/api/interview'
+import { getDashboard } from '@/lib/api/recommendation'
+import { formatSessionMode, formatSessionStatus, formatSectionStatus } from '@/lib/interview/labels'
 import type { EvaluationResult, SessionSection } from '@/lib/types'
 
 export default function SessionResultsPage() {
@@ -15,7 +18,45 @@ export default function SessionResultsPage() {
     queryKey: ['session-results', sessionId],
     queryFn: () => getSessionResults(sessionId),
     enabled: !!sessionId,
+    refetchInterval: (query) => {
+      const data = query.state.data
+      if (!data) return false
+      const pending =
+        data.progress.evaluated_tasks > data.evaluations.length &&
+        data.session.status === 'SESSION_STATUS_COMPLETED'
+      return pending ? 2000 : false
+    },
   })
+
+  const dashboardQ = useQuery({
+    queryKey: ['dashboard'],
+    queryFn: getDashboard,
+    enabled: resultsQ.isSuccess,
+  })
+
+  const retryQ = useQuery({
+    queryKey: ['retry-items'],
+    queryFn: listRetryItems,
+    enabled: resultsQ.isSuccess,
+  })
+
+  const results = resultsQ.data
+  const evaluations = results?.evaluations ?? []
+  const taskIds = [...new Set(evaluations.map((e) => e.task_id))]
+
+  const taskQueries = useQueries({
+    queries: taskIds.map((id) => ({
+      queryKey: ['task', id],
+      queryFn: () => getTask(id),
+      enabled: !!id && resultsQ.isSuccess,
+    })),
+  })
+
+  const taskTitles = new Map(
+    taskQueries
+      .map((q, i) => (q.data?.task ? [taskIds[i], q.data.task.title] as const : null))
+      .filter(Boolean) as [string, string][],
+  )
 
   if (resultsQ.isLoading) {
     return (
@@ -35,7 +76,6 @@ export default function SessionResultsPage() {
     )
   }
 
-  const results = resultsQ.data
   if (!results) {
     return (
       <PageContent>
@@ -44,31 +84,44 @@ export default function SessionResultsPage() {
     )
   }
 
-  const { session, sections, evaluations, progress } = results
+  const { session, sections, progress } = results
+  const passed = evaluations.filter((e) => e.summary.passed).length
+  const failed = evaluations.length - passed
+  const pendingEvaluations =
+    progress.evaluated_tasks > evaluations.length &&
+    session.status === 'SESSION_STATUS_COMPLETED'
+  const pendingRetries = (retryQ.data?.items ?? []).filter(
+    (i) => i.status === 'RETRY_ITEM_STATUS_PENDING',
+  )
+  const recommendations = dashboardQ.data?.recommendations ?? []
+  const weaknesses = dashboardQ.data?.weaknesses ?? []
 
   return (
     <PageContent>
       <header className="flex flex-col gap-2">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
-          Mock-интервью
+          {formatSessionMode(session.mode)}
         </p>
         <h1 className="font-display text-3xl font-bold leading-tight">Результаты</h1>
         <p className="text-[14px] text-text-secondary">
-          Статус: {session.status.replace('SESSION_STATUS_', '').toLowerCase()}
-          {session.total_score ? ` · score ${session.total_score}` : ''}
+          {formatSessionStatus(session.status)}
+          {session.total_score ? ` · итог ${session.total_score}` : ''}
         </p>
         <p className="text-[13px] text-text-muted">
           {progress.evaluated_tasks} оценено · {progress.skipped_tasks} пропущено ·{' '}
           {progress.total_tasks} всего
+          {evaluations.length > 0 ? ` · ${passed} pass · ${failed} fail` : ''}
         </p>
+        {pendingEvaluations ? (
+          <p className="text-[13px] text-text-secondary">Дожидаемся AI-оценок…</p>
+        ) : null}
       </header>
 
       <SectionCard title="Секции">
         <ul className="space-y-3">
-          {sections
-            .slice()
+          {[...sections]
             .sort((a: SessionSection, b: SessionSection) => a.position - b.position)
-            .map((s: SessionSection) => (
+            .map((s) => (
               <li
                 key={s.id}
                 className="flex justify-between gap-4 border-b border-border pb-3 text-sm last:border-0 last:pb-0"
@@ -77,7 +130,7 @@ export default function SessionResultsPage() {
                   {s.position}. {s.title}
                 </span>
                 <span className="text-text-muted">
-                  {s.status.replace('SECTION_STATUS_', '').toLowerCase()}
+                  {formatSectionStatus(s.status)}
                   {s.score ? ` · ${s.score}` : ''}
                 </span>
               </li>
@@ -88,37 +141,109 @@ export default function SessionResultsPage() {
       <SectionCard title="Оценки">
         {evaluations.length === 0 ? (
           <p className="text-[13px] text-text-muted">
-            Оценок пока нет — возможно, задачи были пропущены.
+            {pendingEvaluations
+              ? 'Оценки появятся через несколько секунд.'
+              : 'Оценок нет — задачи были пропущены или сессия отменена.'}
           </p>
         ) : (
           <ul className="space-y-4">
             {evaluations.map((ev: EvaluationResult) => (
-              <li key={ev.summary.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-mono text-xs text-text-muted">{ev.task_id.slice(0, 8)}…</span>
-                  <span className={ev.summary.passed ? 'font-medium text-text-primary' : 'text-danger'}>
-                    {ev.summary.score} · {ev.summary.passed ? 'pass' : 'fail'}
-                  </span>
-                </div>
-                {ev.summary.summary ? (
-                  <p className="mt-2 text-[13px] leading-relaxed text-text-secondary">
-                    {ev.summary.summary}
-                  </p>
-                ) : null}
-              </li>
+              <EvaluationRow key={ev.summary.id} ev={ev} title={taskTitles.get(ev.task_id)} />
             ))}
           </ul>
         )}
       </SectionCard>
 
+      {dashboardQ.isSuccess && (recommendations.length > 0 || weaknesses.length > 0) ? (
+        <SectionCard title="Что дальше">
+          <p className="mb-3 flex items-center gap-2 text-[13px] text-text-secondary">
+            <Sparkles className="h-4 w-4 shrink-0" />
+            Из recommendation service после этой сессии:
+          </p>
+          {dashboardQ.data?.readiness_score != null ? (
+            <p className="mb-3 text-sm">
+              Readiness:{' '}
+              <span className="font-semibold tabular-nums">{dashboardQ.data.readiness_score}</span>
+            </p>
+          ) : null}
+          {recommendations.length > 0 ? (
+            <ul className="space-y-2">
+              {recommendations.slice(0, 3).map((r) => (
+                <li key={r.id} className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
+                  <p className="text-sm font-medium">{r.title}</p>
+                  {r.description ? (
+                    <p className="mt-1 text-xs text-text-secondary">{r.description}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {weaknesses.length > 0 ? (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {weaknesses.slice(0, 4).map((w) => (
+                <li
+                  key={w.skill_key}
+                  className="rounded-full border border-border px-3 py-1 font-mono text-[11px] text-text-secondary"
+                >
+                  {w.skill_key} · {w.score}%
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <Link to="/today" className="mt-4 inline-block text-sm underline">
+            Открыть Today →
+          </Link>
+        </SectionCard>
+      ) : null}
+
+      {pendingRetries.length > 0 ? (
+        <SectionCard title="Повтор ошибок">
+          <p className="text-[13px] text-text-secondary">
+            {pendingRetries.length} задач в очереди retry на Today.
+          </p>
+          <Link to="/today" className="mt-3 inline-block">
+            <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />}>
+              Перейти к retry
+            </Button>
+          </Link>
+        </SectionCard>
+      ) : null}
+
       <div className="flex flex-wrap gap-3">
         <Link to="/today">
-          <Button icon={<ArrowRight className="h-4 w-4" />}>На главную</Button>
+          <Button icon={<ArrowRight className="h-4 w-4" />}>На Today</Button>
         </Link>
         <Link to="/mock">
           <Button variant="secondary">Новое интервью</Button>
         </Link>
       </div>
     </PageContent>
+  )
+}
+
+function EvaluationRow({ ev, title }: { ev: EvaluationResult; title?: string }) {
+  const feedbackText =
+    typeof ev.summary.feedback === 'object' && ev.summary.feedback !== null
+      ? (ev.summary.feedback as { text?: string }).text
+      : undefined
+
+  return (
+    <li className="border-b border-border pb-4 last:border-0 last:pb-0">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-medium text-text-primary">{title ?? `Task ${ev.task_id.slice(0, 8)}…`}</p>
+          <p className="font-mono text-[10px] text-text-muted">{ev.task_id.slice(0, 8)}…</p>
+        </div>
+        <span className={ev.summary.passed ? 'font-medium text-text-primary' : 'text-danger'}>
+          {ev.summary.score} · {ev.summary.passed ? 'pass' : 'fail'}
+        </span>
+      </div>
+      {ev.summary.summary ? (
+        <p className="mt-2 text-[13px] leading-relaxed text-text-secondary">{ev.summary.summary}</p>
+      ) : null}
+      {feedbackText ? (
+        <p className="mt-2 text-[12px] leading-relaxed text-text-muted">{feedbackText}</p>
+      ) : null}
+    </li>
   )
 }

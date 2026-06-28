@@ -7,6 +7,7 @@ export type CompanyCardProps = {
   description?: string
   onSelect: (companyId: string) => void
   loading?: boolean
+  selected?: boolean
 }
 
 function Initials({ name }: { name: string }) {
@@ -19,15 +20,25 @@ function Initials({ name }: { name: string }) {
   )
 }
 
-export function CompanyCard({ id, name, slug, description, onSelect, loading }: CompanyCardProps) {
+export function CompanyCard({
+  id,
+  name,
+  slug,
+  description,
+  onSelect,
+  loading,
+  selected,
+}: CompanyCardProps) {
   return (
     <button
       type="button"
       onClick={() => onSelect(id)}
       disabled={loading}
       className={cn(
-        'card-lift group relative flex flex-col gap-3 rounded-lg border border-border bg-surface-1 p-4 text-left',
-        'hover:border-border-strong hover:bg-surface-2',
+        'card-lift group relative flex flex-col gap-3 rounded-lg border bg-surface-1 p-4 text-left',
+        selected
+          ? 'border-text-primary bg-text-primary/5'
+          : 'border-border hover:border-border-strong hover:bg-surface-2',
         'disabled:cursor-wait disabled:opacity-60',
       )}
     >

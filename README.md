@@ -13,9 +13,12 @@ Monorepo of **independent microservices**. Each service is self-contained — op
 | recommendation | [services/recommendation/](services/recommendation/) | 8084 | 9094 | yes |
 | template | [services/template/](services/template/) | 8099 | 9199 | skeleton only |
 
-## Frontend (MVP)
+## Frontend (MVP → legacy UI migration)
 
-React SPA: [apps/web/](apps/web/) — auth, mock interview, dashboard, profile.
+React SPA: [apps/web/](apps/web/) — phased port from legacy `druzya/frontend` onto microservices.
+
+**Migration plan:** [apps/web/MIGRATION.md](apps/web/MIGRATION.md)  
+**Dev tracker:** `npm run dev` → open `/migration`
 
 ```bash
 cd apps/web && npm install && npm run dev

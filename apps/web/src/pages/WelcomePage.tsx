@@ -1,6 +1,7 @@
 import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { readAccessToken } from '@/lib/apiClient'
+import { PLAN_CATALOG } from '@/lib/billing/planCatalog'
 
 /**
  * Public landing — sdvg.io-style minimalism from the legacy druz9 frontend,
@@ -50,9 +51,9 @@ function Nav() {
           <a href="#features" style={{ fontSize: 14, color: INK_60, textDecoration: 'none' }}>
             Возможности
           </a>
-          <a href="#pricing" style={{ fontSize: 14, color: INK_60, textDecoration: 'none' }}>
+          <Link to="/pricing" style={{ fontSize: 14, color: INK_60, textDecoration: 'none' }}>
             Тарифы
-          </a>
+          </Link>
           <a
             href="https://t.me/druz9"
             target="_blank"
@@ -443,38 +444,6 @@ function ModesStrip() {
   )
 }
 
-const PLANS = [
-  {
-    slug: 'free',
-    name: 'Free',
-    tagline: 'Попробовать без оплаты',
-    cta: 'Начать бесплатно',
-    ctaTo: '/login',
-    highlight: false,
-    limits: [
-      '5 AI-оценок в день',
-      '2 mock-интервью в месяц',
-      '30 запусков кода в день',
-      'Базовые шаблоны',
-    ],
-  },
-  {
-    slug: 'pro',
-    name: 'Pro',
-    tagline: 'Для плотной подготовки',
-    cta: 'Подключить Pro',
-    ctaTo: '/login?next=/profile',
-    highlight: true,
-    limits: [
-      '100 AI-оценок в день',
-      '30 mock-интервью в месяц',
-      '500 запусков кода в день',
-      'Шаблоны компаний и скрытые тесты',
-      'Расширенный AI-фидбек',
-    ],
-  },
-] as const
-
 function Pricing() {
   return (
     <section
@@ -510,8 +479,10 @@ function Pricing() {
           Free хватит, чтобы попробовать
         </h2>
         <p style={{ margin: '16px auto 0', fontSize: 15, color: INK_60, maxWidth: 480, lineHeight: 1.55 }}>
-          Pro подключается через Tribute. Без trial-ловушек — отмена в любой момент, доступ до конца
-          оплаченного периода.
+          Лимиты совпадают с billing service.{' '}
+          <Link to="/pricing" style={{ color: INK, textDecoration: 'underline' }}>
+            Подробнее о тарифах →
+          </Link>
         </p>
       </div>
       <div
@@ -524,7 +495,7 @@ function Pricing() {
           margin: '0 auto',
         }}
       >
-        {PLANS.map((plan) => (
+        {PLAN_CATALOG.map((plan) => (
           <div
             key={plan.slug}
             style={{
@@ -559,7 +530,7 @@ function Pricing() {
                 gap: 10,
               }}
             >
-              {plan.limits.map((line) => (
+              {plan.highlights.map((line) => (
                 <li
                   key={line}
                   style={{ fontSize: 13.5, color: INK_60, display: 'flex', alignItems: 'flex-start', gap: 10 }}
@@ -570,7 +541,7 @@ function Pricing() {
               ))}
             </ul>
             <Link
-              to={plan.ctaTo}
+              to={plan.slug === 'free' ? '/login' : '/pricing'}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -587,7 +558,7 @@ function Pricing() {
                 boxSizing: 'border-box',
               }}
             >
-              {plan.cta}
+              {plan.slug === 'free' ? 'Начать бесплатно' : 'Подробнее о Pro'}
             </Link>
           </div>
         ))}
@@ -624,6 +595,12 @@ function Footer() {
           <a href="https://t.me/druz9" target="_blank" rel="noopener noreferrer" style={footerLink}>
             Telegram
           </a>
+          <Link to="/legal/terms" style={footerLink}>
+            Terms
+          </Link>
+          <Link to="/legal/privacy" style={footerLink}>
+            Privacy
+          </Link>
           <Link to="/login" style={footerLink}>
             Войти
           </Link>

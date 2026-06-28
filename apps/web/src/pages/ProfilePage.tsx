@@ -2,13 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
-  BookOpen,
-  Brain,
+  CreditCard,
   ListChecks,
-  Map as MapIcon,
-  Settings as SettingsIcon,
   Sparkles,
-  Target,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
@@ -73,60 +69,35 @@ export default function ProfilePage() {
           <div>
             <h1 className="font-display text-3xl font-bold leading-tight">@{username}</h1>
             <div className="mt-1 text-[14px] text-text-secondary">
-              {memberSince ? <>Member since {memberSince}</> : null}
+              {memberSince ? <>На druz9 с {memberSince}</> : null}
             </div>
           </div>
         </div>
-        <Button variant="ghost" size="sm" icon={<SettingsIcon className="h-4 w-4" />} disabled>
-          Settings
-        </Button>
+        <Link to="/pricing">
+          <Button variant="ghost" size="sm" icon={<CreditCard className="h-4 w-4" />}>
+            Тарифы
+          </Button>
+        </Link>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <ProfileCard icon={<Target className="h-4 w-4" />} title="Active track">
-          <div className="flex flex-col gap-2">
-            <div>
-              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-                Study mode
-              </span>
-              <div className="font-display text-2xl font-bold leading-tight">General</div>
-            </div>
-            <p className="text-[13px] leading-relaxed text-text-secondary">
-              Balanced prep across algorithms, system design, and behavioral.
-            </p>
-          </div>
-        </ProfileCard>
-
-        <ProfileCard icon={<Brain className="h-4 w-4" />} title="AI coaches">
-          <p className="text-[13px] text-text-secondary">
-            Adopt a coach from mock results or the tutor hub — coming soon on this build.
-          </p>
-        </ProfileCard>
-
+      <div className="grid grid-cols-1 gap-5">
         <QuickLinksCard />
 
-        <ProfileCard icon={<Sparkles className="h-4 w-4" />} title="Weekly report" className="sm:col-span-2">
-          <p className="text-[13px] leading-relaxed text-text-secondary">
-            Your week-at-a-glance — sessions, hours, and top focus area.
-          </p>
-          <p className="mt-2 text-[12px] text-text-muted">Available after more activity is logged.</p>
-        </ProfileCard>
-
         {billingQ.isLoading ? (
-          <ProfileCard title="Subscription" className="sm:col-span-2">
-            <p className="text-sm text-text-muted">Loading…</p>
+          <ProfileCard title="Подписка и лимиты">
+            <p className="text-sm text-text-muted">Загрузка…</p>
           </ProfileCard>
         ) : billingQ.isError ? (
-          <ProfileCard title="Subscription" className="sm:col-span-2">
+          <ProfileCard title="Подписка и лимиты">
             <ErrorMessage
               message={formatApiError(billingQ.error)}
               onRetry={() => void billingQ.refetch()}
             />
           </ProfileCard>
         ) : billingQ.data ? (
-          <ProfileCard title="Subscription" className="sm:col-span-2">
+          <ProfileCard title="Подписка и лимиты">
             <p className="text-sm">
-              Plan:{' '}
+              План:{' '}
               <span className="font-medium">
                 {formatPlanName(billingQ.data.plan_name, billingQ.data.plan_slug)}
               </span>
@@ -163,7 +134,7 @@ export default function ProfilePage() {
                 })}
               </ul>
             ) : (
-              <p className="mt-2 text-sm text-text-muted">No limits configured.</p>
+              <p className="mt-2 text-sm text-text-muted">Лимиты не настроены для плана.</p>
             )}
           </ProfileCard>
         ) : null}
@@ -173,24 +144,15 @@ export default function ProfilePage() {
 }
 
 function ProfileCard({
-  icon,
   title,
   children,
-  className = '',
 }: {
-  icon?: React.ReactNode
   title: string
   children: React.ReactNode
-  className?: string
 }) {
   return (
-    <section
-      className={`flex flex-col gap-3 rounded-xl border border-border bg-surface-1 p-5 ${className}`}
-    >
-      <header className="flex items-center gap-2">
-        {icon ? <span className="text-text-secondary">{icon}</span> : null}
-        <h2 className="font-display text-base font-bold leading-tight">{title}</h2>
-      </header>
+    <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface-1 p-5">
+      <h2 className="font-display text-base font-bold leading-tight">{title}</h2>
       {children}
     </section>
   )
@@ -201,32 +163,20 @@ function QuickLinksCard() {
     {
       to: '/mock',
       label: 'Mock interview',
-      hint: 'Company templates & solo sections',
+      hint: 'Шаблоны компаний и сессии',
       icon: <Sparkles className="h-4 w-4" />,
     },
     {
-      to: '/mock',
-      label: 'Tasks',
-      hint: 'Practice queue & retries',
+      to: '/today',
+      label: 'Today',
+      hint: 'Readiness и рекомендации',
       icon: <ListChecks className="h-4 w-4" />,
-    },
-    {
-      to: '/today',
-      label: 'Atlas',
-      hint: 'Skill map & progress',
-      icon: <MapIcon className="h-4 w-4" />,
-    },
-    {
-      to: '/today',
-      label: 'Codex',
-      hint: 'Patterns & reference',
-      icon: <BookOpen className="h-4 w-4" />,
     },
   ]
 
   return (
-    <ProfileCard title="Quick links" className="sm:col-span-2">
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+    <ProfileCard title="Быстрые ссылки">
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {links.map((l) => (
           <li key={l.label}>
             <Link
@@ -252,5 +202,5 @@ function QuickLinksCard() {
 function formatMonthYear(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  return d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
 }
