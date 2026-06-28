@@ -17,6 +17,8 @@ type Repository interface {
 	CreateRetrySession(ctx context.Context, bundle interviewrepo.SessionBundle, retryItemIDs []string, at time.Time) error
 	GetSessionByID(ctx context.Context, id string) (*interviewmodel.Session, error)
 	GetSessionForUser(ctx context.Context, userID, sessionID string) (*interviewmodel.Session, error)
+	GetActiveSessionForUser(ctx context.Context, userID string) (*interviewmodel.Session, error)
+	ExpireStaleActiveSessions(ctx context.Context, idleBefore, maxAgeBefore time.Time) (int64, error)
 	UpdateSession(ctx context.Context, session *interviewmodel.Session) error
 	ListSectionsBySession(ctx context.Context, sessionID string) ([]interviewmodel.SessionSection, error)
 	UpdateSection(ctx context.Context, section *interviewmodel.SessionSection) error

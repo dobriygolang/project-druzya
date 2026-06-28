@@ -1,21 +1,28 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, Users } from 'lucide-react'
+import { ArrowRight, Building2, Users } from 'lucide-react'
 import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
+import { CompanyMockModal } from '@/components/mock/CompanyMockModal'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
-import { ErrorMessage } from '@/components/ErrorMessage'
+import { useToast } from '@/components/ui/Toast'
 import { PageContent } from '@/components/PageContent'
 import { getBillingMe } from '@/lib/api/billing'
-import { listCompanies, listInterviewTemplates } from '@/lib/api/content'
-import { startSession, startTrainingSession } from '@/lib/api/interview'
+import { listCompanies } from '@/lib/api/content'
+import {
+  cancelSession,
+  getActiveSession,
+  startSession,
+  startTrainingSession,
+} from '@/lib/api/interview'
 import { formatApiError, readAccessToken } from '@/lib/apiClient'
 import { formatLimitUsage } from '@/lib/billingLabels'
+import { formatInterviewError, isActiveSessionConflict, sessionModeLabel } from '@/lib/interviewLabels'
 import { LIVE_LANGS } from '@/lib/live/constants'
 import { readGuestDisplayName, persistGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
-import type { Company, InterviewTemplate, SessionMode } from '@/lib/types'
+import type { Progress, Session, SessionMode } from '@/lib/types'
 import { cn } from '@/lib/cn'
 
 const SOLO_SECTIONS = [
@@ -47,30 +54,59 @@ const SOLO_SECTIONS = [
 
 export default function MockHubPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
+  const toast = useToast()
   const authed = !!readAccessToken()
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
+  const [companyModalOpen, setCompanyModalOpen] = useState(false)
   const [liveLanguage, setLiveLanguage] = useState('go')
   const [guestName, setGuestName] = useState(() => readGuestDisplayName())
 
   const companiesQ = useQuery({ queryKey: ['companies'], queryFn: () => listCompanies() })
-  const templatesQ = useQuery({
-    queryKey: ['templates', selectedCompanyId],
-    queryFn: () => listInterviewTemplates(selectedCompanyId ?? undefined),
-    enabled: !!selectedCompanyId,
-  })
   const billingQ = useQuery({ queryKey: ['billing-me'], queryFn: getBillingMe })
+  const activeQ = useQuery({
+    queryKey: ['active-session'],
+    queryFn: getActiveSession,
+    enabled: authed,
+    refetchInterval: 60_000,
+  })
+
+  function notifyError(err: unknown) {
+    const raw = formatApiError(err)
+    toast.push(formatInterviewError(err), 'error')
+    if (isActiveSessionConflict(raw)) {
+      void activeQ.refetch()
+    }
+  }
 
   const startMockM = useMutation({
     mutationFn: (templateId: string) => startSession(templateId),
-    onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: ['active-session'] })
+      setCompanyModalOpen(false)
+      navigate(`/interview/session/${data.session.id}`)
+    },
+    onError: notifyError,
   })
 
   const startSoloM = useMutation({
     mutationFn: (mode: SessionMode) => startTrainingSession(mode),
-    onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
+    onSuccess: (data) => {
+      void qc.invalidateQueries({ queryKey: ['active-session'] })
+      navigate(`/interview/session/${data.session.id}`)
+    },
+    onError: notifyError,
   })
 
   const createLiveM = useCreateLiveRoom()
+
+  const cancelActiveM = useMutation({
+    mutationFn: (sessionId: string) => cancelSession(sessionId),
+    onSuccess: () => {
+      void activeQ.refetch()
+      toast.push('Сессия завершена', 'success')
+    },
+    onError: (err) => toast.push(formatInterviewError(formatApiError(err)), 'error'),
+  })
 
   const companyTemplatesEnabled = billingQ.data?.features.company_templates_enabled !== false
   const mockQuota = billingQ.data?.limits.mock_interviews_per_month
@@ -81,25 +117,22 @@ export default function MockHubPage() {
     mockQuota.used >= mockQuota.limit
 
   const companies = companiesQ.data?.companies ?? []
-  const templates = templatesQ.data?.templates ?? []
-  const selectedCompany = companies.find((c) => c.id === selectedCompanyId)
+  const activeSession = activeQ.data?.session ?? null
+  const activeProgress = activeQ.data?.progress ?? null
 
   const canStartCompanyMock =
     companyTemplatesEnabled && !mockQuotaExhausted && !startMockM.isPending
 
-  const anyError =
-    startMockM.error ?? startSoloM.error ?? createLiveM.error ?? companiesQ.error
-
   function handleCreateLive() {
     if (!authed) persistGuestDisplayName(guestName || 'Guest')
-    createLiveM.mutate({
-      language: liveLanguage,
-      displayName: guestName || undefined,
-    })
+    createLiveM.mutate(
+      { language: liveLanguage, displayName: guestName || undefined },
+      { onError: (err) => toast.push(formatApiError(err), 'error') },
+    )
   }
 
   return (
-    <PageContent wide className="gap-8">
+    <PageContent className="gap-8">
       <PageHeader
         eyebrow="Practice"
         title="Mock & practice"
@@ -112,15 +145,13 @@ export default function MockHubPage() {
         </QuotaBanner>
       ) : null}
 
-      {anyError ? (
-        <ErrorMessage
-          message={formatApiError(anyError)}
-          onRetry={() => {
-            startMockM.reset()
-            startSoloM.reset()
-            createLiveM.reset()
-            void companiesQ.refetch()
-          }}
+      {activeSession ? (
+        <ActiveSessionCard
+          session={activeSession}
+          progress={activeProgress}
+          loading={cancelActiveM.isPending}
+          onContinue={() => navigate(`/interview/session/${activeSession.id}`)}
+          onCancel={() => cancelActiveM.mutate(activeSession.id)}
         />
       ) : null}
 
@@ -205,31 +236,82 @@ export default function MockHubPage() {
               </Link>
             </p>
           ) : companiesQ.isLoading ? (
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-8 w-20 animate-pulse rounded-lg bg-surface-2" />
-              ))}
-            </div>
+            <div className="h-9 w-32 animate-pulse rounded-lg bg-surface-2" />
           ) : companies.length === 0 ? (
             <p className="text-[13px] text-text-muted">Каталог компаний пока пуст.</p>
           ) : (
-            <CompanyMockPanel
-              companies={companies}
-              selectedCompanyId={selectedCompanyId}
-              selectedCompany={selectedCompany}
-              templates={templates}
-              templatesLoading={templatesQ.isLoading || templatesQ.isFetching}
-              onSelectCompany={(id) =>
-                setSelectedCompanyId((prev) => (prev === id ? null : id))
-              }
-              onStart={(templateId) => startMockM.mutate(templateId)}
-              starting={startMockM.isPending}
+            <Button
+              variant="primary"
+              size="sm"
+              className="w-full sm:w-auto"
+              icon={<Building2 className="h-4 w-4" />}
+              iconRight={<ArrowRight className="h-4 w-4" />}
               disabled={!canStartCompanyMock || mockQuotaExhausted}
-            />
+              onClick={() => setCompanyModalOpen(true)}
+            >
+              Выбрать шаблон
+            </Button>
           )}
         </PracticeCard>
       </div>
+
+      <CompanyMockModal
+        open={companyModalOpen}
+        onClose={() => setCompanyModalOpen(false)}
+        companies={companies}
+        starting={startMockM.isPending}
+        disabled={!canStartCompanyMock || mockQuotaExhausted}
+        onStart={(templateId) => startMockM.mutate(templateId)}
+      />
     </PageContent>
+  )
+}
+
+function ActiveSessionCard({
+  session,
+  progress,
+  loading,
+  onContinue,
+  onCancel,
+}: {
+  session: Session
+  progress: Progress | null
+  loading: boolean
+  onContinue: () => void
+  onCancel: () => void
+}) {
+  const progressText = progress
+    ? `${progress.evaluated_tasks + progress.skipped_tasks}/${progress.total_tasks} задач`
+    : null
+
+  return (
+    <SdvgCard eyebrow="Active session" title="Продолжить текущую сессию">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-text-primary">{sessionModeLabel(session.mode)}</p>
+          <p className="mt-1 text-[13px] text-text-secondary">
+            {progressText ? `${progressText} · ` : null}
+            начата{' '}
+            {session.started_at
+              ? new Date(session.started_at).toLocaleString('ru-RU', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+              : 'недавно'}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button size="sm" onClick={onContinue}>
+            Продолжить
+          </Button>
+          <Button variant="ghost" size="sm" loading={loading} onClick={onCancel}>
+            Завершить
+          </Button>
+        </div>
+      </div>
+    </SdvgCard>
   )
 }
 
@@ -281,116 +363,6 @@ function PillButton({
     >
       {loading ? '…' : children}
     </button>
-  )
-}
-
-function CompanyMockPanel({
-  companies,
-  selectedCompanyId,
-  selectedCompany,
-  templates,
-  templatesLoading,
-  onSelectCompany,
-  onStart,
-  starting,
-  disabled,
-}: {
-  companies: Company[]
-  selectedCompanyId: string | null
-  selectedCompany?: Company
-  templates: InterviewTemplate[]
-  templatesLoading: boolean
-  onSelectCompany: (id: string) => void
-  onStart: (templateId: string) => void
-  starting: boolean
-  disabled: boolean
-}) {
-  const [pickedId, setPickedId] = useState<string | null>(null)
-  const picked = useMemo(
-    () => templates.find((t) => t.id === pickedId) ?? null,
-    [templates, pickedId],
-  )
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap gap-2">
-        {companies.map((c) => (
-          <PillButton
-            key={c.id}
-            active={selectedCompanyId === c.id}
-            loading={selectedCompanyId === c.id && templatesLoading}
-            onClick={() => {
-              onSelectCompany(c.id)
-              setPickedId(null)
-            }}
-          >
-            {c.name}
-          </PillButton>
-        ))}
-      </div>
-
-      {selectedCompanyId ? (
-        <div className="rounded-xl border border-border bg-surface-2/50 p-3">
-          {templatesLoading ? (
-            <p className="text-[13px] text-text-muted">Загрузка шаблонов…</p>
-          ) : templates.length === 0 ? (
-            <p className="text-[13px] text-text-muted">
-              Нет шаблонов для {selectedCompany?.name ?? 'компании'}.
-            </p>
-          ) : (
-            <>
-              <p className="text-[13px] text-text-secondary">
-                Шаблон для {selectedCompany?.name}
-              </p>
-              <ul className="mt-2 flex flex-col gap-1.5">
-                {templates.map((t) => {
-                  const active = pickedId === t.id
-                  return (
-                    <li key={t.id}>
-                      <button
-                        type="button"
-                        onClick={() => setPickedId(t.id)}
-                        className={cn(
-                          'flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
-                          active
-                            ? 'border-border-strong bg-surface-1'
-                            : 'border-transparent hover:border-border hover:bg-surface-1',
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            'grid h-4 w-4 shrink-0 place-items-center rounded-full border',
-                            active
-                              ? 'border-text-primary bg-text-primary text-bg'
-                              : 'border-border',
-                          )}
-                        >
-                          {active ? <Check className="h-2.5 w-2.5" /> : null}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate font-medium">{t.title}</span>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-              {picked ? (
-                <Button
-                  className="mt-3 w-full"
-                  size="sm"
-                  loading={starting}
-                  disabled={disabled}
-                  onClick={() => onStart(picked.id)}
-                >
-                  Начать — {picked.title}
-                </Button>
-              ) : null}
-            </>
-          )}
-        </div>
-      ) : (
-        <p className="text-[13px] text-text-muted">Выберите компанию выше.</p>
-      )}
-    </div>
   )
 }
 

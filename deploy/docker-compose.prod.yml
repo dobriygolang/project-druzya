@@ -263,6 +263,7 @@ services:
       args:
         SERVICE: sandbox
     restart: unless-stopped
+    user: "0:0"
     env_file: .env
     environment:
       <<: *service-env

@@ -4,6 +4,7 @@ import (
 	"context"
 	cryptorand "crypto/rand"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	mathrand "math/rand/v2"
 	"time"
@@ -33,6 +34,9 @@ func (s *interviewService) StartInterviewSession(
 	// Feature gate first (no side effects). Quota is consumed only after the
 	// session is created so failures never burn quota.
 	if err := s.checkSessionEntitlement(ctx, userID, mode); err != nil {
+		return nil, err
+	}
+	if err := s.expireStaleForUser(ctx, userID); err != nil {
 		return nil, err
 	}
 
@@ -237,6 +241,36 @@ func (s *interviewService) CancelSession(ctx context.Context, userID, sessionID 
 		return nil, err
 	}
 	return session, nil
+}
+
+func (s *interviewService) GetActiveSession(ctx context.Context, userID string) (*interviewmodel.SessionDetail, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("user_id required: %w", ErrInvalidInput)
+	}
+	if err := s.expireStaleForUser(ctx, userID); err != nil {
+		return nil, err
+	}
+	session, err := s.repo.GetActiveSessionForUser(ctx, userID)
+	if err != nil {
+		if errors.Is(err, interviewrepo.ErrNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	sections, err := s.repo.ListSectionsBySession(ctx, session.ID)
+	if err != nil {
+		return nil, err
+	}
+	tasks, err := s.repo.ListTasksBySession(ctx, session.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &interviewmodel.SessionDetail{
+		Session:  session,
+		Sections: sections,
+		Tasks:    tasks,
+		Progress: computeProgress(sections, tasks),
+	}, nil
 }
 
 func (s *interviewService) loadSessionTree(ctx context.Context, userID, sessionID string) (*interviewmodel.Session, []interviewmodel.SessionSection, []interviewmodel.SessionTask, error) {

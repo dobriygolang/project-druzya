@@ -2,8 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { LogOut, Menu, User, X } from 'lucide-react'
+import { ChevronDown, LogOut, Menu, User, X } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
+import { PAGE_MAX_WIDTH_CLASS } from '@/lib/brand/layout'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { getMe, logout } from '@/lib/api/auth'
 import { cn } from '@/lib/cn'
@@ -11,6 +12,12 @@ import { PRIMARY_NAV } from '@/lib/migration/nav'
 import { useMotion } from '@/lib/motion-presets'
 
 const IMMERSIVE: RegExp[] = [/^\/interview\/session\//, /^\/live\//]
+
+function userInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2)
+  if (parts.length === 0) return '?'
+  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('')
+}
 
 function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: () => void }) {
   const { pathname } = useLocation()
@@ -21,10 +28,10 @@ function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: 
       onClick={onClick}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'rounded-lg px-3 py-1.5 text-sm transition-colors no-underline',
+        'rounded-lg border px-3 py-1.5 text-sm no-underline transition-colors',
         active
-          ? 'bg-surface-2 font-medium text-text-primary'
-          : 'font-normal text-text-secondary hover:text-text-primary',
+          ? 'border-border-strong bg-surface-2 font-medium text-text-primary'
+          : 'border-transparent font-normal text-text-secondary hover:border-border hover:bg-surface-1 hover:text-text-primary',
       )}
     >
       {label}
@@ -49,7 +56,7 @@ function UserMenu({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-border bg-surface-1 p-1.5 shadow-card"
+      className="absolute right-0 top-full z-50 mt-2 w-52 rounded-xl border border-border bg-surface-1 p-1.5 shadow-lg"
       role="menu"
     >
       {items.map((it) => (
@@ -57,10 +64,10 @@ function UserMenu({ onClose }: { onClose: () => void }) {
           key={it.to}
           to={it.to}
           onClick={onClose}
-          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary no-underline transition-colors hover:bg-surface-2 hover:text-text-primary"
+          className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-primary no-underline transition-colors hover:bg-surface-2"
           role="menuitem"
         >
-          {it.icon ? <it.icon className="h-4 w-4 shrink-0" /> : null}
+          {it.icon ? <it.icon className="h-4 w-4 shrink-0 text-text-muted" /> : null}
           <span className="truncate">{it.label}</span>
         </Link>
       ))}
@@ -68,10 +75,10 @@ function UserMenu({ onClose }: { onClose: () => void }) {
       <button
         type="button"
         onClick={() => void handleLogout()}
-        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
+        className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-primary transition-colors hover:bg-surface-2"
         role="menuitem"
       >
-        <LogOut className="h-4 w-4 shrink-0" />
+        <LogOut className="h-4 w-4 shrink-0 text-text-muted" />
         <span>Выйти</span>
       </button>
     </div>
@@ -84,7 +91,7 @@ function TopNav() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
-  const username = meQ.data?.username ?? '…'
+  const username = meQ.data?.username ?? 'Аккаунт'
 
   useEffect(() => {
     if (!userMenuOpen) return
@@ -99,8 +106,13 @@ function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-bg/95 backdrop-blur supports-[backdrop-filter]:bg-bg/90">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-6 sm:px-8">
-        <div className="flex min-w-0 items-center gap-6 lg:gap-10">
+      <div
+        className={cn(
+          'mx-auto flex h-16 items-center justify-between gap-4 px-6 sm:px-8',
+          PAGE_MAX_WIDTH_CLASS,
+        )}
+      >
+        <div className="flex min-w-0 items-center gap-4 lg:gap-8">
           <Logo to="/today" size="sm" />
           <nav className="hidden items-center gap-1 lg:flex">
             {PRIMARY_NAV.map((item) => (
@@ -114,17 +126,30 @@ function TopNav() {
             <button
               type="button"
               onClick={() => setUserMenuOpen((v) => !v)}
-              className="rounded-lg px-2.5 py-1.5 text-sm text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
-              aria-label="User menu"
+              className={cn(
+                'inline-flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-2 py-1.5',
+                'text-sm font-medium text-text-primary transition-colors hover:border-border-strong hover:bg-surface-2',
+              )}
+              aria-label="Меню аккаунта"
               aria-expanded={userMenuOpen}
+              aria-haspopup="menu"
             >
-              {username}
+              <span className="grid h-7 w-7 place-items-center rounded-full bg-surface-2 text-[11px] font-semibold text-text-secondary">
+                {userInitials(username)}
+              </span>
+              <span className="max-w-[120px] truncate">{username}</span>
+              <ChevronDown
+                className={cn(
+                  'h-4 w-4 text-text-muted transition-transform',
+                  userMenuOpen && 'rotate-180',
+                )}
+              />
             </button>
             {userMenuOpen ? <UserMenu onClose={() => setUserMenuOpen(false)} /> : null}
           </div>
           <button
             type="button"
-            className="grid h-9 w-9 place-items-center rounded-lg text-text-secondary hover:bg-surface-2 lg:hidden"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-1 text-text-secondary hover:bg-surface-2 lg:hidden"
             aria-label="Menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(true)}
@@ -142,7 +167,7 @@ function TopNav() {
               <Logo to="/today" size="sm" />
               <button
                 type="button"
-                className="grid h-9 w-9 place-items-center rounded-lg text-text-secondary hover:bg-surface-2"
+                className="grid h-9 w-9 place-items-center rounded-lg border border-border text-text-secondary hover:bg-surface-2"
                 aria-label="Close menu"
                 onClick={() => setMenuOpen(false)}
               >
@@ -163,14 +188,14 @@ function TopNav() {
               <Link
                 to="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm text-text-secondary no-underline hover:bg-surface-2"
+                className="block rounded-lg border border-transparent px-3 py-2 text-sm text-text-primary no-underline hover:bg-surface-2"
               >
                 Профиль
               </Link>
               <Link
                 to="/pricing"
                 onClick={() => setMenuOpen(false)}
-                className="block rounded-lg px-3 py-2 text-sm text-text-secondary no-underline hover:bg-surface-2"
+                className="block rounded-lg border border-transparent px-3 py-2 text-sm text-text-primary no-underline hover:bg-surface-2"
               >
                 Тарифы
               </Link>
@@ -180,7 +205,7 @@ function TopNav() {
                   setMenuOpen(false)
                   void logout().then(() => navigate('/welcome', { replace: true }))
                 }}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-text-secondary hover:bg-surface-2"
+                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-2"
               >
                 Выйти
               </button>

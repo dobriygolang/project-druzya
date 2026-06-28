@@ -41,7 +41,7 @@ export default function MigrationStatusPage() {
   const byArea = featuresByArea()
 
   return (
-    <PageContent className="max-w-4xl pb-20">
+    <PageContent className="pb-20">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-text-secondary">

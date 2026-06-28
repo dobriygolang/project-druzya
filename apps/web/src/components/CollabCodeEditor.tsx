@@ -22,6 +22,7 @@ type Props = {
   displayName?: string
   accessToken?: string
   bottomInset?: number
+  fontSize?: number
   onRun?: () => void
   onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
 }
@@ -34,7 +35,18 @@ function userColor(id: string): string {
 }
 
 export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(function CollabCodeEditor(
-  { roomId, language, frozen, userId, displayName, accessToken, bottomInset = 0, onRun, onWsStatusChange },
+  {
+    roomId,
+    language,
+    frozen,
+    userId,
+    displayName,
+    accessToken,
+    bottomInset = 0,
+    fontSize = 14,
+    onRun,
+    onWsStatusChange,
+  },
   ref,
 ) {
   const mountRef = useRef<HTMLDivElement>(null)
@@ -42,6 +54,7 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
   const ydocRef = useRef<Y.Doc | null>(null)
   const awarenessRef = useRef<Awareness | null>(null)
   const frozenCompartment = useRef(new Compartment())
+  const fontSizeCompartment = useRef(new Compartment())
   const wsSendRef = useRef<(env: EditorWsEnvelope) => boolean>(() => false)
   const sendRef = useRef<(update: Uint8Array) => void>(() => {})
   const sendSnapshotRef = useRef<(full: Uint8Array) => void>(() => {})
@@ -155,6 +168,13 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
         keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
         cmLanguageExt(language),
         ...vscodeEditorExtensions,
+        fontSizeCompartment.current.of(
+          EditorView.theme({
+            '&': { fontSize: `${fontSize}px` },
+            '.cm-content': { fontSize: `${fontSize}px` },
+            '.cm-gutters': { fontSize: `${fontSize}px` },
+          }),
+        ),
         yCollab(ytext, awareness),
         frozenCompartment.current.of(EditorView.editable.of(!frozen)),
       ],
@@ -188,6 +208,20 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
       effects: frozenCompartment.current.reconfigure(EditorView.editable.of(!frozen)),
     })
   }, [frozen])
+
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    view.dispatch({
+      effects: fontSizeCompartment.current.reconfigure(
+        EditorView.theme({
+          '&': { fontSize: `${fontSize}px` },
+          '.cm-content': { fontSize: `${fontSize}px` },
+          '.cm-gutters': { fontSize: `${fontSize}px` },
+        }),
+      ),
+    })
+  }, [fontSize])
 
   useEffect(() => {
     const awareness = awarenessRef.current

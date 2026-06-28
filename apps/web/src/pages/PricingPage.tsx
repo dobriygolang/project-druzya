@@ -29,7 +29,7 @@ export default function PricingPage() {
     <PublicPageShell>
       <PublicNav centerLinks={[{ href: '/welcome', label: 'Главная' }]} />
 
-      <PageContent className="max-w-4xl">
+      <PageContent>
         <header className="text-center">
           <Eyebrow>Тарифы</Eyebrow>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">

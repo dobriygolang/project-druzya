@@ -76,6 +76,7 @@ func New(ctx context.Context) (*App, error) {
 		Billing:       billingClient,
 		Events:        events,
 		SessionTTL:    cfg.SessionTTL,
+		StaleAfter:    cfg.SessionStaleAfter,
 		TrainingLimit: cfg.TrainingLimit,
 	})
 

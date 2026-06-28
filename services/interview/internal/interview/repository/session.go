@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/shopspring/decimal"
@@ -83,6 +84,30 @@ func (r *Repository) GetSessionForUser(ctx context.Context, userID, sessionID st
 		FROM interview_sessions WHERE id = $1 AND user_id = $2
 	`, sessionID, userID)
 	return scanSession(row)
+}
+
+func (r *Repository) GetActiveSessionForUser(ctx context.Context, userID string) (*interviewmodel.Session, error) {
+	row := r.conn(ctx).QueryRow(ctx, `
+		SELECT id, user_id, template_id, mode, status, started_at, completed_at,
+		       passing_score, total_score, created_at, updated_at
+		FROM interview_sessions
+		WHERE user_id = $1 AND status = 'active'
+		LIMIT 1
+	`, userID)
+	return scanSession(row)
+}
+
+func (r *Repository) ExpireStaleActiveSessions(ctx context.Context, idleBefore, maxAgeBefore time.Time) (int64, error) {
+	tag, err := r.conn(ctx).Exec(ctx, `
+		UPDATE interview_sessions
+		SET status = 'expired', updated_at = now()
+		WHERE status = 'active'
+		  AND (updated_at < $1 OR started_at < $2)
+	`, idleBefore, maxAgeBefore)
+	if err != nil {
+		return 0, fmt.Errorf("expire stale sessions: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (r *Repository) UpdateSession(ctx context.Context, session *interviewmodel.Session) error {

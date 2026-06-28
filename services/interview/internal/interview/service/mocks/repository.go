@@ -379,6 +379,64 @@ func (_c *Repository_CreateSessionBundle_Call) RunAndReturn(run func(context.Con
 	return _c
 }
 
+// ExpireStaleActiveSessions provides a mock function with given fields: ctx, idleBefore, maxAgeBefore
+func (_m *Repository) ExpireStaleActiveSessions(ctx context.Context, idleBefore time.Time, maxAgeBefore time.Time) (int64, error) {
+	ret := _m.Called(ctx, idleBefore, maxAgeBefore)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ExpireStaleActiveSessions")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time, time.Time) (int64, error)); ok {
+		return rf(ctx, idleBefore, maxAgeBefore)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, time.Time, time.Time) int64); ok {
+		r0 = rf(ctx, idleBefore, maxAgeBefore)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, time.Time, time.Time) error); ok {
+		r1 = rf(ctx, idleBefore, maxAgeBefore)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ExpireStaleActiveSessions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ExpireStaleActiveSessions'
+type Repository_ExpireStaleActiveSessions_Call struct {
+	*mock.Call
+}
+
+// ExpireStaleActiveSessions is a helper method to define mock.On call
+//   - ctx context.Context
+//   - idleBefore time.Time
+//   - maxAgeBefore time.Time
+func (_e *Repository_Expecter) ExpireStaleActiveSessions(ctx interface{}, idleBefore interface{}, maxAgeBefore interface{}) *Repository_ExpireStaleActiveSessions_Call {
+	return &Repository_ExpireStaleActiveSessions_Call{Call: _e.mock.On("ExpireStaleActiveSessions", ctx, idleBefore, maxAgeBefore)}
+}
+
+func (_c *Repository_ExpireStaleActiveSessions_Call) Run(run func(ctx context.Context, idleBefore time.Time, maxAgeBefore time.Time)) *Repository_ExpireStaleActiveSessions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(time.Time), args[2].(time.Time))
+	})
+	return _c
+}
+
+func (_c *Repository_ExpireStaleActiveSessions_Call) Return(_a0 int64, _a1 error) *Repository_ExpireStaleActiveSessions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ExpireStaleActiveSessions_Call) RunAndReturn(run func(context.Context, time.Time, time.Time) (int64, error)) *Repository_ExpireStaleActiveSessions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FailOutboxEvent provides a mock function with given fields: ctx, id, errMsg, retryDelay
 func (_m *Repository) FailOutboxEvent(ctx context.Context, id string, errMsg string, retryDelay time.Duration) error {
 	ret := _m.Called(ctx, id, errMsg, retryDelay)
@@ -424,6 +482,65 @@ func (_c *Repository_FailOutboxEvent_Call) Return(_a0 error) *Repository_FailOut
 }
 
 func (_c *Repository_FailOutboxEvent_Call) RunAndReturn(run func(context.Context, string, string, time.Duration) error) *Repository_FailOutboxEvent_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetActiveSessionForUser provides a mock function with given fields: ctx, userID
+func (_m *Repository) GetActiveSessionForUser(ctx context.Context, userID string) (*model.Session, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetActiveSessionForUser")
+	}
+
+	var r0 *model.Session
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*model.Session, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.Session); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Session)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_GetActiveSessionForUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetActiveSessionForUser'
+type Repository_GetActiveSessionForUser_Call struct {
+	*mock.Call
+}
+
+// GetActiveSessionForUser is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+func (_e *Repository_Expecter) GetActiveSessionForUser(ctx interface{}, userID interface{}) *Repository_GetActiveSessionForUser_Call {
+	return &Repository_GetActiveSessionForUser_Call{Call: _e.mock.On("GetActiveSessionForUser", ctx, userID)}
+}
+
+func (_c *Repository_GetActiveSessionForUser_Call) Run(run func(ctx context.Context, userID string)) *Repository_GetActiveSessionForUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_GetActiveSessionForUser_Call) Return(_a0 *model.Session, _a1 error) *Repository_GetActiveSessionForUser_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_GetActiveSessionForUser_Call) RunAndReturn(run func(context.Context, string) (*model.Session, error)) *Repository_GetActiveSessionForUser_Call {
 	_c.Call.Return(run)
 	return _c
 }

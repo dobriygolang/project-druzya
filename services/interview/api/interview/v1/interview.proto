@@ -92,6 +92,12 @@ service InterviewService {
     };
   }
 
+  rpc GetActiveSession(GetActiveSessionRequest) returns (GetActiveSessionResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/sessions/active"
+    };
+  }
+
   rpc SubmitAttempt(SubmitAttemptRequest) returns (SubmitAttemptResponse) {
     option (google.api.http) = {
       post: "/v1/interview/session-tasks/{session_task_id}/attempts"
@@ -287,6 +293,13 @@ message CancelSessionRequest {
 
 message CancelSessionResponse {
   Session session = 1;
+}
+
+message GetActiveSessionRequest {}
+
+message GetActiveSessionResponse {
+  optional Session session = 1;
+  optional Progress progress = 2;
 }
 
 message SubmitAttemptRequest {

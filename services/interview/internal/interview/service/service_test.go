@@ -53,6 +53,11 @@ func TestStartInterviewSession(t *testing.T) {
 
 	fx := setUp(t)
 
+	fx.repo.EXPECT().
+		GetActiveSessionForUser(mock.Anything, userID).
+		Return(nil, interviewrepo.ErrNotFound).
+		Once()
+
 	fx.content.EXPECT().
 		GetInterviewTemplateDetail(mock.Anything, templateID).
 		Return(&contentadapter.TemplateDetail{
@@ -360,8 +365,14 @@ func TestSubmitAttempt_contentNotFound(t *testing.T) {
 func TestStartInterviewSession_templateNotFound(t *testing.T) {
 	t.Parallel()
 
+	const userID = "user-1"
 	templateID := "missing"
 	fx := setUp(t)
+
+	fx.repo.EXPECT().
+		GetActiveSessionForUser(mock.Anything, userID).
+		Return(nil, interviewrepo.ErrNotFound).
+		Once()
 
 	fx.content.EXPECT().
 		GetInterviewTemplateDetail(mock.Anything, templateID).
@@ -370,7 +381,7 @@ func TestStartInterviewSession_templateNotFound(t *testing.T) {
 
 	_, err := fx.svc.StartInterviewSession(
 		context.Background(),
-		"user-1",
+		userID,
 		&templateID,
 		interviewmodel.ModeCompanyInterview,
 	)

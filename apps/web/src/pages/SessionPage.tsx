@@ -129,14 +129,14 @@ export default function SessionPage() {
 
   if (stateQ.isLoading) {
     return (
-      <PageContent wide>
+      <PageContent>
         <p className="text-sm text-text-muted">Загрузка сессии…</p>
       </PageContent>
     )
   }
   if (stateQ.isError) {
     return (
-      <PageContent wide>
+      <PageContent>
         <ErrorMessage
           message={stateQ.error instanceof Error ? stateQ.error.message : 'Ошибка сессии'}
           onRetry={() => void stateQ.refetch()}
@@ -148,7 +148,7 @@ export default function SessionPage() {
   const state = stateQ.data
   if (!state) {
     return (
-      <PageContent wide>
+      <PageContent>
         <p className="text-sm text-text-muted">Сессия не найдена.</p>
       </PageContent>
     )
@@ -162,7 +162,7 @@ export default function SessionPage() {
 
   if (!current_task) {
     return (
-      <PageContent wide>
+      <PageContent>
         <header className="flex flex-col gap-2">
           <h1 className="font-display text-3xl font-bold leading-tight">Сессия завершена</h1>
           <p className="text-[14px] text-text-secondary">Все задачи пройдены или пропущены.</p>
@@ -175,7 +175,7 @@ export default function SessionPage() {
   }
 
   return (
-    <PageContent wide className="gap-8">
+    <PageContent className="gap-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">

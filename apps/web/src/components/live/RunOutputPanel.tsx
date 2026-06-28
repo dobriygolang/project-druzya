@@ -12,6 +12,7 @@ type Props = {
   error?: string | null
   /** viewport = full screen bottom (CollabRoom); contained = inside editor block */
   placement?: 'viewport' | 'contained'
+  theme?: 'light' | 'dark'
 }
 
 function isRunnerError(status: string): boolean {
@@ -58,8 +59,11 @@ export function RunOutputPanel({
   running,
   error,
   placement = 'viewport',
+  theme = 'dark',
 }: Props) {
   if (!open) return null
+
+  const light = theme === 'light'
 
   const positionClass =
     placement === 'contained'
@@ -74,45 +78,58 @@ export function RunOutputPanel({
         : run.status.toUpperCase()
     : null
 
+  const shellClass = light
+    ? 'border-t border-border bg-surface-1 text-text-primary'
+    : 'border-t border-[var(--hair-2)] bg-[rgba(15,15,17,0.96)] font-mono backdrop-blur-[20px]'
+
+  const tabActive = light ? 'text-text-primary' : 'rgb(var(--ink))'
+  const tabIdle = light ? 'text-text-muted' : 'var(--ink-40)'
+
   return (
-    <div
-      className={`${positionClass} flex flex-col border-t border-[var(--hair-2)] bg-[rgba(15,15,17,0.96)] font-mono backdrop-blur-[20px]`}
-      style={{ height: PANEL_HEIGHT }}
-    >
-      <div className="flex items-center justify-between border-b border-[var(--hair)] px-4 py-2.5">
+    <div className={`${positionClass} flex flex-col ${shellClass}`} style={{ height: PANEL_HEIGHT }}>
+      <div
+        className={`flex items-center justify-between border-b px-4 py-2.5 ${light ? 'border-border' : 'border-[var(--hair)]'}`}
+      >
         <div className="flex items-center gap-3.5">
           {(['stdout', 'stderr'] as const).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => onTabChange(t)}
-              className="border-none bg-transparent p-0 text-[10px] tracking-[0.08em] transition-colors"
-              style={{ color: tab === t ? 'rgb(var(--ink))' : 'var(--ink-40)' }}
+              className={`border-none bg-transparent p-0 text-[10px] uppercase tracking-[0.08em] transition-colors ${light ? 'font-medium' : ''}`}
+              style={{ color: tab === t ? tabActive : tabIdle }}
             >
-              {t.toUpperCase()}
+              {t}
             </button>
           ))}
           {statusLabel ? (
             <span
-              className="text-[10px] tracking-[0.08em]"
-              style={{ color: run && isRunnerError(run.status) ? 'var(--red)' : 'var(--ink-40)' }}
+              className="font-mono text-[10px] tracking-[0.08em]"
+              style={{
+                color:
+                  run && isRunnerError(run.status)
+                    ? 'var(--red)'
+                    : light
+                      ? undefined
+                      : 'var(--ink-40)',
+              }}
             >
-              {statusLabel}
+              <span className={light ? 'text-text-muted' : undefined}>{statusLabel}</span>
             </span>
           ) : null}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="border-none bg-transparent text-sm leading-none text-[var(--ink-40)] transition-colors hover:text-[rgb(var(--ink))]"
+          className={`border-none bg-transparent text-sm leading-none transition-colors hover:text-text-primary ${light ? 'text-text-muted' : 'text-[var(--ink-40)] hover:text-[rgb(var(--ink))]'}`}
           title="Close output"
         >
           ×
         </button>
       </div>
       <pre
-        className="m-0 flex-1 overflow-auto px-4 py-3 text-xs whitespace-pre-wrap"
-        style={{ color: tab === 'stderr' ? 'var(--red)' : 'rgb(var(--ink))' }}
+        className={`m-0 flex-1 overflow-auto px-4 py-3 text-xs whitespace-pre-wrap ${light ? 'font-mono text-text-primary' : ''}`}
+        style={{ color: tab === 'stderr' ? 'var(--red)' : light ? undefined : 'rgb(var(--ink))' }}
       >
         {panelBody({ tab, run, running, error })}
       </pre>

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	interviewapi "github.com/sedorofeevd/project-druzya/services/interview/internal/app/api/interview"
+	"github.com/sedorofeevd/project-druzya/services/interview/internal/sessioncleanup"
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/tools/ops"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -28,6 +29,8 @@ func RunAPI(ctx context.Context, a *App) error {
 	))
 	interviewapi.NewRegisteredImplementation(grpcSrv, a.Service)
 	reflection.Register(grpcSrv)
+
+	go sessioncleanup.Run(ctx, a.Logger, a.Service, a.Config.SessionCleanupEvery)
 
 	go func() {
 		a.Logger.Info("grpc server starting", "addr", listenAddr)

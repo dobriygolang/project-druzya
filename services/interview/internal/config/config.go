@@ -22,7 +22,9 @@ type Config struct {
 	ContentGRPCAddr  string
 	InternalAPIToken string
 	BillingGRPCAddr  string
-	SessionTTL       time.Duration
+	SessionTTL         time.Duration
+	SessionStaleAfter  time.Duration
+	SessionCleanupEvery time.Duration
 	TrainingLimit    int
 	CORSAllowedOrigins []string
 }
@@ -40,6 +42,14 @@ func Load() (*Config, error) {
 	sessionTTL, err := time.ParseDuration(getEnv("SESSION_TTL", "8h"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid SESSION_TTL: %w", err)
+	}
+	sessionStaleAfter, err := time.ParseDuration(getEnv("SESSION_STALE_AFTER", "45m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid SESSION_STALE_AFTER: %w", err)
+	}
+	sessionCleanupEvery, err := time.ParseDuration(getEnv("SESSION_CLEANUP_INTERVAL", "5m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid SESSION_CLEANUP_INTERVAL: %w", err)
 	}
 	trainingLimit, err := strconv.Atoi(getEnv("TRAINING_TASK_LIMIT", "10"))
 	if err != nil {
@@ -70,8 +80,10 @@ func Load() (*Config, error) {
 		ContentGRPCAddr:  getEnv("CONTENT_GRPC_ADDR", "127.0.0.1:9091"),
 		InternalAPIToken: internalToken,
 		BillingGRPCAddr:  getEnv("BILLING_GRPC_ADDR", ""),
-		SessionTTL:       sessionTTL,
-		TrainingLimit:      trainingLimit,
+		SessionTTL:          sessionTTL,
+		SessionStaleAfter:   sessionStaleAfter,
+		SessionCleanupEvery: sessionCleanupEvery,
+		TrainingLimit:       trainingLimit,
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 	}, nil
 }

@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
 	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
 	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
 	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
+	interviewrepo "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/repository"
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/complete_evaluation"
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/submit_attempt"
 )
@@ -21,6 +23,7 @@ type Service interface {
 	GetCurrentSessionState(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionState, error)
 	GetSessionResults(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionResults, error)
 	CancelSession(ctx context.Context, userID, sessionID string) (*interviewmodel.Session, error)
+	GetActiveSession(ctx context.Context, userID string) (*interviewmodel.SessionDetail, error)
 	SubmitAttempt(ctx context.Context, input SubmitAttemptInput) (*interviewmodel.Attempt, error)
 	GetAttempt(ctx context.Context, userID, attemptID string) (*interviewmodel.Attempt, error)
 	CompleteEvaluation(ctx context.Context, input CompleteEvaluationInput) (*interviewmodel.EvaluationSummary, error)
@@ -28,6 +31,7 @@ type Service interface {
 	StartRetrySession(ctx context.Context, userID string, retryItemIDs []string) (*interviewmodel.SessionDetail, error)
 	SkipTask(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SessionTask, interviewmodel.Progress, error)
 	DismissRetryItem(ctx context.Context, userID, retryItemID string) (*interviewmodel.RetryItem, error)
+	ExpireStaleActiveSessions(ctx context.Context) (int64, error)
 	GetAttemptInternal(ctx context.Context, attemptID string) (*interviewmodel.Attempt, error)
 	GetEvaluationSummaryInternal(ctx context.Context, attemptID string) (*interviewmodel.EvaluationSummary, error)
 	ListRetryItemsInternal(ctx context.Context, userID string, status *interviewmodel.RetryItemStatus) ([]interviewmodel.RetryItem, error)
@@ -71,6 +75,7 @@ type interviewService struct {
 	billing        billingadapter.Client
 	events         eventsadapter.Publisher
 	sessionTTL     time.Duration
+	staleAfter     time.Duration
 	trainingLimit  int
 
 	// CQRS usecase handlers. Reference pattern: each write/read operation is its
@@ -86,6 +91,7 @@ type Deps struct {
 	Billing       billingadapter.Client
 	Events        eventsadapter.Publisher
 	SessionTTL    time.Duration
+	StaleAfter    time.Duration
 	TrainingLimit int
 }
 
@@ -99,12 +105,17 @@ func New(deps Deps) Service {
 	if limit <= 0 {
 		limit = defaultTrainingTaskLimit
 	}
+	stale := deps.StaleAfter
+	if stale <= 0 {
+		stale = 45 * time.Minute
+	}
 	svc := &interviewService{
 		repo:          deps.Repo,
 		content:       deps.Content,
 		billing:       deps.Billing,
 		events:        deps.Events,
 		sessionTTL:    ttl,
+		staleAfter:    stale,
 		trainingLimit: limit,
 		submitAttempt: submit_attempt.New(deps.Repo, deps.Content, ttl),
 	}
@@ -127,9 +138,24 @@ func (s *interviewService) expireIfNeeded(ctx context.Context, session *intervie
 	if session.Status != interviewmodel.SessionStatusActive {
 		return nil
 	}
-	if time.Since(session.StartedAt) <= s.sessionTTL {
+	if !s.isSessionStale(session) {
 		return nil
 	}
+	return s.markSessionExpired(ctx, session)
+}
+
+func (s *interviewService) isSessionStale(session *interviewmodel.Session) bool {
+	now := time.Now().UTC()
+	if now.Sub(session.StartedAt) > s.sessionTTL {
+		return true
+	}
+	if now.Sub(session.UpdatedAt) > s.staleAfter {
+		return true
+	}
+	return false
+}
+
+func (s *interviewService) markSessionExpired(ctx context.Context, session *interviewmodel.Session) error {
 	now := time.Now().UTC()
 	session.Status = interviewmodel.SessionStatusExpired
 	session.UpdatedAt = now
@@ -137,4 +163,25 @@ func (s *interviewService) expireIfNeeded(ctx context.Context, session *intervie
 		return err
 	}
 	return ErrSessionClosed
+}
+
+// ExpireStaleActiveSessions closes idle or over-TTL active sessions (background worker).
+func (s *interviewService) ExpireStaleActiveSessions(ctx context.Context) (int64, error) {
+	now := time.Now().UTC()
+	return s.repo.ExpireStaleActiveSessions(ctx, now.Add(-s.staleAfter), now.Add(-s.sessionTTL))
+}
+
+func (s *interviewService) expireStaleForUser(ctx context.Context, userID string) error {
+	session, err := s.repo.GetActiveSessionForUser(ctx, userID)
+	if err != nil {
+		if errors.Is(err, interviewrepo.ErrNotFound) {
+			return nil
+		}
+		return err
+	}
+	if !s.isSessionStale(session) {
+		return nil
+	}
+	_ = s.markSessionExpired(ctx, session)
+	return nil
 }

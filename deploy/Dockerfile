@@ -29,7 +29,8 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 
 FROM alpine:3.20
 ARG SERVICE
-RUN apk add --no-cache ca-certificates tzdata wget
+RUN apk add --no-cache ca-certificates tzdata wget \
+  && if [ "$SERVICE" = "sandbox" ]; then apk add --no-cache docker-cli; fi
 COPY --from=builder /src/services/${SERVICE}/.bin/${SERVICE} /usr/local/bin/service
 COPY services/${SERVICE}/scripts/migrations /migrations
 USER nobody

@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useRef, useState } from 'react'
 import {
   CollabCodeEditor,
   wsStatusColor,
@@ -9,7 +9,8 @@ import {
   type CollabCodeEditorHandle,
 } from '@/components/CollabCodeEditor'
 import { LiveNewPage } from '@/components/live/LiveNewPage'
-import { LiveCodeRunButton, LiveCodeStatusChip, LiveCodeToolButton } from '@/components/live/LiveCodeChrome'
+import { LiveRoomBottomBar } from '@/components/live/LiveRoomBottomBar'
+import { LiveRoomTopBar } from '@/components/live/LiveRoomTopBar'
 import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel'
 import { Logo } from '@/components/brand/Logo'
 import { brand } from '@/lib/brand/tokens'
@@ -27,7 +28,6 @@ import {
   readGuestToken,
 } from '@/lib/api/rooms'
 import { readAccessToken } from '@/lib/apiClient'
-import type { EditorWsStatus } from '@/lib/ws/collabEditor'
 
 function jwtSubject(token: string): string | null {
   const part = token.split('.')[1]
@@ -41,7 +41,6 @@ function jwtSubject(token: string): string | null {
   }
 }
 
-/** Immersive live room — full-viewport editor + RUN + output panel. */
 export default function CollabRoomPage() {
   const { roomId = '' } = useParams()
   const [searchParams] = useSearchParams()
@@ -50,10 +49,11 @@ export default function CollabRoomPage() {
   const qc = useQueryClient()
   const editorRef = useRef<CollabCodeEditorHandle>(null)
   const [copied, setCopied] = useState(false)
-  const [wsStatus, setWsStatus] = useState<EditorWsStatus>('connecting')
+  const [wsStatus, setWsStatus] = useState<import('@/lib/ws/collabEditor').EditorWsStatus>('connecting')
   const [guestName, setGuestName] = useState('')
   const [guestToken, setGuestToken] = useState(() => readGuestToken(roomId))
   const [guestRoom, setGuestRoom] = useState<import('@/lib/api/rooms').CodeRoom | null>(null)
+  const [fontSize, setFontSize] = useState(14)
   const isNew = roomId === 'new'
   const authed = !!readAccessToken()
   const hasSession = authed || !!guestToken
@@ -104,10 +104,9 @@ export default function CollabRoomPage() {
 
   useEffect(() => {
     if (isNew) return
-    const prev = document.body.style.backgroundColor
-    document.body.style.backgroundColor = '#1e1e1e'
+    document.documentElement.classList.add('light')
     return () => {
-      document.body.style.backgroundColor = prev
+      document.documentElement.classList.remove('light')
     }
   }, [isNew])
 
@@ -145,7 +144,7 @@ export default function CollabRoomPage() {
   }
 
   if (roomQ.isLoading || (authed && meQ.isLoading)) {
-    return <EditorShell message="LOADING ROOM…" />
+    return <EditorShell message="Загрузка комнаты…" />
   }
 
   const room =
@@ -167,10 +166,10 @@ export default function CollabRoomPage() {
   if (!room) {
     return (
       <EditorShell
-        message="ROOM NOT FOUND"
+        message="Комната не найдена"
         sub={roomQ.error instanceof Error ? roomQ.error.message : undefined}
         action={
-          <Link to="/live/new">
+          <Link to="/mock">
             <Button variant="secondary" size="sm">
               Создать новую
             </Button>
@@ -185,12 +184,14 @@ export default function CollabRoomPage() {
   const isOwner = sessionUserId === room.owner_id
   const canFreeze = myRole === 'owner' || myRole === 'interviewer' || isOwner
   const canRun = !!hasSession
-  const panelBottom = runPanelHeight(run.panelOpen)
   const closeTo = authed ? '/today' : '/welcome'
+  const panelHeight = runPanelHeight(run.panelOpen)
+  const displayName = meQ.data?.username ?? (guestName || 'Guest')
 
   const handleRun = () => {
     const code = editorRef.current?.getCode() ?? ''
     if (!code.trim()) return
+    run.setPanelOpen(true)
     void run.executeRun({
       taskId: room.task_id,
       sessionTaskId,
@@ -200,69 +201,66 @@ export default function CollabRoomPage() {
     })
   }
 
+  const statusLabel = wsStatusLabel(wsStatus, room.is_frozen)
+  const statusColor =
+    wsStatus === 'open' && !room.is_frozen ? brand.green : wsStatusColor(wsStatus, room.is_frozen)
+
   return (
-    <div className="fixed inset-0 bg-[#1e1e1e] text-[#d4d4d4]">
-      <CollabCodeEditor
-        ref={editorRef}
-        roomId={room.id}
-        language={room.language}
+    <div className="flex h-[100dvh] flex-col bg-bg text-text-primary">
+      <LiveRoomTopBar
+        closeTo={closeTo}
+        isOwner={isOwner}
+        inviteLoading={inviteM.isPending}
+        inviteCopied={copied}
+        onInvite={() => inviteM.mutate()}
+        canFreeze={canFreeze}
+        freezeLoading={freezeM.isPending}
         frozen={room.is_frozen}
-        userId={sessionUserId ?? guestName}
-        displayName={meQ.data?.username ?? (guestName || undefined)}
-        accessToken={wsToken}
-        bottomInset={panelBottom}
-        onRun={canRun ? handleRun : undefined}
-        onWsStatusChange={setWsStatus}
+        onFreeze={() => freezeM.mutate(!room.is_frozen)}
+        wsFailed={wsStatus === 'failed'}
+        onReconnect={() => editorRef.current?.reconnect()}
       />
 
-      <div className="fixed top-3.5 right-6 z-[25] flex items-center gap-2">
-        {canRun ? <LiveCodeRunButton running={run.running} onRun={handleRun} /> : null}
-        {isOwner ? (
-          <LiveCodeToolButton loading={inviteM.isPending} onClick={() => inviteM.mutate()}>
-            {copied ? 'Скопировано' : 'Пригласить'}
-          </LiveCodeToolButton>
-        ) : null}
-        {canFreeze ? (
-          <LiveCodeToolButton loading={freezeM.isPending} onClick={() => freezeM.mutate(!room.is_frozen)}>
-            {room.is_frozen ? 'Разморозить' : 'Заморозить'}
-          </LiveCodeToolButton>
-        ) : null}
-        <Link to={closeTo}>
-          <LiveCodeToolButton title="Закрыть">×</LiveCodeToolButton>
-        </Link>
+      <div className="relative min-h-0 flex-1 bg-[#1e1e1e]">
+        <CollabCodeEditor
+          ref={editorRef}
+          roomId={room.id}
+          language={room.language}
+          frozen={room.is_frozen}
+          userId={sessionUserId ?? guestName}
+          displayName={displayName}
+          accessToken={wsToken}
+          bottomInset={panelHeight}
+          fontSize={fontSize}
+          onRun={canRun ? handleRun : undefined}
+          onWsStatusChange={setWsStatus}
+        />
+
+        <RunOutputPanel
+          open={run.panelOpen}
+          onClose={() => run.setPanelOpen(false)}
+          tab={run.outputTab}
+          onTabChange={run.setOutputTab}
+          run={run.activeRun}
+          running={run.running}
+          error={run.runError}
+          theme="light"
+          placement="contained"
+        />
       </div>
 
-      <RunOutputPanel
-        open={run.panelOpen}
-        onClose={() => run.setPanelOpen(false)}
-        tab={run.outputTab}
-        onTabChange={run.setOutputTab}
-        run={run.activeRun}
-        running={run.running}
-        error={run.runError}
-      />
-
-      <LiveCodeStatusChip
+      <LiveRoomBottomBar
         language={room.language}
-        statusLabel={wsStatusLabel(wsStatus, room.is_frozen)}
-        statusColor={wsStatusColor(wsStatus, room.is_frozen)}
-        bottomOffset={panelBottom + 16}
-        extra={
-          wsStatus === 'failed' ? (
-            <button
-              type="button"
-              className="pointer-events-auto ml-1 underline"
-              style={{ color: 'var(--red)' }}
-              onClick={() => editorRef.current?.reconnect()}
-            >
-              retry
-            </button>
-          ) : room.participants.length > 0 ? (
-            <span className="pointer-events-none ml-1 text-[#858585]">
-              · {room.participants.length} online
-            </span>
-          ) : null
-        }
+        fontSize={fontSize}
+        onFontSizeChange={setFontSize}
+        displayName={displayName}
+        statusLabel={statusLabel}
+        statusColor={statusColor}
+        canRun={canRun}
+        running={run.running}
+        onRun={handleRun}
+        outputOpen={run.panelOpen}
+        onToggleOutput={() => run.setPanelOpen((v) => !v)}
       />
     </div>
   )
@@ -277,10 +275,15 @@ function EditorShell({
   sub?: string
   action?: React.ReactNode
 }) {
+  useEffect(() => {
+    document.documentElement.classList.add('light')
+  }, [])
+
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#1e1e1e] px-6 text-center">
-      <p className="font-mono text-[11px] tracking-[0.08em] text-[#858585]">{message}</p>
-      {sub ? <p className="max-w-md text-sm leading-relaxed text-[#858585]">{sub}</p> : null}
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-bg px-6 text-center">
+      <Logo to="/welcome" />
+      <p className="text-sm font-medium text-text-primary">{message}</p>
+      {sub ? <p className="max-w-md text-sm leading-relaxed text-text-secondary">{sub}</p> : null}
       {action}
     </div>
   )
@@ -351,7 +354,7 @@ function GuestGate({
               <Link to={loginTo}>
                 <Button className="w-full">Войти в аккаунт</Button>
               </Link>
-              <Link to="/live/new">
+              <Link to="/mock">
                 <Button variant="ghost" className="w-full">
                   Создать свою комнату
                 </Button>

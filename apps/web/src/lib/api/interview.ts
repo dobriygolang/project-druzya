@@ -76,6 +76,16 @@ export function cancelSession(sessionId: string) {
   })
 }
 
+export function getActiveSession() {
+  return api<{
+    session?: Session
+    progress?: Progress
+  }>('/interview/sessions/active').then((res) => ({
+    session: res.session ?? null,
+    progress: res.progress ?? null,
+  }))
+}
+
 export function submitAttempt(input: {
   sessionTaskId: string
   answerText?: string

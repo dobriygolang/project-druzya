@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { PAGE_MAX_WIDTH_CLASS } from '@/lib/brand/layout'
 import { readAccessToken } from '@/lib/apiClient'
 import { brand } from '@/lib/brand/tokens'
 import { Logo } from '@/components/brand/Logo'
@@ -24,7 +25,7 @@ export function PublicNav({ centerLinks = defaultCenter, right, className }: Pro
 
   return (
     <header className={cn('border-b bg-bg', className)} style={{ borderColor: brand.hair }}>
-      <div className="mx-auto flex max-w-[1200px] items-center justify-between gap-3 px-6 py-5 sm:px-8">
+      <div className={cn('mx-auto flex items-center justify-between gap-3 px-6 py-5 sm:px-8', PAGE_MAX_WIDTH_CLASS)}>
         <Logo to="/welcome" />
 
         <nav className="hidden items-center gap-7 md:flex">
