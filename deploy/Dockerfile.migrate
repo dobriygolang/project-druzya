@@ -9,6 +9,7 @@ COPY services/recommendation/scripts/migrations /migrations/recommendation
 COPY services/billing/scripts/migrations /migrations/billing
 COPY services/sandbox/scripts/migrations /migrations/sandbox
 COPY services/rooms/scripts/migrations /migrations/rooms
+COPY deploy/scripts/services.conf.sh /services.conf.sh
 COPY deploy/scripts/migrate-all.sh /migrate-all.sh
 RUN chmod +x /migrate-all.sh
 ENTRYPOINT ["/migrate-all.sh"]

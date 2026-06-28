@@ -1,9 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-# shellcheck source=services.conf.sh
-source "$ROOT/deploy/scripts/services.conf.sh"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/services.conf.sh" ]; then
+  # shellcheck source=services.conf.sh
+  source "$SCRIPT_DIR/services.conf.sh"
+elif [ -f /services.conf.sh ]; then
+  # shellcheck source=/services.conf.sh
+  source /services.conf.sh
+else
+  echo "migrate-all: services.conf.sh not found" >&2
+  exit 1
+fi
 
 run_migrate() {
   local name="$1"
