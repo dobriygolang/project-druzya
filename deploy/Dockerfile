@@ -13,12 +13,16 @@ RUN apk add --no-cache git bash make
 # Monorepo replace ../sibling in go.mod — copy all services for cross-module imports.
 WORKDIR /src
 COPY services/ ./services/
-WORKDIR /src/services/${SERVICE}
 ENV GOWORK=off
-# Always regenerate — pre-extracted pkg/api from tarball can be stale after proto RPC changes.
+# replace ../sibling imports use other services' pkg/api (gitignored) — generate all protos.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    make gen-proto
+    for d in /src/services/*/; do \
+      if [ -f "$d/buf.yaml" ]; then \
+        (cd "$d" && make gen-proto) || exit 1; \
+      fi; \
+    done
+WORKDIR /src/services/${SERVICE}
 # Cross-service replace imports pull sibling pkg/api/google — duplicate proto registration at init.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
