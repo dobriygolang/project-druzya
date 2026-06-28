@@ -27,6 +27,12 @@ var protectedMethods = map[string]struct{}{
 	interviewv1.InterviewService_ListRetryItems_FullMethodName:          {},
 	interviewv1.InterviewService_DismissRetryItem_FullMethodName:        {},
 	interviewv1.InterviewService_StartRetrySession_FullMethodName:       {},
+	interviewv1.InterviewService_GetSystemDesignWorkspace_FullMethodName:      {},
+	interviewv1.InterviewService_PatchSystemDesignWorkspace_FullMethodName:    {},
+	interviewv1.InterviewService_ListSystemDesignTurns_FullMethodName:         {},
+	interviewv1.InterviewService_PostSystemDesignTurn_FullMethodName:          {},
+	interviewv1.InterviewService_RequestSystemDesignCheckpoint_FullMethodName: {},
+	interviewv1.InterviewService_SubmitSystemDesign_FullMethodName:            {},
 }
 
 // AuthInterceptor validates Bearer JWT for user-facing RPC methods.

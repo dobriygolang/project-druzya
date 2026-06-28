@@ -4,7 +4,8 @@ import { readAccessToken } from '@/lib/apiClient'
 export function RequireAuth() {
   const location = useLocation()
   if (!readAccessToken()) {
-    return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />
+    const next = encodeURIComponent(location.pathname + location.search)
+    return <Navigate to={`/login?next=${next}`} replace />
   }
   return <Outlet />
 }
