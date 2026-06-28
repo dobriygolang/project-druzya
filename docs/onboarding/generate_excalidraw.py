@@ -23,14 +23,15 @@ def _seed() -> int:
 
 def _finalize(elements: list[dict]) -> list[dict]:
     out: list[dict] = []
-    for i, el in enumerate(elements):
+    for el in elements:
         if el.get("type") == "frame":
             continue
         el = {k: v for k, v in el.items() if v is not None}
         el.pop("frameId", None)
-        el["index"] = f"a{i}"
+        el.pop("index", None)
         el["updated"] = _UPDATED
-        el.setdefault("roughness", 0)
+        el["link"] = None
+        el["locked"] = False
         out.append(el)
     return out
 
@@ -69,7 +70,7 @@ def rect(
         "groupIds": [],
         "roundness": {"type": roundness},
         "seed": _seed(),
-        "version": 1,
+        "version": 141,
         "versionNonce": _seed(),
         "isDeleted": False,
         "boundElements": [{"type": "text", "id": tid}],
@@ -94,7 +95,7 @@ def rect(
         "groupIds": [],
         "roundness": None,
         "seed": _seed(),
-        "version": 1,
+        "version": 141,
         "versionNonce": _seed(),
         "isDeleted": False,
         "boundElements": [],
@@ -132,7 +133,7 @@ def ellipse_db(x: float, y: float, w: float, h: float, text: str, *, sketch: boo
         "opacity": 100,
         "groupIds": [],
         "seed": _seed(),
-        "version": 1,
+        "version": 141,
         "versionNonce": _seed(),
         "isDeleted": False,
         "boundElements": [{"type": "text", "id": tid}],
@@ -157,7 +158,7 @@ def ellipse_db(x: float, y: float, w: float, h: float, text: str, *, sketch: boo
         "groupIds": [],
         "roundness": None,
         "seed": _seed(),
-        "version": 1,
+        "version": 141,
         "versionNonce": _seed(),
         "isDeleted": False,
         "boundElements": [],
@@ -195,7 +196,7 @@ def label(x: float, y: float, text: str, *, size: int = 16, sketch: bool = False
         "groupIds": [],
         "roundness": None,
         "seed": _seed(),
-        "version": 1,
+        "version": 141,
         "versionNonce": _seed(),
         "isDeleted": False,
         "boundElements": [],
@@ -241,7 +242,7 @@ def arrow(
         "groupIds": [],
         "roundness": {"type": 2},
         "seed": _seed(),
-        "version": 1,
+        "version": 141,
         "versionNonce": _seed(),
         "isDeleted": False,
         "boundElements": [],
@@ -290,7 +291,7 @@ def save(name: str, elements: list, scroll_x: float = 0, scroll_y: float = 0) ->
         "source": "https://excalidraw.com",
         "elements": _finalize(elements),
         "appState": {
-            "gridSize": None,
+            "gridSize": 20,
             "viewBackgroundColor": "#ffffff",
             "scrollX": scroll_x,
             "scrollY": scroll_y,
@@ -298,7 +299,8 @@ def save(name: str, elements: list, scroll_x: float = 0, scroll_y: float = 0) ->
         "files": {},
     }
     path = OUT / name
-    path.write_text(json.dumps(doc, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    # pretty JSON — same as serializeAsJSON(); extension expects this shape
+    path.write_text(json.dumps(doc, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"wrote {path} ({path.stat().st_size} bytes, {len(doc['elements'])} elements)")
 
 
@@ -598,10 +600,18 @@ def diagram_05_journeys() -> None:
     save("05-user-journeys.excalidraw", els)
 
 
+def diagram_test_minimal() -> None:
+    """Single rectangle — use to verify Excalidraw plugin loads."""
+    els: list = []
+    els += rect(100, 100, 200, 80, "Test OK\nopen via Excalidraw Editor", bg="#b2f2bb", align="center")
+    save("00-test-minimal.excalidraw", els)
+
+
 def main() -> None:
     global _UPDATED
     _UPDATED = int(time.time() * 1000)
     random.seed(42)
+    diagram_test_minimal()
     diagram_00_master()
     diagram_01_overview()
     diagram_02_services_data()

@@ -3,6 +3,7 @@ import { Code2, Settings, UserPlus, X } from 'lucide-react'
 import { RoomSessionTimer } from '@/components/live/RoomSessionTimer'
 import { brand } from '@/lib/brand/tokens'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 type Props = {
   closeTo: string
@@ -41,6 +42,8 @@ export function LiveRoomTopBar({
   createdAt,
   expiresAt,
 }: Props) {
+  const { t } = useI18n()
+
   return (
     <header
       className="flex h-[52px] shrink-0 items-center justify-between gap-4 border-b bg-surface-1 px-4 sm:px-5"
@@ -50,7 +53,7 @@ export function LiveRoomTopBar({
         <Link to={closeTo} className="inline-flex items-center gap-2 no-underline">
           <Code2 className="h-[18px] w-[18px] text-text-primary" strokeWidth={2} />
           <span className="text-[15px] font-medium tracking-[-0.01em] text-text-primary">
-            druzya code
+            {t('live.brand')}
           </span>
         </Link>
 
@@ -61,7 +64,7 @@ export function LiveRoomTopBar({
             loading={closeLoading}
             onClick={onClose}
           >
-            Close room
+            {t('live.closeRoom')}
           </TopBarButton>
         </div>
       </div>
@@ -77,7 +80,7 @@ export function LiveRoomTopBar({
             onClick={onReconnect}
             className="text-[13px] text-text-secondary underline hover:text-text-primary"
           >
-            Reconnect
+            {t('live.reconnect')}
           </button>
         ) : null}
 
@@ -86,7 +89,7 @@ export function LiveRoomTopBar({
             type="button"
             disabled={inviteLoading}
             onClick={onInvite}
-            title="Скопировать ссылку для гостя"
+            title={t('live.inviteTitle')}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-50',
               inviteCopied
@@ -95,7 +98,9 @@ export function LiveRoomTopBar({
             )}
           >
             <UserPlus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">{inviteCopied ? 'Ссылка скопирована' : 'Пригласить'}</span>
+            <span className="hidden sm:inline">
+              {inviteCopied ? t('live.inviteCopied') : t('live.invite')}
+            </span>
           </button>
         ) : null}
 
@@ -108,7 +113,7 @@ export function LiveRoomTopBar({
             )}
           >
             <Settings className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Settings</span>
+            <span className="hidden sm:inline">{t('live.settings')}</span>
           </summary>
           <div
             className="absolute right-0 top-[calc(100%+6px)] z-30 min-w-[180px] rounded-xl border border-border bg-surface-1 p-1.5 shadow-lg"
@@ -116,16 +121,16 @@ export function LiveRoomTopBar({
           >
             {isOwner ? (
               <MenuButton loading={inviteLoading} onClick={onInvite}>
-                {inviteCopied ? 'Invite link copied' : 'Copy invite link'}
+                {inviteCopied ? t('live.inviteCopiedMenu') : t('live.copyInvite')}
               </MenuButton>
             ) : null}
             {canFreeze ? (
               <MenuButton loading={freezeLoading} onClick={onFreeze}>
-                {frozen ? 'Unfreeze editor' : 'Freeze editor'}
+                {frozen ? t('live.unfreeze') : t('live.freeze')}
               </MenuButton>
             ) : null}
             {!isOwner && !canFreeze ? (
-              <p className="px-3 py-2 text-[13px] text-text-muted">No room settings</p>
+              <p className="px-3 py-2 text-[13px] text-text-muted">{t('live.noSettings')}</p>
             ) : null}
           </div>
         </details>

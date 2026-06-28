@@ -3,6 +3,7 @@ import { ArrowRight, Loader2, Target } from 'lucide-react'
 import { SdvgCard } from '@/components/brand/SdvgCard'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
+import { skillLabel, useI18n } from '@/lib/i18n'
 import type { Dashboard } from '@/lib/types'
 
 function ActionCard({
@@ -28,6 +29,8 @@ export function TodayActionGrid({
   dashboard?: Dashboard | null
   loading?: boolean
 }) {
+  const { t } = useI18n()
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -43,10 +46,8 @@ export function TodayActionGrid({
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <ActionCard eyebrow="Mock" title="Next mock">
-        <p className="text-[13px] leading-relaxed text-text-secondary">
-          Multi-stage interview under a company template — algo, system design, behavioral.
-        </p>
+      <ActionCard eyebrow={t('today.actions.mockEyebrow')} title={t('today.actions.mockTitle')}>
+        <p className="text-[13px] leading-relaxed text-text-secondary">{t('today.actions.mockBody')}</p>
         <Link to="/mock" className="mt-4 inline-block">
           <Button
             variant="primary"
@@ -54,14 +55,14 @@ export function TodayActionGrid({
             icon={<Target className="h-4 w-4" />}
             iconRight={<ArrowRight className="h-4 w-4" />}
           >
-            Open mock picker
+            {t('today.actions.mockCta')}
           </Button>
         </Link>
       </ActionCard>
 
-      <ActionCard eyebrow="Insight" title="Coach insight">
+      <ActionCard eyebrow={t('today.actions.insightEyebrow')} title={t('today.actions.insightTitle')}>
         {recommendations.length === 0 ? (
-          <p className="text-[13px] text-text-muted">Complete a mock to unlock insights.</p>
+          <p className="text-[13px] text-text-muted">{t('today.actions.insightEmpty')}</p>
         ) : (
           <div className="relative pl-3.5">
             <span
@@ -77,23 +78,21 @@ export function TodayActionGrid({
         )}
       </ActionCard>
 
-      <ActionCard eyebrow="Brief" title="Daily brief">
+      <ActionCard eyebrow={t('today.actions.briefEyebrow')} title={t('today.actions.briefTitle')}>
         {dashboard?.profile_summary ? (
-          <p className="text-[13px] leading-relaxed text-text-secondary">
-            {dashboard.profile_summary}
-          </p>
+          <p className="text-[13px] leading-relaxed text-text-secondary">{dashboard.profile_summary}</p>
         ) : (
-          <p className="text-[13px] text-text-muted">Brief appears after your first session.</p>
+          <p className="text-[13px] text-text-muted">{t('today.actions.briefEmpty')}</p>
         )}
       </ActionCard>
 
-      <ActionCard eyebrow="Focus" title="Weak spots">
+      <ActionCard eyebrow={t('today.actions.focusEyebrow')} title={t('today.actions.focusTitle')}>
         {weaknesses.length === 0 ? (
           <div className="space-y-3">
-            <p className="text-[13px] text-text-secondary">No weak spots tracked yet.</p>
+            <p className="text-[13px] text-text-secondary">{t('today.actions.focusEmpty')}</p>
             <Link to="/mock">
               <Button variant="ghost" size="sm" iconRight={<ArrowRight className="h-3.5 w-3.5" />}>
-                Start mock
+                {t('today.actions.focusMock')}
               </Button>
             </Link>
           </div>
@@ -110,10 +109,8 @@ export function TodayActionGrid({
                   aria-hidden
                 />
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[13px] font-medium">{w.skill_key}</span>
-                  <span className="font-mono text-[11px] tabular-nums text-text-muted">
-                    {w.score}%
-                  </span>
+                  <span className="text-[13px] font-medium">{skillLabel(t, w.skill_key)}</span>
+                  <span className="font-mono text-[11px] tabular-nums text-text-muted">{w.score}%</span>
                 </div>
                 <Link
                   to="/mock"
@@ -131,9 +128,10 @@ export function TodayActionGrid({
 }
 
 export function TodayActionGridSkeleton() {
+  const { t } = useI18n()
   return (
     <div className="flex items-center gap-2 text-[12px] text-text-muted">
-      <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading insights…
+      <Loader2 className="h-3.5 w-3.5 animate-spin" /> {t('today.actions.loading')}
     </div>
   )
 }

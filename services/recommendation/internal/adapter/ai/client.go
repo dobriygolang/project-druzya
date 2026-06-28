@@ -11,5 +11,5 @@ type SkillScore struct {
 
 // Client calls ai-service internal RPCs.
 type Client interface {
-	GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []SkillScore) (string, error)
+	GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []SkillScore, locale string) (string, error)
 }

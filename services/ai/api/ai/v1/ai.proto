@@ -79,6 +79,7 @@ message GenerateProfileSummaryRequest {
   string user_id = 1;
   int32 readiness_score = 2;
   repeated ProfileSkillScore skills = 3;
+  string locale = 4;
 }
 
 message GenerateProfileSummaryResponse {

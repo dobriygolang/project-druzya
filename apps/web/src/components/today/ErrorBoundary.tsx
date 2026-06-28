@@ -1,10 +1,14 @@
 import { Component, type ReactNode } from 'react'
 
-export class ErrorBoundary extends Component<
-  { children: ReactNode; section: string },
-  { error: Error | null }
-> {
-  state = { error: null as Error | null }
+type Props = {
+  children: ReactNode
+  message: string
+}
+
+type State = { error: Error | null }
+
+export class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null }
 
   static getDerivedStateFromError(error: Error) {
     return { error }
@@ -14,9 +18,7 @@ export class ErrorBoundary extends Component<
     if (this.state.error) {
       return (
         <section className="rounded-xl border border-border bg-surface-1 p-5">
-          <p className="text-sm text-text-muted">
-            {this.props.section} failed to load.
-          </p>
+          <p className="text-sm text-text-muted">{this.props.message}</p>
         </section>
       )
     }

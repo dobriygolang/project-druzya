@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/Modal'
 import { listInterviewTemplates } from '@/lib/api/content'
 import type { Company, InterviewTemplate } from '@/lib/types'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 type Props = {
   open: boolean
@@ -23,6 +24,7 @@ export function CompanyMockModal({
   disabled,
   onStart,
 }: Props) {
+  const { t } = useI18n()
   const [companyId, setCompanyId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -43,14 +45,14 @@ export function CompanyMockModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Mock под компанию"
-      description="Выберите компанию и шаблон — сессия начнётся сразу."
+      title={t('mock.modal.title')}
+      description={t('mock.modal.description')}
       className="max-w-3xl"
     >
       <div className="flex min-h-[320px] flex-col sm:flex-row">
         <aside className="shrink-0 border-b border-border p-3 sm:w-[200px] sm:border-b-0 sm:border-r sm:p-4">
           <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-[0.08em] text-text-muted">
-            Компании
+            {t('mock.modal.companies')}
           </p>
           <ul className="flex gap-1 overflow-x-auto sm:flex-col sm:overflow-visible">
             {companies.map((c) => (
@@ -74,28 +76,28 @@ export function CompanyMockModal({
 
         <div className="min-w-0 flex-1 p-4 sm:p-5">
           {!companyId ? (
-            <p className="text-sm text-text-muted">Нет компаний в каталоге.</p>
+            <p className="text-sm text-text-muted">{t('mock.modal.noCompanies')}</p>
           ) : templatesQ.isLoading ? (
             <div className="flex items-center gap-2 text-sm text-text-muted">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Загрузка шаблонов…
+              {t('mock.modal.loadingTemplates')}
             </div>
           ) : templates.length === 0 ? (
             <p className="text-sm text-text-muted">
-              Нет шаблонов для {selectedCompany?.name ?? 'компании'}.
+              {t('mock.modal.noTemplates', { company: selectedCompany?.name ?? '—' })}
             </p>
           ) : (
             <>
               <p className="mb-3 text-[13px] text-text-secondary">
-                Шаблоны — {selectedCompany?.name}
+                {t('mock.modal.templatesFor', { company: selectedCompany?.name ?? '' })}
               </p>
               <ul className="flex flex-col gap-2">
-                {templates.map((t) => (
+                {templates.map((tpl) => (
                   <TemplateRow
-                    key={t.id}
-                    template={t}
+                    key={tpl.id}
+                    template={tpl}
                     disabled={disabled || starting}
-                    onPick={() => onStart(t.id)}
+                    onPick={() => onStart(tpl.id)}
                   />
                 ))}
               </ul>

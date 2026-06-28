@@ -11,7 +11,9 @@ import (
 	contentadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/content"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
 	aiadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/ai"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/payload"
 )
 
@@ -126,6 +128,7 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 		if err := s.repo.EnsureUserProfile(txCtx, event.UserID); err != nil {
 			return fmt.Errorf("ensure user profile: %w", err)
 		}
+		lang := locale.From(ctx)
 
 		for _, c := range criteria {
 			if _, err := s.repo.UpsertSkillScore(txCtx, event.UserID, c.SkillKey, c.Normalized, seenAt); err != nil {
@@ -150,8 +153,8 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 					Type:        model.RecTypeImproveSkill,
 					Priority:    priorityForScore(c.Normalized),
 					SkillKey:    &skillKey,
-					Title:       fmt.Sprintf("Improve %s", humanizeSkillKey(c.SkillKey)),
-					Description: fmt.Sprintf("Your score on %s is %d/100. Focus on this area to boost readiness.", humanizeSkillKey(c.SkillKey), c.Normalized),
+					Title:       copy.ImproveSkillTitle(lang, humanizeSkillKey(c.SkillKey)),
+					Description: copy.ImproveSkillDescription(lang, humanizeSkillKey(c.SkillKey), c.Normalized),
 					Metadata: map[string]any{
 						"attempt_id": event.AttemptID,
 						"score":      c.Normalized,
@@ -161,7 +164,7 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 					return fmt.Errorf("upsert improve skill recommendation: %w", err)
 				}
 			}
-			if err := s.applySpecialRules(txCtx, event, c); err != nil {
+			if err := s.applySpecialRules(txCtx, event, c, lang); err != nil {
 				return err
 			}
 		}
@@ -196,13 +199,13 @@ func (s *recommendationService) refreshProfileSummary(ctx context.Context, userI
 	}
 	llmCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
 	defer cancel()
-	text, err := s.ai.GenerateProfileSummary(llmCtx, userID, profile.ReadinessScore, skills)
+	text, err := s.ai.GenerateProfileSummary(llmCtx, userID, profile.ReadinessScore, skills, locale.From(ctx))
 	if err == nil && text != "" {
 		_ = s.repo.UpdateProfileSummary(ctx, userID, text)
 	}
 }
 
-func (s *recommendationService) applySpecialRules(ctx context.Context, event model.AttemptEvaluatedEvent, c model.CriterionScore) error {
+func (s *recommendationService) applySpecialRules(ctx context.Context, event model.AttemptEvaluatedEvent, c model.CriterionScore, lang string) error {
 	if c.Normalized >= 70 {
 		return nil
 	}
@@ -218,8 +221,8 @@ func (s *recommendationService) applySpecialRules(ctx context.Context, event mod
 			Type:        model.RecTypeRewriteAnswer,
 			Priority:    priorityForScore(c.Normalized),
 			SkillKey:    &skillKey,
-			Title:       "Rewrite your answer using STAR",
-			Description: "Restructure your behavioral answer with clear Situation, Task, Action, and Result sections.",
+			Title:       copy.RewriteAnswerTitle(lang),
+			Description: copy.RewriteAnswerDescription(lang),
 			Metadata: map[string]any{
 				"attempt_id": event.AttemptID,
 				"criterion":  c.Key,
@@ -235,8 +238,8 @@ func (s *recommendationService) applySpecialRules(ctx context.Context, event mod
 			Type:        model.RecTypePracticeSection,
 			Priority:    priorityForScore(c.Normalized),
 			SkillKey:    &skillKey,
-			Title:       fmt.Sprintf("Practice %s in system design", humanizeSkillKey(criterionKey)),
-			Description: fmt.Sprintf("Focus on %s when designing systems — your recent score was %d/100.", humanizeSkillKey(criterionKey), c.Normalized),
+			Title:       copy.PracticeSystemDesignTitle(lang, humanizeSkillKey(criterionKey)),
+			Description: copy.PracticeSystemDesignDescription(lang, humanizeSkillKey(criterionKey), c.Normalized),
 			Metadata: map[string]any{
 				"attempt_id": event.AttemptID,
 				"criterion":  c.Key,

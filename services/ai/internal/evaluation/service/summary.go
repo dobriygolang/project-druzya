@@ -13,6 +13,7 @@ func (s *evaluationService) GenerateProfileSummary(
 	userID string,
 	readiness int,
 	skills []summary.SkillScore,
+	locale string,
 ) (string, error) {
 	if userID == "" {
 		return "", fmt.Errorf("user_id is required")
@@ -23,5 +24,5 @@ func (s *evaluationService) GenerateProfileSummary(
 	}
 	return gen.Generate(ctx, summary.Input{
 		UserID: userID, ReadinessScore: readiness, Skills: skills,
-	})
+	}, locale)
 }

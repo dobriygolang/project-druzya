@@ -4,6 +4,7 @@ import { LIVE_LANGS } from '@/lib/live/constants'
 import { brand } from '@/lib/brand/tokens'
 import type { CollabPeer } from '@/lib/codemirror/collabPresence'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 const FONT_MIN = 12
 const FONT_MAX = 20
@@ -41,6 +42,7 @@ export function LiveRoomBottomBar({
   outputOpen,
   onToggleOutput,
 }: Props) {
+  const { t } = useI18n()
   const langLabel = LIVE_LANGS.find((l) => l.id === language)?.label ?? language
 
   return (
@@ -61,7 +63,7 @@ export function LiveRoomBottomBar({
             )}
           >
             <Play className="h-3.5 w-3.5 fill-current" />
-            {running ? 'Running…' : 'Run'}
+            {running ? t('live.running') : t('live.run')}
           </button>
         ) : null}
 
@@ -90,19 +92,19 @@ export function LiveRoomBottomBar({
               : 'border-border text-text-secondary hover:bg-surface-2',
           )}
         >
-          Output
+          {t('live.output')}
         </button>
 
         <div
           className="hidden items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-1.5 text-[13px] text-text-secondary sm:flex"
-          title="Room language"
+          title={t('live.roomLanguage')}
         >
           <span>{langLabel}</span>
         </div>
 
         <div className="flex items-center gap-1 rounded-lg border border-border bg-surface-2 px-1 py-0.5">
           <IconButton
-            aria-label="Decrease font size"
+            aria-label={t('live.fontDecrease')}
             disabled={fontSize <= FONT_MIN}
             onClick={() => onFontSizeChange(Math.max(FONT_MIN, fontSize - 1))}
           >
@@ -112,7 +114,7 @@ export function LiveRoomBottomBar({
             {fontSize}
           </span>
           <IconButton
-            aria-label="Increase font size"
+            aria-label={t('live.fontIncrease')}
             disabled={fontSize >= FONT_MAX}
             onClick={() => onFontSizeChange(Math.min(FONT_MAX, fontSize + 1))}
           >

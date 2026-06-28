@@ -23,7 +23,7 @@ func (i *Implementation) GenerateProfileSummary(
 			Confidence: int(s.GetConfidence()),
 		})
 	}
-	text, err := i.service.GenerateProfileSummary(ctx, req.GetUserId(), int(req.GetReadinessScore()), skills)
+	text, err := i.service.GenerateProfileSummary(ctx, req.GetUserId(), int(req.GetReadinessScore()), skills, req.GetLocale())
 	if err != nil {
 		return nil, mapServiceError(err)
 	}

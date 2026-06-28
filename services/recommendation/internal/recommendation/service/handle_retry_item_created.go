@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
 )
 
 func (s *recommendationService) HandleRetryItemCreated(ctx context.Context, eventID string, event model.RetryItemCreatedEvent) error {
@@ -35,11 +37,9 @@ func (s *recommendationService) HandleRetryItemCreated(ctx context.Context, even
 		if err := s.repo.EnsureUserProfile(txCtx, event.UserID); err != nil {
 			return fmt.Errorf("ensure user profile: %w", err)
 		}
+		lang := locale.From(ctx)
 
-		title := "Retry failed task"
-		if taskTitle != "" {
-			title = fmt.Sprintf("Retry: %s", taskTitle)
-		}
+		title := copy.RetryTaskTitle(lang, taskTitle)
 
 		position, err := s.repo.NextLearningPlanPosition(txCtx, event.UserID)
 		if err != nil {

@@ -11,9 +11,11 @@ import { TodayActionGrid } from '@/components/today/TodayActionGrid'
 import { getMe } from '@/lib/api/auth'
 import { getDashboard } from '@/lib/api/recommendation'
 import { listRetryItems, startRetrySession } from '@/lib/api/interview'
+import { useI18n } from '@/lib/i18n'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
+  const { t, formatDate } = useI18n()
 
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
   const dashboardQ = useQuery({ queryKey: ['dashboard'], queryFn: getDashboard })
@@ -24,14 +26,15 @@ export default function DashboardPage() {
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })
 
-  const today = useMemo(() => {
-    const d = new Date()
-    return d.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      weekday: 'long',
-    })
-  }, [])
+  const today = useMemo(
+    () =>
+      formatDate(new Date(), {
+        day: 'numeric',
+        month: 'long',
+        weekday: 'long',
+      }),
+    [formatDate],
+  )
 
   const username = meQ.data?.username ?? ''
   const pendingRetries = (retryQ.data?.items ?? []).filter(
@@ -42,12 +45,12 @@ export default function DashboardPage() {
     <PageContent className="gap-8">
       <PageHeader
         eyebrow={today}
-        title={username ? `Привет, ${username}` : 'Привет'}
+        title={username ? t('today.greetingNamed', { name: username }) : t('today.greeting')}
         description={
           <>
-            Рекомендации и прогресс — только с backend.{' '}
+            {t('today.description')}{' '}
             <Link to="/mock" className="text-text-primary underline">
-              Начать mock
+              {t('today.startMock')}
             </Link>
           </>
         }
@@ -61,21 +64,21 @@ export default function DashboardPage() {
 
       <LearningPlanCard items={dashboardQ.data?.learning_plan ?? []} loading={dashboardQ.isLoading} />
 
-      <ErrorBoundary section="Action cards">
+      <ErrorBoundary message={t('today.errorSection', { section: t('today.insights.title') })}>
         <section className="flex flex-col gap-5">
           <PageHeader
-            eyebrow="Insights"
-            title="Что делать сегодня"
-            description="Карточки строятся из recommendation service после mock-сессий."
+            eyebrow={t('today.insights.eyebrow')}
+            title={t('today.insights.title')}
+            description={t('today.insights.description')}
           />
           <TodayActionGrid dashboard={dashboardQ.data} loading={dashboardQ.isLoading} />
         </section>
       </ErrorBoundary>
 
       {pendingRetries.length > 0 ? (
-        <SdvgCard eyebrow="Retry" title="Повтор ошибок">
+        <SdvgCard eyebrow={t('today.retry.eyebrow')} title={t('today.retry.title')}>
           <p className="text-[13px] text-text-secondary">
-            {pendingRetries.length} задач ждут повторной попытки.
+            {t('today.retry.pending', { count: pendingRetries.length })}
           </p>
           <Button
             variant="ghost"
@@ -84,7 +87,7 @@ export default function DashboardPage() {
             loading={retryM.isPending}
             onClick={() => retryM.mutate(pendingRetries.map((i) => i.id))}
           >
-            Начать повтор
+            {t('today.retry.start')}
           </Button>
         </SdvgCard>
       ) : null}

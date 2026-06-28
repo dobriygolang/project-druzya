@@ -4,13 +4,15 @@ import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ChevronDown, LogOut, Menu, User, X } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
+import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { PAGE_MAX_WIDTH_CLASS } from '@/lib/brand/layout'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 import { UserAvatar } from '@/components/UserAvatar'
 import { getMe, logout } from '@/lib/api/auth'
 import { cn } from '@/lib/cn'
-import { PRIMARY_NAV } from '@/lib/migration/nav'
+import { usePrimaryNav } from '@/lib/migration/nav'
 import { useMotion } from '@/lib/motion-presets'
+import { useI18n } from '@/lib/i18n'
 
 const IMMERSIVE: RegExp[] = [/^\/interview\/session\//, /^\/live\//]
 
@@ -36,6 +38,7 @@ function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: 
 
 function UserMenu({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate()
+  const { t } = useI18n()
 
   async function handleLogout() {
     await logout()
@@ -44,9 +47,9 @@ function UserMenu({ onClose }: { onClose: () => void }) {
   }
 
   const items = [
-    { to: '/profile', label: 'Профиль', icon: User },
-    { to: '/pricing', label: 'Тарифы', icon: null },
-    { to: '/welcome', label: 'О продукте', icon: null },
+    { to: '/profile', label: t('shell.profile'), icon: User },
+    { to: '/pricing', label: t('shell.pricing'), icon: null },
+    { to: '/welcome', label: t('shell.about'), icon: null },
   ]
 
   return (
@@ -74,7 +77,7 @@ function UserMenu({ onClose }: { onClose: () => void }) {
         role="menuitem"
       >
         <LogOut className="h-4 w-4 shrink-0 text-text-muted" />
-        <span>Выйти</span>
+        <span>{t('shell.logout')}</span>
       </button>
     </div>
   )
@@ -82,11 +85,13 @@ function UserMenu({ onClose }: { onClose: () => void }) {
 
 function TopNav() {
   const navigate = useNavigate()
+  const { t } = useI18n()
+  const primaryNav = usePrimaryNav()
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
-  const username = meQ.data?.username ?? 'Аккаунт'
+  const username = meQ.data?.username ?? t('shell.accountFallback')
 
   useEffect(() => {
     if (!userMenuOpen) return
@@ -110,13 +115,14 @@ function TopNav() {
         <div className="flex min-w-0 items-center gap-4 lg:gap-8">
           <Logo to="/today" size="sm" />
           <nav className="hidden items-center gap-1 lg:flex">
-            {PRIMARY_NAV.map((item) => (
+            {primaryNav.map((item) => (
               <NavItem key={item.to} to={item.to} label={item.label} />
             ))}
           </nav>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          <LocaleSwitcher compact className="hidden sm:flex" />
           <div ref={userMenuRef} className="relative hidden sm:block">
             <button
               type="button"
@@ -125,7 +131,7 @@ function TopNav() {
                 'inline-flex items-center gap-2 rounded-lg border border-border bg-surface-1 px-2 py-1.5',
                 'text-sm font-medium text-text-primary transition-colors hover:border-border-strong hover:bg-surface-2',
               )}
-              aria-label="Меню аккаунта"
+              aria-label={t('shell.accountMenu')}
               aria-expanded={userMenuOpen}
               aria-haspopup="menu"
             >
@@ -150,7 +156,7 @@ function TopNav() {
           <button
             type="button"
             className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-surface-1 text-text-secondary hover:bg-surface-2 lg:hidden"
-            aria-label="Menu"
+            aria-label={t('shell.menu')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(true)}
           >
@@ -168,14 +174,14 @@ function TopNav() {
               <button
                 type="button"
                 className="grid h-9 w-9 place-items-center rounded-lg border border-border text-text-secondary hover:bg-surface-2"
-                aria-label="Close menu"
+                aria-label={t('shell.closeMenu')}
                 onClick={() => setMenuOpen(false)}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <nav className="flex flex-col gap-1">
-              {PRIMARY_NAV.map((item) => (
+              {primaryNav.map((item) => (
                 <NavItem
                   key={item.to}
                   to={item.to}
@@ -184,20 +190,23 @@ function TopNav() {
                 />
               ))}
             </nav>
+            <div className="mt-4 px-1">
+              <LocaleSwitcher />
+            </div>
             <div className="mt-auto space-y-1 border-t border-border pt-4">
               <Link
                 to="/profile"
                 onClick={() => setMenuOpen(false)}
                 className="block rounded-lg border border-transparent px-3 py-2 text-sm text-text-primary no-underline hover:bg-surface-2"
               >
-                Профиль
+                {t('shell.profile')}
               </Link>
               <Link
                 to="/pricing"
                 onClick={() => setMenuOpen(false)}
                 className="block rounded-lg border border-transparent px-3 py-2 text-sm text-text-primary no-underline hover:bg-surface-2"
               >
-                Тарифы
+                {t('shell.pricing')}
               </Link>
               <button
                 type="button"
@@ -207,7 +216,7 @@ function TopNav() {
                 }}
                 className="block w-full rounded-lg px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-2"
               >
-                Выйти
+                {t('shell.logout')}
               </button>
             </div>
           </div>

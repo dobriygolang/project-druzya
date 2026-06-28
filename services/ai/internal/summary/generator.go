@@ -23,8 +23,6 @@ type Input struct {
 	Skills         []SkillScore
 }
 
-const systemPrompt = `Ты карьерный коуч для технических интервью. Напиши 2-3 предложения на русском: сильные стороны, слабые зоны, следующий шаг. Без markdown.`
-
 // Generator produces human-readable profile summaries.
 type Generator struct {
 	chain llmchain.ChatClient
@@ -36,29 +34,29 @@ func New(chain llmchain.ChatClient) *Generator {
 }
 
 // Generate returns a profile summary text.
-func (g *Generator) Generate(ctx context.Context, in Input) (string, error) {
+func (g *Generator) Generate(ctx context.Context, in Input, locale string) (string, error) {
 	if g.chain == nil {
-		return fallback(in), nil
+		return fallback(in, locale), nil
 	}
 	payload, _ := json.Marshal(in)
 	resp, err := g.chain.Chat(ctx, llmchain.Request{
 		Task: llmchain.TaskInsightProse,
 		Messages: []llmchain.Message{
-			{Role: "system", Content: systemPrompt},
+			{Role: "system", Content: systemPrompt(locale)},
 			{Role: "user", Content: string(payload)},
 		},
 	})
 	if err != nil {
-		return fallback(in), nil
+		return fallback(in, locale), nil
 	}
 	text := strings.TrimSpace(resp.Content)
 	if text == "" {
-		return fallback(in), nil
+		return fallback(in, locale), nil
 	}
 	return text, nil
 }
 
-func fallback(in Input) string {
+func fallback(in Input, locale string) string {
 	var weak, strong string
 	for _, s := range in.Skills {
 		if s.Confidence < 20 {
@@ -72,7 +70,13 @@ func fallback(in Input) string {
 		}
 	}
 	if strong != "" && weak != "" {
+		if strings.HasPrefix(strings.ToLower(locale), "en") {
+			return fmt.Sprintf("Readiness %d%%. Strong area: %s. Focus on: %s.", in.ReadinessScore, strong, weak)
+		}
 		return fmt.Sprintf("Readiness %d%%. Сильная зона: %s. Сфокусируйся на: %s.", in.ReadinessScore, strong, weak)
+	}
+	if strings.HasPrefix(strings.ToLower(locale), "en") {
+		return fmt.Sprintf("Readiness %d%%. Keep practicing your learning plan.", in.ReadinessScore)
 	}
 	return fmt.Sprintf("Readiness %d%%. Продолжай практику по плану обучения.", in.ReadinessScore)
 }

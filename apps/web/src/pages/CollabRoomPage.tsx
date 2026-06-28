@@ -5,7 +5,6 @@ import { useRef, useState } from 'react'
 import {
   CollabCodeEditor,
   wsStatusColor,
-  wsStatusLabel,
   type CollabCodeEditorHandle,
 } from '@/components/CollabCodeEditor'
 import type { CollabPeer } from '@/lib/codemirror/collabPresence'
@@ -33,6 +32,7 @@ import {
 } from '@/lib/api/rooms'
 import { readAccessToken } from '@/lib/apiClient'
 import { markInviteCopied, readInviteCopied } from '@/lib/live/useCreateLiveRoom'
+import { liveWsStatusLabel, useI18n } from '@/lib/i18n'
 
 function jwtSubject(token: string): string | null {
   const part = token.split('.')[1]
@@ -47,6 +47,7 @@ function jwtSubject(token: string): string | null {
 }
 
 export default function CollabRoomPage() {
+  const { t } = useI18n()
   const { roomId = '' } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -158,15 +159,15 @@ export default function CollabRoomPage() {
         loading={false}
         onJoin={() => {}}
         loginTo={`/login?next=/live/${roomId}`}
-        title="Нужен доступ"
-        description="Открой ссылку с ?invite=… от организатора или войди в аккаунт, если ты участник комнаты."
+        title={t('live.accessTitle')}
+        description={t('live.accessDescription')}
         hideJoin
       />
     )
   }
 
   if (roomQ.isLoading || (authed && meQ.isLoading)) {
-    return <EditorShell message="Загрузка комнаты…" />
+    return <EditorShell message={t('live.loadingRoom')} />
   }
 
   const room =
@@ -188,12 +189,12 @@ export default function CollabRoomPage() {
   if (!room) {
     return (
       <EditorShell
-        message="Комната не найдена"
+        message={t('live.roomNotFound')}
         sub={roomQ.error instanceof Error ? roomQ.error.message : undefined}
         action={
           <Link to="/mock">
             <Button variant="secondary" size="sm">
-              Создать новую
+              {t('live.createNew')}
             </Button>
           </Link>
         }
@@ -208,7 +209,7 @@ export default function CollabRoomPage() {
   const canRun = !!hasSession
   const closeTo = authed ? '/today' : '/welcome'
   const panelHeight = runPanelHeight(run.panelOpen)
-  const displayName = meQ.data?.username ?? (guestName || 'Guest')
+  const displayName = meQ.data?.username ?? (guestName || t('common.guest'))
 
   const handleClose = () => {
     if (isOwner) {
@@ -238,7 +239,7 @@ export default function CollabRoomPage() {
     })
   }
 
-  const statusLabel = wsStatusLabel(wsStatus, room.is_frozen)
+  const statusLabel = liveWsStatusLabel(t, wsStatus, room.is_frozen)
   const statusColor =
     wsStatus === 'open' && !room.is_frozen ? brand.green : wsStatusColor(wsStatus, room.is_frozen)
   const isGo = normalizeEditorLang(room.language) === 'go'
@@ -269,15 +270,13 @@ export default function CollabRoomPage() {
           className="flex shrink-0 items-center justify-between gap-3 border-b bg-surface-2 px-4 py-2 text-[13px] text-text-secondary sm:px-5"
           style={{ borderColor: brand.hair }}
         >
-          <span>
-            Отправь ссылку-приглашение гостю — он сможет войти без регистрации и редактировать код вместе с тобой.
-          </span>
+          <span>{t('live.inviteBanner')}</span>
           <button
             type="button"
             onClick={() => setShowInviteBanner(false)}
             className="shrink-0 text-text-muted hover:text-text-primary"
           >
-            Скрыть
+            {t('live.hide')}
           </button>
         </div>
       ) : null}
@@ -368,8 +367,8 @@ function GuestGate({
   loading,
   onJoin,
   loginTo,
-  title = 'Вход как гость',
-  description = 'Имя для отображения в редакторе. Доступ только на время сессии.',
+  title,
+  description,
   hideJoin = false,
 }: {
   guestName: string
@@ -382,6 +381,8 @@ function GuestGate({
   description?: string
   hideJoin?: boolean
 }) {
+  const { t } = useI18n()
+
   useEffect(() => {
     document.documentElement.classList.add('light')
   }, [])
@@ -392,52 +393,56 @@ function GuestGate({
         <div className="mx-auto flex max-w-lg items-center justify-between">
           <Logo to="/welcome" />
           <Link to={loginTo} className="text-sm text-text-secondary no-underline">
-            Войти
+            {t('live.login')}
           </Link>
         </div>
       </header>
       <main className="mx-auto flex max-w-lg flex-col items-center px-6 py-16">
         <div className="sdvg-card w-full p-6 sm:p-7" style={{ boxShadow: brand.cardShadow }}>
-          <h1 className="text-xl font-semibold tracking-[-0.02em]">{title}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-text-secondary">{description}</p>
+          <h1 className="text-xl font-semibold tracking-[-0.02em]">{title ?? t('live.guestTitle')}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+            {description ?? t('live.guestDescription')}
+          </p>
           {!hideJoin ? (
             <>
               <label htmlFor="guest-name" className="mt-5 block text-sm font-medium">
-                Имя
+                {t('live.name')}
               </label>
               <input
                 id="guest-name"
                 value={guestName}
                 onChange={(e) => onNameChange(e.target.value)}
                 className="mt-1.5 w-full rounded-xl border border-border bg-surface-1 px-3 py-2.5 text-sm outline-none focus:border-border-strong"
-                placeholder="Кандидат"
+                placeholder={t('live.namePlaceholder')}
               />
               {error ? (
                 <div className="mt-3">
-                  <ErrorMessage message={error instanceof Error ? error.message : 'Ошибка входа'} />
+                  <ErrorMessage
+                    message={error instanceof Error ? error.message : t('live.joinError')}
+                  />
                 </div>
               ) : null}
               <Button className="mt-5 w-full" loading={loading} onClick={onJoin}>
-                Войти в комнату
+                {t('live.joinRoom')}
               </Button>
             </>
           ) : (
             <div className="mt-5 flex flex-col gap-2">
               <Link to={loginTo}>
-                <Button className="w-full">Войти в аккаунт</Button>
+                <Button className="w-full">{t('live.loginAccount')}</Button>
               </Link>
               <Link to="/mock">
                 <Button variant="ghost" className="w-full">
-                  Создать свою комнату
+                  {t('live.createOwnRoom')}
                 </Button>
               </Link>
             </div>
           )}
           {!hideJoin ? (
             <p className="mt-4 text-center text-xs text-text-muted">
-              Уже есть аккаунт?{' '}
+              {t('live.hasAccount')}{' '}
               <Link to={loginTo} className="text-text-primary underline">
-                Войти
+                {t('live.login')}
               </Link>
             </p>
           ) : null}

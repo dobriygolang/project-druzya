@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
 )
 
 func (s *recommendationService) HandleSessionCompleted(ctx context.Context, eventID string, event model.SessionCompletedEvent) error {
@@ -41,12 +43,13 @@ func (s *recommendationService) HandleSessionCompleted(ctx context.Context, even
 
 		if profile.ReadinessScore >= 80 {
 			suggestedMode := event.Mode
+			lang := locale.From(ctx)
 			rec := model.Recommendation{
 				UserID:      event.UserID,
 				Type:        model.RecTypeTakeMockInterview,
 				Priority:    model.PriorityMedium,
-				Title:       "Take a mock interview",
-				Description: fmt.Sprintf("Your readiness score is %d/100 — schedule a full mock interview to validate progress.", profile.ReadinessScore),
+				Title:       copy.TakeMockTitle(lang),
+				Description: copy.TakeMockDescription(lang, profile.ReadinessScore),
 				Metadata: map[string]any{
 					"session_id":     event.SessionID,
 					"mode":           event.Mode,
@@ -61,13 +64,14 @@ func (s *recommendationService) HandleSessionCompleted(ctx context.Context, even
 		if weak := weakestSkill(scores); weak != nil {
 			skillKey := weak.SkillKey
 			section := sectionLabelFromMode(event.Mode)
+			lang := locale.From(ctx)
 			rec := model.Recommendation{
 				UserID:      event.UserID,
 				Type:        model.RecTypePracticeSection,
 				Priority:    priorityForScore(weak.Score),
 				SkillKey:    &skillKey,
-				Title:       fmt.Sprintf("Practice %s section", section),
-				Description: fmt.Sprintf("After completing your %s session, focus on %s (score %d/100).", section, humanizeSkillKey(weak.SkillKey), weak.Score),
+				Title:       copy.PracticeSectionTitle(lang, section),
+				Description: copy.PracticeSectionDescription(lang, section, humanizeSkillKey(weak.SkillKey), weak.Score),
 				Metadata: map[string]any{
 					"session_id": event.SessionID,
 					"mode":       event.Mode,

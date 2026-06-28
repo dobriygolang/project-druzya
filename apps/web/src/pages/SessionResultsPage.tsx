@@ -9,9 +9,11 @@ import { getTask } from '@/lib/api/content'
 import { getSessionResults, listRetryItems } from '@/lib/api/interview'
 import { getDashboard } from '@/lib/api/recommendation'
 import { formatSessionMode, formatSessionStatus, formatSectionStatus } from '@/lib/interview/labels'
+import { useI18n } from '@/lib/i18n'
 import type { EvaluationResult, SessionSection } from '@/lib/types'
 
 export default function SessionResultsPage() {
+  const { t } = useI18n()
   const { sessionId = '' } = useParams()
 
   const resultsQ = useQuery({
@@ -61,7 +63,7 @@ export default function SessionResultsPage() {
   if (resultsQ.isLoading) {
     return (
       <PageContent>
-        <p className="text-sm text-text-muted">Загрузка результатов…</p>
+        <p className="text-sm text-text-muted">{t('results.loading')}</p>
       </PageContent>
     )
   }
@@ -69,7 +71,7 @@ export default function SessionResultsPage() {
     return (
       <PageContent>
         <ErrorMessage
-          message={resultsQ.error instanceof Error ? resultsQ.error.message : 'Ошибка'}
+          message={resultsQ.error instanceof Error ? resultsQ.error.message : t('common.error')}
           onRetry={() => void resultsQ.refetch()}
         />
       </PageContent>
@@ -79,7 +81,7 @@ export default function SessionResultsPage() {
   if (!results) {
     return (
       <PageContent>
-        <p className="text-sm text-text-muted">Результаты не найдены.</p>
+        <p className="text-sm text-text-muted">{t('results.notFound')}</p>
       </PageContent>
     )
   }
@@ -102,22 +104,27 @@ export default function SessionResultsPage() {
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
           {formatSessionMode(session.mode)}
         </p>
-        <h1 className="font-display text-3xl font-bold leading-tight">Результаты</h1>
+        <h1 className="font-display text-3xl font-bold leading-tight">{t('results.title')}</h1>
         <p className="text-[14px] text-text-secondary">
           {formatSessionStatus(session.status)}
-          {session.total_score ? ` · итог ${session.total_score}` : ''}
+          {session.total_score ? t('results.totalScore', { score: session.total_score }) : ''}
         </p>
         <p className="text-[13px] text-text-muted">
-          {progress.evaluated_tasks} оценено · {progress.skipped_tasks} пропущено ·{' '}
-          {progress.total_tasks} всего
-          {evaluations.length > 0 ? ` · ${passed} pass · ${failed} fail` : ''}
+          {t('results.stats', {
+            evaluated: progress.evaluated_tasks,
+            skipped: progress.skipped_tasks,
+            total: progress.total_tasks,
+          })}
+          {evaluations.length > 0
+            ? t('results.statsWithPass', { passed, failed })
+            : ''}
         </p>
         {pendingEvaluations ? (
-          <p className="text-[13px] text-text-secondary">Дожидаемся AI-оценок…</p>
+          <p className="text-[13px] text-text-secondary">{t('results.pendingEval')}</p>
         ) : null}
       </header>
 
-      <SectionCard title="Секции">
+      <SectionCard title={t('results.sections')}>
         <ul className="space-y-3">
           {[...sections]
             .sort((a: SessionSection, b: SessionSection) => a.position - b.position)
@@ -138,31 +145,34 @@ export default function SessionResultsPage() {
         </ul>
       </SectionCard>
 
-      <SectionCard title="Оценки">
+      <SectionCard title={t('results.evaluations')}>
         {evaluations.length === 0 ? (
           <p className="text-[13px] text-text-muted">
-            {pendingEvaluations
-              ? 'Оценки появятся через несколько секунд.'
-              : 'Оценок нет — задачи были пропущены или сессия отменена.'}
+            {pendingEvaluations ? t('results.evalPending') : t('results.evalEmpty')}
           </p>
         ) : (
           <ul className="space-y-4">
             {evaluations.map((ev: EvaluationResult) => (
-              <EvaluationRow key={ev.summary.id} ev={ev} title={taskTitles.get(ev.task_id)} />
+              <EvaluationRow
+                key={ev.summary.id}
+                ev={ev}
+                title={taskTitles.get(ev.task_id)}
+                t={t}
+              />
             ))}
           </ul>
         )}
       </SectionCard>
 
       {dashboardQ.isSuccess && (recommendations.length > 0 || weaknesses.length > 0) ? (
-        <SectionCard title="Что дальше">
+        <SectionCard title={t('results.next')}>
           <p className="mb-3 flex items-center gap-2 text-[13px] text-text-secondary">
             <Sparkles className="h-4 w-4 shrink-0" />
-            Из recommendation service после этой сессии:
+            {t('results.nextHint')}
           </p>
           {dashboardQ.data?.readiness_score != null ? (
             <p className="mb-3 text-sm">
-              Readiness:{' '}
+              {t('results.readiness')}{' '}
               <span className="font-semibold tabular-nums">{dashboardQ.data.readiness_score}</span>
             </p>
           ) : null}
@@ -191,19 +201,19 @@ export default function SessionResultsPage() {
             </ul>
           ) : null}
           <Link to="/today" className="mt-4 inline-block text-sm underline">
-            Открыть Today →
+            {t('results.openToday')}
           </Link>
         </SectionCard>
       ) : null}
 
       {pendingRetries.length > 0 ? (
-        <SectionCard title="Повтор ошибок">
+        <SectionCard title={t('results.retryTitle')}>
           <p className="text-[13px] text-text-secondary">
-            {pendingRetries.length} задач в очереди retry на Today.
+            {t('results.retryPending', { count: pendingRetries.length })}
           </p>
           <Link to="/today" className="mt-3 inline-block">
             <Button variant="ghost" size="sm" icon={<RefreshCw className="h-4 w-4" />}>
-              Перейти к retry
+              {t('results.goRetry')}
             </Button>
           </Link>
         </SectionCard>
@@ -211,17 +221,25 @@ export default function SessionResultsPage() {
 
       <div className="flex flex-wrap gap-3">
         <Link to="/today">
-          <Button icon={<ArrowRight className="h-4 w-4" />}>На Today</Button>
+          <Button icon={<ArrowRight className="h-4 w-4" />}>{t('results.toToday')}</Button>
         </Link>
         <Link to="/mock">
-          <Button variant="secondary">Новое интервью</Button>
+          <Button variant="secondary">{t('results.newInterview')}</Button>
         </Link>
       </div>
     </PageContent>
   )
 }
 
-function EvaluationRow({ ev, title }: { ev: EvaluationResult; title?: string }) {
+function EvaluationRow({
+  ev,
+  title,
+  t,
+}: {
+  ev: EvaluationResult
+  title?: string
+  t: (key: string, vars?: Record<string, string | number>) => string
+}) {
   const feedbackText =
     typeof ev.summary.feedback === 'object' && ev.summary.feedback !== null
       ? (ev.summary.feedback as { text?: string }).text
@@ -231,11 +249,13 @@ function EvaluationRow({ ev, title }: { ev: EvaluationResult; title?: string }) 
     <li className="border-b border-border pb-4 last:border-0 last:pb-0">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="font-medium text-text-primary">{title ?? `Task ${ev.task_id.slice(0, 8)}…`}</p>
+          <p className="font-medium text-text-primary">
+            {title ?? t('results.taskFallback', { id: ev.task_id.slice(0, 8) })}
+          </p>
           <p className="font-mono text-[10px] text-text-muted">{ev.task_id.slice(0, 8)}…</p>
         </div>
         <span className={ev.summary.passed ? 'font-medium text-text-primary' : 'text-danger'}>
-          {ev.summary.score} · {ev.summary.passed ? 'pass' : 'fail'}
+          {ev.summary.score} · {ev.summary.passed ? t('common.pass') : t('common.fail')}
         </span>
       </div>
       {ev.summary.summary ? (

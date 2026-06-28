@@ -51,9 +51,7 @@ func (h *Handler) HandleEvent(ctx context.Context, ev interviewadapter.OutboxEve
 			return h.fail(ctx, ev.ID, fmt.Errorf("handle retry item created: %w", err))
 		}
 	default:
-		// Unknown event types are acked and skipped rather than failed forever:
-		// the wildcard claim ("*") will otherwise re-deliver them indefinitely.
-		return h.Interview.AckOutboxEvents(ctx, []string{ev.ID})
+		return fmt.Errorf("unexpected event %q (not owned by recommendation)", ev.EventName)
 	}
 	return h.Interview.AckOutboxEvents(ctx, []string{ev.ID})
 }

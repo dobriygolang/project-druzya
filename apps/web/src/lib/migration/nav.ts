@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import { FEATURES, isNavVisible } from './features'
+import { useI18n } from '@/lib/i18n'
 
 export type NavItem = { to: string; label: string; primary?: boolean }
 
@@ -7,16 +9,28 @@ function isRouteVisible(path: string): boolean {
   return feature ? isNavVisible(feature.status) : false
 }
 
-/** Desktop header + mobile drawer */
-export const PRIMARY_NAV: NavItem[] = [
-  { to: '/today', label: 'Today' },
-  { to: '/mock', label: 'Mock' },
-  { to: '/profile', label: 'Profile' },
-].filter((item) => isRouteVisible(item.to))
+export function usePrimaryNav(): NavItem[] {
+  const { t } = useI18n()
+  return useMemo(
+    () =>
+      [
+        { to: '/today', label: t('nav.today') },
+        { to: '/mock', label: t('nav.mock') },
+        { to: '/profile', label: t('nav.profile') },
+      ].filter((item) => isRouteVisible(item.to)),
+    [t],
+  )
+}
 
-/** Mobile bottom bar */
-export const MOBILE_NAV: NavItem[] = [
-  { to: '/today', label: 'Today' },
-  { to: '/mock', label: 'Mock', primary: true },
-  { to: '/profile', label: 'Profile' },
-].filter((item) => isRouteVisible(item.to))
+export function useMobileNav(): NavItem[] {
+  const { t } = useI18n()
+  return useMemo(
+    () =>
+      [
+        { to: '/today', label: t('nav.today') },
+        { to: '/mock', label: t('nav.mock'), primary: true },
+        { to: '/profile', label: t('nav.profile') },
+      ].filter((item) => isRouteVisible(item.to)),
+    [t],
+  )
+}

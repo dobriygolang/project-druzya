@@ -1,97 +1,72 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout, LegalNavLink, LegalSection } from '@/components/legal/LegalLayout'
-
-const UPDATED = '28 июня 2026'
+import { useI18n } from '@/lib/i18n'
 
 export default function LegalPrivacyPage() {
+  const { t } = useI18n()
+
   return (
     <LegalLayout
-      eyebrow="Privacy"
-      title="Политика конфиденциальности"
-      updated={UPDATED}
-      nav={<LegalNavLink to="/legal/terms">Terms</LegalNavLink>}
-      footer="Черновик под текущий MVP (microservices druz9.online). Детали хранения уточняются в production checklist."
+      eyebrow={t('legal.privacy.eyebrow')}
+      title={t('legal.privacy.title')}
+      updated={t('legal.privacy.updated')}
+      nav={<LegalNavLink to="/legal/terms">{t('legal.privacy.navTerms')}</LegalNavLink>}
+      footer={t('legal.privacy.footer')}
     >
-      <LegalSection title="1. Какие данные обрабатываем">
+      <LegalSection title={t('legal.privacy.s1Title')}>
         <ul className="list-disc space-y-1 pl-5">
-          <li>
-            <strong>Аккаунт</strong> — username, avatar, telegram_id и/или yandex_id (identity
-            service).
-          </li>
-          <li>
-            <strong>Mock-интервью</strong> — сессии, ответы, код попыток, оценки (interview + ai
-            services).
-          </li>
-          <li>
-            <strong>Запуски кода</strong> — исходник, stdout/stderr, результаты тестов (sandbox
-            service).
-          </li>
-          <li>
-            <strong>Live-комнаты</strong> — содержимое редактора для синхронизации (rooms service).
-          </li>
-          <li>
-            <strong>Рекомендации</strong> — профиль навыков и учебный план (recommendation service).
-          </li>
-          <li>
-            <strong>Биллинг</strong> — план, счётчики использования (billing service).
-          </li>
+          <li>{t('legal.privacy.s1Account')}</li>
+          <li>{t('legal.privacy.s1Mock')}</li>
+          <li>{t('legal.privacy.s1Runs')}</li>
+          <li>{t('legal.privacy.s1Live')}</li>
+          <li>{t('legal.privacy.s1Rec')}</li>
+          <li>{t('legal.privacy.s1Billing')}</li>
         </ul>
       </LegalSection>
 
-      <LegalSection title="2. Чего не собираем в MVP">
+      <LegalSection title={t('legal.privacy.s2Title')}>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Email/пароль — только OAuth/Telegram через identity.</li>
-          <li>Рекламные cookies и стороннюю web-аналитику.</li>
-          <li>Доступ к файлам на вашем устройстве вне введённого вами кода/текста.</li>
+          <li>{t('legal.privacy.s2Li1')}</li>
+          <li>{t('legal.privacy.s2Li2')}</li>
+          <li>{t('legal.privacy.s2Li3')}</li>
         </ul>
       </LegalSection>
 
-      <LegalSection title="3. Зачем используем">
-        <p>
-          Для аутентификации, проведения mock-сессий, AI-оценки, квот тарифа, collab-редактора и
-          персональных рекомендаций. Без продажи данных третьим лицам.
-        </p>
+      <LegalSection title={t('legal.privacy.s3Title')}>
+        <p>{t('legal.privacy.s3Body')}</p>
       </LegalSection>
 
-      <LegalSection title="4. AI-обработка">
-        <p>
-          Текст и код попыток отправляются в ai-service для scoring. Не передаём провайдеру ваш
-          пароль или токены OAuth — только содержимое попытки, необходимое для оценки.
-        </p>
+      <LegalSection title={t('legal.privacy.s4Title')}>
+        <p>{t('legal.privacy.s4Body')}</p>
       </LegalSection>
 
-      <LegalSection title="5. Хранение и локализация">
-        <p>
-          Данные хранятся в PostgreSQL и Redis сервисов платформы. Production-развёртывание
-          target'ит инфраструктуру в РФ — см. deploy checklist репозитория. JWT access-токен —
-          в localStorage клиента; refresh — в Redis на backend.
-        </p>
+      <LegalSection title={t('legal.privacy.s5Title')}>
+        <p>{t('legal.privacy.s5Body')}</p>
       </LegalSection>
 
-      <LegalSection title="6. Ваши права">
+      <LegalSection title={t('legal.privacy.s6Title')}>
         <p>
-          Вы можете запросить информацию об обрабатываемых данных и удаление аккаунта, написав на{' '}
+          {t('legal.privacy.s6BodyBefore')}{' '}
           <a href="mailto:privacy@druz9.ru" className="underline">
             privacy@druz9.ru
           </a>
-          . Self-service export/delete в интерфейсе — в roadmap; пока через поддержку.
+          {t('legal.privacy.s6BodyAfter')}
         </p>
       </LegalSection>
 
-      <LegalSection title="7. Cookies">
+      <LegalSection title={t('legal.privacy.s7Title')}>
         <p>
-          Технические cookies/токены для сессии авторизации. Маркетинговых cookies нет. Подробнее
-          — в{' '}
+          {t('legal.privacy.s7BodyBefore')}{' '}
           <Link to="/legal/terms" className="underline">
-            условиях использования
+            {t('legal.privacy.s7TermsLink')}
           </Link>
           .
         </p>
       </LegalSection>
 
-      <LegalSection title="8. Контакты">
+      <LegalSection title={t('legal.privacy.s8Title')}>
         <p>
-          DPO / privacy:{' '}
+          {t('legal.privacy.s8BodyBefore')}{' '}
           <a href="mailto:privacy@druz9.ru" className="underline">
             privacy@druz9.ru
           </a>

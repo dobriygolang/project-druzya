@@ -9,34 +9,48 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/logger"
 )
 
-// Poll claims recommendation-relevant outbox events in a single round-trip.
+// handledEventNames — only these types may be claimed. Do not use OutboxClaimAll:
+// ai-service owns interview.attempt_submitted and a wildcard claim races with it.
+var handledEventNames = []string{
+	AttemptEvaluatedEvent,
+	SessionCompletedEvent,
+	RetryItemCreatedEvent,
+}
+
+// Poll claims recommendation-relevant outbox events (one claim per event type).
 func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Client, h *Handler, limit int) error {
-	events, err := interview.ClaimOutboxEvents(ctx, interviewadapter.OutboxClaimAll, limit)
-	if err != nil {
-		return err
-	}
-	for _, ev := range events {
-		start := time.Now()
-		if err := h.HandleEvent(ctx, ev); err != nil {
-			ops.IncOutboxEvent("recommendation", ev.EventName, "error")
-			ops.ObserveOutboxDuration("recommendation", ev.EventName, time.Since(start))
-			log.Error("outbox_failed",
-				"event_id", ev.ID,
-				"event_name", ev.EventName,
-				"duration_ms", time.Since(start).Milliseconds(),
-				"err", err,
-			)
-			continue
+	for _, eventName := range handledEventNames {
+		events, err := interview.ClaimOutboxEvents(ctx, eventName, limit)
+		if err != nil {
+			return err
 		}
-		ops.IncOutboxEvent("recommendation", ev.EventName, "ok")
+		for _, ev := range events {
+			processOutboxEvent(ctx, log, h, ev)
+		}
+	}
+	return nil
+}
+
+func processOutboxEvent(ctx context.Context, log logger.Logger, h *Handler, ev interviewadapter.OutboxEvent) {
+	start := time.Now()
+	if err := h.HandleEvent(ctx, ev); err != nil {
+		ops.IncOutboxEvent("recommendation", ev.EventName, "error")
 		ops.ObserveOutboxDuration("recommendation", ev.EventName, time.Since(start))
-		log.Info("outbox_processed",
+		log.Error("outbox_failed",
 			"event_id", ev.ID,
 			"event_name", ev.EventName,
 			"duration_ms", time.Since(start).Milliseconds(),
+			"err", err,
 		)
+		return
 	}
-	return nil
+	ops.IncOutboxEvent("recommendation", ev.EventName, "ok")
+	ops.ObserveOutboxDuration("recommendation", ev.EventName, time.Since(start))
+	log.Info("outbox_processed",
+		"event_id", ev.ID,
+		"event_name", ev.EventName,
+		"duration_ms", time.Since(start).Milliseconds(),
+	)
 }
 
 // Run polls interview outbox until ctx is cancelled.
@@ -50,7 +64,7 @@ func Run(ctx context.Context, log logger.Logger, interview interviewadapter.Clie
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	log.Info("outbox worker started", "interval", interval.String(), "claim", interviewadapter.OutboxClaimAll)
+	log.Info("outbox worker started", "interval", interval.String(), "claim", handledEventNames)
 
 	for {
 		select {

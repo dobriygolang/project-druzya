@@ -39,6 +39,27 @@ func TestHandleEvent_RoutesSessionCompleted(t *testing.T) {
 	require.NoError(t, h.HandleEvent(ctx, ev))
 }
 
+func TestHandleEvent_RejectAttemptSubmitted(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	h := &outboxworker.Handler{
+		Interview: interviewmocks.NewClient(t),
+		Service:   servicemocks.NewService(t),
+	}
+
+	err := h.HandleEvent(ctx, interviewadapter.OutboxEvent{
+		ID:        "evt-submitted",
+		EventName: "interview.attempt_submitted",
+		Payload: map[string]any{
+			"attempt_id": "a1",
+			"user_id":    "u1",
+		},
+	})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "not owned by recommendation")
+}
+
 func TestParseAttemptEvaluatedEvent_ScoreString(t *testing.T) {
 	t.Parallel()
 

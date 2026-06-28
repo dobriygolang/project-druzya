@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 type Props = {
   mode: 'countdown' | 'elapsed'
@@ -26,6 +27,7 @@ function formatDuration(totalSec: number): string {
 }
 
 export function RoomSessionTimer({ mode, createdAt, expiresAt, className }: Props) {
+  const { t } = useI18n()
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function RoomSessionTimer({ mode, createdAt, expiresAt, className }: Prop
       return null
     }
     const remainingSec = Math.ceil((expiresMs - now) / 1000)
-    label = 'Осталось'
+    label = t('live.timerRemaining')
     value = formatDuration(remainingSec)
     urgent = remainingSec <= 300
   } else {
@@ -53,7 +55,7 @@ export function RoomSessionTimer({ mode, createdAt, expiresAt, className }: Prop
       return null
     }
     const elapsedSec = Math.floor((now - createdMs) / 1000)
-    label = 'Сессия'
+    label = t('live.timerSession')
     value = formatDuration(elapsedSec)
   }
 
@@ -66,7 +68,7 @@ export function RoomSessionTimer({ mode, createdAt, expiresAt, className }: Prop
           : 'border-border bg-surface-1 text-text-secondary',
         className,
       )}
-      title={mode === 'countdown' ? 'Комната будет закрыта по истечении времени' : 'Длительность текущей сессии'}
+      title={mode === 'countdown' ? t('live.timerCountdownTitle') : t('live.timerElapsedTitle')}
     >
       <span className="font-medium text-text-primary">{value}</span>
       <span>{label}</span>

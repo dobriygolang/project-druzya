@@ -1,10 +1,12 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { PAGE_MAX_WIDTH_CLASS } from '@/lib/brand/layout'
 import { readAccessToken } from '@/lib/apiClient'
 import { brand } from '@/lib/brand/tokens'
 import { Logo } from '@/components/brand/Logo'
 import { cn } from '@/lib/cn'
+import { useI18n } from '@/lib/i18n'
 
 type LinkItem = { href: string; label: string; external?: boolean }
 
@@ -14,14 +16,17 @@ type Props = {
   className?: string
 }
 
-const defaultCenter: LinkItem[] = [
-  { href: '/welcome#features', label: 'Возможности' },
-  { href: '/pricing', label: 'Тарифы' },
-  { href: 'https://t.me/druz9', label: 'Канал', external: true },
-]
-
-export function PublicNav({ centerLinks = defaultCenter, right, className }: Props) {
+export function PublicNav({ centerLinks, right, className }: Props) {
+  const { t } = useI18n()
   const isAuthed = !!readAccessToken()
+
+  const defaultCenter: LinkItem[] = [
+    { href: '/welcome#features', label: t('public.features') },
+    { href: '/pricing', label: t('public.pricing') },
+    { href: 'https://t.me/druz9', label: t('public.channel'), external: true },
+  ]
+
+  const links = centerLinks ?? defaultCenter
 
   return (
     <header className={cn('border-b bg-bg', className)} style={{ borderColor: brand.hair }}>
@@ -29,7 +34,7 @@ export function PublicNav({ centerLinks = defaultCenter, right, className }: Pro
         <Logo to="/welcome" />
 
         <nav className="hidden items-center gap-7 md:flex">
-          {centerLinks.map((item) =>
+          {links.map((item) =>
             item.external ? (
               <a
                 key={item.href}
@@ -64,6 +69,7 @@ export function PublicNav({ centerLinks = defaultCenter, right, className }: Pro
         </nav>
 
         <div className="flex shrink-0 items-center gap-3">
+          <LocaleSwitcher compact className="hidden sm:flex" />
           {right ??
             (isAuthed ? (
               <Link
@@ -71,25 +77,16 @@ export function PublicNav({ centerLinks = defaultCenter, right, className }: Pro
                 className="rounded-lg px-3.5 py-2 text-sm font-medium no-underline"
                 style={{ background: brand.ink, color: brand.bg }}
               >
-                В приложение
+                {t('public.openApp')}
               </Link>
             ) : (
-              <>
-                <Link
-                  to="/login"
-                  className="hidden text-sm no-underline sm:inline"
-                  style={{ color: brand.ink60 }}
-                >
-                  Войти
-                </Link>
-                <Link
-                  to="/login"
-                  className="rounded-lg px-3.5 py-2 text-sm font-medium no-underline"
-                  style={{ background: brand.ink, color: brand.bg }}
-                >
-                  Начать бесплатно
-                </Link>
-              </>
+              <Link
+                to="/login"
+                className="rounded-lg px-3.5 py-2 text-sm font-medium no-underline"
+                style={{ background: brand.ink, color: brand.bg }}
+              >
+                {t('public.startFree')}
+              </Link>
             ))}
         </div>
       </div>

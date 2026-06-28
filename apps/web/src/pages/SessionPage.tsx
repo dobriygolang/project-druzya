@@ -19,8 +19,10 @@ import {
 } from '@/lib/api/interview'
 import { isCodeTask } from '@/lib/interview/taskKind'
 import { SessionSectionsProgress } from '@/components/session/SessionSectionsProgress'
+import { useI18n } from '@/lib/i18n'
 
 export default function SessionPage() {
+  const { t } = useI18n()
   const { sessionId = '' } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -130,7 +132,7 @@ export default function SessionPage() {
   if (stateQ.isLoading) {
     return (
       <PageContent>
-        <p className="text-sm text-text-muted">Загрузка сессии…</p>
+        <p className="text-sm text-text-muted">{t('session.loading')}</p>
       </PageContent>
     )
   }
@@ -138,7 +140,7 @@ export default function SessionPage() {
     return (
       <PageContent>
         <ErrorMessage
-          message={stateQ.error instanceof Error ? stateQ.error.message : 'Ошибка сессии'}
+          message={stateQ.error instanceof Error ? stateQ.error.message : t('session.error')}
           onRetry={() => void stateQ.refetch()}
         />
       </PageContent>
@@ -149,7 +151,7 @@ export default function SessionPage() {
   if (!state) {
     return (
       <PageContent>
-        <p className="text-sm text-text-muted">Сессия не найдена.</p>
+        <p className="text-sm text-text-muted">{t('session.notFound')}</p>
       </PageContent>
     )
   }
@@ -164,29 +166,33 @@ export default function SessionPage() {
     return (
       <PageContent>
         <header className="flex flex-col gap-2">
-          <h1 className="font-display text-3xl font-bold leading-tight">Сессия завершена</h1>
-          <p className="text-[14px] text-text-secondary">Все задачи пройдены или пропущены.</p>
+          <h1 className="font-display text-3xl font-bold leading-tight">{t('session.completed')}</h1>
+          <p className="text-[14px] text-text-secondary">{t('session.completedBody')}</p>
         </header>
         <Button onClick={() => navigate(`/interview/session/${sessionId}/results`)}>
-          Смотреть результаты
+          {t('session.viewResults')}
         </Button>
       </PageContent>
     )
   }
+
+  const attemptStatus = attemptQ.data?.attempt.status ?? 'ATTEMPT_STATUS_SUBMITTED'
 
   return (
     <PageContent className="gap-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
-            Mock-интервью
+            {t('session.eyebrow')}
           </p>
           <h1 className="font-display text-2xl font-bold leading-tight sm:text-3xl">
-            {current_section?.title ?? 'Задача'}
+            {current_section?.title ?? t('session.taskFallback')}
           </h1>
           <p className="mt-1 text-[13px] text-text-muted">
-            Прогресс: {progress.evaluated_tasks + progress.skipped_tasks}/{progress.total_tasks}{' '}
-            задач
+            {t('session.progress', {
+              done: progress.evaluated_tasks + progress.skipped_tasks,
+              total: progress.total_tasks,
+            })}
           </p>
         </div>
         <button
@@ -194,7 +200,7 @@ export default function SessionPage() {
           onClick={() => cancelM.mutate()}
           className="text-sm text-text-muted underline transition-colors hover:text-text-primary"
         >
-          Отменить сессию
+          {t('session.cancel')}
         </button>
       </header>
 
@@ -205,7 +211,7 @@ export default function SessionPage() {
       />
 
       {taskQ.isLoading ? (
-        <p className="text-sm text-text-muted">Загрузка задачи…</p>
+        <p className="text-sm text-text-muted">{t('session.loadingTask')}</p>
       ) : task ? (
         <SectionCard title={task.title}>
           <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
@@ -221,31 +227,28 @@ export default function SessionPage() {
 
       {evaluating ? (
         <Card elevation="e2">
-          <p className="text-sm font-medium">Оцениваем ответ…</p>
+          <p className="text-sm font-medium">{t('session.evaluating')}</p>
           <p className="mt-1 text-sm text-text-muted">
-            Статус: {attemptQ.data?.attempt.status ?? 'ATTEMPT_STATUS_SUBMITTED'}. Обычно 10–30
-            секунд.
+            {t('session.evaluatingHint', { status: attemptStatus })}
           </p>
         </Card>
       ) : codeTask && taskId && sessionTaskId ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[13px] text-text-secondary">
-              Решай solo или открой live-комнату для парного coding с интервьюером.
-            </p>
+            <p className="text-[13px] text-text-secondary">{t('session.codeHint')}</p>
             <Button
               variant="secondary"
               size="sm"
               loading={collabM.isPending}
               onClick={() => collabM.mutate()}
             >
-              Live-комната
+              {t('session.liveRoom')}
             </Button>
           </div>
           {collabM.isError ? (
             <ErrorMessage
               message={
-                collabM.error instanceof Error ? collabM.error.message : 'Не удалось создать комнату'
+                collabM.error instanceof Error ? collabM.error.message : t('session.roomError')
               }
             />
           ) : null}
@@ -262,20 +265,20 @@ export default function SessionPage() {
           {submitM.isError ? (
             <ErrorMessage
               message={
-                submitM.error instanceof Error ? submitM.error.message : 'Ошибка отправки'
+                submitM.error instanceof Error ? submitM.error.message : t('session.submitError')
               }
             />
           ) : null}
         </>
       ) : (
-        <SectionCard title="Ответ">
+        <SectionCard title={t('session.answer')}>
           <textarea
             id="answer"
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
             rows={10}
             className="w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-border-strong"
-            placeholder="Опиши свой опыт и подход…"
+            placeholder={t('session.answerPlaceholder')}
           />
 
           {(submitM.isError || skipM.isError) && (
@@ -283,7 +286,7 @@ export default function SessionPage() {
               message={
                 (submitM.error ?? skipM.error) instanceof Error
                   ? (submitM.error ?? skipM.error)!.message
-                  : 'Ошибка отправки'
+                  : t('session.submitError')
               }
             />
           )}
@@ -294,10 +297,10 @@ export default function SessionPage() {
               disabled={!answer.trim()}
               onClick={() => submitM.mutate()}
             >
-              Отправить
+              {t('session.submit')}
             </Button>
             <Button variant="ghost" loading={skipM.isPending} onClick={() => skipM.mutate()}>
-              Пропустить
+              {t('session.skip')}
             </Button>
           </div>
         </SectionCard>
@@ -306,7 +309,7 @@ export default function SessionPage() {
       {codeTask && !evaluating ? (
         <div className="flex justify-end">
           <Button variant="ghost" loading={skipM.isPending} onClick={() => skipM.mutate()}>
-            Пропустить задачу
+            {t('session.skipTask')}
           </Button>
         </div>
       ) : null}

@@ -3,6 +3,7 @@ package recommendationapi
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	recommendationv1 "github.com/sedorofeevd/project-druzya/services/recommendation/pkg/api/recommendation/v1"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -14,10 +15,14 @@ import (
 func newGatewayMux(ctx context.Context, endpoint string) (http.Handler, error) {
 	mux := runtime.NewServeMux(
 		runtime.WithIncomingHeaderMatcher(func(key string) (string, bool) {
-			if key == "Authorization" {
+			switch strings.ToLower(key) {
+			case "authorization":
 				return "authorization", true
+			case "accept-language":
+				return "accept-language", true
+			default:
+				return runtime.DefaultHeaderMatcher(key)
 			}
-			return runtime.DefaultHeaderMatcher(key)
 		}),
 		runtime.WithErrorHandler(func(
 			ctx context.Context,

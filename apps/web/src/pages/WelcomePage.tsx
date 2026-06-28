@@ -1,11 +1,14 @@
 import { useEffect, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
 import { brand } from '@/lib/brand/tokens'
 import { getBillingPlans } from '@/lib/api/billing'
+import { useI18n } from '@/lib/i18n'
 
 function DashboardMock() {
+  const { t } = useI18n()
   return (
     <div
       className="relative rounded-[18px] border bg-surface-1 p-6"
@@ -17,18 +20,18 @@ function DashboardMock() {
         ))}
       </div>
       <div className="mb-[18px] flex items-baseline justify-between">
-        <span className="text-[13px] text-text-secondary">Readiness</span>
+        <span className="text-[13px] text-text-secondary">{t('welcome.mockReadiness')}</span>
         <span className="text-[28px] font-semibold tracking-[-0.02em]">68%</span>
       </div>
       <div className="relative mb-[22px] h-1 rounded-sm bg-[rgba(76,179,92,0.2)]">
         <span className="absolute inset-y-0 left-0 w-[68%] rounded-sm" style={{ background: brand.green }} />
       </div>
       <div className="mb-2.5 text-[13px] text-text-secondary">
-        Рекомендации <span className="text-text-muted"> 2</span>
+        {t('welcome.mockRecs')} <span className="text-text-muted"> 2</span>
       </div>
-      <RecCard title="Повторить dynamic programming" sub="Слабое место после mock-сессии" accent />
+      <RecCard title={t('welcome.mockRec1Title')} sub={t('welcome.mockRec1Sub')} accent />
       <div className="h-2.5" />
-      <RecCard title="System design: rate limiter" sub="Следующий шаг в плане" muted />
+      <RecCard title={t('welcome.mockRec2Title')} sub={t('welcome.mockRec2Sub')} muted />
     </div>
   )
 }
@@ -68,6 +71,7 @@ function Bullet({ children }: { children: ReactNode }) {
 }
 
 export default function WelcomePage() {
+  const { t } = useI18n()
   const plansQ = useQuery({
     queryKey: ['billing-plans'],
     queryFn: getBillingPlans,
@@ -84,22 +88,40 @@ export default function WelcomePage() {
     }
   }, [])
 
+  const tracks = [
+    { name: t('welcome.trackAlgo'), sub: t('welcome.trackAlgoSub') },
+    { name: t('welcome.trackSys'), sub: t('welcome.trackSysSub') },
+    { name: t('welcome.trackBeh'), sub: t('welcome.trackBehSub') },
+  ]
+
   return (
     <PublicPageShell>
-      <PublicNav />
+      <PublicNav
+        right={
+          <div className="flex items-center gap-3">
+            <LocaleSwitcher compact />
+            <Link
+              to="/login"
+              className="rounded-lg px-3.5 py-2 text-sm font-medium no-underline"
+              style={{ background: brand.ink, color: brand.bg }}
+            >
+              {t('public.startFree')}
+            </Link>
+          </div>
+        }
+      />
       <section className="mx-auto max-w-[1200px] px-8 pb-24 pt-[88px]">
         <div className="hero-grid grid items-center gap-16 lg:grid-cols-2">
           <div>
             <span className="sdvg-pill mb-7">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: brand.dot }} />
-              Подготовка к техническим собесам
+              {t('welcome.pill')}
             </span>
             <h1 className="text-[clamp(40px,6vw,64px)] font-semibold leading-[1.02] tracking-[-0.035em]">
-              Mock-интервью с AI-разбором — без шума и геймификации.
+              {t('welcome.heroTitle')}
             </h1>
             <p className="mt-6 max-w-[460px] text-[17px] leading-relaxed text-text-secondary">
-              Компании и шаблоны интервью, алгоритмы, system design и behavioral. После каждой
-              попытки — оценка и персональный план, что повторить.
+              {t('welcome.heroBody')}
             </p>
             <div className="mt-9 flex flex-wrap items-center gap-3.5">
               <Link
@@ -107,19 +129,19 @@ export default function WelcomePage() {
                 className="inline-flex items-center rounded-[10px] px-[22px] py-3 text-[15px] font-medium no-underline"
                 style={{ background: brand.ink, color: brand.bg }}
               >
-                Начать бесплатно
+                {t('public.startFree')}
               </Link>
               <a
                 href="#features"
                 className="inline-flex items-center gap-2 px-1.5 py-3 text-[15px] font-medium no-underline"
               >
-                Как это работает →
+                {t('welcome.howItWorks')}
               </a>
             </div>
             <div className="mt-7 flex flex-wrap gap-5">
-              <Bullet>2 mock-интервью в месяц бесплатно</Bullet>
-              <Bullet>AI-оценка ответов</Bullet>
-              <Bullet>Live coding с напарником</Bullet>
+              <Bullet>{t('welcome.bulletMocks')}</Bullet>
+              <Bullet>{t('welcome.bulletAi')}</Bullet>
+              <Bullet>{t('welcome.bulletLive')}</Bullet>
             </div>
           </div>
           <DashboardMock />
@@ -129,30 +151,26 @@ export default function WelcomePage() {
       <section id="features" className="mx-auto max-w-[1200px] border-t px-8 pb-28 pt-16" style={{ borderColor: brand.hair }}>
         <div className="surfaces-grid grid items-start gap-16 lg:grid-cols-[1fr_2.4fr]">
           <div>
-            <p className="font-mono text-[11.5px] uppercase tracking-[0.18em] text-text-muted">Что внутри</p>
-            <h2 className="mt-[18px] text-[clamp(28px,3.4vw,38px)] font-semibold leading-[1.1] tracking-[-0.025em]">
-              Четыре блока. Один аккаунт.
-            </h2>
-            <p className="mt-5 text-[15px] leading-relaxed text-text-secondary">
-              Всё для подготовки к собесу в одном месте: от mock-сессии до совместного live coding.
+            <p className="font-mono text-[11.5px] uppercase tracking-[0.18em] text-text-muted">
+              {t('welcome.featuresEyebrow')}
             </p>
+            <h2 className="mt-[18px] text-[clamp(28px,3.4vw,38px)] font-semibold leading-[1.1] tracking-[-0.025em]">
+              {t('welcome.featuresTitle')}
+            </h2>
+            <p className="mt-5 text-[15px] leading-relaxed text-text-secondary">{t('welcome.featuresBody')}</p>
           </div>
           <div className="surfaces-cells grid gap-x-14 gap-y-12 sm:grid-cols-2">
-            <Feature title="Mock-интервью" text="Шаблоны под компании: алгоритмы, SQL, system design и behavioral в одной сессии." />
-            <Feature title="AI-разбор" text="После каждой попытки — оценка, фидбек и задачи на повтор. Без «молодец, попробуй ещё»." />
-            <Feature muted title="Дашборд" text="Readiness, сильные и слабые навыки, рекомендации и учебный план на основе попыток." />
-            <Feature muted title="Live coding" text="Комнаты для совместного решения задач в реальном времени — для парной практики." />
+            <Feature title={t('welcome.featMockTitle')} text={t('welcome.featMockText')} />
+            <Feature title={t('welcome.featAiTitle')} text={t('welcome.featAiText')} />
+            <Feature muted title={t('welcome.featDashTitle')} text={t('welcome.featDashText')} />
+            <Feature muted title={t('welcome.featLiveTitle')} text={t('welcome.featLiveText')} />
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-[1200px] px-8 pb-28">
         <div className="tracks-grid grid gap-8 rounded-[18px] border bg-surface-1 p-8 sm:grid-cols-3" style={{ borderColor: brand.hair }}>
-          {[
-            { name: 'Алгоритмы', sub: 'LeetCode-style задачи с запуском кода, тестами и AI-оценкой решения.' },
-            { name: 'System design', sub: 'Архитектурные кейсы: масштабирование, trade-offs, диаграммы и устный разбор.' },
-            { name: 'Behavioral', sub: 'STAR-ответы, soft skills и типовые вопросы рекрутеров и hiring manager.' },
-          ].map((it) => (
+          {tracks.map((it) => (
             <div key={it.name}>
               <div className="mb-1.5 flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: brand.dot }} />
@@ -162,21 +180,21 @@ export default function WelcomePage() {
             </div>
           ))}
         </div>
-        <p className="mt-4 text-center text-[13px] text-text-muted">
-          Секции комбинируются в шаблонах интервью под конкретную компанию.
-        </p>
+        <p className="mt-4 text-center text-[13px] text-text-muted">{t('welcome.tracksNote')}</p>
       </section>
 
       <section id="pricing" className="mx-auto max-w-[1200px] border-t px-8 pb-28" style={{ borderColor: brand.hair }}>
         <div className="pt-16 text-center">
-          <p className="font-mono text-[11.5px] uppercase tracking-[0.18em] text-text-muted">Тарифы</p>
+          <p className="font-mono text-[11.5px] uppercase tracking-[0.18em] text-text-muted">
+            {t('welcome.pricingEyebrow')}
+          </p>
           <h2 className="mt-3.5 text-[clamp(28px,3.4vw,36px)] font-semibold tracking-[-0.025em]">
-            Free хватит, чтобы попробовать
+            {t('welcome.pricingTitle')}
           </h2>
           <p className="mx-auto mt-4 max-w-[480px] text-[15px] leading-relaxed text-text-secondary">
-            Лимиты совпадают с billing service.{' '}
+            {t('welcome.pricingBody')}{' '}
             <Link to="/pricing" className="text-text-primary underline">
-              Подробнее о тарифах →
+              {t('welcome.pricingMore')}
             </Link>
           </p>
         </div>
@@ -215,7 +233,7 @@ export default function WelcomePage() {
                   border: plan.highlight ? 'none' : `1px solid ${brand.hair}`,
                 }}
               >
-                {plan.slug === 'free' ? 'Начать бесплатно' : 'Подробнее о Pro'}
+                {plan.slug === 'free' ? t('public.startFree') : t('pricing.learnMorePro')}
               </Link>
             </div>
           ))}
@@ -232,7 +250,7 @@ export default function WelcomePage() {
               </span>
             </Link>
             <p className="mt-3.5 text-[13.5px] leading-relaxed text-text-secondary">
-              Mock-интервью и AI-разбор для подготовки к техническим собеседованиям.
+              {t('welcome.footerTagline')}
             </p>
             <div className="mt-[18px] text-[12.5px] text-text-muted">© {new Date().getFullYear()} druz9.online</div>
           </div>
@@ -241,13 +259,10 @@ export default function WelcomePage() {
               Telegram
             </a>
             <Link to="/legal/terms" className="no-underline hover:text-text-primary">
-              Terms
+              {t('public.terms')}
             </Link>
             <Link to="/legal/privacy" className="no-underline hover:text-text-primary">
-              Privacy
-            </Link>
-            <Link to="/login" className="no-underline hover:text-text-primary">
-              Войти
+              {t('public.privacy')}
             </Link>
           </div>
         </div>

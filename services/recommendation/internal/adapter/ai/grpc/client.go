@@ -51,7 +51,7 @@ func (c *Client) authCtx(ctx context.Context) context.Context {
 }
 
 // GenerateProfileSummary requests a human-readable profile summary.
-func (c *Client) GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []aiadapter.SkillScore) (string, error) {
+func (c *Client) GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []aiadapter.SkillScore, locale string) (string, error) {
 	protoSkills := make([]*aiv1.ProfileSkillScore, 0, len(skills))
 	for _, s := range skills {
 		protoSkills = append(protoSkills, &aiv1.ProfileSkillScore{
@@ -64,6 +64,7 @@ func (c *Client) GenerateProfileSummary(ctx context.Context, userID string, read
 		UserId:         userID,
 		ReadinessScore: int32(readiness),
 		Skills:         protoSkills,
+		Locale:         locale,
 	})
 	if err != nil {
 		return "", err

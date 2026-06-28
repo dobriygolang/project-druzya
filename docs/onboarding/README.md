@@ -8,13 +8,17 @@
 2. **Закройте** файл, если он открыт как JSON-текст (1339+ строк).
 3. Правый клик на `.excalidraw` → **Open With…** → **Excalidraw Editor**.
 4. Первое открытие после старта Cursor может занять 5–15 сек (webview). Это норма для плагина.
-5. Если крутится бесконечно — `Cmd+Shift+P` → **Developer: Reload Window**.
-
-> Файлы хранятся в **compact JSON** (1 строка) — так быстрее парсится, чем pretty-print на 1000+ строк.
+5. Если **Failed to load / Unable to load initial data**:
+   - Сначала открой `00-test-minimal.excalidraw` — если он работает, проблема в конкретном файле
+   - Правый клик → **Open With…** → **Excalidraw Editor** (не Text Editor)
+   - `Cmd+Shift+P` → **Developer: Reload Window**
+   - Перегенерируй: `python3 docs/onboarding/generate_excalidraw.py`
+6. Если крутится бесконечно — см. п.5 Reload Window.
 
 | # | Файл | Содержание |
 |---|------|------------|
-| **0** | **[00-master-architecture.excalidraw](./00-master-architecture.excalidraw)** | **Главная схема** (формат референса): User → Caddy → сервисы с API, Redis, externals, PG-схемы |
+| **0** | **[00-master-architecture.excalidraw](./00-master-architecture.excalidraw)** | **Главная схема** (формат референса) |
+| 0t | [00-test-minimal.excalidraw](./00-test-minimal.excalidraw) | Проверка что плагин Excalidraw работает |
 | 1 | [01-overview.excalidraw](./01-overview.excalidraw) | Краткий обзор |
 | 2 | [02-services-and-data.excalidraw](./02-services-and-data.excalidraw) | Каждый сервис: зона ответственности, таблицы/Redis, что отдаёт и кто потребляет |
 | 3 | [03-sync-communication.excalidraw](./03-sync-communication.excalidraw) | HTTP (user), gRPC (s2s), WebSocket; маршруты Caddy |

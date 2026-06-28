@@ -5,7 +5,9 @@ import (
 
 	recommendationv1 "github.com/sedorofeevd/project-druzya/services/recommendation/pkg/api/recommendation/v1"
 	"github.com/sedorofeevd/project-druzya/services/identity/pkg/jwt"
+	localepkg "github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 var protectedMethods = map[string]struct{}{
@@ -19,6 +21,8 @@ var protectedMethods = map[string]struct{}{
 // AuthInterceptor validates Bearer JWT for user-facing RPC methods.
 func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		ctx = localeFromMetadata(ctx)
+
 		if _, ok := protectedMethods[info.FullMethod]; !ok {
 			return handler(ctx, req)
 		}
@@ -31,4 +35,16 @@ func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {
 
 		return handler(WithUserID(ctx, userID), req)
 	}
+}
+
+func localeFromMetadata(ctx context.Context) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ctx
+	}
+	vals := md.Get("accept-language")
+	if len(vals) == 0 {
+		return ctx
+	}
+	return localepkg.With(ctx, localepkg.ParseAcceptLanguage(vals[0]))
 }

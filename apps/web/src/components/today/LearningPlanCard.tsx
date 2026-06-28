@@ -3,10 +3,8 @@ import { Check, X } from 'lucide-react'
 import { SdvgCard } from '@/components/brand/SdvgCard'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
-import {
-  completeLearningPlanItem,
-  dismissLearningPlanItem,
-} from '@/lib/api/recommendation'
+import { completeLearningPlanItem, dismissLearningPlanItem } from '@/lib/api/recommendation'
+import { pluralTasks, useI18n } from '@/lib/i18n'
 import type { LearningPlanItem } from '@/lib/types'
 
 export function LearningPlanCard({
@@ -16,6 +14,7 @@ export function LearningPlanCard({
   items: LearningPlanItem[]
   loading?: boolean
 }) {
+  const { t } = useI18n()
   const qc = useQueryClient()
 
   const completeM = useMutation({
@@ -37,9 +36,9 @@ export function LearningPlanCard({
 
   return (
     <SdvgCard
-      eyebrow="План"
-      title="План обучения"
-      description={`${active.length} ${active.length === 1 ? 'задача' : active.length < 5 ? 'задачи' : 'задач'} на повтор`}
+      eyebrow={t('today.plan.eyebrow')}
+      title={t('today.plan.title')}
+      description={pluralTasks(t, active.length)}
     >
       <ul className="flex flex-col gap-2">
         {active.slice(0, 5).map((item) => (
@@ -55,9 +54,7 @@ export function LearningPlanCard({
             <div className="min-w-0">
               <p className="text-[14px] font-medium">{item.title}</p>
               {item.description ? (
-                <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
-                  {item.description}
-                </p>
+                <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">{item.description}</p>
               ) : null}
             </div>
             <div className="flex shrink-0 gap-2">
@@ -68,7 +65,7 @@ export function LearningPlanCard({
                 icon={<Check className="h-3.5 w-3.5" />}
                 onClick={() => completeM.mutate(item.id)}
               >
-                Готово
+                {t('today.plan.done')}
               </Button>
               <Button
                 variant="ghost"
@@ -77,7 +74,7 @@ export function LearningPlanCard({
                 icon={<X className="h-3.5 w-3.5" />}
                 onClick={() => dismissM.mutate(item.id)}
               >
-                Скрыть
+                {t('today.plan.hide')}
               </Button>
             </div>
           </li>

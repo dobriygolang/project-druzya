@@ -1,82 +1,64 @@
 import { Link } from 'react-router-dom'
 import { LegalLayout, LegalNavLink, LegalSection } from '@/components/legal/LegalLayout'
-
-const UPDATED = '28 июня 2026'
+import { useI18n } from '@/lib/i18n'
 
 export default function LegalTermsPage() {
+  const { t } = useI18n()
+
   return (
     <LegalLayout
-      eyebrow="Legal"
-      title="Условия использования"
-      updated={UPDATED}
-      nav={<LegalNavLink to="/legal/privacy">Privacy</LegalNavLink>}
-      footer="Черновик для MVP druz9.online. Финальная юридическая редактура — до public launch."
+      eyebrow={t('legal.terms.eyebrow')}
+      title={t('legal.terms.title')}
+      updated={t('legal.terms.updated')}
+      nav={<LegalNavLink to="/legal/privacy">{t('legal.terms.navPrivacy')}</LegalNavLink>}
+      footer={t('legal.terms.footer')}
     >
-      <LegalSection title="1. Сервис">
-        <p>
-          druz9.online — платформа для подготовки к техническим собеседованиям: mock-интервью,
-          запуск кода, AI-оценка ответов и рекомендации по навыкам. Используя сервис, вы
-          соглашаетесь с этими условиями.
-        </p>
+      <LegalSection title={t('legal.terms.s1Title')}>
+        <p>{t('legal.terms.s1Body')}</p>
       </LegalSection>
 
-      <LegalSection title="2. Аккаунт">
-        <p>
-          Регистрация происходит через Telegram или Yandex ID. Вы отвечаете за сохранность доступа
-          к своему аккаунту у провайдера авторизации. Один человек — один аккаунт, если иное не
-          согласовано с поддержкой.
-        </p>
+      <LegalSection title={t('legal.terms.s2Title')}>
+        <p>{t('legal.terms.s2Body')}</p>
       </LegalSection>
 
-      <LegalSection title="3. Допустимое использование">
+      <LegalSection title={t('legal.terms.s3Title')}>
         <ul className="list-disc space-y-1 pl-5">
-          <li>Не злоупотребляйте API, квотами и автоматизированными скриптами.</li>
-          <li>Не загружайте вредоносный код в sandbox и live-комнаты.</li>
-          <li>Не публикуйте чужие персональные данные без согласия.</li>
-          <li>Не пытайтесь обойти лимиты тарифного плана.</li>
+          <li>{t('legal.terms.s3Li1')}</li>
+          <li>{t('legal.terms.s3Li2')}</li>
+          <li>{t('legal.terms.s3Li3')}</li>
+          <li>{t('legal.terms.s3Li4')}</li>
         </ul>
       </LegalSection>
 
-      <LegalSection title="4. Контент и AI-оценка">
-        <p>
-          Задачи и rubrics предоставляются catalog-сервисом. AI-оценка генерируется автоматически
-          и носит рекомендательный характер — не является hiring decision. Мы не гарантируем
-          прохождение реального собеседования.
-        </p>
+      <LegalSection title={t('legal.terms.s4Title')}>
+        <p>{t('legal.terms.s4Body')}</p>
       </LegalSection>
 
-      <LegalSection title="5. Тарифы">
+      <LegalSection title={t('legal.terms.s5Title')}>
         <p>
-          Лимиты Free/Pro описаны на{' '}
+          {t('legal.terms.s5BodyBefore')}{' '}
           <Link to="/pricing" className="underline">
-            странице тарифов
+            {t('legal.terms.s5PricingLink')}
           </Link>{' '}
-          и применяются billing-service. Оплата Pro — когда checkout будет доступен в интерфейсе.
+          {t('legal.terms.s5BodyAfter')}
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Ограничение ответственности">
-        <p>
-          Сервис предоставляется «как есть». Мы не несём ответственности за косвенные убытки,
-          потерю данных из-за действий третьих лиц или форс-мажора. Максимальная ответственность
-          ограничена суммой, уплаченной вами за Pro за последние 12 месяцев (если применимо).
-        </p>
+      <LegalSection title={t('legal.terms.s6Title')}>
+        <p>{t('legal.terms.s6Body')}</p>
       </LegalSection>
 
-      <LegalSection title="7. Прекращение">
-        <p>
-          Вы можете прекратить использование в любой момент. Мы можем ограничить или закрыть
-          аккаунт при нарушении этих условий с уведомлением, когда это возможно.
-        </p>
+      <LegalSection title={t('legal.terms.s7Title')}>
+        <p>{t('legal.terms.s7Body')}</p>
       </LegalSection>
 
-      <LegalSection title="8. Контакты">
+      <LegalSection title={t('legal.terms.s8Title')}>
         <p>
-          Вопросы по условиям:{' '}
+          {t('legal.terms.s8BodyBefore')}{' '}
           <a href="mailto:legal@druz9.ru" className="underline">
             legal@druz9.ru
           </a>
-          . Жалобы на злоупотребления:{' '}
+          . {t('legal.terms.s8AbuseBefore')}{' '}
           <a href="mailto:abuse@druz9.ru" className="underline">
             abuse@druz9.ru
           </a>

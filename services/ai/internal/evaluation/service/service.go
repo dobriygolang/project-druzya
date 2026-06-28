@@ -21,7 +21,7 @@ type Service interface {
 	GetEvaluationJob(ctx context.Context, id string) (*evaluationmodel.EvaluationJob, error)
 	GetEvaluationJobByAttemptID(ctx context.Context, attemptID string) (*evaluationmodel.EvaluationJob, error)
 	ListEvaluationJobs(ctx context.Context, status *evaluationmodel.JobStatus, limit int) ([]evaluationmodel.EvaluationJob, error)
-	GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []summary.SkillScore) (string, error)
+	GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []summary.SkillScore, locale string) (string, error)
 }
 
 type evaluationService struct {

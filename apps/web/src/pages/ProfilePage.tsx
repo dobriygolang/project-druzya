@@ -12,14 +12,16 @@ import { getMe } from '@/lib/api/auth'
 import { formatApiError } from '@/lib/apiClient'
 import { UserAvatar } from '@/components/UserAvatar'
 import {
-  entitlementLabel,
-  formatLimitUsage,
   formatPlanName,
   limitProgressPct,
   sortLimitEntries,
+  useBillingLabels,
 } from '@/lib/billingLabels'
+import { useI18n } from '@/lib/i18n'
 
 export default function ProfilePage() {
+  const { t, formatDate } = useI18n()
+  const { entitlementLabel, formatLimitUsage } = useBillingLabels()
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
   const billingQ = useQuery({ queryKey: ['billing-me'], queryFn: getBillingMe })
 
@@ -52,7 +54,9 @@ export default function ProfilePage() {
   if (!user) return null
 
   const username = user.username
-  const memberSince = user.created_at ? formatMonthYear(user.created_at) : null
+  const memberSince = user.created_at
+    ? formatDate(new Date(user.created_at), { month: 'long', year: 'numeric' })
+    : null
   const limitEntries = billingQ.data ? sortLimitEntries(Object.entries(billingQ.data.limits)) : []
 
   return (
@@ -63,39 +67,41 @@ export default function ProfilePage() {
             <UserAvatar name={username} avatarUrl={user.avatar_url} className="h-16 w-16" textClassName="text-xl" />
           </div>
           <div>
-            <Eyebrow>Профиль</Eyebrow>
+            <Eyebrow>{t('profile.eyebrow')}</Eyebrow>
             <h1 className="mt-1 text-[clamp(1.5rem,3vw,2rem)] font-semibold leading-tight tracking-[-0.02em]">
               @{username}
             </h1>
             {memberSince ? (
-              <p className="mt-1 text-[14px] text-text-secondary">На druz9 с {memberSince}</p>
+              <p className="mt-1 text-[14px] text-text-secondary">
+                {t('profile.memberSince', { date: memberSince })}
+              </p>
             ) : null}
           </div>
         </div>
         <Link to="/pricing">
           <Button variant="ghost" size="sm" icon={<CreditCard className="h-4 w-4" />}>
-            Тарифы
+            {t('common.pricing')}
           </Button>
         </Link>
       </header>
 
-      <QuickLinksCard />
+      <QuickLinksCard t={t} />
 
       {billingQ.isLoading ? (
-        <SdvgCard eyebrow="Billing" title="Подписка и лимиты">
-          <p className="text-sm text-text-muted">Загрузка…</p>
+        <SdvgCard eyebrow={t('billing.eyebrow')} title={t('billing.title')}>
+          <p className="text-sm text-text-muted">{t('common.loading')}</p>
         </SdvgCard>
       ) : billingQ.isError ? (
-        <SdvgCard eyebrow="Billing" title="Подписка и лимиты">
+        <SdvgCard eyebrow={t('billing.eyebrow')} title={t('billing.title')}>
           <ErrorMessage
             message={formatApiError(billingQ.error)}
             onRetry={() => void billingQ.refetch()}
           />
         </SdvgCard>
       ) : billingQ.data ? (
-        <SdvgCard eyebrow="Billing" title="Подписка и лимиты">
+        <SdvgCard eyebrow={t('billing.eyebrow')} title={t('billing.title')}>
           <p className="text-[15px]">
-            План:{' '}
+            {t('billing.plan')}:{' '}
             <span className="font-medium">
               {formatPlanName(billingQ.data.plan_name, billingQ.data.plan_slug)}
             </span>
@@ -135,7 +141,7 @@ export default function ProfilePage() {
               })}
             </ul>
           ) : (
-            <p className="mt-2 text-sm text-text-muted">Лимиты не настроены для плана.</p>
+            <p className="mt-2 text-sm text-text-muted">{t('billing.noLimits')}</p>
           )}
         </SdvgCard>
       ) : null}
@@ -143,27 +149,31 @@ export default function ProfilePage() {
   )
 }
 
-function QuickLinksCard() {
+function QuickLinksCard({
+  t,
+}: {
+  t: (key: string, vars?: Record<string, string | number>) => string
+}) {
   const links = [
     {
       to: '/mock',
-      label: 'Mock interview',
-      hint: 'Шаблоны компаний и сессии',
+      label: t('profile.quickLinks.mockLabel'),
+      hint: t('profile.quickLinks.mockHint'),
       icon: Sparkles,
     },
     {
       to: '/today',
-      label: 'Today',
-      hint: 'Readiness и рекомендации',
+      label: t('profile.quickLinks.todayLabel'),
+      hint: t('profile.quickLinks.todayHint'),
       icon: ListChecks,
     },
   ]
 
   return (
-    <SdvgCard eyebrow="Навигация" title="Быстрые ссылки">
+    <SdvgCard eyebrow={t('profile.quickLinks.eyebrow')} title={t('profile.quickLinks.title')}>
       <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {links.map((l) => (
-          <li key={l.label}>
+          <li key={l.to}>
             <Link
               to={l.to}
               className="group flex items-start gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3 no-underline transition-colors hover:border-border-strong"
@@ -180,10 +190,4 @@ function QuickLinksCard() {
       </ul>
     </SdvgCard>
   )
-}
-
-function formatMonthYear(iso: string): string {
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })
 }

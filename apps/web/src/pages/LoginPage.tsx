@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Logo } from '@/components/brand/Logo'
+import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { PublicPageShell } from '@/components/brand/PublicNav'
 import { brand } from '@/lib/brand/tokens'
 import { authTelegram, getAuthConfig, getYandexAuthURL } from '@/lib/api/auth'
 import { Button } from '@/components/ui/Button'
+import { useI18n } from '@/lib/i18n'
 
 const DEFAULT_BOT = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? ''
 
 export default function LoginPage() {
+  const { t } = useI18n()
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const next = params.get('next') ?? '/today'
@@ -36,7 +39,7 @@ export default function LoginPage() {
       await authTelegram(code)
       navigate(next, { replace: true })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка входа')
+      setError(err instanceof Error ? err.message : t('login.loginError'))
     } finally {
       setBusy(false)
     }
@@ -51,7 +54,7 @@ export default function LoginPage() {
       sessionStorage.setItem('oauth_next', next)
       window.location.href = url
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка Yandex OAuth')
+      setError(err instanceof Error ? err.message : t('login.yandexError'))
       setBusy(false)
     }
   }
@@ -61,18 +64,19 @@ export default function LoginPage() {
       <header className="border-b px-6 py-5 sm:px-8" style={{ borderColor: brand.hair }}>
         <div className="mx-auto flex max-w-[1200px] items-center justify-between">
           <Logo to="/welcome" />
-          <Link to="/welcome" className="text-[13.5px] text-text-secondary no-underline">
-            Назад
-          </Link>
+          <div className="flex items-center gap-3">
+            <LocaleSwitcher compact />
+            <Link to="/welcome" className="text-[13.5px] text-text-secondary no-underline">
+              {t('public.back')}
+            </Link>
+          </div>
         </div>
       </header>
 
       <main className="flex flex-1 justify-center px-6 pb-16 pt-20 sm:px-8 sm:pt-24">
         <div className="w-full max-w-[400px]">
-          <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.02em]">Добро пожаловать</h1>
-          <p className="mt-2.5 text-[14.5px] leading-relaxed text-text-secondary">
-            Войди через Telegram или Yandex — аккаунт создаётся автоматически при первом входе.
-          </p>
+          <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.02em]">{t('login.title')}</h1>
+          <p className="mt-2.5 text-[14.5px] leading-relaxed text-text-secondary">{t('login.subtitle')}</p>
 
           {error ? (
             <div
@@ -86,10 +90,10 @@ export default function LoginPage() {
           <form onSubmit={(e) => void onTelegramSubmit(e)} className="mt-8 space-y-4">
             <div>
               <label htmlFor="tg-code" className="block text-sm font-medium">
-                Telegram
+                {t('login.telegram')}
               </label>
               <p className="mt-1 text-xs text-text-secondary">
-                Открой{' '}
+                {t('login.telegramHintOpen')}{' '}
                 <a
                   href={`https://t.me/${botLinkName}?start=login`}
                   target="_blank"
@@ -98,7 +102,7 @@ export default function LoginPage() {
                 >
                   @{botLinkName}
                 </a>
-                , отправь /start login и введи код из бота.
+                {t('login.telegramHintAfter')}
               </p>
               <input
                 id="tg-code"
@@ -111,22 +115,20 @@ export default function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full" loading={busy} disabled={code.trim().length < 4}>
-              Войти через Telegram
+              {t('login.submitTelegram')}
             </Button>
           </form>
 
           <div className="relative my-5 text-center">
             <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
-            <span className="relative bg-bg px-3 text-[13px] text-text-secondary">или</span>
+            <span className="relative bg-bg px-3 text-[13px] text-text-secondary">{t('common.or')}</span>
           </div>
 
           <Button variant="ghost" className="w-full" loading={busy} onClick={() => void onYandex()}>
-            Войти через Yandex
+            {t('login.submitYandex')}
           </Button>
 
-          <p className="mt-8 text-center text-xs text-text-secondary">
-            Нет аккаунта? Регистрация происходит автоматически при первом входе.
-          </p>
+          <p className="mt-8 text-center text-xs text-text-secondary">{t('login.autoRegister')}</p>
         </div>
       </main>
     </PublicPageShell>

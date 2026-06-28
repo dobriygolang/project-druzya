@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Building2, Users } from 'lucide-react'
@@ -18,42 +18,19 @@ import {
 } from '@/lib/api/interview'
 import { listMyActiveRooms } from '@/lib/api/rooms'
 import { formatApiError, readAccessToken } from '@/lib/apiClient'
-import { formatLimitUsage } from '@/lib/billingLabels'
-import { formatInterviewError, isActiveSessionConflict, sessionModeLabel } from '@/lib/interviewLabels'
+import { useBillingLabels } from '@/lib/billingLabels'
+import { isActiveSessionConflict, useInterviewLabels } from '@/lib/interviewLabels'
+import { useI18n } from '@/lib/i18n'
 import { LIVE_LANGS } from '@/lib/live/constants'
 import { readGuestDisplayName, persistGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
 import type { Progress, Session, SessionMode } from '@/lib/types'
 import { cn } from '@/lib/cn'
 
-const SOLO_SECTIONS = [
-  {
-    id: 'algo',
-    label: 'Algo',
-    hint: 'Data structures & algorithms',
-    mode: 'SESSION_MODE_ALGORITHMS_TRAINING' as SessionMode,
-  },
-  {
-    id: 'coding',
-    label: 'Coding',
-    hint: 'Live coding & SQL',
-    mode: 'SESSION_MODE_LIVE_CODING_TRAINING' as SessionMode,
-  },
-  {
-    id: 'sysdesign',
-    label: 'System Design',
-    hint: 'Architecture & scaling',
-    mode: 'SESSION_MODE_SYSTEM_DESIGN_TRAINING' as SessionMode,
-  },
-  {
-    id: 'behavioral',
-    label: 'Behavioral',
-    hint: 'STAR & culture fit',
-    mode: 'SESSION_MODE_BEHAVIORAL_TRAINING' as SessionMode,
-  },
-] as const
-
 export default function MockHubPage() {
+  const { t, locale, formatDate } = useI18n()
+  const { formatLimitUsage } = useBillingLabels()
+  const { sessionModeLabel, formatInterviewError } = useInterviewLabels()
   const navigate = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
@@ -61,6 +38,37 @@ export default function MockHubPage() {
   const [companyModalOpen, setCompanyModalOpen] = useState(false)
   const [liveLanguage, setLiveLanguage] = useState('go')
   const [guestName, setGuestName] = useState(() => readGuestDisplayName())
+
+  const soloSections = useMemo(
+    () =>
+      [
+        {
+          id: 'algo',
+          label: t('mock.solo.algo'),
+          hint: t('mock.solo.algoHint'),
+          mode: 'SESSION_MODE_ALGORITHMS_TRAINING' as SessionMode,
+        },
+        {
+          id: 'coding',
+          label: t('mock.solo.coding'),
+          hint: t('mock.solo.codingHint'),
+          mode: 'SESSION_MODE_LIVE_CODING_TRAINING' as SessionMode,
+        },
+        {
+          id: 'sysdesign',
+          label: t('mock.solo.sysdesign'),
+          hint: t('mock.solo.sysdesignHint'),
+          mode: 'SESSION_MODE_SYSTEM_DESIGN_TRAINING' as SessionMode,
+        },
+        {
+          id: 'behavioral',
+          label: t('mock.solo.behavioral'),
+          hint: t('mock.solo.behavioralHint'),
+          mode: 'SESSION_MODE_BEHAVIORAL_TRAINING' as SessionMode,
+        },
+      ] as const,
+    [t],
+  )
 
   const companiesQ = useQuery({ queryKey: ['companies'], queryFn: () => listCompanies() })
   const billingQ = useQuery({ queryKey: ['billing-me'], queryFn: getBillingMe })
@@ -110,9 +118,9 @@ export default function MockHubPage() {
     mutationFn: (sessionId: string) => cancelSession(sessionId),
     onSuccess: () => {
       void activeQ.refetch()
-      toast.push('Сессия завершена', 'success')
+      toast.push(t('interview.sessionCancelled'), 'success')
     },
-    onError: (err) => toast.push(formatInterviewError(formatApiError(err)), 'error'),
+    onError: (err) => toast.push(formatInterviewError(err), 'error'),
   })
 
   const companyTemplatesEnabled = billingQ.data?.features.company_templates_enabled !== false
@@ -133,24 +141,27 @@ export default function MockHubPage() {
     companyTemplatesEnabled && !mockQuotaExhausted && !startMockM.isPending
 
   function handleCreateLive() {
-    if (!authed) persistGuestDisplayName(guestName || 'Guest')
+    if (!authed) persistGuestDisplayName(guestName || t('common.guest'))
     createLiveM.mutate(
       { language: liveLanguage, displayName: guestName || undefined },
       { onError: (err) => toast.push(formatApiError(err), 'error') },
     )
   }
 
+  const timeLocale = locale === 'en' ? 'en-US' : 'ru-RU'
+
   return (
     <PageContent className="gap-8">
       <PageHeader
-        eyebrow="Practice"
-        title="Mock & practice"
-        description="Три формата подготовки — выбери режим и начинай сразу."
+        eyebrow={t('mock.eyebrow')}
+        title={t('mock.title')}
+        description={t('mock.description')}
       />
 
       {mockQuotaExhausted && billingQ.isSuccess && mockQuota ? (
         <QuotaBanner>
-          {formatLimitUsage('mock_interviews_per_month', mockQuota)} — лимит исчерпан.
+          {formatLimitUsage('mock_interviews_per_month', mockQuota)}
+          {t('billing.quotaExhausted')}
         </QuotaBanner>
       ) : null}
 
@@ -159,8 +170,11 @@ export default function MockHubPage() {
           session={activeSession}
           progress={activeProgress}
           loading={cancelActiveM.isPending}
+          modeLabel={sessionModeLabel(activeSession.mode)}
           onContinue={() => navigate(`/interview/session/${activeSession.id}`)}
           onCancel={() => cancelActiveM.mutate(activeSession.id)}
+          t={t}
+          formatDate={formatDate}
         />
       ) : null}
 
@@ -171,17 +185,20 @@ export default function MockHubPage() {
           concurrentLimit={activeRooms.concurrent_limit}
           concurrentUnlimited={activeRooms.concurrent_unlimited}
           monthlyQuota={liveRoomsQuota}
+          formatLimitUsage={formatLimitUsage}
+          t={t}
+          timeLocale={timeLocale}
         />
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-3">
         <PracticeCard
-          eyebrow="Solo"
-          title="Одна секция"
-          description="Быстрая тренировка — algo, coding, system design или behavioral."
+          eyebrow={t('mock.solo.eyebrow')}
+          title={t('mock.solo.title')}
+          description={t('mock.solo.description')}
         >
           <div className="flex flex-wrap gap-2">
-            {SOLO_SECTIONS.map((s) => (
+            {soloSections.map((s) => (
               <PillButton
                 key={s.id}
                 title={s.hint}
@@ -196,25 +213,25 @@ export default function MockHubPage() {
         </PracticeCard>
 
         <PracticeCard
-          eyebrow="Live"
-          title="Pair programming"
-          description="Общий редактор в реальном времени — комната создаётся сразу."
+          eyebrow={t('mock.live.eyebrow')}
+          title={t('mock.live.title')}
+          description={t('mock.live.description')}
         >
           <div className="flex flex-col gap-4">
             {!authed ? (
               <label className="block">
-                <span className="text-[13px] text-text-secondary">Ваше имя в редакторе</span>
+                <span className="text-[13px] text-text-secondary">{t('mock.live.displayName')}</span>
                 <input
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Guest"
+                  placeholder={t('common.guest')}
                   className="mt-1.5 w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
                 />
               </label>
             ) : null}
 
             <div>
-              <span className="text-[13px] text-text-secondary">Язык</span>
+              <span className="text-[13px] text-text-secondary">{t('mock.live.language')}</span>
               <div className="mt-2 flex flex-wrap gap-2">
                 {LIVE_LANGS.map((lang) => (
                   <PillButton
@@ -237,27 +254,27 @@ export default function MockHubPage() {
               loading={createLiveM.isPending}
               onClick={handleCreateLive}
             >
-              Создать комнату
+              {t('mock.live.createRoom')}
             </Button>
           </div>
         </PracticeCard>
 
         <PracticeCard
-          eyebrow="Company"
-          title="Mock под компанию"
-          description="Полное интервью по шаблону — несколько секций под выбранную компанию."
+          eyebrow={t('mock.company.eyebrow')}
+          title={t('mock.company.title')}
+          description={t('mock.company.description')}
         >
           {!companyTemplatesEnabled && billingQ.isSuccess ? (
             <p className="text-[13px] leading-relaxed text-text-secondary">
-              Доступно на Pro.{' '}
+              {t('mock.company.proOnly')}{' '}
               <Link to="/pricing" className="text-text-primary underline">
-                Тарифы
+                {t('common.pricing')}
               </Link>
             </p>
           ) : companiesQ.isLoading ? (
             <div className="h-9 w-32 animate-pulse rounded-lg bg-surface-2" />
           ) : companies.length === 0 ? (
-            <p className="text-[13px] text-text-muted">Каталог компаний пока пуст.</p>
+            <p className="text-[13px] text-text-muted">{t('mock.company.emptyCatalog')}</p>
           ) : (
             <Button
               variant="primary"
@@ -268,7 +285,7 @@ export default function MockHubPage() {
               disabled={!canStartCompanyMock || mockQuotaExhausted}
               onClick={() => setCompanyModalOpen(true)}
             >
-              Выбрать шаблон
+              {t('mock.company.pickTemplate')}
             </Button>
           )}
         </PracticeCard>
@@ -292,31 +309,36 @@ function ActiveRoomsCard({
   concurrentLimit,
   concurrentUnlimited,
   monthlyQuota,
+  formatLimitUsage,
+  t,
+  timeLocale,
 }: {
   rooms: import('@/lib/api/rooms').ActiveRoomSummary[]
   activeCount: number
   concurrentLimit?: number
   concurrentUnlimited?: boolean
   monthlyQuota?: import('@/lib/billingLabels').UsageLimit
-  gaugeQuota?: import('@/lib/billingLabels').UsageLimit
+  formatLimitUsage: (key: string, lim: import('@/lib/billingLabels').UsageLimit) => string
+  t: (key: string, vars?: Record<string, string | number>) => string
+  timeLocale: string
 }) {
   const concurrentText = concurrentUnlimited
-    ? `${activeCount} активных · без лимита одновременно`
+    ? t('mock.activeRooms.concurrentUnlimited', { count: activeCount })
     : concurrentLimit != null
-      ? `${activeCount} из ${concurrentLimit} активных`
-      : `${activeCount} активных`
+      ? t('mock.activeRooms.concurrentLimited', { active: activeCount, limit: concurrentLimit })
+      : t('mock.activeRooms.concurrentSimple', { count: activeCount })
 
   return (
-    <SdvgCard eyebrow="Live rooms" title="Активные комнаты">
+    <SdvgCard eyebrow={t('mock.activeRooms.eyebrow')} title={t('mock.activeRooms.title')}>
       <div className="flex flex-col gap-4">
         <p className="text-[13px] text-text-secondary">{concurrentText}</p>
         {monthlyQuota ? (
           <p className="text-[13px] text-text-muted">
-            Создано {formatLimitUsage('live_rooms_per_month', monthlyQuota)}
+            {t('common.created')} {formatLimitUsage('live_rooms_per_month', monthlyQuota)}
           </p>
         ) : null}
         {rooms.length === 0 ? (
-          <p className="text-[13px] text-text-muted">Нет открытых комнат — создай новую ниже.</p>
+          <p className="text-[13px] text-text-muted">{t('mock.activeRooms.empty')}</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {rooms.map((room) => (
@@ -330,11 +352,11 @@ function ActiveRoomsCard({
                   </span>
                   <span className="text-[12px] text-text-muted">
                     {room.created_at
-                      ? new Date(room.created_at).toLocaleTimeString('ru-RU', {
+                      ? new Date(room.created_at).toLocaleTimeString(timeLocale, {
                           hour: '2-digit',
                           minute: '2-digit',
                         })
-                      : 'открыта'}
+                      : t('common.open')}
                   </span>
                 </Link>
               </li>
@@ -350,43 +372,50 @@ function ActiveSessionCard({
   session,
   progress,
   loading,
+  modeLabel,
   onContinue,
   onCancel,
+  t,
+  formatDate,
 }: {
   session: Session
   progress: Progress | null
   loading: boolean
+  modeLabel: string
   onContinue: () => void
   onCancel: () => void
+  t: (key: string, vars?: Record<string, string | number>) => string
+  formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) => string
 }) {
   const progressText = progress
-    ? `${progress.evaluated_tasks + progress.skipped_tasks}/${progress.total_tasks} задач`
+    ? `${progress.evaluated_tasks + progress.skipped_tasks}/${progress.total_tasks} ${t('common.tasks')}`
     : null
 
+  const startedAt = session.started_at
+    ? formatDate(new Date(session.started_at), {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : t('common.recently')
+
   return (
-    <SdvgCard eyebrow="Active session" title="Продолжить текущую сессию">
+    <SdvgCard eyebrow={t('mock.activeSession.eyebrow')} title={t('mock.activeSession.title')}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-medium text-text-primary">{sessionModeLabel(session.mode)}</p>
+          <p className="text-sm font-medium text-text-primary">{modeLabel}</p>
           <p className="mt-1 text-[13px] text-text-secondary">
             {progressText ? `${progressText} · ` : null}
-            начата{' '}
-            {session.started_at
-              ? new Date(session.started_at).toLocaleString('ru-RU', {
-                  day: 'numeric',
-                  month: 'short',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
-              : 'недавно'}
+            {t('common.started')} {startedAt}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button size="sm" onClick={onContinue}>
-            Продолжить
+            {t('mock.activeSession.continue')}
           </Button>
           <Button variant="ghost" size="sm" loading={loading} onClick={onCancel}>
-            Завершить
+            {t('mock.activeSession.finish')}
           </Button>
         </div>
       </div>

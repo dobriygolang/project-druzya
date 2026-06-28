@@ -1,6 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom'
 import { Home, Sparkles, User } from 'lucide-react'
-import { MOBILE_NAV } from '@/lib/migration/nav'
+import { useMobileNav } from '@/lib/migration/nav'
 import { cn } from '@/lib/cn'
 
 const TAB_ICONS: Record<string, typeof Home> = {
@@ -21,8 +21,9 @@ const HIDE_ON: RegExp[] = [
 
 export function MobileBottomNav() {
   const { pathname } = useLocation()
+  const mobileNav = useMobileNav()
   if (HIDE_ON.some((re) => re.test(pathname))) return null
-  if (MOBILE_NAV.length === 0) return null
+  if (mobileNav.length === 0) return null
 
   return (
     <nav
@@ -36,9 +37,9 @@ export function MobileBottomNav() {
     >
       <div
         className="grid items-center pt-2 pb-1.5"
-        style={{ gridTemplateColumns: `repeat(${MOBILE_NAV.length}, minmax(0, 1fr))` }}
+        style={{ gridTemplateColumns: `repeat(${mobileNav.length}, minmax(0, 1fr))` }}
       >
-        {MOBILE_NAV.map((tab) => {
+        {mobileNav.map((tab) => {
           const Icon = TAB_ICONS[tab.to] ?? Home
           return (
             <NavLink

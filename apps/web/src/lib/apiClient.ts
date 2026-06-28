@@ -1,8 +1,9 @@
 import { normalizeProtoJson } from '@/lib/protoJson'
+import { readStoredLocale } from '@/lib/i18n/localeStorage'
 
 export const API_BASE: string = import.meta.env.VITE_API_BASE ?? '/v1'
 
-const ACCESS_TOKEN_KEY = 'druzya_access_token'
+export const ACCESS_TOKEN_KEY = 'druzya_access_token'
 const REFRESH_TOKEN_KEY = 'druzya_refresh_token'
 
 let memAccessToken: string | null = null
@@ -113,6 +114,9 @@ async function doFetch(path: string, init: RequestInit, bearer: string | null): 
     headers.set('content-type', 'application/json')
   }
   if (bearer) headers.set('authorization', `Bearer ${bearer}`)
+  if (!headers.has('accept-language')) {
+    headers.set('accept-language', readStoredLocale())
+  }
   return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
 
