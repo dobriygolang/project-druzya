@@ -59,6 +59,7 @@ docker compose -f docker-compose.prod.yml run --rm migrate
 ### JWT / auth errors
 
 - Ensure `deploy/secrets/jwt/` exists (`make keys`)
+- Keys must be readable by container user `nobody`: `chmod 644 deploy/secrets/jwt/*.pem`
 - All services using JWT must mount the same `public.pem`
 
 ### Caddy TLS issues

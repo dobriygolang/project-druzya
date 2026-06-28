@@ -81,5 +81,3 @@ Build: `GOWORK=off`
 ## Agent tokens (cavecrew)
 
 Read `.cursor/rules/cavecrew.mdc`. Broad locate → `cavecrew-investigator`. ≤2 file edit → `cavecrew-builder`. Diff review → `cavecrew-reviewer`.
-
-Human backup: `AGENTS.original.md`

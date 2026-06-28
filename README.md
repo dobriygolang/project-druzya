@@ -21,7 +21,7 @@ React SPA: [apps/web/](apps/web/) — auth, mock interview, dashboard, profile.
 cd apps/web && npm install && npm run dev
 ```
 
-Requires backend services on ports 8080–8084 (see `apps/web/README.md`).
+Requires backend services on ports 8080–8087 (identity, content, interview, recommendation, billing, sandbox, rooms).
 
 ## Local dev
 
@@ -32,9 +32,9 @@ make start
 
 ## Production deploy
 
-See [deploy/README.md](deploy/README.md) and [deploy/PROD_PLAN.md](deploy/PROD_PLAN.md).
+See [deploy/PRODUCTION_CHECKLIST.md](deploy/PRODUCTION_CHECKLIST.md) and [deploy/RUNBOOK.md](deploy/RUNBOOK.md).
 
-Domains: **druz9.ru**, **druz9.online** — API at `api.druz9.ru`, app at `app.druz9.ru` (SPA baked into caddy image).
+Canonical site: **https://druz9.online** — API at `api.druz9.online`; **druz9.ru** redirects to `.online`.
 
 ```bash
 cd deploy

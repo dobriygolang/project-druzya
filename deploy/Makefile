@@ -41,8 +41,8 @@ backup: ## Dump all Postgres databases (requires pg_dump + .env)
 prune: ## Remove dangling images and old build cache (safe after deploy)
 	@./scripts/docker-prune.sh
 
-deploy: ## Pull-less prod update: build, migrate, up, prune (run from repo root on server)
+deploy: keys ## Pull-less prod update: build, migrate, up, prune (run from deploy/ on server)
 	$(COMPOSE) build
 	$(COMPOSE) run --rm migrate
-	$(COMPOSE) up -d --remove-orphans
+	$(COMPOSE) up -d --remove-orphans --wait --wait-timeout 300
 	@./scripts/docker-prune.sh

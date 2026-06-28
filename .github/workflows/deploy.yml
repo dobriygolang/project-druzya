@@ -151,11 +151,17 @@ jobs:
             fi
 
             cd deploy
+            make keys
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
             bash scripts/build-images.sh
             docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans
+            if ! docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans --wait --wait-timeout 300; then
+              docker compose -f docker-compose.prod.yml --env-file .env ps
+              docker compose -f docker-compose.prod.yml --env-file .env logs identity --tail 80
+              docker compose -f docker-compose.prod.yml --env-file .env logs billing --tail 40
+              exit 1
+            fi
 
             ./scripts/docker-prune.sh
 

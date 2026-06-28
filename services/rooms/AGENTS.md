@@ -66,5 +66,3 @@ make build
 - Route: `/live/:roomId` — `apps/web/src/pages/CollabRoomPage.tsx`
 - Vite proxies `/v1/rooms` and `/ws` → `:8087`
 - Caddy: `handle /ws/*` + `/v1/rooms*` → `rooms:8087`
-
-See [PORT_PLAN.md](./PORT_PLAN.md) for druzya source mapping.

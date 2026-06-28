@@ -54,5 +54,3 @@ make start | gen-proto | test | lint | build
 ## Agent tokens (cavecrew)
 
 `.cursor/rules/cavecrew.mdc` — investigator/builder/reviewer for compressed subagent output.
-
-Human backup: `AGENTS.original.md`

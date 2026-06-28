@@ -163,4 +163,4 @@ curl -sfI https://app.druz9.ru/
 - [ ] Live-комната: `/live/new` → WS подключается
 - [ ] `docker compose -f docker-compose.prod.yml ps` — все healthy
 
-См. также: [RUNBOOK.md](./RUNBOOK.md), [PROD_PLAN.md](./PROD_PLAN.md).
+См. также: [RUNBOOK.md](./RUNBOOK.md).

@@ -18,7 +18,7 @@ When working on a service, **open only that service folder** and read its local 
 | sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | code execution runs (MVP) |
 | **rooms** | [services/rooms/AGENTS.md](services/rooms/AGENTS.md) | live coding collab, WS + Yjs |
 
-Prod deploy: [deploy/PROD_PLAN.md](deploy/PROD_PLAN.md)
+Prod deploy: [deploy/PRODUCTION_CHECKLIST.md](deploy/PRODUCTION_CHECKLIST.md), [deploy/RUNBOOK.md](deploy/RUNBOOK.md)
 
 Root `go.work` is optional. Services build with `GOWORK=off`.
 

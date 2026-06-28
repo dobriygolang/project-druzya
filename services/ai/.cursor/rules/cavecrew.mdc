@@ -15,4 +15,4 @@ Prefer cavecrew subagents over inline explore when output would be long.
 
 Subagent results caveman-compressed (~60% fewer tokens in main context).
 
-Read compressed `AGENTS.md` first. Full prose: `AGENTS.original.md`.
+Read `AGENTS.md` first.

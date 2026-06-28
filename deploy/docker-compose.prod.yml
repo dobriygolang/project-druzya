@@ -70,14 +70,18 @@ services:
       YANDEX_CLIENT_SECRET: ${YANDEX_CLIENT_SECRET}
       YANDEX_REDIRECT_URI: ${YANDEX_REDIRECT_URI}
       AUTH_RATE_LIMIT_PER_MINUTE: ${AUTH_RATE_LIMIT_PER_MINUTE:-60}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
     volumes:
       - ./secrets/jwt:/run/secrets/jwt:ro
     healthcheck:
       <<: *health-ready
+      start_period: 90s
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/readyz"]
     depends_on:
       migrate:
         condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 

@@ -13,4 +13,4 @@ Layers: `cmd/ai/app/run.go` → `internal/app/api/ai/` → `internal/evaluation/
 
 Outbox worker: `internal/outboxworker` — poll `interview.attempt_submitted` only.
 
-See `AGENTS.md` (compressed). `AGENTS.original.md` for full text.
+See `AGENTS.md`.
