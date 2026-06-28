@@ -13,6 +13,12 @@ import (
 
 func newGatewayMux(ctx context.Context, endpoint string) (http.Handler, error) {
 	mux := runtime.NewServeMux(
+		runtime.WithIncomingHeaderMatcher(func(key string) (string, bool) {
+			if key == "Authorization" {
+				return "authorization", true
+			}
+			return runtime.DefaultHeaderMatcher(key)
+		}),
 		runtime.WithErrorHandler(func(
 			ctx context.Context,
 			_ *runtime.ServeMux,

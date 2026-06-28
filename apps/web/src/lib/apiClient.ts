@@ -52,6 +52,22 @@ export function clearTokens(): void {
   safeDelete(REFRESH_TOKEN_KEY)
 }
 
+/** grpc-gateway JSON uses camelCase; custom handlers may use snake_case. */
+export function parseAuthTokens(body: Record<string, unknown>): {
+  access_token: string
+  refresh_token: string
+} {
+  const access = body.access_token ?? body.accessToken
+  const refresh = body.refresh_token ?? body.refreshToken
+  if (typeof access !== 'string' || !access) {
+    throw new Error('missing access token in auth response')
+  }
+  return {
+    access_token: access,
+    refresh_token: typeof refresh === 'string' ? refresh : '',
+  }
+}
+
 function isPublicPath(path: string): boolean {
   return path.startsWith('/login') || path.startsWith('/auth/')
 }
@@ -72,13 +88,10 @@ async function performRefresh(): Promise<string | null> {
       body: JSON.stringify({ refresh_token: refresh }),
     })
     if (!res.ok) return null
-    const body = (await res.json()) as {
-      access_token?: string
-      refresh_token?: string
-    }
-    if (!body.access_token) return null
-    persistTokens(body.access_token, body.refresh_token ?? refresh)
-    return body.access_token
+    const body = (await res.json()) as Record<string, unknown>
+    const tokens = parseAuthTokens(body)
+    persistTokens(tokens.access_token, tokens.refresh_token || refresh)
+    return tokens.access_token
   } catch {
     return null
   }
