@@ -170,9 +170,6 @@ export default function SessionPage() {
 
   const { session, current_section, current_task, progress } = state
   const sections = stateQ.data?.sections ?? []
-  const task = taskQ.data?.task
-  const evaluating = !!attemptId
-  const codeTask = isCodeTask(current_task.task_type ?? task?.type)
 
   if (!current_task) {
     return (
@@ -187,6 +184,10 @@ export default function SessionPage() {
       </PageContent>
     )
   }
+
+  const task = taskQ.data?.task
+  const evaluating = !!attemptId
+  const codeTask = isCodeTask(current_task.task_type ?? task?.type)
 
   const attemptStatus = attemptQ.data?.attempt.status ?? 'ATTEMPT_STATUS_SUBMITTED'
 

@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/content"
 	contentmocks "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/content/mocks"
-	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
 	interviewmocks "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview/mocks"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
 	recommendationservice "github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/service"
@@ -71,25 +70,6 @@ func defaultEvent() model.AttemptEvaluatedEvent {
 		Score:      45,
 		Passed:     false,
 		OccurredAt: time.Now().UTC(),
-	}
-}
-
-func defaultSummary() *interviewadapter.EvaluationSummary {
-	return &interviewadapter.EvaluationSummary{
-		AttemptID: attemptID,
-		Score:     45,
-		Passed:    false,
-		Feedback: map[string]any{
-			"criteria": []any{
-				map[string]any{
-					"key":       "correctness",
-					"score":     30.0,
-					"max_score": 100.0,
-					"task_type": "algorithm",
-				},
-			},
-		},
-		CreatedAt: time.Now().UTC(),
 	}
 }
 
