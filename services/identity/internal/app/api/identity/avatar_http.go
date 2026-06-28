@@ -68,7 +68,7 @@ func (i *Implementation) serveTelegramFile(w http.ResponseWriter, r *http.Reques
 		writeHTTPError(w, err)
 		return
 	}
-	defer body.Close()
+	defer func() { _ = body.Close() }()
 
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Cache-Control", "public, max-age=3600")
