@@ -13,6 +13,10 @@ Monorepo of **independent microservices**. Each service is self-contained — op
 | recommendation | [services/recommendation/](services/recommendation/) | 8084 | 9094 | yes |
 | template | [services/template/](services/template/) | 8099 | 9199 | skeleton only |
 
+## Onboarding (architecture)
+
+New team members: [docs/onboarding/](docs/onboarding/) — Excalidraw diagrams + service/data map.
+
 ## Frontend (MVP → legacy UI migration)
 
 React SPA: [apps/web/](apps/web/) — phased port from legacy `druzya/frontend` onto microservices.

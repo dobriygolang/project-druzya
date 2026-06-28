@@ -29,6 +29,9 @@ logs: ## Tail all service logs
 migrate: ## Run migrations only
 	$(COMPOSE) run --rm migrate
 
+reset-db: ## Drop and recreate all application databases (then run migrate)
+	@set -a && . ./.env && set +a && USE_DOCKER_POSTGRES=1 ENV_FILE=.env ./scripts/reset-databases.sh
+
 ps: ## Show running containers
 	$(COMPOSE) ps
 

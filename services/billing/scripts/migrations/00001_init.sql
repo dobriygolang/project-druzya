@@ -1,8 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-DROP TABLE IF EXISTS usage_counters;
-DROP TABLE IF EXISTS user_plans;
-DROP TABLE IF EXISTS plan_limits;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE plans (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -43,6 +41,9 @@ CREATE TABLE subscriptions (
 
 CREATE INDEX subscriptions_user_status_idx ON subscriptions (user_id, status);
 CREATE INDEX subscriptions_provider_sub_idx ON subscriptions (provider, provider_subscription_id);
+CREATE UNIQUE INDEX subscriptions_one_active_per_user
+    ON subscriptions (user_id)
+    WHERE status IN ('active', 'trialing');
 
 CREATE TABLE provider_accounts (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -82,48 +83,48 @@ CREATE TABLE provider_events (
     UNIQUE (provider, provider_event_id)
 );
 
-INSERT INTO plans (id, slug, name, description, priority, is_active) VALUES
+INSERT INTO plans (id, slug, name, description, priority, is_active, metadata) VALUES
     (
         'f0000000-0000-4000-8000-000000000001',
         'free',
         'Free',
         'Default free tier',
         0,
-        true
+        true,
+        '{"tagline":"Попробовать без оплаты","highlight":false}'::jsonb
     ),
     (
         'f0000000-0000-4000-8000-000000000002',
         'pro_monthly',
-        'Pro Monthly',
+        'Pro',
         'Paid monthly subscription',
         10,
-        true
-    )
-ON CONFLICT (id) DO NOTHING;
+        true,
+        '{"tagline":"Для плотной подготовки","highlight":true}'::jsonb
+    );
 
 INSERT INTO plan_entitlements (plan_id, key, value_json) VALUES
-    ('f0000000-0000-4000-8000-000000000001', 'ai_evaluations_per_day', '{"type":"counter","limit":5,"period":"day"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'mock_interviews_per_month', '{"type":"counter","limit":2,"period":"month"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'code_runs_per_day', '{"type":"counter","limit":30,"period":"day"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'ai_evaluations_per_day', '{"type":"counter","period":"day"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'mock_interviews_per_month', '{"type":"counter","period":"month"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'code_runs_per_day', '{"type":"counter","period":"day"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'hidden_tests_enabled', '{"type":"bool","value":false}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'company_templates_enabled', '{"type":"bool","value":false}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'company_templates_enabled', '{"type":"bool","value":true}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'recommendations_enabled', '{"type":"bool","value":true}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_per_month', '{"type":"counter","period":"month"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_concurrent', '{"type":"gauge"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'ai_evaluations_per_day', '{"type":"counter","limit":100,"period":"day"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'mock_interviews_per_month', '{"type":"counter","limit":30,"period":"month"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'code_runs_per_day', '{"type":"counter","limit":500,"period":"day"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'hidden_tests_enabled', '{"type":"bool","value":true}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'company_templates_enabled', '{"type":"bool","value":true}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'recommendations_enabled', '{"type":"bool","value":true}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'advanced_feedback_enabled', '{"type":"bool","value":true}'::jsonb)
-ON CONFLICT (plan_id, key) DO NOTHING;
+    ('f0000000-0000-4000-8000-000000000002', 'advanced_feedback_enabled', '{"type":"bool","value":true}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_per_month', '{"type":"counter","period":"month"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_concurrent', '{"type":"gauge","limit":100}'::jsonb);
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS provider_events;
-DROP TABLE IF EXISTS usage_counters;
-DROP TABLE IF EXISTS provider_accounts;
-DROP TABLE IF EXISTS subscriptions;
-DROP TABLE IF EXISTS plan_entitlements;
-DROP TABLE IF EXISTS plans;
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
 -- +goose StatementEnd

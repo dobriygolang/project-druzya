@@ -141,12 +141,6 @@ CREATE INDEX rubric_criteria_rubric_id_idx ON rubric_criteria (rubric_id);
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS rubric_criteria;
-DROP TABLE IF EXISTS rubrics;
-DROP TABLE IF EXISTS task_solutions;
-DROP TABLE IF EXISTS template_section_tasks;
-DROP TABLE IF EXISTS tasks;
-DROP TABLE IF EXISTS template_sections;
-DROP TABLE IF EXISTS interview_templates;
-DROP TABLE IF EXISTS companies;
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
 -- +goose StatementEnd

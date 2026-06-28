@@ -107,7 +107,6 @@ CREATE TABLE evaluation_summaries (
     CONSTRAINT evaluation_summaries_attempt_unique UNIQUE (attempt_id)
 );
 
-CREATE INDEX evaluation_summaries_attempt_id_idx ON evaluation_summaries (attempt_id);
 
 CREATE TABLE retry_items (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -128,14 +127,33 @@ CREATE TABLE retry_items (
 
 CREATE INDEX retry_items_user_id_status_idx ON retry_items (user_id, status);
 CREATE INDEX retry_items_source_attempt_id_idx ON retry_items (source_attempt_id);
+
+CREATE UNIQUE INDEX retry_items_user_task_active_idx
+    ON retry_items (user_id, task_id)
+    WHERE status IN ('pending', 'in_progress');
+
+CREATE TABLE domain_outbox (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    event_name   TEXT NOT NULL,
+    payload      JSONB NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'pending',
+    locked_until TIMESTAMPTZ,
+    retry_count  INT NOT NULL DEFAULT 0,
+    last_error   TEXT,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+    processed_at TIMESTAMPTZ,
+    CONSTRAINT domain_outbox_status_check CHECK (
+        status IN ('pending', 'processing', 'published', 'failed')
+    )
+);
+
+CREATE INDEX domain_outbox_pending_idx
+    ON domain_outbox (created_at)
+    WHERE status IN ('pending', 'failed');
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS retry_items;
-DROP TABLE IF EXISTS evaluation_summaries;
-DROP TABLE IF EXISTS attempts;
-DROP TABLE IF EXISTS session_tasks;
-DROP TABLE IF EXISTS interview_session_sections;
-DROP TABLE IF EXISTS interview_sessions;
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
 -- +goose StatementEnd

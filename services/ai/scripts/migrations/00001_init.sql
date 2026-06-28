@@ -44,6 +44,6 @@ CREATE INDEX model_calls_evaluation_job_id_idx ON model_calls (evaluation_job_id
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS model_calls;
-DROP TABLE IF EXISTS evaluation_jobs;
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
 -- +goose StatementEnd

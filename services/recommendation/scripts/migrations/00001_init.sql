@@ -1,10 +1,11 @@
 -- +goose Up
 -- +goose StatementBegin
-
 CREATE TABLE user_skill_profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL UNIQUE,
     readiness_score INT NOT NULL DEFAULT 0,
+    profile_summary TEXT,
+    summary_updated_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -71,15 +72,23 @@ CREATE TABLE processed_events (
     UNIQUE (consumer, event_id)
 );
 
+CREATE INDEX IF NOT EXISTS recommendations_user_status_idx
+    ON recommendations (user_id, status);
+
+CREATE INDEX IF NOT EXISTS learning_plan_items_user_status_idx
+    ON learning_plan_items (user_id, status);
+
+CREATE UNIQUE INDEX IF NOT EXISTS recommendations_take_mock_active_uniq
+    ON recommendations (user_id, type)
+    WHERE status = 'active' AND type = 'take_mock_interview';
+
+CREATE UNIQUE INDEX IF NOT EXISTS recommendations_special_active_uniq
+    ON recommendations (user_id, type, skill_key)
+    WHERE status = 'active' AND type IN ('rewrite_answer', 'practice_section');
 -- +goose StatementEnd
 
 -- +goose Down
 -- +goose StatementBegin
-
-DROP TABLE IF EXISTS processed_events;
-DROP TABLE IF EXISTS learning_plan_items;
-DROP TABLE IF EXISTS recommendations;
-DROP TABLE IF EXISTS skill_scores;
-DROP TABLE IF EXISTS user_skill_profiles;
-
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
 -- +goose StatementEnd

@@ -1,4 +1,5 @@
 -- +goose Up
+-- +goose StatementBegin
 -- Live coding rooms (ported from druzya editor_rooms + editor_participants).
 
 CREATE TABLE IF NOT EXISTS code_rooms (
@@ -9,6 +10,7 @@ CREATE TABLE IF NOT EXISTS code_rooms (
     language    TEXT NOT NULL DEFAULT 'go',
     is_frozen   BOOLEAN NOT NULL DEFAULT false,
     visibility  TEXT NOT NULL DEFAULT 'shared',
+    is_guest_created  BOOLEAN NOT NULL DEFAULT false,
     expires_at  TIMESTAMPTZ NOT NULL,
     archived_at TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -35,6 +37,13 @@ CREATE TABLE IF NOT EXISTS code_room_participants (
 
 CREATE INDEX IF NOT EXISTS idx_code_room_participants_user ON code_room_participants (user_id);
 
+CREATE INDEX idx_code_rooms_guest_active
+    ON code_rooms (expires_at)
+    WHERE archived_at IS NULL AND is_guest_created = true;
+-- +goose StatementEnd
+
 -- +goose Down
-DROP TABLE IF EXISTS code_room_participants;
-DROP TABLE IF EXISTS code_rooms;
+-- +goose StatementBegin
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
+-- +goose StatementEnd

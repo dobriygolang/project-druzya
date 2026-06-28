@@ -61,6 +61,19 @@ docker compose -f docker-compose.prod.yml logs -f interview
 
 ### migrations failed
 
+Full schema reset (empty prod, no users — forward-only init migrations):
+
+```bash
+cd deploy
+# stop app services so nothing holds DB connections
+docker compose -f docker-compose.prod.yml stop identity content interview ai recommendation billing sandbox rooms identity-bot caddy
+make reset-db
+docker compose -f docker-compose.prod.yml run --rm migrate
+docker compose -f docker-compose.prod.yml up -d
+```
+
+Single migration run after a normal schema change:
+
 ```bash
 cd deploy
 docker compose -f docker-compose.prod.yml run --rm migrate

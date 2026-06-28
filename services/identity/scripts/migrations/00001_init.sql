@@ -20,5 +20,6 @@ CREATE INDEX users_created_at_idx ON users (created_at);
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS users;
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
 -- +goose StatementEnd

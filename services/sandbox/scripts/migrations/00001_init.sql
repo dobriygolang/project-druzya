@@ -9,6 +9,7 @@ CREATE TABLE code_runs (
     session_task_id UUID,
     language        TEXT NOT NULL,
     code            TEXT NOT NULL,
+    stdin           TEXT NOT NULL DEFAULT '',
     status          TEXT NOT NULL DEFAULT 'queued',
     run_type        TEXT NOT NULL DEFAULT 'custom',
     stdout          TEXT,
@@ -34,5 +35,6 @@ CREATE INDEX code_runs_status_created_idx ON code_runs (status, created_at DESC)
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS code_runs;
+-- Forward-only. Full wipe: deploy/scripts/reset-databases.sh
+SELECT 1;
 -- +goose StatementEnd
