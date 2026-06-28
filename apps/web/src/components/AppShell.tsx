@@ -8,7 +8,7 @@ import { MobileBottomNav } from '@/components/MobileBottomNav'
 
 const NAV = [
   { to: '/dashboard', label: 'Главная' },
-  { to: '/interview', label: 'Mock' },
+  { to: '/practice', label: 'Тренировка' },
 ] as const
 
 const IMMERSIVE: RegExp[] = [/^\/interview\/session\//, /^\/live\//]

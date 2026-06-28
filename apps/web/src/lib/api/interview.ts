@@ -28,6 +28,19 @@ export function startSession(templateId: string, mode: SessionMode = 'SESSION_MO
   }).then(normalizeSessionBundle)
 }
 
+/** Start a single-section training session (no company template). */
+export function startTrainingSession(mode: SessionMode) {
+  return api<{
+    session: Session
+    sections?: SessionSection[]
+    tasks?: SessionTask[]
+    progress?: Progress
+  }>('/interview/sessions', {
+    method: 'POST',
+    body: JSON.stringify({ mode }),
+  }).then(normalizeSessionBundle)
+}
+
 export function getSession(sessionId: string) {
   return api<{
     session: Session

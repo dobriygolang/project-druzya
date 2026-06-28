@@ -1,12 +1,10 @@
+import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
 import { CollabCodeEditor } from '@/components/CollabCodeEditor'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { ErrorMessage } from '@/components/ErrorMessage'
-import { PageContent } from '@/components/PageContent'
-import { SectionCard } from '@/components/SectionCard'
 import { getMe } from '@/lib/api/auth'
 import {
   createInvite,
@@ -20,6 +18,7 @@ import {
 } from '@/lib/api/rooms'
 import { readAccessToken } from '@/lib/apiClient'
 
+/** Immersive live room — layout from druzya/frontend EditorPage (full-viewport dark editor). */
 export default function CollabRoomPage() {
   const { roomId = '' } = useParams()
   const [searchParams] = useSearchParams()
@@ -58,11 +57,10 @@ export default function CollabRoomPage() {
   })
 
   const createM = useMutation({
-    mutationFn: (payload?: { task_id?: string; language?: string }) =>
+    mutationFn: () =>
       createRoom({
         room_type: 'interview',
-        language: payload?.language ?? 'go',
-        task_id: payload?.task_id,
+        language: 'go',
       }),
     onSuccess: (room) => {
       navigate(`/live/${room.id}`, { replace: true })
@@ -85,105 +83,79 @@ export default function CollabRoomPage() {
     },
   })
 
+  useEffect(() => {
+    const prev = document.body.style.backgroundColor
+    document.body.style.backgroundColor = '#1e1e1e'
+    return () => {
+      document.body.style.backgroundColor = prev
+    }
+  }, [])
+
   if (isNew) {
     if (!authed) {
       return (
-        <PageContent wide>
-          <SectionCard title="Live-комната">
-            <p className="text-[13px] text-text-secondary">Войдите, чтобы создать live-комнату.</p>
-            <Link to="/login">
-              <Button variant="secondary" size="sm" className="self-start">
-                Войти
-              </Button>
+        <CenterMessage
+          text="SIGN IN REQUIRED"
+          sub="Войдите, чтобы создать live-комнату."
+          action={
+            <Link to="/login?next=/live/new">
+              <Button size="sm">Войти</Button>
             </Link>
-          </SectionCard>
-        </PageContent>
+          }
+        />
       )
     }
     return (
-      <PageContent wide>
-        <header className="flex flex-col gap-2">
-          <h1 className="font-display text-3xl font-bold leading-tight">Новая live-комната</h1>
-          <p className="text-[14px] text-text-secondary">
-            Общий редактор с синхронизацией через Yjs. Лимит — billing + до 3 активных комнат.
-          </p>
-        </header>
-        {createM.error ? (
-          <ErrorMessage
-            message={createM.error instanceof Error ? createM.error.message : 'Ошибка создания'}
-          />
-        ) : null}
-        <Button onClick={() => createM.mutate(undefined)} loading={createM.isPending}>
-          Создать комнату
-        </Button>
-      </PageContent>
+      <CenterMessage
+        text={createM.isPending ? 'CREATING ROOM…' : 'LIVE CODING'}
+        sub="Общий редактор с синхронизацией в реальном времени."
+        action={
+          <>
+            {createM.error ? (
+              <ErrorMessage
+                message={createM.error instanceof Error ? createM.error.message : 'Ошибка'}
+              />
+            ) : null}
+            <Button onClick={() => createM.mutate()} loading={createM.isPending}>
+              Создать комнату
+            </Button>
+          </>
+        }
+      />
     )
   }
 
   if (!authed && inviteToken && !guestToken) {
     return (
-      <PageContent>
-        <SectionCard title="Вход как гость">
-          <p className="text-[13px] text-text-secondary">
-            Введите имя для отображения в редакторе. Доступ только на время сессии.
-          </p>
-          <div>
-            <label htmlFor="guest-name" className="block text-sm font-medium">
-              Имя
-            </label>
-            <input
-              id="guest-name"
-              value={guestName}
-              onChange={(e) => setGuestName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-border-strong"
-              placeholder="Кандидат"
-            />
-          </div>
-          {guestJoinM.error ? (
-            <ErrorMessage
-              message={
-                guestJoinM.error instanceof Error ? guestJoinM.error.message : 'Ошибка входа'
-              }
-            />
-          ) : null}
-          <Button loading={guestJoinM.isPending} onClick={() => guestJoinM.mutate()}>
-            Войти в комнату
-          </Button>
-          <p className="text-xs text-text-muted">
-            Уже есть аккаунт?{' '}
-            <Link
-              to={`/login?next=/live/${roomId}?invite=${encodeURIComponent(inviteToken)}`}
-              className="underline"
-            >
-              Войти
-            </Link>
-          </p>
-        </SectionCard>
-      </PageContent>
+      <GuestGate
+        guestName={guestName}
+        onNameChange={setGuestName}
+        error={guestJoinM.error}
+        loading={guestJoinM.isPending}
+        onJoin={() => guestJoinM.mutate()}
+        loginTo={`/login?next=/live/${roomId}?invite=${encodeURIComponent(inviteToken)}`}
+      />
     )
   }
 
   if (!authed && !guestToken) {
     return (
-      <PageContent>
-        <SectionCard title="Доступ ограничен">
-          <ErrorMessage message="Нужна ссылка-приглашение или вход в аккаунт." />
+      <CenterMessage
+        text="INVITE REQUIRED"
+        sub="Нужна ссылка-приглашение или вход в аккаунт."
+        action={
           <Link to="/login">
-            <Button variant="secondary" size="sm" className="self-start">
+            <Button variant="secondary" size="sm">
               Войти
             </Button>
           </Link>
-        </SectionCard>
-      </PageContent>
+        }
+      />
     )
   }
 
   if (roomQ.isLoading || (authed && meQ.isLoading)) {
-    return (
-      <PageContent wide>
-        <p className="text-sm text-text-muted">Загрузка комнаты…</p>
-      </PageContent>
-    )
+    return <CenterMessage text="LOADING ROOM…" />
   }
 
   const room =
@@ -201,22 +173,22 @@ export default function CollabRoomPage() {
           participants: [],
         }
       : null)
+
   if (!room) {
     return (
-      <PageContent wide>
-        <SectionCard title="Комната не найдена">
-          <ErrorMessage
-            message={roomQ.error instanceof Error ? roomQ.error.message : 'Комната не найдена'}
-          />
-          {authed ? (
+      <CenterMessage
+        text="ROOM NOT FOUND"
+        sub={roomQ.error instanceof Error ? roomQ.error.message : undefined}
+        action={
+          authed ? (
             <Link to="/live/new">
-              <Button variant="secondary" size="sm" className="self-start">
+              <Button variant="secondary" size="sm">
                 Создать новую
               </Button>
             </Link>
-          ) : null}
-        </SectionCard>
-      </PageContent>
+          ) : undefined
+        }
+      />
     )
   }
 
@@ -227,61 +199,127 @@ export default function CollabRoomPage() {
   const wsToken = guestToken ?? readAccessToken() ?? ''
 
   return (
-    <PageContent wide className="gap-6 py-6 sm:py-10">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
-            Live coding
-          </p>
-          <h1 className="font-display text-2xl font-bold leading-tight">
-            Комната {room.id.slice(0, 8)}…
-          </h1>
-          <p className="text-[13px] text-text-muted">
-            {room.language} · {room.participants.length} участник(ов)
-            {room.is_frozen ? ' · заморожена' : ''}
+    <div className="fixed inset-0 flex flex-col bg-[#1e1e1e] text-[#d4d4d4]">
+      <header className="z-20 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5 sm:px-6">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] tracking-[0.08em] text-[#858585]">LIVE CODING</p>
+          <p className="truncate text-sm font-medium text-[#d4d4d4]">
+            {room.id.slice(0, 8)}… · {room.language} · {room.participants.length} участник(ов)
             {guestToken ? ' · гость' : ''}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {isOwner ? (
-            <Button variant="secondary" loading={inviteM.isPending} onClick={() => inviteM.mutate()}>
-              {copied ? 'Ссылка скопирована' : 'Пригласить'}
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={inviteM.isPending}
+              onClick={() => inviteM.mutate()}
+              className="border-white/15 bg-white/5 text-[#d4d4d4] hover:bg-white/10"
+            >
+              {copied ? 'Скопировано' : 'Пригласить'}
             </Button>
           ) : null}
           {canFreeze ? (
             <Button
               variant="secondary"
+              size="sm"
               loading={freezeM.isPending}
               onClick={() => freezeM.mutate(!room.is_frozen)}
+              className="border-white/15 bg-white/5 text-[#d4d4d4] hover:bg-white/10"
             >
               {room.is_frozen ? 'Разморозить' : 'Заморозить'}
             </Button>
           ) : null}
+          <Link to="/dashboard">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="border-white/15 text-[#858585] hover:bg-white/5 hover:text-[#d4d4d4]"
+            >
+              Закрыть
+            </Button>
+          </Link>
         </div>
       </header>
 
-      <Card elevation="e2" padding="sm" className="overflow-hidden">
-        <CollabCodeEditor
-          roomId={room.id}
-          language={room.language}
-          frozen={room.is_frozen}
-          userId={myId ?? guestName}
-          accessToken={wsToken}
-        />
-      </Card>
+      <CollabCodeEditor
+        roomId={room.id}
+        language={room.language}
+        frozen={room.is_frozen}
+        userId={myId ?? guestName}
+        displayName={meQ.data?.username ?? (guestName || undefined)}
+        accessToken={wsToken}
+      />
+    </div>
+  )
+}
 
-      {authed ? (
-        <SectionCard title="Участники">
-          <ul className="space-y-1 text-sm">
-            {room.participants.map((p) => (
-              <li key={p.user_id}>
-                {p.user_id.slice(0, 8)}… — {p.role}
-                {p.user_id === myId ? ' (вы)' : ''}
-              </li>
-            ))}
-          </ul>
-        </SectionCard>
-      ) : null}
-    </PageContent>
+function CenterMessage({
+  text,
+  sub,
+  action,
+}: {
+  text: string
+  sub?: string
+  action?: React.ReactNode
+}) {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#1e1e1e] px-6 text-center">
+      <p className="font-mono text-[11px] tracking-[0.08em] text-[#858585]">{text}</p>
+      {sub ? <p className="max-w-md text-sm leading-relaxed text-[#858585]">{sub}</p> : null}
+      {action}
+    </div>
+  )
+}
+
+function GuestGate({
+  guestName,
+  onNameChange,
+  error,
+  loading,
+  onJoin,
+  loginTo,
+}: {
+  guestName: string
+  onNameChange: (v: string) => void
+  error: unknown
+  loading: boolean
+  onJoin: () => void
+  loginTo: string
+}) {
+  return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center gap-5 bg-bg px-6">
+      <div className="w-full max-w-sm rounded-xl border border-border bg-surface-1 p-6">
+        <h1 className="font-display text-xl font-bold">Вход как гость</h1>
+        <p className="mt-2 text-sm text-text-secondary">
+          Имя для отображения в редакторе. Доступ только на время сессии.
+        </p>
+        <label htmlFor="guest-name" className="mt-4 block text-sm font-medium">
+          Имя
+        </label>
+        <input
+          id="guest-name"
+          value={guestName}
+          onChange={(e) => onNameChange(e.target.value)}
+          className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-border-strong"
+          placeholder="Кандидат"
+        />
+        {error ? (
+          <div className="mt-3">
+            <ErrorMessage message={error instanceof Error ? error.message : 'Ошибка входа'} />
+          </div>
+        ) : null}
+        <Button className="mt-4 w-full" loading={loading} onClick={onJoin}>
+          Войти в комнату
+        </Button>
+        <p className="mt-4 text-center text-xs text-text-muted">
+          Уже есть аккаунт?{' '}
+          <Link to={loginTo} className="underline">
+            Войти
+          </Link>
+        </p>
+      </div>
+    </div>
   )
 }

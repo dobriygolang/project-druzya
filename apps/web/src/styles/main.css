@@ -26,6 +26,8 @@
     --hair: rgba(15, 15, 15, 0.06);
     --hair-2: rgba(15, 15, 15, 0.12);
     --red: #ff3b30;
+    --ink-60: #5b5b5b;
+    --ink-40: #8e8e8e;
     --motion-dur-small: 120ms;
     --motion-dur-medium: 200ms;
     --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
@@ -81,5 +83,42 @@
     .card-lift:hover {
       transform: none;
     }
+  }
+
+  /* Yjs remote cursors — from druzya/frontend main.css */
+  .cm-ySelectionCaret {
+    position: relative;
+    border-left: 2px solid;
+    border-color: rgb(var(--y-r, 255), var(--y-g, 59), var(--y-b, 48));
+    margin-left: -1px;
+    margin-right: -1px;
+    z-index: 2;
+  }
+  .cm-ySelectionCaret::before {
+    content: attr(data-y-user-name);
+    position: absolute;
+    top: -1.4em;
+    left: -2px;
+    padding: 1px 6px;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: 3px 3px 3px 0;
+    color: #fff;
+    background: rgb(var(--y-r, 255), var(--y-g, 59), var(--y-b, 48));
+    white-space: nowrap;
+    pointer-events: none;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    letter-spacing: 0.04em;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    transition: opacity var(--motion-dur-small) var(--motion-ease-standard);
+  }
+  .cm-line:hover .cm-ySelectionCaret::before,
+  .always-show-cursor-labels .cm-ySelectionCaret::before {
+    opacity: 1;
+  }
+  .cm-ySelection {
+    background-color: rgba(var(--y-r, 255), var(--y-g, 59), var(--y-b, 48), 0.18);
   }
 }

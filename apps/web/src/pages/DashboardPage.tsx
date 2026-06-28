@@ -111,7 +111,7 @@ export default function DashboardPage() {
           <p className="text-[13px] leading-relaxed text-text-secondary">
             Пройди алгоритмическое и behavioral-интервью с AI-оценкой и персональным планом.
           </p>
-          <Link to="/interview">
+          <Link to="/practice">
             <Button
               variant="primary"
               size="sm"
@@ -119,7 +119,7 @@ export default function DashboardPage() {
               iconRight={<ArrowRight className="h-4 w-4" />}
               className="self-start"
             >
-              Начать mock
+              К тренировке
             </Button>
           </Link>
         </SectionCard>
@@ -171,8 +171,8 @@ export default function DashboardPage() {
         {recommendations.length === 0 ? (
           <p className="text-[13px] text-text-muted">
             Пока нет рекомендаций.{' '}
-            <Link to="/interview" className="underline">
-              Пройди mock-интервью
+            <Link to="/practice" className="underline">
+              Пройди тренировку
             </Link>
             , чтобы получить персональный план.
           </p>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export type EditorWsEnvelope = {
   kind: string
@@ -17,7 +17,10 @@ export function useEditorWs(roomId: string | undefined, token: string | undefine
   const [reconnectKey, setReconnectKey] = useState(0)
 
   useEffect(() => {
-    if (!roomId || !token) return
+    if (!roomId || !token) {
+      setStatus('closed')
+      return
+    }
     closedByUser.current = false
     attemptsRef.current = 0
 
@@ -41,6 +44,9 @@ export function useEditorWs(roomId: string | undefined, token: string | undefine
         } catch {
           /* ignore */
         }
+      }
+      ws.onerror = () => {
+        /* onclose handles retry */
       }
       ws.onclose = () => {
         if (closedByUser.current) {
@@ -66,17 +72,17 @@ export function useEditorWs(roomId: string | undefined, token: string | undefine
     }
   }, [roomId, token, reconnectKey])
 
-  const send = (env: EditorWsEnvelope) => {
+  const send = useCallback((env: EditorWsEnvelope) => {
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return false
     ws.send(JSON.stringify(env))
     return true
-  }
+  }, [])
 
-  const reconnect = () => {
+  const reconnect = useCallback(() => {
     attemptsRef.current = 0
     setReconnectKey((n) => n + 1)
-  }
+  }, [])
 
   return { status, lastMessage, send, reconnect }
 }

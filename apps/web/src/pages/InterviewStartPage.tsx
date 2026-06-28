@@ -78,6 +78,9 @@ export default function InterviewStartPage() {
   return (
     <PageContent>
       <header className="flex flex-col gap-2">
+        <Link to="/practice" className="text-[13px] text-text-muted underline">
+          ← Все режимы
+        </Link>
         <h1 className="font-display text-3xl font-bold leading-tight">Mock-интервью</h1>
         <p className="text-[14px] text-text-secondary">
           Выбери компанию и шаблон интервью. Сессия включает алгоритмы и behavioral-секции.

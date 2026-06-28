@@ -2,21 +2,21 @@ import { useEffect, useRef } from 'react'
 import * as Y from 'yjs'
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { yCollab } from 'y-codemirror.next'
-import { EditorState } from '@codemirror/state'
+import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
-import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { go } from '@codemirror/lang-go'
 import { python } from '@codemirror/lang-python'
 import { javascript } from '@codemirror/lang-javascript'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { b64ToBytes, bytesToB64, useEditorWs } from '@/lib/ws/collabEditor'
-import { readAccessToken } from '@/lib/apiClient'
+import { b64ToBytes, bytesToB64, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
+import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
 
 type Props = {
   roomId: string
   language: string
   frozen: boolean
   userId?: string
+  displayName?: string
   accessToken?: string
 }
 
@@ -42,13 +42,49 @@ function userColor(id: string): string {
   return `hsl(${hue} 70% 55%)`
 }
 
-export function CollabCodeEditor({ roomId, language, frozen, userId, accessToken }: Props) {
+function wsStatusLabel(status: string, frozen: boolean): string {
+  if (frozen) return 'FROZEN'
+  switch (status) {
+    case 'open':
+      return 'LIVE'
+    case 'failed':
+      return 'OFFLINE'
+    case 'reconnecting':
+      return 'RECONNECT…'
+    case 'connecting':
+      return 'CONNECT…'
+    default:
+      return status.toUpperCase()
+  }
+}
+
+function wsStatusColor(status: string, frozen: boolean): string {
+  if (frozen) return 'var(--red)'
+  if (status === 'open') return 'rgb(var(--ink))'
+  if (status === 'failed') return 'var(--red)'
+  return 'var(--ink-60)'
+}
+
+export function CollabCodeEditor({
+  roomId,
+  language,
+  frozen,
+  userId,
+  displayName,
+  accessToken,
+}: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const ydocRef = useRef<Y.Doc | null>(null)
   const awarenessRef = useRef<Awareness | null>(null)
-  const token = accessToken ?? readAccessToken() ?? ''
-  const { status, lastMessage, send, reconnect } = useEditorWs(roomId, token)
+  const frozenCompartment = useRef(new Compartment())
+  const wsSendRef = useRef<(env: EditorWsEnvelope) => boolean>(() => false)
+
+  const token = accessToken ?? ''
+  const { status, lastMessage, send, reconnect } = useEditorWs(roomId, token || undefined)
+
+  wsSendRef.current = send
+
   const sendRef = useRef<(update: Uint8Array) => void>(() => {})
   const sendSnapshotRef = useRef<(full: Uint8Array) => void>(() => {})
   const sendAwarenessRef = useRef<(update: Uint8Array) => void>(() => {})
@@ -80,6 +116,7 @@ export function CollabCodeEditor({ roomId, language, frozen, userId, accessToken
     }
   }, [lastMessage])
 
+  // Mount editor once per room/language/token — never depend on `send` or WS status.
   useEffect(() => {
     const mount = mountRef.current
     if (!mount || !token) return
@@ -89,8 +126,10 @@ export function CollabCodeEditor({ roomId, language, frozen, userId, accessToken
     const ytext = ydoc.getText('code')
     const awareness = new Awareness(ydoc)
     awarenessRef.current = awareness
+
+    const label = displayName ?? userId?.slice(0, 8) ?? 'you'
     awareness.setLocalStateField('user', {
-      name: userId?.slice(0, 8) ?? 'you',
+      name: label,
       color: userColor(userId ?? roomId),
     })
 
@@ -126,13 +165,13 @@ export function CollabCodeEditor({ roomId, language, frozen, userId, accessToken
     awareness.on('update', onAwUpdate)
 
     sendRef.current = (update) => {
-      send({ kind: 'op', data: { payload: bytesToB64(update) } })
+      wsSendRef.current({ kind: 'op', data: { payload: bytesToB64(update) } })
     }
     sendSnapshotRef.current = (full) => {
-      send({ kind: 'snapshot', data: { payload: bytesToB64(full) } })
+      wsSendRef.current({ kind: 'snapshot', data: { payload: bytesToB64(full) } })
     }
     sendAwarenessRef.current = (update) => {
-      send({ kind: 'presence', data: { update: bytesToB64(update) } })
+      wsSendRef.current({ kind: 'presence', data: { update: bytesToB64(update) } })
     }
 
     const state = EditorState.create({
@@ -140,11 +179,11 @@ export function CollabCodeEditor({ roomId, language, frozen, userId, accessToken
       extensions: [
         lineNumbers(),
         history(),
-        keymap.of([...defaultKeymap, ...historyKeymap]),
+        keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
         langExt(language),
-        oneDark,
+        ...vscodeEditorExtensions,
         yCollab(ytext, awareness),
-        EditorView.editable.of(!frozen),
+        frozenCompartment.current.of(EditorView.editable.of(!frozen)),
       ],
     })
     const view = new EditorView({ state, parent: mount })
@@ -166,36 +205,51 @@ export function CollabCodeEditor({ roomId, language, frozen, userId, accessToken
       ydocRef.current = null
       awarenessRef.current = null
     }
-  }, [roomId, language, token, userId, send, frozen, accessToken])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- token/room/language only
+  }, [roomId, language, token])
+
+  // Toggle frozen without remounting editor.
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    view.dispatch({
+      effects: frozenCompartment.current.reconfigure(EditorView.editable.of(!frozen)),
+    })
+  }, [frozen])
+
+  // Update awareness label when user info arrives.
+  useEffect(() => {
+    const awareness = awarenessRef.current
+    if (!awareness) return
+    const label = displayName ?? userId?.slice(0, 8) ?? 'you'
+    awareness.setLocalStateField('user', {
+      name: label,
+      color: userColor(userId ?? roomId),
+    })
+  }, [displayName, userId, roomId])
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between text-sm text-neutral-500">
-        <span>
-          WS:{' '}
-          <span
-            className={
-              status === 'open'
-                ? 'text-green-600'
-                : status === 'failed'
-                  ? 'text-red-600'
-                  : 'text-amber-600'
-            }
-          >
-            {status}
-          </span>
-          {frozen ? ' · frozen' : ''}
-        </span>
+    <div className="relative h-full min-h-0 flex-1">
+      <div ref={mountRef} className="absolute inset-0 always-show-cursor-labels" />
+
+      <div
+        className="pointer-events-none fixed bottom-4 right-6 z-30 flex items-center gap-2 rounded-full border border-white/10 bg-[rgba(20,20,22,0.78)] px-3.5 py-1.5 font-mono text-[10px] tracking-[0.08em] backdrop-blur-md"
+        style={{ paddingBottom: 'max(6px, env(safe-area-inset-bottom))' }}
+      >
+        <span className="text-[#858585]">{language.toUpperCase()}</span>
+        <span className="text-[#858585]">·</span>
+        <span style={{ color: wsStatusColor(status, frozen) }}>{wsStatusLabel(status, frozen)}</span>
         {status === 'failed' ? (
-          <button type="button" className="underline" onClick={reconnect}>
-            Reconnect
+          <button
+            type="button"
+            className="pointer-events-auto ml-1 underline"
+            style={{ color: 'var(--red)' }}
+            onClick={reconnect}
+          >
+            retry
           </button>
         ) : null}
       </div>
-      <div
-        ref={mountRef}
-        className="min-h-[420px] overflow-hidden rounded-lg border border-neutral-200 text-left"
-      />
     </div>
   )
 }

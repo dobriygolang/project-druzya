@@ -9,7 +9,7 @@ const TABS: Array<{
   primary?: boolean
 }> = [
   { to: '/dashboard', icon: Home, label: 'Главная' },
-  { to: '/interview', icon: Sparkles, label: 'Mock', primary: true },
+  { to: '/practice', icon: Sparkles, label: 'Тренировка', primary: true },
   { to: '/profile', icon: User, label: 'Профиль' },
 ]
 

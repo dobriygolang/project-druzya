@@ -9,6 +9,7 @@ const WelcomePage = lazy(() => import('@/pages/WelcomePage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
+const PracticePage = lazy(() => import('@/pages/PracticePage'))
 const InterviewStartPage = lazy(() => import('@/pages/InterviewStartPage'))
 const SessionPage = lazy(() => import('@/pages/SessionPage'))
 const SessionResultsPage = lazy(() => import('@/pages/SessionResultsPage'))
@@ -31,6 +32,7 @@ export default function App() {
         <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/live/:roomId" element={<CollabRoomPage />} />
 
         <Route element={<RequireAuth />}>
           <Route
@@ -38,6 +40,14 @@ export default function App() {
             element={
               <AuthedLayout>
                 <DashboardPage />
+              </AuthedLayout>
+            }
+          />
+          <Route
+            path="/practice"
+            element={
+              <AuthedLayout>
+                <PracticePage />
               </AuthedLayout>
             }
           />
@@ -62,14 +72,6 @@ export default function App() {
             element={
               <AuthedLayout>
                 <SessionResultsPage />
-              </AuthedLayout>
-            }
-          />
-          <Route
-            path="/live/:roomId"
-            element={
-              <AuthedLayout>
-                <CollabRoomPage />
               </AuthedLayout>
             }
           />
