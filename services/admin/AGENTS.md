@@ -49,8 +49,9 @@ Design doc: [../../docs/architecture/admin-panel.md](../../docs/architecture/adm
 | ListCompanies | `GET /v1/admin/content/companies` |
 | UpsertCompany | `POST /v1/admin/content/companies` |
 | ListTasks | `GET /v1/admin/content/tasks` |
-| GetTask | `GET /v1/admin/content/tasks/{id}` or `/by-slug/{slug}` |
+| GetTask | `GET /v1/admin/content/tasks/{id}` or `/by-slug/{slug}` — includes `solutions[]` |
 | UpsertTask | `POST /v1/admin/content/tasks` |
+| ReplaceTaskSolutions | `POST /v1/admin/content/tasks/{task_id}/solutions` |
 | ListArticles | `GET /v1/admin/content/articles` |
 | GetArticle | `GET /v1/admin/content/articles/{id}` or `/by-slug/{slug}` — includes `linked_tasks` |
 | UpsertArticle | `POST /v1/admin/content/articles` — optional `task_slugs[]` (catalog task slugs) |

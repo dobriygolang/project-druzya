@@ -137,6 +137,67 @@ Useful eval-flow metrics:
 
 Operator snapshot metrics (users, DB size, LLM chain ping) live in **admin UI** `/admin`, not Prometheus.
 
+## Paid LLM (production scale)
+
+Eval routes by **billing plan**: free users → free chain keys; `pro_monthly` → paid chain keys.
+Two separate key sets — you never pay for free-user traffic on DeepSeek/Groq paid.
+
+### Free plan limits (billing migration `00010`)
+
+| Entitlement | Free | Pro |
+|-------------|------|-----|
+| AI eval / day | **5** | 100 |
+| Mock interviews / month | **3** | 30 |
+
+5 eval/day × ~2 LLM calls ≈ 10 API calls/user — ~100 active free users stay within Groq free org quota.
+
+### Env: split chains
+
+```bash
+# Free chain (free-tier API keys only)
+LLM_FREE_CHAIN_ORDER=groq,cloudflare,openrouter
+GROQ_API_KEY=gsk_...              # Groq free tier
+OPENROUTER_API_KEY=sk-or-...
+CLOUDFLARE_API_KEY=...
+CLOUDFLARE_ACCOUNT_ID=...
+
+# Paid chain (separate keys — do not reuse free keys)
+LLM_PAID_CHAIN_ORDER=deepseek,groq
+DEEPSEEK_API_KEY=sk-...
+GROQ_PAID_API_KEY=gsk_...         # Groq Developer / paid project
+OPENROUTER_PAID_API_KEY=sk-or-... # optional
+
+EVAL_WORKER_CONCURRENCY=20        # tune for paid RPM
+```
+
+Legacy `LLM_CHAIN_ORDER` is fallback when `LLM_FREE_CHAIN_ORDER` is empty.
+
+Admin LLM probes show `free/groq`, `pro/deepseek`, etc.
+
+### Provider economics (pro chain)
+
+| Provider | Role | Cost (eval ~5k tokens) | Notes |
+|----------|------|--------------------------|-------|
+| **DeepSeek** | Primary judge | **~$0.002–0.004** | [platform.deepseek.com](https://platform.deepseek.com) — UnionPay/crypto, no geo block from RU VPS |
+| **Groq Developer** | Fast primary / fallback | **~$0.002** | Same `GROQ_API_KEY`, upgrade tier in console — **500+ RPM** vs 30 RPM free |
+| **OpenRouter** | Optional tail | +5–15% markup | One key, many models; good backup |
+| OpenAI direct | Avoid for eval | $0.01+ | Expensive; geo/billing friction |
+
+**Cheapest stack:** `deepseek` only (~$2–4 / 1000 evals).  
+**Fastest stack:** `groq` paid first (~$2–3 / 1000 evals, lowest latency).  
+**Balanced:** `LLM_CHAIN_ORDER=deepseek,groq,openrouter`
+
+### `.env` checklist (paid keys on prod)
+
+Apply migration `00010` on billing DB, then set keys above and restart `ai` + `billing`.
+
+Watch Grafana **AI & LLM** dashboard: `llm_calls_total`, `outbox_lag_seconds`.
+
+### Billing alignment
+
+Product billing limits eval **count** per user; pro chain keys limit **spend**.
+Monitor provider dashboards + `model_calls` table for cost drift.
+
 ## Rooms horizontal scale
 
 Live collab WebSocket state is in-memory per `rooms` pod. **Do not run multiple `rooms` replicas without sticky sessions on `/ws/*`.**

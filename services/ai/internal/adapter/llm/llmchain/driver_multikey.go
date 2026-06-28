@@ -40,10 +40,13 @@ import (
 	"time"
 )
 
-// MultiKeyCooldown — после rate-limit / unauthorized ключ исключается из
-// rotation на это время. 1h хардкодом, чтобы оператор успел реально
-// поправить ключ (rotate / top up credits).
-const MultiKeyCooldown = time.Hour
+// MultiKeyAuthCooldown — после unauthorized/payment-required ключ исключается
+// из rotation на это время.
+const MultiKeyAuthCooldown = time.Hour
+
+// MultiKeyRateLimitCooldown — 429 на free-tier (Google/Groq) обычно минутная,
+// не часовая. 1h cooldown на 429 ломал probe: оба ключа → "all unavailable".
+const MultiKeyRateLimitCooldown = 60 * time.Second
 
 type multiKeySub struct {
 	driver       Driver
@@ -123,13 +126,27 @@ func (m *MultiKeyDriver) nextAvailable(now time.Time) *multiKeySub {
 	return nil
 }
 
+func (m *MultiKeyDriver) cooldownFor(err error) time.Duration {
+	if errors.Is(err, ErrRateLimited) {
+		var hse *httpStatusError
+		if errors.As(err, &hse) {
+			if ra := parseRetryAfter(hse.Headers().Get("Retry-After"), time.Now()); ra > 0 {
+				return ra
+			}
+		}
+		return MultiKeyRateLimitCooldown
+	}
+	return MultiKeyAuthCooldown
+}
+
 func (m *MultiKeyDriver) handleErr(s *multiKeySub, err error) {
 	if errors.Is(err, ErrRateLimited) || errors.Is(err, ErrUnauthorized) {
-		s.markCooldown(time.Now().Add(MultiKeyCooldown))
+		cd := m.cooldownFor(err)
+		s.markCooldown(time.Now().Add(cd))
 		if m.log != nil {
 			m.log.Warn("llmchain.MultiKeyDriver: key cooled down",
 				slog.String("provider", string(m.provider)),
-				slog.Duration("cooldown", MultiKeyCooldown),
+				slog.Duration("cooldown", cd),
 				slog.String("err", err.Error()))
 		}
 	}
@@ -140,15 +157,20 @@ func (m *MultiKeyDriver) handleErr(s *multiKeySub, err error) {
 func (m *MultiKeyDriver) Chat(ctx context.Context, model string, req Request) (Response, error) {
 	now := time.Now()
 	tried := 0
+	var lastErr error
 	for tried < len(m.subs) {
 		sub := m.nextAvailable(now)
 		if sub == nil {
+			if lastErr != nil {
+				return Response{}, fmt.Errorf("%w: %v", ErrAllProvidersUnavailable, lastErr)
+			}
 			return Response{}, ErrAllProvidersUnavailable
 		}
 		resp, err := sub.driver.Chat(ctx, model, req)
 		if err == nil {
 			return resp, nil
 		}
+		lastErr = err
 		// Rate-limit / auth → cooldown + try next; прочие → return as-is.
 		if errors.Is(err, ErrRateLimited) || errors.Is(err, ErrUnauthorized) {
 			m.handleErr(sub, err)
@@ -156,6 +178,9 @@ func (m *MultiKeyDriver) Chat(ctx context.Context, model string, req Request) (R
 			continue
 		}
 		return resp, fmt.Errorf("llmchain.MultiKeyDriver.Chat: %w", err)
+	}
+	if lastErr != nil {
+		return Response{}, fmt.Errorf("%w: %v", ErrAllProvidersUnavailable, lastErr)
 	}
 	return Response{}, ErrAllProvidersUnavailable
 }
@@ -167,21 +192,29 @@ func (m *MultiKeyDriver) Chat(ctx context.Context, model string, req Request) (R
 func (m *MultiKeyDriver) ChatStream(ctx context.Context, model string, req Request) (<-chan StreamEvent, error) {
 	now := time.Now()
 	tried := 0
+	var lastErr error
 	for tried < len(m.subs) {
 		sub := m.nextAvailable(now)
 		if sub == nil {
+			if lastErr != nil {
+				return nil, fmt.Errorf("%w: %v", ErrAllProvidersUnavailable, lastErr)
+			}
 			return nil, ErrAllProvidersUnavailable
 		}
 		ch, err := sub.driver.ChatStream(ctx, model, req)
 		if err == nil {
 			return ch, nil
 		}
+		lastErr = err
 		if errors.Is(err, ErrRateLimited) || errors.Is(err, ErrUnauthorized) {
 			m.handleErr(sub, err)
 			tried++
 			continue
 		}
 		return nil, fmt.Errorf("llmchain.MultiKeyDriver.ChatStream: %w", err)
+	}
+	if lastErr != nil {
+		return nil, fmt.Errorf("%w: %v", ErrAllProvidersUnavailable, lastErr)
 	}
 	return nil, ErrAllProvidersUnavailable
 }

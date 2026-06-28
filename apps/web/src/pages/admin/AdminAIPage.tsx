@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { OrderedProviderPicker } from '@/components/admin/FormControls'
+import { LLM_PROVIDERS } from '@/lib/admin/options'
 import {
   getAdminLLMConfig,
   listAdminEvaluationJobs,
@@ -22,7 +24,7 @@ export default function AdminAIPage() {
   })
 
   const [version, setVersion] = useState(0)
-  const [chainOrder, setChainOrder] = useState('')
+  const [chainOrder, setChainOrder] = useState<string[]>([])
   const [taskMapJSON, setTaskMapJSON] = useState('')
   const [virtualChainsJSON, setVirtualChainsJSON] = useState('')
   const [probes, setProbes] = useState<AdminLLMProviderProbe[]>([])
@@ -31,7 +33,7 @@ export default function AdminAIPage() {
     const cfg = configQ.data?.config
     if (!cfg) return
     setVersion(cfg.version)
-    setChainOrder((cfg.chain_order ?? []).join(', '))
+    setChainOrder(cfg.chain_order ?? [])
     setTaskMapJSON(cfg.task_map_json ?? '')
     setVirtualChainsJSON(cfg.virtual_chains_json ?? '')
   }, [configQ.data])
@@ -40,10 +42,7 @@ export default function AdminAIPage() {
     mutationFn: () =>
       updateAdminLLMConfig({
         expected_version: version,
-        chain_order: chainOrder
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        chain_order: chainOrder,
         task_map_json: taskMapJSON || undefined,
         virtual_chains_json: virtualChainsJSON || undefined,
       }),
@@ -121,15 +120,14 @@ export default function AdminAIPage() {
         <Card elevation="e1" className="space-y-3 p-4">
           <h2 className="font-medium">LLM chain config</h2>
           <p className="text-xs text-text-muted">Version {version}. Empty chain order falls back to env LLM_CHAIN_ORDER.</p>
-          <label className="block text-sm">
-            Chain order (comma-separated providers)
-            <input
-              className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm font-mono"
-              value={chainOrder}
-              onChange={(e) => setChainOrder(e.target.value)}
-              placeholder="groq,cerebras,openai,google"
-            />
-          </label>
+
+          <OrderedProviderPicker
+            label="Chain order"
+            available={LLM_PROVIDERS}
+            selected={chainOrder}
+            onChange={setChainOrder}
+          />
+
           <label className="block text-sm">
             Task map JSON (advanced, optional)
             <textarea

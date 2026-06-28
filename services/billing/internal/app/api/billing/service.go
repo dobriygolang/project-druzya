@@ -15,14 +15,15 @@ type Implementation struct {
 	billingv1.UnimplementedBillingServiceServer
 	billingv1.UnimplementedBillingInternalServiceServer
 	billingv1.UnimplementedBillingAdminServiceServer
-	svc  billingservice.Service
-	repo *billingrepo.Repository
-	pg   *billingrepo.Pool
+	svc      billingservice.Service
+	repo     *billingrepo.Repository
+	pg       *billingrepo.Pool
+	checkout CheckoutConfig
 }
 
 // NewImplementation constructs transport handlers.
-func NewImplementation(svc billingservice.Service, repo *billingrepo.Repository, pg *billingrepo.Pool) *Implementation {
-	return &Implementation{svc: svc, repo: repo, pg: pg}
+func NewImplementation(svc billingservice.Service, repo *billingrepo.Repository, pg *billingrepo.Pool, checkout CheckoutConfig) *Implementation {
+	return &Implementation{svc: svc, repo: repo, pg: pg, checkout: checkout}
 }
 
 // Register mounts billing services on the gRPC server.
@@ -66,7 +67,7 @@ func toProtoEntitlements(view *model.EntitlementsView) *billingv1.GetMeResponse 
 	return out
 }
 
-func toProtoPlanCatalog(item catalog.PlanCatalogItem) *billingv1.PlanCatalog {
+func toProtoPlanCatalog(item catalog.PlanCatalogItem, checkout PlanCheckoutURLs) *billingv1.PlanCatalog {
 	out := &billingv1.PlanCatalog{
 		Slug:       item.Slug,
 		Name:       item.Name,
@@ -75,6 +76,12 @@ func toProtoPlanCatalog(item catalog.PlanCatalogItem) *billingv1.PlanCatalog {
 		Highlights: append([]string(nil), item.Highlights...),
 		Features:   map[string]bool{},
 		Limits:     map[string]*billingv1.PlanEntitlementSpec{},
+	}
+	if checkout.WebURL != "" {
+		out.CheckoutUrl = &checkout.WebURL
+	}
+	if checkout.TelegramURL != "" {
+		out.TelegramCheckoutUrl = &checkout.TelegramURL
 	}
 	for k, v := range item.Features {
 		out.Features[k] = v

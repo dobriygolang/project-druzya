@@ -11,6 +11,7 @@ import (
 	billingadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
 	evaluationrepo "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/repository"
@@ -41,10 +42,11 @@ type ContentClient interface {
 	GetTaskBundle(ctx context.Context, taskID string) (*contentadapter.TaskBundle, error)
 }
 
-// BillingClient consumes evaluation quota (optional; may be nil).
+// BillingClient consumes evaluation quota and resolves plan tier.
 type BillingClient interface {
 	CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) error
 	ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) error
+	GetEntitlements(ctx context.Context, userID string) (*billingadapter.Entitlements, error)
 }
 
 // Deps wires the run-evaluation handler.
@@ -184,6 +186,17 @@ func (h *Handler) consumeBillingUsage(ctx context.Context, userID string) error 
 	return nil
 }
 
+func (h *Handler) userTier(ctx context.Context, userID string) llmchain.SubscriptionPlan {
+	if h.billing == nil || userID == "" {
+		return llmchain.SubscriptionPlanFree
+	}
+	ent, err := h.billing.GetEntitlements(ctx, userID)
+	if err != nil || ent == nil {
+		return llmchain.SubscriptionPlanFree
+	}
+	return llmchain.SubscriptionPlanFromBilling(ent.PlanSlug)
+}
+
 func (h *Handler) executeEvaluation(ctx context.Context, job *evaluationmodel.EvaluationJob, attempt *interviewadapter.Attempt) error {
 	bundle, err := h.content.GetTaskBundle(ctx, attempt.TaskID)
 	if err != nil {
@@ -205,6 +218,7 @@ func (h *Handler) executeEvaluation(ctx context.Context, job *evaluationmodel.Ev
 		taskType, title, description,
 		bundle.Criteria, bundle.Solutions,
 		answerText, code, language,
+		h.userTier(ctx, attempt.UserID),
 	))
 	if err != nil {
 		return err

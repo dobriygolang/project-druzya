@@ -5,12 +5,15 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import {
   getAdminArticle,
+  listAdminTasks,
   upsertAdminArticle,
   type AdminArticleStatus,
   type AdminArticleVideo,
   type AdminArticleVideoProvider,
 } from '@/lib/api/admin'
 import { detectVideoProvider } from '@/lib/learn/video'
+import { CheckboxMultiSelect } from '@/components/admin/FormControls'
+import { inputClassName, labelClassName, SKILL_KEY_OPTIONS } from '@/lib/admin/options'
 
 const STATUS_OPTIONS: { value: AdminArticleStatus; label: string }[] = [
   { value: 'ARTICLE_STATUS_DRAFT', label: 'draft' },
@@ -44,11 +47,29 @@ export default function AdminArticleEditPage() {
   const [title, setTitle] = useState('')
   const [summary, setSummary] = useState('')
   const [body, setBody] = useState('')
-  const [skillKeys, setSkillKeys] = useState('')
+  const [skillKeys, setSkillKeys] = useState<string[]>([])
+  const [customSkillKey, setCustomSkillKey] = useState('')
   const [status, setStatus] = useState<AdminArticleStatus>('ARTICLE_STATUS_DRAFT')
   const [readingMinutes, setReadingMinutes] = useState('')
   const [videos, setVideos] = useState<AdminArticleVideo[]>([])
-  const [taskSlugs, setTaskSlugs] = useState('')
+  const [taskSlugs, setTaskSlugs] = useState<string[]>([])
+
+  const tasksQ = useQuery({
+    queryKey: ['admin-tasks-for-article'],
+    queryFn: () => listAdminTasks({ limit: 200, status: 'published' }),
+  })
+
+  const taskOptions = (tasksQ.data?.tasks ?? []).map((t) => ({
+    value: t.slug,
+    label: `${t.title} (${t.slug})`,
+  }))
+
+  const skillKeyOptions = [
+    ...SKILL_KEY_OPTIONS.map((key) => ({ value: key, label: key })),
+    ...skillKeys
+      .filter((k) => !SKILL_KEY_OPTIONS.includes(k as (typeof SKILL_KEY_OPTIONS)[number]))
+      .map((key) => ({ value: key, label: `${key} (custom)` })),
+  ]
 
   const articleQ = useQuery({
     queryKey: ['admin-article', routeSlug],
@@ -64,7 +85,7 @@ export default function AdminArticleEditPage() {
     setTitle(article.title)
     setSummary(article.summary)
     setBody(article.body)
-    setSkillKeys(article.skill_keys?.join(', ') ?? '')
+    setSkillKeys(article.skill_keys ?? [])
     setStatus(article.status)
     setReadingMinutes(article.reading_minutes != null ? String(article.reading_minutes) : '')
     setVideos(
@@ -72,7 +93,7 @@ export default function AdminArticleEditPage() {
         ? [...article.videos].sort((a, b) => a.position - b.position)
         : [],
     )
-    setTaskSlugs(article.linked_tasks?.map((t) => t.slug).join(', ') ?? '')
+    setTaskSlugs(article.linked_tasks?.map((t) => t.slug) ?? [])
   }, [articleQ.data])
 
   const saveM = useMutation({
@@ -85,10 +106,7 @@ export default function AdminArticleEditPage() {
         body,
         status,
         reading_minutes: readingMinutes ? Number(readingMinutes) : undefined,
-        skill_keys: skillKeys
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        skill_keys: skillKeys,
         videos: videos
           .filter((v) => v.title.trim() && v.url.trim())
           .map((v, index) => ({
@@ -96,10 +114,7 @@ export default function AdminArticleEditPage() {
             position: index + 1,
             provider: v.url.trim() ? detectVideoProvider(v.url) : v.provider,
           })),
-        task_slugs: taskSlugs
-          .split(',')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        task_slugs: taskSlugs,
       }),
     onSuccess: (res) => {
       void qc.invalidateQueries({ queryKey: ['admin-articles'] })
@@ -163,34 +178,51 @@ export default function AdminArticleEditPage() {
             onChange={(e) => setBody(e.target.value)}
           />
         </label>
-        <label className="block text-sm">
-          Skill keys (comma-separated)
+        <CheckboxMultiSelect
+          label="Skill keys"
+          options={skillKeyOptions}
+          selected={skillKeys}
+          onChange={setSkillKeys}
+        />
+        <div className="flex gap-2">
           <input
-            className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
-            placeholder="algorithm.arrays, behavioral.overall"
-            value={skillKeys}
-            onChange={(e) => setSkillKeys(e.target.value)}
+            className="flex-1 rounded border border-border bg-surface-1 px-3 py-2 text-sm"
+            placeholder="Custom skill key, e.g. algorithm.graphs"
+            value={customSkillKey}
+            onChange={(e) => setCustomSkillKey(e.target.value)}
           />
-        </label>
-        <label className="block text-sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!customSkillKey.trim()}
+            onClick={() => {
+              const key = customSkillKey.trim()
+              if (key && !skillKeys.includes(key)) {
+                setSkillKeys((prev) => [...prev, key])
+              }
+              setCustomSkillKey('')
+            }}
+          >
+            Add custom
+          </Button>
+        </div>
+        <label className={labelClassName}>
           Reading minutes
           <input
             type="number"
             min={1}
-            className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
+            className={inputClassName}
             value={readingMinutes}
             onChange={(e) => setReadingMinutes(e.target.value)}
           />
         </label>
-        <label className="block text-sm">
-          Linked task slugs (comma-separated)
-          <input
-            className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 font-mono text-sm"
-            placeholder="two-sum, binary-search"
-            value={taskSlugs}
-            onChange={(e) => setTaskSlugs(e.target.value)}
-          />
-        </label>
+        <CheckboxMultiSelect
+          label="Linked practice tasks"
+          options={taskOptions}
+          selected={taskSlugs}
+          emptyHint="No published tasks available."
+          onChange={setTaskSlugs}
+        />
         <label className="block text-sm">
           Status
           <select

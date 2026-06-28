@@ -21,8 +21,20 @@ type Config struct {
 	JWTPublicKeyPEM    []byte
 	IdentityGRPCAddr   string
 	TributeWebhookSecret string
-	TributeTierToPlan  map[string]string
-	CORSAllowedOrigins []string
+	TributeTierToPlan    map[string]string
+	TributeCheckout      TributeCheckoutConfig
+	CORSAllowedOrigins   []string
+}
+
+// TributeCheckoutConfig holds per-plan payment links from Tribute Creator dashboard.
+type TributeCheckoutConfig struct {
+	ByPlan map[string]PlanCheckoutLinks
+}
+
+// PlanCheckoutLinks is web (browser) and Telegram Mini App checkout URLs.
+type PlanCheckoutLinks struct {
+	WebURL      string
+	TelegramURL string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -63,8 +75,47 @@ func Load() (*Config, error) {
 		IdentityGRPCAddr:     getEnv("IDENTITY_GRPC_ADDR", "127.0.0.1:9090"),
 		TributeWebhookSecret: tributeSecret,
 		TributeTierToPlan:    parseTierMap(getEnv("TRIBUTE_TIER_MAP", "tribute_pro_monthly:pro_monthly")),
+		TributeCheckout:      loadTributeCheckout(),
 		CORSAllowedOrigins:   ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 	}, nil
+}
+
+func loadTributeCheckout() TributeCheckoutConfig {
+	byPlan := parseCheckoutPlanMap(getEnv("TRIBUTE_CHECKOUT_URLS", ""), getEnv("TRIBUTE_TELEGRAM_CHECKOUT_URLS", ""))
+	if web := strings.TrimSpace(os.Getenv("TRIBUTE_PRO_CHECKOUT_URL")); web != "" {
+		entry := byPlan["pro_monthly"]
+		entry.WebURL = web
+		byPlan["pro_monthly"] = entry
+	}
+	if tg := strings.TrimSpace(os.Getenv("TRIBUTE_PRO_TELEGRAM_CHECKOUT_URL")); tg != "" {
+		entry := byPlan["pro_monthly"]
+		entry.TelegramURL = tg
+		byPlan["pro_monthly"] = entry
+	}
+	return TributeCheckoutConfig{ByPlan: byPlan}
+}
+
+func parseCheckoutPlanMap(webCSV, tgCSV string) map[string]PlanCheckoutLinks {
+	out := map[string]PlanCheckoutLinks{}
+	for part := range strings.SplitSeq(webCSV, ",") {
+		slug, url, ok := strings.Cut(strings.TrimSpace(part), "=")
+		if !ok || slug == "" || url == "" {
+			continue
+		}
+		entry := out[strings.TrimSpace(slug)]
+		entry.WebURL = strings.TrimSpace(url)
+		out[strings.TrimSpace(slug)] = entry
+	}
+	for part := range strings.SplitSeq(tgCSV, ",") {
+		slug, url, ok := strings.Cut(strings.TrimSpace(part), "=")
+		if !ok || slug == "" || url == "" {
+			continue
+		}
+		entry := out[strings.TrimSpace(slug)]
+		entry.TelegramURL = strings.TrimSpace(url)
+		out[strings.TrimSpace(slug)] = entry
+	}
+	return out
 }
 
 func parseTierMap(raw string) map[string]string {

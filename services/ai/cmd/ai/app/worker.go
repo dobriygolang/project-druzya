@@ -12,7 +12,7 @@ func RunWorker(ctx context.Context, a *App) error {
 	return outboxworker.Run(ctx, a.Logger, a.InterviewClient, &outboxworker.Handler{
 		Interview: a.InterviewClient,
 		Service:   a.Service,
-	}, a.Config.WorkerPollInterval, 10)
+	}, a.Config.WorkerPollInterval, 10, a.Config.EvalWorkerConcurrency)
 }
 
 // RunRetryWorker drives delayed retries and recovers stuck running jobs.

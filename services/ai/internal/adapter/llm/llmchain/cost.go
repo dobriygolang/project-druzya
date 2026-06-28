@@ -71,7 +71,9 @@ var costTable = map[string]modelCost{
 	"google/gemini-2.0-flash": {0, 0},
 	"google/gemini-1.5-pro":   {1.25, 5.00},
 	"google/gemini-1.5-flash": {0.075, 0.30},
-	// DeepSeek
+	// DeepSeek (direct API — bare model ids in Response.Model)
+	"deepseek-chat":     {0.27, 1.10},
+	"deepseek-reasoner": {0.55, 2.19},
 	"deepseek/deepseek-chat":     {0.27, 1.10},
 	"deepseek/deepseek-reasoner": {0.55, 2.19},
 	// Qwen / OpenRouter free

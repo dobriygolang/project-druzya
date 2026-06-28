@@ -23,6 +23,16 @@ export interface AdminTask {
   status: string
 }
 
+export interface AdminTaskSolution {
+  id: string
+  task_id: string
+  language?: string
+  solution_text: string
+  explanation?: string
+  complexity?: string
+  is_primary: boolean
+}
+
 export type AdminArticleStatus =
   | 'ARTICLE_STATUS_UNSPECIFIED'
   | 'ARTICLE_STATUS_DRAFT'
@@ -163,6 +173,13 @@ export function listAdminTasks(params?: {
   return api<{ tasks: AdminTask[] }>(`/admin/content/tasks${q ? `?${q}` : ''}`)
 }
 
+export function getAdminTask(params: { id?: string; slug?: string }) {
+  const path = params.slug
+    ? `/admin/content/tasks/by-slug/${encodeURIComponent(params.slug)}`
+    : `/admin/content/tasks/${encodeURIComponent(params.id ?? '')}`
+  return api<{ task: AdminTask; solutions?: AdminTaskSolution[] }>(path)
+}
+
 export function upsertAdminTask(body: {
   id?: string
   slug: string
@@ -177,6 +194,26 @@ export function upsertAdminTask(body: {
     method: 'POST',
     body: JSON.stringify(body),
   })
+}
+
+export function replaceAdminTaskSolutions(
+  taskId: string,
+  solutions: Array<{
+    id?: string
+    language?: string
+    solution_text: string
+    explanation?: string
+    complexity?: string
+    is_primary: boolean
+  }>,
+) {
+  return api<{ solutions: AdminTaskSolution[] }>(
+    `/admin/content/tasks/${encodeURIComponent(taskId)}/solutions`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ task_id: taskId, solutions }),
+    },
+  )
 }
 
 export function listAdminArticles(params?: { status?: AdminArticleStatus; limit?: number; offset?: number }) {

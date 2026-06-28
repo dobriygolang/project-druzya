@@ -37,17 +37,21 @@ func (i *Implementation) ListTasks(ctx context.Context, req *adminv1.ListTasksRe
 	return &adminv1.ListTasksResponse{Tasks: out}, nil
 }
 
-// GetTask returns one task by id or slug.
+// GetTask returns one task by id or slug with reference solutions.
 func (i *Implementation) GetTask(ctx context.Context, req *adminv1.GetTaskRequest) (*adminv1.GetTaskResponse, error) {
-	task, err := i.service.GetTask(ctx, req.GetId(), req.GetSlug())
+	detail, err := i.service.GetTask(ctx, req.GetId(), req.GetSlug())
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	protoTask, err := toProtoTask(*task)
+	protoTask, err := toProtoTask(detail.Task)
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
-	return &adminv1.GetTaskResponse{Task: protoTask}, nil
+	outSolutions := make([]*adminv1.TaskSolution, 0, len(detail.Solutions))
+	for _, sol := range detail.Solutions {
+		outSolutions = append(outSolutions, toProtoSolution(sol))
+	}
+	return &adminv1.GetTaskResponse{Task: protoTask, Solutions: outSolutions}, nil
 }
 
 // UpsertTask creates or updates a task.

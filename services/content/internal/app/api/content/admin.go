@@ -86,6 +86,50 @@ func (i *Implementation) UpsertTask(ctx context.Context, req *contentv1.UpsertTa
 	return &contentv1.UpsertTaskResponse{Task: protoTask}, nil
 }
 
+// GetTaskForAdmin returns a task with reference solutions (admin).
+func (i *Implementation) GetTaskForAdmin(ctx context.Context, req *contentv1.GetTaskForAdminRequest) (*contentv1.GetTaskForAdminResponse, error) {
+	task, solutions, err := i.service.GetTaskForAdmin(ctx, req.GetId(), req.GetSlug())
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	protoTask, err := toProtoTask(task)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	outSolutions := make([]*contentv1.TaskSolution, 0, len(solutions))
+	for idx := range solutions {
+		outSolutions = append(outSolutions, toProtoSolution(&solutions[idx]))
+	}
+	return &contentv1.GetTaskForAdminResponse{
+		Task:      protoTask,
+		Solutions: outSolutions,
+	}, nil
+}
+
+// ReplaceTaskSolutions replaces all reference solutions for a task (admin).
+func (i *Implementation) ReplaceTaskSolutions(ctx context.Context, req *contentv1.ReplaceTaskSolutionsRequest) (*contentv1.ReplaceTaskSolutionsResponse, error) {
+	inputs := make([]catalogmodel.Solution, 0, len(req.GetSolutions()))
+	for _, item := range req.GetSolutions() {
+		inputs = append(inputs, catalogmodel.Solution{
+			ID:           item.GetId(),
+			Language:     optionalString(item.Language),
+			SolutionText: item.GetSolutionText(),
+			Explanation:  optionalString(item.Explanation),
+			Complexity:   optionalString(item.Complexity),
+			IsPrimary:    item.GetIsPrimary(),
+		})
+	}
+	solutions, err := i.service.ReplaceTaskSolutions(ctx, req.GetTaskId(), inputs)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	out := make([]*contentv1.TaskSolution, 0, len(solutions))
+	for idx := range solutions {
+		out = append(out, toProtoSolution(&solutions[idx]))
+	}
+	return &contentv1.ReplaceTaskSolutionsResponse{Solutions: out}, nil
+}
+
 // UpsertInterviewTemplate creates or updates an interview template (admin).
 func (i *Implementation) UpsertInterviewTemplate(ctx context.Context, req *contentv1.UpsertInterviewTemplateRequest) (*contentv1.UpsertInterviewTemplateResponse, error) {
 	passingScore := int(req.GetPassingScore())

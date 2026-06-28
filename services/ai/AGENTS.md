@@ -105,10 +105,18 @@ make start | gen-proto | test | lint | build
 | CONTENT_GRPC_ADDR | `127.0.0.1:9091` |
 | BILLING_GRPC_ADDR | optional |
 | INTERNAL_API_TOKEN | required |
-| LLM_CHAIN_ORDER | provider fallback order |
+| LLM_CHAIN_ORDER | free chain fallback if `LLM_FREE_CHAIN_ORDER` empty |
+| LLM_FREE_CHAIN_ORDER | free users (`groq,cloudflare,openrouter`) |
+| LLM_PAID_CHAIN_ORDER | pro users (`deepseek,groq`) |
+| GROQ_API_KEY | free-tier Groq |
+| GROQ_PAID_API_KEY | paid Groq (Developer tier) |
+| DEEPSEEK_API_KEY | paid chain only |
+| OPENROUTER_PAID_API_KEY | optional paid fallback |
 | LLM_CAVEMAN | `lite` (`off` / `full`) |
 | EVAL_MAX_RETRIES | `3` |
+| EVAL_WORKER_CONCURRENCY | `1` (raise to 10–30 with paid API) |
 | WORKER_POLL_INTERVAL | `2s` |
+| DEEPSEEK_API_KEY | optional; paid judge primary — see `deploy/RUNBOOK.md` |
 
 Build: `GOWORK=off`
 

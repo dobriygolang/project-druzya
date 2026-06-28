@@ -47,6 +47,20 @@ func toProtoTask(t contentadapter.Task) (*adminv1.Task, error) {
 	return out, nil
 }
 
+func toProtoSolution(s contentadapter.Solution) *adminv1.TaskSolution {
+	return &adminv1.TaskSolution{
+		Id:           s.ID,
+		TaskId:       s.TaskID,
+		Language:     s.Language,
+		SolutionText: s.SolutionText,
+		Explanation:  s.Explanation,
+		Complexity:   s.Complexity,
+		IsPrimary:    s.IsPrimary,
+		CreatedAt:    timestamppb.New(s.CreatedAt),
+		UpdatedAt:    timestamppb.New(s.UpdatedAt),
+	}
+}
+
 func rawJSONToStruct(raw []byte) (*structpb.Struct, error) {
 	if len(raw) == 0 {
 		return &structpb.Struct{}, nil

@@ -21,7 +21,17 @@ type BuildConfig struct {
 	OpenRouter          string
 	Cloudflare          string
 	CloudflareAccountID string
+	DeepSeek            string
 	Caveman             string
+}
+
+// TierBuildConfig wires separate free vs paid provider keys and chain order.
+type TierBuildConfig struct {
+	FreeChainOrder string
+	PaidChainOrder string
+	Free           BuildConfig
+	Paid           BuildConfig
+	Caveman        string
 }
 
 // BuildChainOpts configures llmchain assembly.
@@ -32,11 +42,82 @@ type BuildChainOpts struct {
 	RuntimeCtx          context.Context
 }
 
-// BuildChain assembles the provider chain from environment config.
+// BuildTierChainOpts configures free/pro chain assembly for eval routing.
+type BuildTierChainOpts struct {
+	Config              TierBuildConfig
+	Log                 *slog.Logger
+	RuntimeConfigSource llmchain.ConfigSource
+	RuntimeCtx          context.Context
+}
+
+// BuildChain assembles a single provider chain from environment config.
 // Returns nil chain when no API keys are configured (caller should use fake client).
 func BuildChain(opts BuildChainOpts) (llmchain.ChatClient, *llmchain.Chain, error) {
-	cfg := opts.Config
+	return buildOneChain(opts.Config, chainBuildOpts{
+		log:                 opts.Log,
+		runtimeConfigSource: opts.RuntimeConfigSource,
+		runtimeCtx:          opts.RuntimeCtx,
+	})
+}
+
+// BuildTierChains assembles free and paid chains plus a TierRouter for eval.
+// Free chain is required; paid chain is optional (pro users fall back to free).
+func BuildTierChains(opts BuildTierChainOpts) (llmchain.ChatClient, *llmchain.TierChains, error) {
 	log := opts.Log
+	if log == nil {
+		log = slog.Default()
+	}
+	cfg := opts.Config
+
+	freeCfg := cfg.Free
+	freeCfg.Order = firstNonEmpty(freeCfg.Order, cfg.FreeChainOrder, "groq,cloudflare,openrouter")
+	freeCfg.Caveman = cfg.Caveman
+
+	freeClient, freeChain, err := buildOneChain(freeCfg, chainBuildOpts{
+		log:                 log,
+		runtimeConfigSource: opts.RuntimeConfigSource,
+		runtimeCtx:          opts.RuntimeCtx,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	if freeChain == nil {
+		return nil, nil, fmt.Errorf("free LLM chain requires at least one API key")
+	}
+
+	paidCfg := cfg.Paid
+	paidCfg.Order = firstNonEmpty(paidCfg.Order, cfg.PaidChainOrder, "deepseek,groq")
+	paidCfg.Caveman = cfg.Caveman
+
+	var proClient llmchain.ChatClient
+	var proChain *llmchain.Chain
+	proClient, proChain, err = buildOneChain(paidCfg, chainBuildOpts{
+		log:                 log,
+		runtimeConfigSource: opts.RuntimeConfigSource,
+		runtimeCtx:          opts.RuntimeCtx,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	if proChain == nil {
+		log.Warn("paid LLM chain not configured; pro users will use free chain")
+		proClient = freeClient
+		proChain = freeChain
+	}
+
+	chains := &llmchain.TierChains{Free: freeChain, Pro: proChain}
+	router := llmchain.NewTierRouter(freeClient, proClient, chains, log)
+	return router, chains, nil
+}
+
+type chainBuildOpts struct {
+	log                 *slog.Logger
+	runtimeConfigSource llmchain.ConfigSource
+	runtimeCtx          context.Context
+}
+
+func buildOneChain(cfg BuildConfig, opts chainBuildOpts) (llmchain.ChatClient, *llmchain.Chain, error) {
+	log := opts.log
 	if log == nil {
 		log = slog.Default()
 	}
@@ -67,6 +148,7 @@ func BuildChain(opts BuildChainOpts) (llmchain.ChatClient, *llmchain.Chain, erro
 	addKeys("google", cfg.Google, llmchain.NewGoogleDriver)
 	addKeys("mistral", cfg.Mistral, llmchain.NewMistralDriver)
 	addKeys("openrouter", cfg.OpenRouter, llmchain.NewOpenRouterDriver)
+	addKeys("deepseek", cfg.DeepSeek, llmchain.NewDeepSeekDriver)
 	addKeys("openai", cfg.OpenAI, llmchain.NewOpenAIProviderDriver)
 
 	if cfg.Cloudflare != "" && cfg.CloudflareAccountID != "" {
@@ -89,13 +171,23 @@ func BuildChain(opts BuildChainOpts) (llmchain.ChatClient, *llmchain.Chain, erro
 	chain, err := llmchain.NewChain(drivers, llmchain.Options{
 		Order:               parseChainOrder(cfg.Order),
 		Log:                 log,
-		RuntimeConfigSource: opts.RuntimeConfigSource,
-		RuntimeCtx:          opts.RuntimeCtx,
+		RuntimeConfigSource: opts.runtimeConfigSource,
+		RuntimeCtx:          opts.runtimeCtx,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("build llm chain: %w", err)
 	}
-	return caveman.New(chain, caveman.ParseLevel(cfg.Caveman), log), chain, nil
+	client := caveman.New(chain, caveman.ParseLevel(cfg.Caveman), log)
+	return client, chain, nil
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }
 
 func parseChainOrder(raw string) []llmchain.Provider {

@@ -14,7 +14,7 @@ func (i *Implementation) ListPlans(ctx context.Context, _ *billingv1.ListPlansRe
 	}
 	out := &billingv1.ListPlansResponse{Plans: make([]*billingv1.PlanCatalog, 0, len(items))}
 	for _, item := range items {
-		out.Plans = append(out.Plans, toProtoPlanCatalog(item))
+		out.Plans = append(out.Plans, toProtoPlanCatalog(item, i.checkout.URLsFor(item.Slug)))
 	}
 	return out, nil
 }

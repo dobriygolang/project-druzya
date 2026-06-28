@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { AdminSelect } from '@/components/admin/FormControls'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import {
@@ -20,6 +21,13 @@ export default function AdminBillingPage() {
     queryKey: ['admin-plans'],
     queryFn: listAdminPlans,
   })
+
+  useEffect(() => {
+    const first = plansQ.data?.plans?.[0]?.slug
+    if (first && grantPlanSlug === 'pro_monthly' && !plansQ.data?.plans.some((p) => p.slug === 'pro_monthly')) {
+      setGrantPlanSlug(first)
+    }
+  }, [plansQ.data, grantPlanSlug])
 
   const entitlementsQ = useQuery({
     queryKey: ['admin-entitlements', lookupUserId],
@@ -110,14 +118,15 @@ export default function AdminBillingPage() {
               onChange={(e) => setGrantUserId(e.target.value)}
             />
           </label>
-          <label className="block text-sm">
-            Plan slug
-            <input
-              className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
-              value={grantPlanSlug}
-              onChange={(e) => setGrantPlanSlug(e.target.value)}
-            />
-          </label>
+          <AdminSelect
+            label="Plan"
+            value={grantPlanSlug}
+            onChange={setGrantPlanSlug}
+            options={(plansQ.data?.plans ?? []).map((plan) => ({
+              value: plan.slug,
+              label: `${plan.name} (${plan.slug})`,
+            }))}
+          />
           <Button
             loading={grantM.isPending}
             disabled={!grantUserId || !grantPlanSlug}

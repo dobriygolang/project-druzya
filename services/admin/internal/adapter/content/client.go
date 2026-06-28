@@ -32,6 +32,35 @@ type Task struct {
 	UpdatedAt        time.Time
 }
 
+// Solution is a reference solution for AI evaluation.
+type Solution struct {
+	ID           string
+	TaskID       string
+	Language     *string
+	SolutionText string
+	Explanation  *string
+	Complexity   *string
+	IsPrimary    bool
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// TaskDetail is a task with reference solutions.
+type TaskDetail struct {
+	Task      Task
+	Solutions []Solution
+}
+
+// SolutionInput writes a reference solution.
+type SolutionInput struct {
+	ID           *string
+	Language     *string
+	SolutionText string
+	Explanation  *string
+	Complexity   *string
+	IsPrimary    bool
+}
+
 // ArticleVideo is an external video linked from an article.
 type ArticleVideo struct {
 	Title           string
@@ -214,8 +243,9 @@ type Client interface {
 	ListCompanies(ctx context.Context, filter ListCompaniesFilter) ([]Company, error)
 	UpsertCompany(ctx context.Context, input UpsertCompanyInput) (*Company, error)
 	ListTasks(ctx context.Context, filter ListTasksFilter) ([]Task, error)
-	GetTask(ctx context.Context, id, slug string) (*Task, error)
+	GetTask(ctx context.Context, id, slug string) (*TaskDetail, error)
 	UpsertTask(ctx context.Context, input UpsertTaskInput) (*Task, error)
+	ReplaceTaskSolutions(ctx context.Context, taskID string, solutions []SolutionInput) ([]Solution, error)
 	ListArticles(ctx context.Context, filter ListArticlesFilter) ([]Article, error)
 	GetArticle(ctx context.Context, id, slug string) (*Article, error)
 	UpsertArticle(ctx context.Context, input UpsertArticleInput) (*Article, error)

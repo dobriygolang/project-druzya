@@ -14,6 +14,9 @@ export function getBillingPlans() {
 }
 
 function normalizePlanCatalog(raw: PlanCatalogEntry): PlanCatalogEntry {
+  const record = raw as PlanCatalogEntry & { checkoutUrl?: string; telegramCheckoutUrl?: string }
+  const checkoutUrl = record.checkout_url ?? record.checkoutUrl
+  const telegramCheckoutUrl = record.telegram_checkout_url ?? record.telegramCheckoutUrl
   return {
     slug: raw.slug,
     name: raw.name,
@@ -22,5 +25,7 @@ function normalizePlanCatalog(raw: PlanCatalogEntry): PlanCatalogEntry {
     highlights: asArray(raw.highlights),
     features: raw.features ?? {},
     limits: raw.limits ?? {},
+    checkout_url: checkoutUrl,
+    telegram_checkout_url: telegramCheckoutUrl,
   }
 }

@@ -36,6 +36,8 @@ export const enumsRu = {
     system_design: 'System design',
     behavioral: 'Behavioral',
     sql: 'SQL',
+    debugging: 'Отладка',
+    architecture: 'Архитектура',
     unspecified: 'Задача',
   },
   skillDomain: {
@@ -93,5 +95,7 @@ export const enumsRu = {
     system_design: 'System design',
     behavioral: 'Behavioral',
     sql: 'SQL',
+    debugging: 'Отладка',
+    architecture: 'Архитектура',
   },
 } as const

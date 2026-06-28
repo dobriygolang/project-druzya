@@ -109,6 +109,7 @@ func (j *LLMJudge) pass1WaterScore(ctx context.Context, in Input, userAnswer str
 	start := time.Now()
 	resp, err := j.chain.Chat(ctx, llmchain.Request{
 		Task:        llmchain.TaskReasoning,
+		UserTier:    in.UserTier,
 		Temperature: 0,
 		MaxTokens:   200,
 		JSONMode:    true,
@@ -152,6 +153,7 @@ func (j *LLMJudge) pass2Correctness(ctx context.Context, in Input, userAnswer st
 	start := time.Now()
 	resp, err := j.chain.Chat(ctx, llmchain.Request{
 		Task:        llmchain.TaskCodeReview,
+		UserTier:    in.UserTier,
 		Temperature: 0.2,
 		MaxTokens:   800,
 		JSONMode:    true,
@@ -315,6 +317,7 @@ func InputFromBundle(
 	criteria []contentadapter.RubricCriterion,
 	solutions []contentadapter.Solution,
 	answerText, code, language string,
+	userTier llmchain.SubscriptionPlan,
 ) Input {
 	in := Input{
 		TaskType:        taskType,
@@ -323,6 +326,7 @@ func InputFromBundle(
 		AnswerText:      answerText,
 		Code:            code,
 		Language:        language,
+		UserTier:        userTier,
 	}
 	for _, c := range criteria {
 		desc := ""

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
 )
 
@@ -18,6 +19,7 @@ type Input struct {
 	Code            string
 	Language        string
 	OffTopicPenalty float64
+	UserTier        llmchain.SubscriptionPlan
 }
 
 // Criterion is one rubric row for the judge prompt.

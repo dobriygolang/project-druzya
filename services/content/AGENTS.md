@@ -102,7 +102,7 @@ Rubrics resolve by active rubric for `task.type` (no per-task override table).
 | ListArticles | `GET /v1/articles` (`query`, `skill_key`) |
 | GetArticle | `GET /v1/articles/{id}` or `/by-slug/{slug}` — includes `linked_tasks`, `related_articles` |
 
-Admin writes (gRPC `ContentAdminService`, `x-admin-token`): UpsertArticle, GetArticleForAdmin, …
+Admin writes (gRPC `ContentAdminService`, `x-admin-token`): UpsertTask, GetTaskForAdmin (task + solutions), ReplaceTaskSolutions, UpsertArticle, GetArticleForAdmin, …
 
 ## Commands
 

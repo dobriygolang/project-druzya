@@ -25,8 +25,9 @@ type Service interface {
 	ListCompanies(ctx context.Context, filter contentadapter.ListCompaniesFilter) ([]contentadapter.Company, error)
 	UpsertCompany(ctx context.Context, input contentadapter.UpsertCompanyInput) (*contentadapter.Company, error)
 	ListTasks(ctx context.Context, filter contentadapter.ListTasksFilter) ([]contentadapter.Task, error)
-	GetTask(ctx context.Context, id, slug string) (*contentadapter.Task, error)
+	GetTask(ctx context.Context, id, slug string) (*contentadapter.TaskDetail, error)
 	UpsertTask(ctx context.Context, input contentadapter.UpsertTaskInput) (*contentadapter.Task, error)
+	ReplaceTaskSolutions(ctx context.Context, taskID string, solutions []contentadapter.SolutionInput) ([]contentadapter.Solution, error)
 	ListArticles(ctx context.Context, filter contentadapter.ListArticlesFilter) ([]contentadapter.Article, error)
 	GetArticle(ctx context.Context, id, slug string) (*contentadapter.Article, error)
 	UpsertArticle(ctx context.Context, input contentadapter.UpsertArticleInput) (*contentadapter.Article, error)
@@ -88,18 +89,41 @@ func (s *adminService) ListTasks(ctx context.Context, filter contentadapter.List
 	return s.content.ListTasks(ctx, filter)
 }
 
-func (s *adminService) GetTask(ctx context.Context, id, slug string) (*contentadapter.Task, error) {
+func (s *adminService) GetTask(ctx context.Context, id, slug string) (*contentadapter.TaskDetail, error) {
 	if id == "" && slug == "" {
 		return nil, fmt.Errorf("id or slug required: %w", ErrInvalidInput)
 	}
-	task, err := s.content.GetTask(ctx, id, slug)
+	detail, err := s.content.GetTask(ctx, id, slug)
 	if err != nil {
 		if errors.Is(err, contentadapter.ErrNotFound) {
 			return nil, ErrNotFound
 		}
 		return nil, err
 	}
-	return task, nil
+	return detail, nil
+}
+
+func (s *adminService) ReplaceTaskSolutions(
+	ctx context.Context,
+	taskID string,
+	solutions []contentadapter.SolutionInput,
+) ([]contentadapter.Solution, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("task_id required: %w", ErrInvalidInput)
+	}
+	for _, sol := range solutions {
+		if sol.SolutionText == "" {
+			return nil, fmt.Errorf("solution_text required: %w", ErrInvalidInput)
+		}
+	}
+	out, err := s.content.ReplaceTaskSolutions(ctx, taskID, solutions)
+	if err != nil {
+		if errors.Is(err, contentadapter.ErrNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return out, nil
 }
 
 func (s *adminService) UpsertTask(ctx context.Context, input contentadapter.UpsertTaskInput) (*contentadapter.Task, error) {

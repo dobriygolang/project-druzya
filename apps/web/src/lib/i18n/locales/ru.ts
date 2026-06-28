@@ -339,11 +339,18 @@ export const ru = {
     title: 'Free хватит, чтобы попробовать',
     subtitle:
       'Лимиты ниже — из billing service (plan entitlements). Твой текущий расход виден после входа.',
-    checkoutNote: 'Checkout — см. блок ниже',
     startFree: 'Начать бесплатно',
     loginForPro: 'Войти для Pro',
+    subscribeWeb: 'Оформить через Tribute',
+    subscribeTelegram: 'Оплатить в Telegram',
+    linkTelegramFirst: 'Сначала привяжи Telegram — оплата сопоставляется по Telegram ID.',
+    linkTelegramAction: 'Привязать при входе',
+    checkoutUnavailable: 'Checkout ещё не настроен.',
+    returnAfterPay: 'После оплаты вернись на {{url}} — план обновится автоматически.',
+    paymentPending: 'Ждём подтверждение оплаты… Страница обновляется сама.',
+    paymentSuccess: 'Pro активен — спасибо за подписку!',
     paymentNote:
-      'Оплата Pro через Tribute — UI checkout в разработке. Сейчас Pro выдаётся через admin grant на backend.',
+      'Pro оплачивается через Tribute. Перед checkout привяжи Telegram; webhook активирует план в течение минуты.',
     learnMorePro: 'Подробнее о Pro',
   },
   welcome: {

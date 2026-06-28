@@ -27,7 +27,13 @@ func RunAPI(ctx context.Context, a *App) error {
 		billingapi.AuthInterceptor(a.JWT),
 		billingapi.InternalAuthInterceptor(a.Config.InternalAPIToken),
 	))
-	billingapi.NewRegisteredImplementation(grpcSrv, a.Service, billingrepo.New(a.Postgres), a.Postgres)
+	billingapi.NewRegisteredImplementation(
+		grpcSrv,
+		a.Service,
+		billingrepo.New(a.Postgres),
+		a.Postgres,
+		billingapi.CheckoutFromConfig(a.Config.TributeCheckout),
+	)
 	reflection.Register(grpcSrv)
 
 	go func() {

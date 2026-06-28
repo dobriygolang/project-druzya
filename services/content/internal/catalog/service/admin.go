@@ -11,6 +11,8 @@ import (
 type AdminService interface {
 	UpsertCompany(ctx context.Context, c catalogmodel.Company) (*catalogmodel.Company, error)
 	UpsertTask(ctx context.Context, t catalogmodel.Task) (*catalogmodel.Task, error)
+	GetTaskForAdmin(ctx context.Context, id, slug string) (*catalogmodel.Task, []catalogmodel.Solution, error)
+	ReplaceTaskSolutions(ctx context.Context, taskID string, solutions []catalogmodel.Solution) ([]catalogmodel.Solution, error)
 	UpsertInterviewTemplate(ctx context.Context, t catalogmodel.InterviewTemplate) (*catalogmodel.InterviewTemplate, error)
 	UpsertTemplateSection(ctx context.Context, s catalogmodel.TemplateSection) (*catalogmodel.TemplateSection, error)
 	ReplaceTemplateStructure(ctx context.Context, templateID string, sections []catalogmodel.TemplateSectionInput) (*catalogmodel.InterviewTemplateDetail, error)
@@ -32,6 +34,52 @@ func (s *catalogService) UpsertTask(ctx context.Context, t catalogmodel.Task) (*
 		t.Status = "draft"
 	}
 	return s.repo.UpsertTask(ctx, t)
+}
+
+func (s *catalogService) GetTaskForAdmin(ctx context.Context, id, slug string) (*catalogmodel.Task, []catalogmodel.Solution, error) {
+	var (
+		task *catalogmodel.Task
+		err  error
+	)
+	switch {
+	case id != "":
+		task, err = s.repo.GetTaskByID(ctx, id)
+	case slug != "":
+		task, err = s.repo.GetTaskBySlug(ctx, slug)
+	default:
+		return nil, nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	solutions, err := s.repo.ListTaskSolutions(ctx, task.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return task, solutions, nil
+}
+
+func (s *catalogService) ReplaceTaskSolutions(
+	ctx context.Context,
+	taskID string,
+	solutions []catalogmodel.Solution,
+) ([]catalogmodel.Solution, error) {
+	if taskID == "" {
+		return nil, fmt.Errorf("task_id is required: %w", ErrInvalidArgument)
+	}
+	primaryCount := 0
+	for _, sol := range solutions {
+		if sol.SolutionText == "" {
+			return nil, fmt.Errorf("solution_text is required: %w", ErrInvalidArgument)
+		}
+		if sol.IsPrimary {
+			primaryCount++
+		}
+	}
+	if primaryCount > 1 {
+		return nil, fmt.Errorf("at most one primary solution allowed: %w", ErrInvalidArgument)
+	}
+	return s.repo.ReplaceTaskSolutions(ctx, taskID, solutions)
 }
 
 func (s *catalogService) UpsertInterviewTemplate(ctx context.Context, t catalogmodel.InterviewTemplate) (*catalogmodel.InterviewTemplate, error) {

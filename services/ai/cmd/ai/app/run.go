@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	billingadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing"
 	billinggrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing/grpc"
@@ -36,7 +37,7 @@ type App struct {
 	Repo            *evaluationrepo.Repository
 	LLMConfigRepo   *llmconfigrepo.Repository
 	LLMConfig       llmconfigservice.Service
-	LLMChain        *llmchain.Chain
+	LLMChains        *llmchain.TierChains
 	Service         evaluationservice.Service
 }
 
@@ -85,19 +86,29 @@ func New(ctx context.Context) (*App, error) {
 
 	repo := evaluationrepo.New(pg)
 	llmConfigRepo := llmconfigrepo.New(pg)
+	freeChainOrder := coalesceEnv(cfg.LLMFreeChainOrder, cfg.LLMChainOrder)
 
-	chatClient, chain, err := llmadapter.BuildChain(llmadapter.BuildChainOpts{
-		Config: llmadapter.BuildConfig{
-			Order:               cfg.LLMChainOrder,
-			OpenAI:              cfg.OpenAIAPIKey,
-			Groq:                cfg.GroqAPIKey,
-			Cerebras:            cfg.CerebrasAPIKey,
-			Google:              cfg.GoogleAPIKey,
-			Mistral:             cfg.MistralAPIKey,
-			OpenRouter:          cfg.OpenRouterAPIKey,
-			Cloudflare:          cfg.CloudflareAPIKey,
-			CloudflareAccountID: cfg.CloudflareAccountID,
-			Caveman:             cfg.LLMCavemanLevel,
+	chatClient, tierChains, err := llmadapter.BuildTierChains(llmadapter.BuildTierChainOpts{
+		Config: llmadapter.TierBuildConfig{
+			FreeChainOrder: freeChainOrder,
+			PaidChainOrder: cfg.LLMPaidChainOrder,
+			Caveman:        cfg.LLMCavemanLevel,
+			Free: llmadapter.BuildConfig{
+				Order:               freeChainOrder,
+				Groq:                cfg.GroqAPIKey,
+				Cerebras:            cfg.CerebrasAPIKey,
+				Google:              cfg.GoogleAPIKey,
+				Mistral:             cfg.MistralAPIKey,
+				OpenRouter:          cfg.OpenRouterAPIKey,
+				Cloudflare:          cfg.CloudflareAPIKey,
+				CloudflareAccountID: cfg.CloudflareAccountID,
+			},
+			Paid: llmadapter.BuildConfig{
+				Order:      cfg.LLMPaidChainOrder,
+				Groq:       cfg.GroqPaidAPIKey,
+				DeepSeek:   cfg.DeepSeekAPIKey,
+				OpenRouter: cfg.OpenRouterPaidAPIKey,
+			},
 		},
 		Log:                 slog.Default(),
 		RuntimeConfigSource: llmConfigRepo,
@@ -123,7 +134,7 @@ func New(ctx context.Context) (*App, error) {
 
 	llmConfigSvc := llmconfigservice.New(llmconfigservice.Deps{
 		Repo:     llmConfigRepo,
-		Reloader: chain,
+		Reloader: tierChains,
 	})
 	svc := evaluationservice.New(evaluationservice.Deps{
 		Repo:       repo,
@@ -147,7 +158,7 @@ func New(ctx context.Context) (*App, error) {
 		Repo:            repo,
 		LLMConfigRepo:   llmConfigRepo,
 		LLMConfig:       llmConfigSvc,
-		LLMChain:        chain,
+		LLMChains:       tierChains,
 		Service:         svc,
 	}, nil
 }
@@ -169,4 +180,13 @@ func (a *App) Close() {
 	if a.Logger != nil {
 		_ = a.Logger.Sync()
 	}
+}
+
+func coalesceEnv(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
 }

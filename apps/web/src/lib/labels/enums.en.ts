@@ -44,6 +44,8 @@ export const enumsEn: EnumMessages = {
     system_design: 'System design',
     behavioral: 'Behavioral',
     sql: 'SQL',
+    debugging: 'Debugging',
+    architecture: 'Architecture',
     unspecified: 'Task',
   },
   skillDomain: {
@@ -101,5 +103,7 @@ export const enumsEn: EnumMessages = {
     system_design: 'System design',
     behavioral: 'Behavioral',
     sql: 'SQL',
+    debugging: 'Debugging',
+    architecture: 'Architecture',
   },
 }

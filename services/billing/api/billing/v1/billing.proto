@@ -74,6 +74,9 @@ message PlanCatalog {
   repeated string highlights = 5;
   map<string, bool> features = 6;
   map<string, PlanEntitlementSpec> limits = 7;
+  // Tribute checkout links from Creator dashboard (web + Telegram).
+  optional string checkout_url = 8;
+  optional string telegram_checkout_url = 9;
 }
 
 message ListPlansResponse {

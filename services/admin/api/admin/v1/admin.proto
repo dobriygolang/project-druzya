@@ -56,6 +56,13 @@ service AdminService {
     };
   }
 
+  rpc ReplaceTaskSolutions(ReplaceTaskSolutionsRequest) returns (ReplaceTaskSolutionsResponse) {
+    option (google.api.http) = {
+      post: "/v1/admin/content/tasks/{task_id}/solutions"
+      body: "*"
+    };
+  }
+
   rpc ListArticles(ListArticlesRequest) returns (ListArticlesResponse) {
     option (google.api.http) = {
       get: "/v1/admin/content/articles"
@@ -203,6 +210,27 @@ message Task {
   google.protobuf.Timestamp updated_at = 11;
 }
 
+message TaskSolution {
+  string id = 1;
+  string task_id = 2;
+  optional string language = 3;
+  string solution_text = 4;
+  optional string explanation = 5;
+  optional string complexity = 6;
+  bool is_primary = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message TaskSolutionInput {
+  optional string id = 1;
+  optional string language = 2;
+  string solution_text = 3;
+  optional string explanation = 4;
+  optional string complexity = 5;
+  bool is_primary = 6;
+}
+
 message ListCompaniesRequest {
   bool active_only = 1;
   int32 limit = 2;
@@ -244,6 +272,7 @@ message GetTaskRequest {
 
 message GetTaskResponse {
   Task task = 1;
+  repeated TaskSolution solutions = 2;
 }
 
 message UpsertTaskRequest {
@@ -260,6 +289,15 @@ message UpsertTaskRequest {
 
 message UpsertTaskResponse {
   Task task = 1;
+}
+
+message ReplaceTaskSolutionsRequest {
+  string task_id = 1;
+  repeated TaskSolutionInput solutions = 2;
+}
+
+message ReplaceTaskSolutionsResponse {
+  repeated TaskSolution solutions = 1;
 }
 
 enum ArticleStatus {

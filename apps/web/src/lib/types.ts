@@ -335,6 +335,8 @@ export interface PlanCatalogEntry {
   highlights: string[]
   features?: Record<string, boolean>
   limits?: Record<string, PlanEntitlementSpec>
+  checkout_url?: string
+  telegram_checkout_url?: string
 }
 
 export interface TestResult {

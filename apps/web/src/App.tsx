@@ -24,6 +24,7 @@ const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'))
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
 const AdminCompaniesPage = lazy(() => import('@/pages/admin/AdminCompaniesPage'))
 const AdminTasksPage = lazy(() => import('@/pages/admin/AdminTasksPage'))
+const AdminTaskEditPage = lazy(() => import('@/pages/admin/AdminTaskEditPage'))
 const AdminArticlesPage = lazy(() => import('@/pages/admin/AdminArticlesPage'))
 const AdminArticleEditPage = lazy(() => import('@/pages/admin/AdminArticleEditPage'))
 const AdminTemplatesPage = lazy(() => import('@/pages/admin/AdminTemplatesPage'))
@@ -157,6 +158,8 @@ export default function App() {
               <Route index element={<AdminHomePage />} />
               <Route path="companies" element={<AdminCompaniesPage />} />
               <Route path="tasks" element={<AdminTasksPage />} />
+              <Route path="tasks/new/edit" element={<AdminTaskEditPage />} />
+              <Route path="tasks/:slug/edit" element={<AdminTaskEditPage />} />
               <Route path="articles" element={<AdminArticlesPage />} />
               <Route path="articles/new" element={<AdminArticleEditPage />} />
               <Route path="articles/:slug/edit" element={<AdminArticleEditPage />} />

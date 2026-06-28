@@ -91,4 +91,22 @@ func (c *Client) ReleaseUsage(ctx context.Context, userID, key, idempotencyKey s
 	return err
 }
 
+// GetEntitlements returns the user's effective plan for LLM tier routing.
+func (c *Client) GetEntitlements(ctx context.Context, userID string) (*billingadapter.Entitlements, error) {
+	if userID == "" {
+		return nil, fmt.Errorf("user_id required")
+	}
+	resp, err := c.client.GetEntitlements(c.authCtx(ctx), &billingv1.GetEntitlementsRequest{
+		UserId: userID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	ent := resp.GetEntitlements()
+	if ent == nil {
+		return &billingadapter.Entitlements{}, nil
+	}
+	return &billingadapter.Entitlements{PlanSlug: ent.GetPlanSlug()}, nil
+}
+
 var _ billingadapter.Client = (*Client)(nil)

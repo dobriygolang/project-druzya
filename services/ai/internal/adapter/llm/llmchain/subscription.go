@@ -9,4 +9,17 @@ const (
 	SubscriptionPlanPro  SubscriptionPlan = "pro"
 )
 
-func (p SubscriptionPlan) String() string { return string(p) }
+// SubscriptionPlanFromBilling maps billing plan_slug to LLM user tier.
+func SubscriptionPlanFromBilling(planSlug string) SubscriptionPlan {
+	return SubscriptionPlanFromSlug(planSlug)
+}
+
+// SubscriptionPlanFromSlug maps billing plan_slug to llmchain tier.
+func SubscriptionPlanFromSlug(planSlug string) SubscriptionPlan {
+	switch planSlug {
+	case "pro_monthly", "pro", "max":
+		return SubscriptionPlanPro
+	default:
+		return SubscriptionPlanFree
+	}
+}

@@ -15,8 +15,8 @@ func Register(s *grpc.Server, impl *Implementation) {
 }
 
 // NewRegisteredImplementation constructs handlers and registers them on the gRPC server.
-func NewRegisteredImplementation(s *grpc.Server, svc evaluationservice.Service, llmConfig llmconfigservice.Service, chain *llmchain.Chain, pg *evaluationrepo.Pool) *Implementation {
-	impl := NewImplementation(svc, llmConfig, chain, pg)
+func NewRegisteredImplementation(s *grpc.Server, svc evaluationservice.Service, llmConfig llmconfigservice.Service, chains *llmchain.TierChains, pg *evaluationrepo.Pool) *Implementation {
+	impl := NewImplementation(svc, llmConfig, chains, pg)
 	Register(s, impl)
 	return impl
 }

@@ -32,6 +32,7 @@ type Store interface {
 	UpsertArticle(ctx context.Context, a catalogmodel.Article) (*catalogmodel.Article, error)
 	UpsertCompany(ctx context.Context, c catalogmodel.Company) (*catalogmodel.Company, error)
 	UpsertTask(ctx context.Context, t catalogmodel.Task) (*catalogmodel.Task, error)
+	ReplaceTaskSolutions(ctx context.Context, taskID string, solutions []catalogmodel.Solution) ([]catalogmodel.Solution, error)
 	UpsertInterviewTemplate(ctx context.Context, t catalogmodel.InterviewTemplate) (*catalogmodel.InterviewTemplate, error)
 	UpsertTemplateSection(ctx context.Context, s catalogmodel.TemplateSection) (*catalogmodel.TemplateSection, error)
 	ReplaceTemplateStructure(ctx context.Context, templateID string, sections []catalogmodel.TemplateSectionInput) (*catalogmodel.InterviewTemplateDetail, error)

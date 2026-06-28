@@ -13,11 +13,11 @@ type Implementation struct {
 	aiv1.UnimplementedAiInternalServiceServer
 	service   evaluationservice.Service
 	llmConfig llmconfigservice.Service
-	chain     *llmchain.Chain
+	chains    *llmchain.TierChains
 	pg        *evaluationrepo.Pool
 }
 
 // NewImplementation constructs the gRPC transport layer.
-func NewImplementation(svc evaluationservice.Service, llmConfig llmconfigservice.Service, chain *llmchain.Chain, pg *evaluationrepo.Pool) *Implementation {
-	return &Implementation{service: svc, llmConfig: llmConfig, chain: chain, pg: pg}
+func NewImplementation(svc evaluationservice.Service, llmConfig llmconfigservice.Service, chains *llmchain.TierChains, pg *evaluationrepo.Pool) *Implementation {
+	return &Implementation{service: svc, llmConfig: llmConfig, chains: chains, pg: pg}
 }

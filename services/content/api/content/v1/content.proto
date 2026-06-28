@@ -87,6 +87,8 @@ service ContentService {
 service ContentAdminService {
   rpc UpsertCompany(UpsertCompanyRequest) returns (UpsertCompanyResponse);
   rpc UpsertTask(UpsertTaskRequest) returns (UpsertTaskResponse);
+  rpc GetTaskForAdmin(GetTaskForAdminRequest) returns (GetTaskForAdminResponse);
+  rpc ReplaceTaskSolutions(ReplaceTaskSolutionsRequest) returns (ReplaceTaskSolutionsResponse);
   rpc UpsertInterviewTemplate(UpsertInterviewTemplateRequest) returns (UpsertInterviewTemplateResponse);
   rpc UpsertTemplateSection(UpsertTemplateSectionRequest) returns (UpsertTemplateSectionResponse);
   rpc ReplaceTemplateStructure(ReplaceTemplateStructureRequest) returns (ReplaceTemplateStructureResponse);
@@ -370,6 +372,34 @@ message UpsertTaskRequest {
 
 message UpsertTaskResponse {
   Task task = 1;
+}
+
+message GetTaskForAdminRequest {
+  string id = 1;
+  string slug = 2;
+}
+
+message GetTaskForAdminResponse {
+  Task task = 1;
+  repeated TaskSolution solutions = 2;
+}
+
+message TaskSolutionInput {
+  optional string id = 1;
+  optional string language = 2;
+  string solution_text = 3;
+  optional string explanation = 4;
+  optional string complexity = 5;
+  bool is_primary = 6;
+}
+
+message ReplaceTaskSolutionsRequest {
+  string task_id = 1;
+  repeated TaskSolutionInput solutions = 2;
+}
+
+message ReplaceTaskSolutionsResponse {
+  repeated TaskSolution solutions = 1;
 }
 
 message UpsertInterviewTemplateRequest {

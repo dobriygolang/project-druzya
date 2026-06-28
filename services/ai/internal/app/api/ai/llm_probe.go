@@ -9,14 +9,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// ProbeLLMProviders live-probes each provider in the configured chain order.
+// ProbeLLMProviders live-probes free and pro provider chains.
 func (i *Implementation) ProbeLLMProviders(ctx context.Context, _ *aiv1.ProbeLLMProvidersRequest) (*aiv1.ProbeLLMProvidersResponse, error) {
-	if i.chain == nil {
+	if i.chains == nil || i.chains.Free == nil {
 		return nil, status.Error(codes.FailedPrecondition, "llm chain not configured")
 	}
 	probeCtx, cancel := context.WithTimeout(ctx, llmchain.ProbeTimeout)
 	defer cancel()
-	results := i.chain.ProbeChainProviders(probeCtx)
+	results := i.chains.ProbeAll(probeCtx)
 	out := &aiv1.ProbeLLMProvidersResponse{
 		Probes: make([]*aiv1.LLMProviderProbe, 0, len(results)),
 	}

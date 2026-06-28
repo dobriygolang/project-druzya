@@ -122,8 +122,8 @@ func (c *Client) ListTasks(ctx context.Context, filter contentadapter.ListTasksF
 	return out, nil
 }
 
-func (c *Client) GetTask(ctx context.Context, id, slug string) (*contentadapter.Task, error) {
-	resp, err := c.read.GetTask(ctx, &contentv1.GetTaskRequest{Id: id, Slug: slug})
+func (c *Client) GetTask(ctx context.Context, id, slug string) (*contentadapter.TaskDetail, error) {
+	resp, err := c.admin.GetTaskForAdmin(c.adminCtx(ctx), &contentv1.GetTaskForAdminRequest{Id: id, Slug: slug})
 	if err != nil {
 		return nil, contentadapter.MapGRPCError(err)
 	}
@@ -131,7 +131,44 @@ func (c *Client) GetTask(ctx context.Context, id, slug string) (*contentadapter.
 	if err != nil {
 		return nil, err
 	}
-	return &task, nil
+	solutions := make([]contentadapter.Solution, 0, len(resp.GetSolutions()))
+	for _, item := range resp.GetSolutions() {
+		solutions = append(solutions, fromProtoSolution(item))
+	}
+	return &contentadapter.TaskDetail{Task: task, Solutions: solutions}, nil
+}
+
+func (c *Client) ReplaceTaskSolutions(
+	ctx context.Context,
+	taskID string,
+	solutions []contentadapter.SolutionInput,
+) ([]contentadapter.Solution, error) {
+	inputs := make([]*contentv1.TaskSolutionInput, 0, len(solutions))
+	for _, item := range solutions {
+		req := &contentv1.TaskSolutionInput{
+			SolutionText: item.SolutionText,
+			IsPrimary:    item.IsPrimary,
+			Language:     item.Language,
+			Explanation:  item.Explanation,
+			Complexity:   item.Complexity,
+		}
+		if item.ID != nil {
+			req.Id = item.ID
+		}
+		inputs = append(inputs, req)
+	}
+	resp, err := c.admin.ReplaceTaskSolutions(c.adminCtx(ctx), &contentv1.ReplaceTaskSolutionsRequest{
+		TaskId:    taskID,
+		Solutions: inputs,
+	})
+	if err != nil {
+		return nil, contentadapter.MapGRPCError(err)
+	}
+	out := make([]contentadapter.Solution, 0, len(resp.GetSolutions()))
+	for _, item := range resp.GetSolutions() {
+		out = append(out, fromProtoSolution(item))
+	}
+	return out, nil
 }
 
 func (c *Client) UpsertTask(ctx context.Context, input contentadapter.UpsertTaskInput) (*contentadapter.Task, error) {
@@ -544,6 +581,23 @@ func fromProtoTask(t *contentv1.Task) (contentadapter.Task, error) {
 		CreatedAt:        t.GetCreatedAt().AsTime(),
 		UpdatedAt:        t.GetUpdatedAt().AsTime(),
 	}, nil
+}
+
+func fromProtoSolution(s *contentv1.TaskSolution) contentadapter.Solution {
+	if s == nil {
+		return contentadapter.Solution{}
+	}
+	return contentadapter.Solution{
+		ID:           s.GetId(),
+		TaskID:       s.GetTaskId(),
+		Language:     s.Language,
+		SolutionText: s.GetSolutionText(),
+		Explanation:  s.Explanation,
+		Complexity:   s.Complexity,
+		IsPrimary:    s.GetIsPrimary(),
+		CreatedAt:    s.GetCreatedAt().AsTime(),
+		UpdatedAt:    s.GetUpdatedAt().AsTime(),
+	}
 }
 
 func fromProtoTemplate(t *contentv1.InterviewTemplate) contentadapter.InterviewTemplate {

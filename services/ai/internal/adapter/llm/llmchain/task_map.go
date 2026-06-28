@@ -62,12 +62,9 @@ var DefaultTaskModelMap = TaskModelMap{
 		ProviderOpenRouter: "qwen/qwen3-coder:free",
 	},
 	TaskReasoning: {
-		// Explicit reasoning task — primary slot держит reasoning-native
-		// модель. Groq gpt-oss-120b — native chain-of-thought, 131k ctx,
-		// ~500 tok/s. OpenRouter deepseek-r1:free — 671B reasoning model
-		// (on-par с o1), strongest free fallback. Cerebras/Mistral 70B
-		// остаются как fast latency-safe fallback если оба reasoning-pool'а
-		// просели по квоте.
+		// Paid: DeepSeek R1 first when DEEPSEEK_API_KEY + chain order puts
+		// deepseek ahead of groq. Free fallbacks unchanged below.
+		ProviderDeepSeek:   "deepseek-reasoner",
 		ProviderGroq:       "openai/gpt-oss-120b",
 		ProviderCerebras:   "zai-glm-4.7",
 		ProviderMistral:    "mistral-small-latest",
@@ -88,21 +85,14 @@ var DefaultTaskModelMap = TaskModelMap{
 		// where that matters most.
 	},
 	TaskCodeReview: {
-		// Mock submit review — balance depth and latency (beta: prefer fast
-		// feedback; gpt-oss-120b reasoning often exceeds 30s on prod).
+		ProviderDeepSeek:   "deepseek-chat",
 		ProviderGroq:       "llama-3.3-70b-versatile",
 		ProviderCerebras:   "zai-glm-4.7",
 		ProviderMistral:    "mistral-small-latest",
 		ProviderOpenRouter: "deepseek/deepseek-r1:free",
 	},
 	TaskSysDesignCritique: {
-		// Long-context architectural diagrams + spec — reasoning-heavy
-		// judgement (тут просто 70B давало много vague-критики). Primary
-		// слот вынесен на gpt-oss-120b (Groq, 131k ctx + native reasoning)
-		// — у архитектурного судьи depth > speed. OpenRouter deepseek-r1
-		// — strongest free fallback. Cerebras/Mistral 70B — latency-safe
-		// fallback. Paid-юзеры получают расширенный context через
-		// Paid pro users may get stronger models via druz9/pro ModelOverride.
+		ProviderDeepSeek:   "deepseek-reasoner",
 		ProviderGroq:       "openai/gpt-oss-120b",
 		ProviderCerebras:   "zai-glm-4.7",
 		ProviderMistral:    "mistral-small-latest",
@@ -112,9 +102,10 @@ var DefaultTaskModelMap = TaskModelMap{
 		// Cheapest-available on each provider — summarize runs in the
 		// background, token cost trumps quality and the summary may be
 		// re-read by a stronger model downstream.
-		ProviderGroq:     "llama-3.1-8b-instant",
-		ProviderCerebras: "zai-glm-4.7",
-		ProviderMistral:  "mistral-small-latest",
+		ProviderGroq:       "llama-3.1-8b-instant",
+		ProviderCerebras:   "zai-glm-4.7",
+		ProviderMistral:    "mistral-small-latest",
+		ProviderOpenRouter: "openai/gpt-oss-120b:free",
 	},
 	TaskDailyPlanSynthesis: {
 		// Hone Today-план: нужен reasoning + строгий JSON-выход (3-4
@@ -213,13 +204,7 @@ var DefaultTaskModelMap = TaskModelMap{
 		ProviderOpenRouter: "openai/gpt-oss-120b:free",
 	},
 	TaskMLEngMock: {
-		// ML engineering mock — math depth + ml-system-design. Reasoning-
-		// специализированная primary (gpt-oss-120b на Groq) — раньше
-		// llama-3.3-70b плохо обнаруживала math-ошибки в derivations
-		// (gradient calc / loss function sketch). deepseek-r1:free —
-		// strongest reasoning fallback. Cerebras/Mistral 70B — latency-
-		// safe fallback. Это interactive mock (multi-turn pushback), но
-		// quality > latency для math judgment.
+		ProviderDeepSeek:   "deepseek-reasoner",
 		ProviderGroq:       "openai/gpt-oss-120b",
 		ProviderCerebras:   "zai-glm-4.7",
 		ProviderMistral:    "mistral-small-latest",
@@ -399,12 +384,7 @@ var DefaultTaskModelMap = TaskModelMap{
 		ProviderOpenRouter: "openai/gpt-oss-120b:free",
 	},
 	TaskCheckpointGrade: {
-		// 5-question quiz grading с rubric — ≥70% unlock'ает следующий
-		// step. False-pass дорог (юзер идёт в гору без базы, fail'ит
-		// dependent topic'ах через 2-3 step'а). Primary — reasoning-
-		// специализированная gpt-oss-120b (Groq) для аккуратного chain-
-		// of-thought на ответ vs rubric. deepseek-r1:free — top reasoning
-		// fallback. Cerebras/Mistral 70B — latency-safe fallback.
+		ProviderDeepSeek:   "deepseek-reasoner",
 		ProviderGroq:       "openai/gpt-oss-120b",
 		ProviderCerebras:   "zai-glm-4.7",
 		ProviderMistral:    "mistral-small-latest",
@@ -461,12 +441,28 @@ func init() {
 		if inner[ProviderCloudflare] == "" {
 			inner[ProviderCloudflare] = cloudflareModelForTask(task)
 		}
+		if inner[ProviderOpenRouter] == "" {
+			inner[ProviderOpenRouter] = openrouterModelForTask(task)
+		}
 	}
 }
 
 func googleModelForTask(task Task) string {
-	// gemini-2.0-flash-lite often returns zero quota on free keys (2026-Q2).
+	// Google AI Studio free tier via OpenAI-compatible endpoint
+	// (generativelanguage.googleapis.com/v1beta/openai/...).
+	// gemini-2.0-flash — рабочая free-модель; 429 = quota/RPM, не bad key.
 	return "gemini-2.0-flash"
+}
+
+func openrouterModelForTask(task Task) string {
+	switch task {
+	case TaskCopilotStream:
+		return "qwen/qwen3-coder:free"
+	case TaskReasoning, TaskCodeReview, TaskSysDesignCritique, TaskCheckpointGrade, TaskMLEngMock:
+		return "deepseek/deepseek-r1:free"
+	default:
+		return "openai/gpt-oss-120b:free"
+	}
 }
 
 func cloudflareModelForTask(task Task) string {

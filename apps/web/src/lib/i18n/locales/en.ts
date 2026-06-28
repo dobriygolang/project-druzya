@@ -338,11 +338,18 @@ export const en: Messages = {
     title: 'Free is enough to try it',
     subtitle:
       'Limits below come from billing service (plan entitlements). Your usage appears after sign-in.',
-    checkoutNote: 'Checkout — see section below',
     startFree: 'Start for free',
     loginForPro: 'Sign in for Pro',
+    subscribeWeb: 'Subscribe via Tribute',
+    subscribeTelegram: 'Pay in Telegram',
+    linkTelegramFirst: 'Link Telegram to your account first — payment is matched by Telegram ID.',
+    linkTelegramAction: 'Link in login',
+    checkoutUnavailable: 'Checkout is not configured yet.',
+    returnAfterPay: 'After payment, return to {{url}} to refresh your plan.',
+    paymentPending: 'Waiting for payment confirmation… This page refreshes automatically.',
+    paymentSuccess: 'Pro is active — thanks for subscribing!',
     paymentNote:
-      'Pro payment via Tribute — checkout UI in development. Pro is currently granted via admin grant on the backend.',
+      'Pro is billed via Tribute. Link Telegram before checkout; the webhook activates your plan within a minute.',
     learnMorePro: 'Learn about Pro',
   },
   welcome: {

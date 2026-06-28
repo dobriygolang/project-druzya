@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { CheckboxMultiSelect, TaskTypeSelect } from '@/components/admin/FormControls'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { inputClassName, labelClassName } from '@/lib/admin/options'
 import {
   getAdminInterviewTemplateDetail,
   listAdminTasks,
@@ -17,7 +19,7 @@ type SectionDraft = {
   description: string
   position: number
   passing_score: string
-  task_ids: string
+  task_ids: string[]
 }
 
 function sectionToDraft(sec: AdminTemplateSection, index: number): SectionDraft {
@@ -27,7 +29,7 @@ function sectionToDraft(sec: AdminTemplateSection, index: number): SectionDraft 
     description: sec.description ?? '',
     position: sec.position || index + 1,
     passing_score: sec.passing_score != null ? String(sec.passing_score) : '',
-    task_ids: sec.task_ids.join(', '),
+    task_ids: sec.task_ids,
   }
 }
 
@@ -45,6 +47,11 @@ export default function AdminTemplateDetailPage() {
     queryKey: ['admin-tasks-for-template'],
     queryFn: () => listAdminTasks({ limit: 200, status: 'published' }),
   })
+
+  const taskOptions = (tasksQ.data?.tasks ?? []).map((t) => ({
+    value: t.id,
+    label: `${t.title} (${t.slug})`,
+  }))
 
   const [title, setTitle] = useState('')
   const [slug, setSlug] = useState('')
@@ -93,10 +100,7 @@ export default function AdminTemplateDetailPage() {
           description: sec.description || undefined,
           position: sec.position || idx + 1,
           passing_score: sec.passing_score ? Number(sec.passing_score) : undefined,
-          task_ids: sec.task_ids
-            .split(',')
-            .map((s) => s.trim())
-            .filter(Boolean),
+          task_ids: sec.task_ids,
         })),
       ),
     onSuccess: () => {
@@ -113,7 +117,7 @@ export default function AdminTemplateDetailPage() {
         description: '',
         position: prev.length + 1,
         passing_score: '',
-        task_ids: '',
+        task_ids: [],
       },
     ])
   }
@@ -141,41 +145,29 @@ export default function AdminTemplateDetailPage() {
 
       <Card elevation="e1" className="space-y-3 p-4">
         <h2 className="font-medium">Template metadata</h2>
-        <label className="block text-sm">
+        <label className={labelClassName}>
           Slug
-          <input
-            className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-          />
+          <input className={inputClassName} value={slug} onChange={(e) => setSlug(e.target.value)} />
         </label>
-        <label className="block text-sm">
+        <label className={labelClassName}>
           Title
-          <input
-            className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-          />
+          <input className={inputClassName} value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
-        <label className="block text-sm">
+        <label className={labelClassName}>
           Target role
-          <input
-            className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
-            value={targetRole}
-            onChange={(e) => setTargetRole(e.target.value)}
-          />
+          <input className={inputClassName} value={targetRole} onChange={(e) => setTargetRole(e.target.value)} />
         </label>
-        <label className="block text-sm">
+        <label className={labelClassName}>
           Description
           <textarea
-            className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
+            className={inputClassName}
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
         </label>
         <div className="flex flex-wrap gap-4">
-          <label className="block text-sm">
+          <label className={labelClassName}>
             Passing score
             <input
               className="mt-1 w-24 rounded border border-border bg-surface-1 px-3 py-2 text-sm"
@@ -201,31 +193,22 @@ export default function AdminTemplateDetailPage() {
           </Button>
         </div>
 
-        {tasksQ.data?.tasks?.length ? (
-          <p className="text-xs text-text-muted">
-            Published tasks available: {tasksQ.data.tasks.map((t) => `${t.title} (${t.id})`).join(' · ')}
-          </p>
-        ) : null}
-
         {sections.map((sec, idx) => (
           <div key={idx} className="space-y-2 rounded border border-border p-3">
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="block text-sm">
-                Type
-                <input
-                  className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
-                  value={sec.section_type}
-                  onChange={(e) =>
-                    setSections((prev) =>
-                      prev.map((item, i) => (i === idx ? { ...item, section_type: e.target.value } : item)),
-                    )
-                  }
-                />
-              </label>
-              <label className="block text-sm">
+              <TaskTypeSelect
+                label="Section type"
+                value={sec.section_type}
+                onChange={(value) =>
+                  setSections((prev) =>
+                    prev.map((item, i) => (i === idx ? { ...item, section_type: value } : item)),
+                  )
+                }
+              />
+              <label className={labelClassName}>
                 Position
                 <input
-                  className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
+                  className={inputClassName}
                   value={sec.position}
                   onChange={(e) =>
                     setSections((prev) =>
@@ -237,10 +220,10 @@ export default function AdminTemplateDetailPage() {
                 />
               </label>
             </div>
-            <label className="block text-sm">
+            <label className={labelClassName}>
               Title
               <input
-                className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm"
+                className={inputClassName}
                 value={sec.title}
                 onChange={(e) =>
                   setSections((prev) =>
@@ -249,18 +232,17 @@ export default function AdminTemplateDetailPage() {
                 }
               />
             </label>
-            <label className="block text-sm">
-              Task IDs (comma-separated)
-              <input
-                className="mt-1 w-full rounded border border-border bg-surface-1 px-3 py-2 text-sm font-mono"
-                value={sec.task_ids}
-                onChange={(e) =>
-                  setSections((prev) =>
-                    prev.map((item, i) => (i === idx ? { ...item, task_ids: e.target.value } : item)),
-                  )
-                }
-              />
-            </label>
+            <CheckboxMultiSelect
+              label="Tasks in this section"
+              options={taskOptions}
+              selected={sec.task_ids}
+              emptyHint="No published tasks — publish tasks first."
+              onChange={(task_ids) =>
+                setSections((prev) =>
+                  prev.map((item, i) => (i === idx ? { ...item, task_ids } : item)),
+                )
+              }
+            />
           </div>
         ))}
 

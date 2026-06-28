@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Link, useSearchParams } from 'react-router-dom'
 import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { brand } from '@/lib/brand/tokens'
 import { readAccessToken } from '@/lib/apiClient'
 import { getBillingMe, getBillingPlans } from '@/lib/api/billing'
+import { getMe } from '@/lib/api/auth'
 import {
   formatPlanName,
   sortLimitEntries,
@@ -15,14 +17,24 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { PageContent } from '@/components/PageContent'
 import { formatApiError } from '@/lib/apiClient'
 import { useI18n } from '@/lib/i18n'
+import type { PlanCatalogEntry } from '@/lib/types'
 
 export default function PricingPage() {
   const { t } = useI18n()
   const { entitlementLabel, formatLimitUsage } = useBillingLabels()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const queryClient = useQueryClient()
   const isAuthed = !!readAccessToken()
+  const paidReturn = searchParams.get('paid') === '1'
+
   const billingQ = useQuery({
     queryKey: ['billing-me'],
     queryFn: getBillingMe,
+    enabled: isAuthed,
+  })
+  const meQ = useQuery({
+    queryKey: ['me'],
+    queryFn: getMe,
     enabled: isAuthed,
   })
   const plansQ = useQuery({
@@ -30,6 +42,31 @@ export default function PricingPage() {
     queryFn: getBillingPlans,
     staleTime: 5 * 60_000,
   })
+
+  const isProActive = billingQ.data?.plan_slug != null && billingQ.data.plan_slug !== 'free'
+
+  useEffect(() => {
+    if (!paidReturn || !isAuthed) return
+    let attempts = 0
+    const id = window.setInterval(() => {
+      attempts += 1
+      void queryClient.invalidateQueries({ queryKey: ['billing-me'] })
+      if (attempts >= 15) window.clearInterval(id)
+    }, 2000)
+    return () => window.clearInterval(id)
+  }, [paidReturn, isAuthed, queryClient])
+
+  useEffect(() => {
+    if (!paidReturn || !isProActive) return
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete('paid')
+        return next
+      },
+      { replace: true },
+    )
+  }, [paidReturn, isProActive, setSearchParams])
 
   return (
     <PublicPageShell>
@@ -43,6 +80,18 @@ export default function PricingPage() {
             {t('pricing.subtitle')}
           </p>
         </header>
+
+        {paidReturn && isAuthed ? (
+          <div
+            className="rounded-xl border px-4 py-3 text-center text-sm"
+            style={{
+              borderColor: isProActive ? brand.hairStrong : brand.hair,
+              backgroundColor: isProActive ? 'rgba(76,179,92,0.08)' : undefined,
+            }}
+          >
+            {isProActive ? t('pricing.paymentSuccess') : t('pricing.paymentPending')}
+          </div>
+        ) : null}
 
         {isAuthed && billingQ.isLoading ? (
           <p className="text-center text-sm text-text-muted">{t('billing.loading')}</p>
@@ -106,15 +155,13 @@ export default function PricingPage() {
                     </li>
                   ))}
                 </ul>
-                {!isAuthed ? (
-                  <Link to="/login?next=/pricing" className="mt-6 block">
-                    <Button variant={plan.highlight ? 'primary' : 'ghost'} className="w-full">
-                      {plan.slug === 'free' ? t('pricing.startFree') : t('pricing.loginForPro')}
-                    </Button>
-                  </Link>
-                ) : plan.slug !== 'free' && !isCurrent ? (
-                  <p className="mt-6 text-center text-xs text-text-muted">{t('pricing.checkoutNote')}</p>
-                ) : null}
+                <PlanCheckoutActions
+                  plan={plan}
+                  isAuthed={isAuthed}
+                  isCurrent={isCurrent}
+                  hasTelegram={!!meQ.data?.telegram_id}
+                  meLoading={meQ.isLoading}
+                />
               </article>
             )
           })}
@@ -130,6 +177,79 @@ export default function PricingPage() {
         </section>
       </PageContent>
     </PublicPageShell>
+  )
+}
+
+function PlanCheckoutActions({
+  plan,
+  isAuthed,
+  isCurrent,
+  hasTelegram,
+  meLoading,
+}: {
+  plan: PlanCatalogEntry
+  isAuthed: boolean
+  isCurrent: boolean
+  hasTelegram: boolean
+  meLoading: boolean
+}) {
+  const { t } = useI18n()
+  const returnUrl = `${window.location.origin}/pricing?paid=1`
+
+  if (!isAuthed) {
+    return (
+      <Link to="/login?next=/pricing" className="mt-6 block">
+        <Button variant={plan.highlight ? 'primary' : 'ghost'} className="w-full">
+          {plan.slug === 'free' ? t('pricing.startFree') : t('pricing.loginForPro')}
+        </Button>
+      </Link>
+    )
+  }
+
+  if (plan.slug === 'free' || isCurrent) {
+    return null
+  }
+
+  const webUrl = plan.checkout_url?.trim()
+  const tgUrl = plan.telegram_checkout_url?.trim()
+  const hasCheckout = !!(webUrl || tgUrl)
+
+  if (!hasCheckout) {
+    return <p className="mt-6 text-center text-xs text-text-muted">{t('pricing.checkoutUnavailable')}</p>
+  }
+
+  if (meLoading) {
+    return <p className="mt-6 text-center text-xs text-text-muted">{t('common.loading')}</p>
+  }
+
+  return (
+    <div className="mt-6 space-y-3">
+      {!hasTelegram ? (
+        <p className="text-center text-xs text-text-secondary">
+          {t('pricing.linkTelegramFirst')}{' '}
+          <Link to="/login" className="underline underline-offset-2 hover:text-text-primary">
+            {t('pricing.linkTelegramAction')}
+          </Link>
+        </p>
+      ) : null}
+      {webUrl ? (
+        <a href={webUrl} target="_blank" rel="noopener noreferrer" className="block">
+          <Button variant="primary" className="w-full" disabled={!hasTelegram}>
+            {t('pricing.subscribeWeb')}
+          </Button>
+        </a>
+      ) : null}
+      {tgUrl ? (
+        <a href={tgUrl} target="_blank" rel="noopener noreferrer" className="block">
+          <Button variant="ghost" className="w-full" disabled={!hasTelegram}>
+            {t('pricing.subscribeTelegram')}
+          </Button>
+        </a>
+      ) : null}
+      <p className="text-center text-[11px] text-text-muted">
+        {t('pricing.returnAfterPay', { url: returnUrl })}
+      </p>
+    </div>
   )
 }
 
