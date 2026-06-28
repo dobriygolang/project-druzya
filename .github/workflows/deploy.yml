@@ -153,11 +153,7 @@ jobs:
               echo "Extracting pre-generated pkg/api from CI..."
               tar xzf generated-api.tgz
               rm -f generated-api.tgz
-              if ! verify_pkg_api "$REPO_DIR"; then
-                echo "pkg/api incomplete after extract — regenerating on server..."
-                bash "$REPO_DIR/deploy/scripts/gen-all-proto.sh"
-                verify_pkg_api "$REPO_DIR"
-              fi
+              verify_pkg_api "$REPO_DIR"
             else
               echo "ERROR: missing generated-api.tgz — CI upload step failed"
               exit 1

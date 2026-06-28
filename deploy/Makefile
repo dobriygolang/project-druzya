@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose -f docker-compose.prod.yml --env-file .env
 
-.PHONY: help keys build web-build up down logs migrate ps monitoring backup prune deploy smoke
+.PHONY: help keys build web-build up down logs migrate ps monitoring backup prune ensure-pkg-api deploy smoke
 
 help: ## Show deploy commands
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -44,7 +44,12 @@ backup: ## Dump all Postgres databases (requires pg_dump + .env)
 prune: ## Remove dangling images and old build cache (safe after deploy)
 	@./scripts/docker-prune.sh
 
-deploy: keys ## Pull-less prod update: build changed images, migrate if needed, up, prune
+ensure-pkg-api: ## Fail fast when pkg/api is missing (manual deploy: run gen-all-proto from repo root)
+	@root=$$(cd .. && pwd); \
+	source scripts/pkg-api-helpers.sh; \
+	verify_pkg_api "$$root"
+
+deploy: keys ensure-pkg-api ## Pull-less prod update: build changed images, migrate if needed, up, prune
 	@CUR=$$(git rev-parse HEAD); \
 	PREV=$$(cat .last-deploy-sha 2>/dev/null || true); \
 	export DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 COMPOSE_PARALLEL_LIMIT=$${COMPOSE_PARALLEL_LIMIT:-6}; \
