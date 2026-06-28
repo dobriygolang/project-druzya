@@ -186,4 +186,15 @@
   .cm-ySelection {
     background-color: rgba(var(--y-r, 255), var(--y-g, 59), var(--y-b, 48), 0.18);
   }
+  /* y-codemirror.next v0.3 — caret labels + selection on dark editor */
+  .always-show-cursor-labels .cm-ySelectionInfo {
+    opacity: 1 !important;
+    transition-delay: 0s !important;
+  }
+  .always-show-cursor-labels .cm-ySelectionCaretDot {
+    transform: scale(1) !important;
+  }
+  .cm-ySelection.cm-ySelection {
+    border-radius: 2px;
+  }
 }

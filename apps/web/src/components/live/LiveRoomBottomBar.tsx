@@ -1,6 +1,8 @@
 import { Minus, Play, Plus } from 'lucide-react'
+import { LiveRoomParticipants } from '@/components/live/LiveRoomParticipants'
 import { LIVE_LANGS } from '@/lib/live/constants'
 import { brand } from '@/lib/brand/tokens'
+import type { CollabPeer } from '@/lib/codemirror/collabPresence'
 import { cn } from '@/lib/cn'
 
 const FONT_MIN = 12
@@ -10,7 +12,7 @@ type Props = {
   language: string
   fontSize: number
   onFontSizeChange: (size: number) => void
-  displayName: string
+  peers: CollabPeer[]
   statusLabel: string
   statusColor: string
   canRun: boolean
@@ -27,7 +29,7 @@ export function LiveRoomBottomBar({
   language,
   fontSize,
   onFontSizeChange,
-  displayName,
+  peers,
   statusLabel,
   statusColor,
   canRun,
@@ -43,10 +45,10 @@ export function LiveRoomBottomBar({
 
   return (
     <footer
-      className="flex h-[48px] shrink-0 items-center justify-between gap-3 border-t bg-surface-1 px-4 sm:px-5"
+      className="flex min-h-[48px] shrink-0 flex-col gap-2 border-t bg-surface-1 px-4 py-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-0"
       style={{ borderColor: brand.hair }}
     >
-      <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
         {canRun ? (
           <button
             type="button"
@@ -124,14 +126,7 @@ export function LiveRoomBottomBar({
         </span>
       </div>
 
-      <div
-        className="max-w-[40vw] truncate rounded-full px-3 py-1 text-[13px] font-medium text-bg sm:max-w-none"
-        style={{ background: brand.ink }}
-        title={displayName}
-      >
-        {displayName}
-        <span className="opacity-60"> (me)</span>
-      </div>
+      <LiveRoomParticipants peers={peers} className="max-w-full sm:max-w-[50%] sm:justify-end" />
     </footer>
   )
 }

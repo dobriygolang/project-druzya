@@ -8,6 +8,7 @@ import {
   wsStatusLabel,
   type CollabCodeEditorHandle,
 } from '@/components/CollabCodeEditor'
+import type { CollabPeer } from '@/lib/codemirror/collabPresence'
 import { LiveNewPage } from '@/components/live/LiveNewPage'
 import { LiveRoomBottomBar } from '@/components/live/LiveRoomBottomBar'
 import { LiveRoomTopBar } from '@/components/live/LiveRoomTopBar'
@@ -60,6 +61,7 @@ export default function CollabRoomPage() {
   const [guestToken, setGuestToken] = useState(() => readGuestToken(roomId))
   const [guestRoom, setGuestRoom] = useState<import('@/lib/api/rooms').CodeRoom | null>(null)
   const [fontSize, setFontSize] = useState(14)
+  const [peers, setPeers] = useState<CollabPeer[]>([])
   const isNew = roomId === 'new'
   const authed = !!readAccessToken()
   const hasSession = authed || !!guestToken
@@ -293,6 +295,7 @@ export default function CollabRoomPage() {
           fontSize={fontSize}
           onRun={canRun ? handleRun : undefined}
           onFormat={isGo && !room.is_frozen ? () => void handleFormat() : undefined}
+          onPeersChange={setPeers}
           onWsStatusChange={setWsStatus}
         />
 
@@ -319,7 +322,7 @@ export default function CollabRoomPage() {
         language={room.language}
         fontSize={fontSize}
         onFontSizeChange={setFontSize}
-        displayName={displayName}
+        peers={peers}
         statusLabel={statusLabel}
         statusColor={statusColor}
         canRun={canRun}

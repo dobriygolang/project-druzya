@@ -7,6 +7,8 @@ import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { cmLanguageExt } from '@/lib/codemirror/langExtension'
 import { editorAssistExtensions } from '@/lib/codemirror/editorAssist'
+import { collabUserColors } from '@/lib/codemirror/collabColors'
+import { peersFromAwareness, type CollabPeer } from '@/lib/codemirror/collabPresence'
 import { b64ToBytes, bytesToB64, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
 import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
 
@@ -27,14 +29,12 @@ type Props = {
   fontSize?: number
   onRun?: () => void
   onFormat?: () => void
+  onPeersChange?: (peers: CollabPeer[]) => void
   onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
 }
 
-function userColor(id: string): string {
-  let hash = 0
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0
-  const hue = Math.abs(hash) % 360
-  return `hsl(${hue} 70% 55%)`
+function isTabActive(): boolean {
+  return document.visibilityState === 'visible' && document.hasFocus()
 }
 
 export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(function CollabCodeEditor(
@@ -49,6 +49,7 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
     fontSize = 14,
     onRun,
     onFormat,
+    onPeersChange,
     onWsStatusChange,
   },
   ref,
@@ -65,8 +66,10 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
   const sendAwarenessRef = useRef<(update: Uint8Array) => void>(() => {})
   const onRunRef = useRef(onRun)
   const onFormatRef = useRef(onFormat)
+  const onPeersChangeRef = useRef(onPeersChange)
   onRunRef.current = onRun
   onFormatRef.current = onFormat
+  onPeersChangeRef.current = onPeersChange
 
   const token = accessToken ?? ''
   const { lastMessage, send, status, reconnect } = useEditorWs(roomId, token || undefined)
@@ -129,10 +132,27 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
     awarenessRef.current = awareness
 
     const label = displayName ?? userId?.slice(0, 8) ?? 'you'
-    awareness.setLocalStateField('user', {
-      name: label,
-      color: userColor(userId ?? roomId),
-    })
+    const colors = collabUserColors(userId ?? roomId)
+    const syncLocalUser = (active = isTabActive()) => {
+      awareness.setLocalStateField('user', {
+        name: label,
+        color: colors.color,
+        colorLight: colors.colorLight,
+        userId: userId ?? roomId,
+        active,
+      })
+    }
+    syncLocalUser()
+
+    const emitPeers = () => {
+      onPeersChangeRef.current?.(peersFromAwareness(awareness))
+    }
+    const onTabActivity = () => syncLocalUser(isTabActive())
+    document.addEventListener('visibilitychange', onTabActivity)
+    window.addEventListener('focus', onTabActivity)
+    window.addEventListener('blur', onTabActivity)
+    awareness.on('change', emitPeers)
+    emitPeers()
 
     let snapshotTimer: number | null = null
     const sendFullSnapshot = () => {
@@ -204,6 +224,11 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
       } catch {
         /* ignore */
       }
+      document.removeEventListener('visibilitychange', onTabActivity)
+      window.removeEventListener('focus', onTabActivity)
+      window.removeEventListener('blur', onTabActivity)
+      awareness.off('change', emitPeers)
+      awareness.setLocalState(null)
       if (snapshotTimer !== null) window.clearTimeout(snapshotTimer)
       ydoc.off('update', onYUpdate)
       awareness.off('update', onAwUpdate)
@@ -243,9 +268,14 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
     const awareness = awarenessRef.current
     if (!awareness) return
     const label = displayName ?? userId?.slice(0, 8) ?? 'you'
+    const colors = collabUserColors(userId ?? roomId)
+    const prev = awareness.getLocalState()?.user as Record<string, unknown> | undefined
     awareness.setLocalStateField('user', {
+      ...prev,
       name: label,
-      color: userColor(userId ?? roomId),
+      color: colors.color,
+      colorLight: colors.colorLight,
+      userId: userId ?? roomId,
     })
   }, [displayName, userId, roomId])
 
