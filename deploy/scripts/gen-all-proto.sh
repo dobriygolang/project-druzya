@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN_DIR="$ROOT/deploy/.proto-bin"
-SERVICES=(identity content interview ai recommendation billing sandbox rooms)
+SERVICES=(identity content interview ai recommendation billing sandbox rooms admin)
 
 # shellcheck source=/dev/null
 source "$ROOT/deploy/scripts/install-proto-tools.sh"
