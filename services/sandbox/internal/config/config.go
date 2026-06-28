@@ -35,6 +35,7 @@ type Config struct {
 	DockerPythonImage  string
 	DockerNodeImage    string
 	DockerWorkRoot     string
+	DockerGoCacheDir   string
 	CORSAllowedOrigins []string
 	AsyncRuns          bool
 	WorkerInterval     time.Duration
@@ -131,6 +132,7 @@ func Load() (*Config, error) {
 		DockerPythonImage:  getEnv("SANDBOX_DOCKER_PYTHON_IMAGE", "python:3.12-alpine"),
 		DockerNodeImage:    getEnv("SANDBOX_DOCKER_NODE_IMAGE", "node:22-alpine"),
 		DockerWorkRoot:     getEnv("SANDBOX_DOCKER_WORK_ROOT", ""),
+		DockerGoCacheDir:   dockerGoCacheDir(getEnv("SANDBOX_DOCKER_WORK_ROOT", ""), getEnv("SANDBOX_DOCKER_GOCACHE_DIR", "")),
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 		AsyncRuns:          asyncRuns,
 		WorkerInterval:     time.Duration(workerIntervalMS) * time.Millisecond,
@@ -149,6 +151,16 @@ func parseAsyncRuns(raw, runnerMode string) (bool, error) {
 	default:
 		return false, fmt.Errorf("invalid SANDBOX_ASYNC_RUNS: %q", raw)
 	}
+}
+
+func dockerGoCacheDir(workRoot, explicit string) string {
+	if explicit != "" {
+		return explicit
+	}
+	if workRoot != "" {
+		return workRoot + "/gocache"
+	}
+	return ""
 }
 
 func getEnv(key, fallback string) string {

@@ -71,6 +71,10 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init runner: %w", err)
 	}
 	if cfg.RunnerMode == "docker" {
+		dockerRunner, ok := codeRunner.(*runner.DockerRunner)
+		if ok {
+			runner.WarmGoCompiler(ctx, log, dockerRunner)
+		}
 		runner.WarmDockerImages(ctx, log,
 			cfg.DockerGoImage,
 			cfg.DockerPythonImage,

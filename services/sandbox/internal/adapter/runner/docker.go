@@ -23,6 +23,8 @@ type DockerRunner struct {
 	// WorkRoot is a host-visible directory for bind mounts when sandbox uses
 	// docker.sock from inside a container (must match a bind-mounted path).
 	WorkRoot string
+	// GoCacheDir is a host-visible persistent Go build cache (optional).
+	GoCacheDir string
 }
 
 func (r *DockerRunner) Name() string { return "docker" }
@@ -71,7 +73,7 @@ func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ str
 	// the docker CLI process is terminated by the context.
 	defer killContainer(containerName)
 
-	args := dockerRunArgs(containerName, image, dir, req.MemoryMB, r.CPUs, cmd...)
+	args := dockerRunArgs(containerName, image, dir, goCacheDirForRun(r, req.Language), req.MemoryMB, r.CPUs, cmd...)
 	command := exec.CommandContext(runCtx, "docker", args...)
 	command.Stdin = strings.NewReader(stdin)
 
@@ -116,7 +118,14 @@ func (r *DockerRunner) runOnce(ctx context.Context, req RunRequest, stdin, _ str
 	return res, nil
 }
 
-func dockerRunArgs(name, image, workDir string, memoryMB int, cpus string, cmd ...string) []string {
+func goCacheDirForRun(r *DockerRunner, language string) string {
+	if !isGoLanguage(language) || r.GoCacheDir == "" {
+		return ""
+	}
+	return r.GoCacheDir
+}
+
+func dockerRunArgs(name, image, workDir, goCacheDir string, memoryMB int, cpus string, cmd ...string) []string {
 	if memoryMB <= 0 {
 		memoryMB = 128
 	}
@@ -124,6 +133,10 @@ func dockerRunArgs(name, image, workDir string, memoryMB int, cpus string, cmd .
 		cpus = "1.0"
 	}
 	mem := fmt.Sprintf("%dm", memoryMB)
+	gocacheEnv := "/work/.gocache"
+	if goCacheDir != "" {
+		gocacheEnv = goCacheDir
+	}
 	args := []string{
 		"run", "--rm", "-i",
 		"--name", name,
@@ -139,11 +152,13 @@ func dockerRunArgs(name, image, workDir string, memoryMB int, cpus string, cmd .
 		"--read-only",
 		"--tmpfs", "/tmp:rw,size=64m,exec",
 		"-e", "HOME=/work",
-		"-e", "GOCACHE=/work/.gocache",
+		"-e", "GOCACHE=" + gocacheEnv,
 		"-v", workDir + ":/work:rw",
-		"-w", "/work",
-		image,
 	}
+	if goCacheDir != "" {
+		args = append(args, "-v", goCacheDir+":"+goCacheDir+":rw")
+	}
+	args = append(args, "-w", "/work", image)
 	return append(args, cmd...)
 }
 

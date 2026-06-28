@@ -49,6 +49,11 @@ docker compose -f docker-compose.prod.yml logs -f interview
 - **Cause:** content not ready or wrong `CONTENT_GRPC_ADDR`
 - **Fix:** `docker compose ps`, check content logs, verify `content:9091` in compose network
 
+### sandbox Go run timeout
+
+- **Cause:** first `go run` in Docker can take ~5s (compile); default timeout was 2s.
+- **Fix:** `SANDBOX_DEFAULT_TIMEOUT_MS=10000`, persistent GOCACHE at `/var/lib/sandbox-work/gocache`, rebuild sandbox (warm-up on start).
+
 ### sandbox Go compile_error: go.mod file not found
 
 - **Cause:** sandbox runs code via host Docker (`/var/run/docker.sock`). Work dirs must live on a **host path** bind-mounted into the sandbox container at the same path (`/var/lib/sandbox-work`).
