@@ -21,7 +21,6 @@ type Config struct {
 	JWTPublicKeyPEM    []byte
 	InterviewGRPCAddr  string
 	ContentGRPCAddr    string
-	AIGRPCAddr         string
 	InternalAPIToken   string
 	WorkerPollInterval time.Duration
 	CORSAllowedOrigins []string
@@ -67,7 +66,6 @@ func Load() (*Config, error) {
 		JWTPublicKeyPEM:    publicKey,
 		InterviewGRPCAddr:  getEnv("INTERVIEW_GRPC_ADDR", "127.0.0.1:9092"),
 		ContentGRPCAddr:    getEnv("CONTENT_GRPC_ADDR", "127.0.0.1:9091"),
-		AIGRPCAddr:         getEnv("AI_GRPC_ADDR", "127.0.0.1:9093"),
 		InternalAPIToken:   internalToken,
 		WorkerPollInterval: workerPoll,
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),

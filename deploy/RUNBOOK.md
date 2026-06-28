@@ -103,19 +103,37 @@ Requires `pg_dump` on host, or run from a postgres client container.
 
 ## Monitoring (optional)
 
+**Self-hosted Grafana (recommended):** see [grafana/README.md](grafana/README.md).
+
 ```bash
 cd deploy
-docker compose -f docker-compose.prod.yml --profile monitoring up -d
+# set GRAFANA_ADMIN_PASSWORD in .env, then:
+docker compose -f docker-compose.prod.yml --profile monitoring up -d prometheus grafana
 ```
 
-- Prometheus: http://server:9099
-- Grafana: http://server:3000 (default admin / see `GRAFANA_ADMIN_PASSWORD`)
+SSH tunnel: `ssh -L 9099:127.0.0.1:9099 root@server` → Prometheus at http://localhost:9099
 
-Useful eval-flow metrics (when monitoring profile enabled):
+**Grafana:** https://grafana.druz9.online (`admin` / `$GRAFANA_ADMIN_PASSWORD`).
+
+DNS: add **A** `grafana.druz9.online` → server IP at your registrar (reg.ru). Then expand TLS:
+
+```bash
+certbot certonly --webroot -w /var/www/html --cert-name druz9.online --expand \
+  -d druz9.online -d app.druz9.online -d api.druz9.online -d grafana.druz9.online \
+  -d druz9.ru -d app.druz9.ru -d api.druz9.ru
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+**Grafana Cloud (optional):**
+
+Useful eval-flow metrics:
 
 - `outbox_lag_seconds{service="ai|recommendation"}` — queue wait before handler
 - `outbox_handler_duration_seconds` — handler latency
+- `llm_calls_total{provider,result}` — LLM provider health
 - Filter logs by `attempt_id` across ai → interview internal RPCs (`x-attempt-id` metadata)
+
+Operator snapshot metrics (users, DB size, LLM chain ping) live in **admin UI** `/admin`, not Prometheus.
 
 ## Rooms horizontal scale
 

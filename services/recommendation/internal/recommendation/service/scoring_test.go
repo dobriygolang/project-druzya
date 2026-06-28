@@ -26,13 +26,13 @@ func TestNormalizeScore(t *testing.T) {
 
 func TestPriorityForScore(t *testing.T) {
 	t.Parallel()
-	if priorityForScore(40) != model.PriorityHigh {
+	if priorityForScore(40) != model.RecommendationPriorityHigh {
 		t.Fatal("score<50 should be high")
 	}
-	if priorityForScore(60) != model.PriorityMedium {
+	if priorityForScore(60) != model.RecommendationPriorityMedium {
 		t.Fatal("50<=score<70 should be medium")
 	}
-	if priorityForScore(80) != model.PriorityLow {
+	if priorityForScore(80) != model.RecommendationPriorityLow {
 		t.Fatal("score>=70 should be low")
 	}
 }

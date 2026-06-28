@@ -1,0 +1,90 @@
+package recommendationapi
+
+import (
+	recommendationmodel "github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
+	recommendationv1 "github.com/sedorofeevd/project-druzya/services/recommendation/pkg/api/recommendation/v1"
+)
+
+func recommendationTypeToProto(t recommendationmodel.RecommendationType) recommendationv1.RecommendationType {
+	switch t {
+	case recommendationmodel.RecommendationTypeImproveSkill:
+		return recommendationv1.RecommendationType_RECOMMENDATION_TYPE_IMPROVE_SKILL
+	case recommendationmodel.RecommendationTypeRewriteAnswer:
+		return recommendationv1.RecommendationType_RECOMMENDATION_TYPE_REWRITE_ANSWER
+	case recommendationmodel.RecommendationTypePracticeSection:
+		return recommendationv1.RecommendationType_RECOMMENDATION_TYPE_PRACTICE_SECTION
+	case recommendationmodel.RecommendationTypeTakeMockInterview:
+		return recommendationv1.RecommendationType_RECOMMENDATION_TYPE_TAKE_MOCK_INTERVIEW
+	default:
+		return recommendationv1.RecommendationType_RECOMMENDATION_TYPE_UNSPECIFIED
+	}
+}
+
+func recommendationPriorityToProto(p recommendationmodel.RecommendationPriority) recommendationv1.RecommendationPriority {
+	switch p {
+	case recommendationmodel.RecommendationPriorityHigh:
+		return recommendationv1.RecommendationPriority_RECOMMENDATION_PRIORITY_HIGH
+	case recommendationmodel.RecommendationPriorityMedium:
+		return recommendationv1.RecommendationPriority_RECOMMENDATION_PRIORITY_MEDIUM
+	case recommendationmodel.RecommendationPriorityLow:
+		return recommendationv1.RecommendationPriority_RECOMMENDATION_PRIORITY_LOW
+	default:
+		return recommendationv1.RecommendationPriority_RECOMMENDATION_PRIORITY_UNSPECIFIED
+	}
+}
+
+func recommendationStatusToProto(s recommendationmodel.RecommendationStatus) recommendationv1.RecommendationStatus {
+	switch s {
+	case recommendationmodel.RecommendationStatusActive:
+		return recommendationv1.RecommendationStatus_RECOMMENDATION_STATUS_ACTIVE
+	case recommendationmodel.RecommendationStatusDismissed:
+		return recommendationv1.RecommendationStatus_RECOMMENDATION_STATUS_DISMISSED
+	case recommendationmodel.RecommendationStatusCompleted:
+		return recommendationv1.RecommendationStatus_RECOMMENDATION_STATUS_COMPLETED
+	default:
+		return recommendationv1.RecommendationStatus_RECOMMENDATION_STATUS_UNSPECIFIED
+	}
+}
+
+func learningPlanItemTypeToProto(t recommendationmodel.LearningPlanItemType) recommendationv1.LearningPlanItemType {
+	switch t {
+	case recommendationmodel.LearningPlanItemTypeRetryTask:
+		return recommendationv1.LearningPlanItemType_LEARNING_PLAN_ITEM_TYPE_RETRY_TASK
+	default:
+		return recommendationv1.LearningPlanItemType_LEARNING_PLAN_ITEM_TYPE_UNSPECIFIED
+	}
+}
+
+func learningPlanItemStatusToProto(s recommendationmodel.LearningPlanItemStatus) recommendationv1.LearningPlanItemStatus {
+	switch s {
+	case recommendationmodel.LearningPlanItemStatusPending:
+		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_PENDING
+	case recommendationmodel.LearningPlanItemStatusInProgress:
+		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_IN_PROGRESS
+	case recommendationmodel.LearningPlanItemStatusCompleted:
+		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_COMPLETED
+	case recommendationmodel.LearningPlanItemStatusDismissed:
+		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_DISMISSED
+	default:
+		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_UNSPECIFIED
+	}
+}
+
+func dailyBriefItemTypeToProto(t recommendationmodel.DailyBriefItemType) recommendationv1.DailyBriefItemType {
+	switch t {
+	case recommendationmodel.DailyBriefItemTypeRetryTask:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_RETRY_TASK
+	case recommendationmodel.DailyBriefItemTypeWeakSkill:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_WEAK_SKILL
+	case recommendationmodel.DailyBriefItemTypeRecommendation:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_RECOMMENDATION
+	case recommendationmodel.DailyBriefItemTypeTakeMock:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_TAKE_MOCK
+	case recommendationmodel.DailyBriefItemTypeStartMock:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_START_MOCK
+	case recommendationmodel.DailyBriefItemTypeReadArticle:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_READ_ARTICLE
+	default:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_UNSPECIFIED
+	}
+}

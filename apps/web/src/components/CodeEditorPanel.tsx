@@ -8,6 +8,7 @@ import { useFormatCode } from '@/hooks/useFormatCode'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
 import { isTerminalRunStatus } from '@/lib/api/sandbox'
 import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
+import { useI18n } from '@/lib/i18n'
 import type { CodeRun } from '@/lib/types'
 
 function isSuccessfulSubmitRun(run: CodeRun | undefined): boolean {
@@ -51,6 +52,7 @@ export function CodeEditorPanel({
   onSubmit,
   submitPending,
 }: CodeEditorPanelProps) {
+  const { t } = useI18n()
   const run = useSandboxRun()
   const fmt = useFormatCode()
   const [fullCheckPending, setFullCheckPending] = useState(false)
@@ -108,22 +110,23 @@ export function CodeEditorPanel({
               running={run.running}
               onRun={() => handleRun('sample')}
               disabled={!code.trim()}
+              title={t('session.editorRunTitle')}
             />
             {isGo ? (
               <LiveCodeToolButton
                 loading={fmt.formatting}
                 onClick={() => void handleFormat()}
-                title="gofmt (⌘⇧F)"
+                title={t('session.editorFmtTitle')}
               >
-                FMT
+                {t('session.editorFmt')}
               </LiveCodeToolButton>
             ) : null}
             <LiveCodeToolButton
               loading={fullCheckPending}
               onClick={() => void handleFullCheck()}
-              title="Полная проверка"
+              title={t('session.editorVerifyTitle')}
             >
-              FULL
+              {t('session.editorVerify')}
             </LiveCodeToolButton>
           </div>
 
@@ -136,6 +139,8 @@ export function CodeEditorPanel({
             running={run.running}
             error={run.runError}
             placement="contained"
+            panelLabel={t('session.editorOutput')}
+            closeTitle={t('session.editorOutputClose')}
           />
         </div>
 
@@ -166,16 +171,16 @@ export function CodeEditorPanel({
             onClick={onSubmit}
             size="sm"
           >
-            Отправить на оценку
+            {t('session.editorSubmit')}
           </Button>
         </div>
       </div>
 
-      {!verifiedSubmitRunId ? (
-        <p className="text-sm text-text-muted">
-          Сначала пройдите полную проверку (FULL) — отправка доступна только после успешного submit-run.
-        </p>
-      ) : null}
+      {verifiedSubmitRunId ? (
+        <p className="text-sm text-text-secondary">{t('session.editorVerifyOk')}</p>
+      ) : (
+        <p className="text-sm text-text-muted">{t('session.editorVerifyHint')}</p>
+      )}
 
       {fmt.formatError ? (
         <p className="text-sm text-danger">{fmt.formatError}</p>
@@ -183,7 +188,7 @@ export function CodeEditorPanel({
 
       {run.activeRun && run.activeRun.test_results.length > 0 ? (
         <Card elevation="e2" padding="md">
-          <p className="mb-3 text-sm font-medium">Тесты</p>
+          <p className="mb-3 text-sm font-medium">{t('session.editorTests')}</p>
           <ul className="space-y-2 font-mono text-xs">
             {run.activeRun.test_results.map((t) => (
               <li key={t.name} className="rounded-lg border border-border bg-surface-2 p-3">

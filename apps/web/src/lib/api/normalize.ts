@@ -1,6 +1,8 @@
 import type {
   BillingMe,
   CodeRun,
+  DailyBrief,
+  DailyBriefItem,
   Dashboard,
   EvaluationResult,
   Progress,
@@ -28,15 +30,43 @@ export function normalizeProgress(raw?: Partial<Progress>): Progress {
   }
 }
 
-export function normalizeDashboard(raw: Dashboard): Dashboard {
+export function normalizeDashboard(raw: Dashboard & { dailyBrief?: DailyBrief }): Dashboard {
+  const briefRaw = raw.daily_brief ?? raw.dailyBrief
   return {
     readiness_score: raw.readiness_score ?? 0,
     pending_retry_count: raw.pending_retry_count ?? 0,
-    profile_summary: raw.profile_summary,
     strengths: asArray(raw.strengths),
     weaknesses: asArray(raw.weaknesses),
     recommendations: asArray(raw.recommendations),
     learning_plan: asArray(raw.learning_plan),
+    daily_brief: briefRaw ? normalizeDailyBrief(briefRaw) : undefined,
+    read_article_slugs: asArray(
+      raw.read_article_slugs ??
+        (raw as Dashboard & { readArticleSlugs?: string[] }).readArticleSlugs,
+    ),
+  }
+}
+
+function normalizeDailyBrief(raw: DailyBrief & { items?: DailyBriefItem[] }): DailyBrief {
+  const items = asArray(raw.items).map((item) => ({
+    type: item.type,
+    title: item.title,
+    description: item.description,
+    action_label: item.action_label ?? (item as DailyBriefItem & { actionLabel?: string }).actionLabel,
+    action_path: item.action_path ?? (item as DailyBriefItem & { actionPath?: string }).actionPath,
+    retry_item_id:
+      item.retry_item_id ?? (item as DailyBriefItem & { retryItemId?: string }).retryItemId,
+    skill_key: item.skill_key ?? (item as DailyBriefItem & { skillKey?: string }).skillKey,
+    secondary_action_label:
+      item.secondary_action_label ??
+      (item as DailyBriefItem & { secondaryActionLabel?: string }).secondaryActionLabel,
+    secondary_action_path:
+      item.secondary_action_path ??
+      (item as DailyBriefItem & { secondaryActionPath?: string }).secondaryActionPath,
+  }))
+  return {
+    readiness_score: raw.readiness_score ?? 0,
+    items,
   }
 }
 

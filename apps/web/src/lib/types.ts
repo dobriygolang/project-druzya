@@ -163,25 +163,133 @@ export interface SkillInsight {
   confidence: number
 }
 
+export type RecommendationType =
+  | 'RECOMMENDATION_TYPE_UNSPECIFIED'
+  | 'RECOMMENDATION_TYPE_IMPROVE_SKILL'
+  | 'RECOMMENDATION_TYPE_REWRITE_ANSWER'
+  | 'RECOMMENDATION_TYPE_PRACTICE_SECTION'
+  | 'RECOMMENDATION_TYPE_TAKE_MOCK_INTERVIEW'
+
+export type RecommendationPriority =
+  | 'RECOMMENDATION_PRIORITY_UNSPECIFIED'
+  | 'RECOMMENDATION_PRIORITY_HIGH'
+  | 'RECOMMENDATION_PRIORITY_MEDIUM'
+  | 'RECOMMENDATION_PRIORITY_LOW'
+
+export type RecommendationStatus =
+  | 'RECOMMENDATION_STATUS_UNSPECIFIED'
+  | 'RECOMMENDATION_STATUS_ACTIVE'
+  | 'RECOMMENDATION_STATUS_DISMISSED'
+  | 'RECOMMENDATION_STATUS_COMPLETED'
+
+export type LearningPlanItemType =
+  | 'LEARNING_PLAN_ITEM_TYPE_UNSPECIFIED'
+  | 'LEARNING_PLAN_ITEM_TYPE_RETRY_TASK'
+
+export type LearningPlanItemStatus =
+  | 'LEARNING_PLAN_ITEM_STATUS_UNSPECIFIED'
+  | 'LEARNING_PLAN_ITEM_STATUS_PENDING'
+  | 'LEARNING_PLAN_ITEM_STATUS_IN_PROGRESS'
+  | 'LEARNING_PLAN_ITEM_STATUS_COMPLETED'
+  | 'LEARNING_PLAN_ITEM_STATUS_DISMISSED'
+
+export type DailyBriefItemType =
+  | 'DAILY_BRIEF_ITEM_TYPE_UNSPECIFIED'
+  | 'DAILY_BRIEF_ITEM_TYPE_RETRY_TASK'
+  | 'DAILY_BRIEF_ITEM_TYPE_WEAK_SKILL'
+  | 'DAILY_BRIEF_ITEM_TYPE_RECOMMENDATION'
+  | 'DAILY_BRIEF_ITEM_TYPE_TAKE_MOCK'
+  | 'DAILY_BRIEF_ITEM_TYPE_START_MOCK'
+  | 'DAILY_BRIEF_ITEM_TYPE_READ_ARTICLE'
+
+export type ArticleStatus =
+  | 'ARTICLE_STATUS_UNSPECIFIED'
+  | 'ARTICLE_STATUS_DRAFT'
+  | 'ARTICLE_STATUS_PUBLISHED'
+  | 'ARTICLE_STATUS_ARCHIVED'
+
+export type ArticleVideoProvider =
+  | 'ARTICLE_VIDEO_PROVIDER_UNSPECIFIED'
+  | 'ARTICLE_VIDEO_PROVIDER_YOUTUBE'
+  | 'ARTICLE_VIDEO_PROVIDER_VIMEO'
+  | 'ARTICLE_VIDEO_PROVIDER_OTHER'
+
+export interface ArticleVideo {
+  title: string
+  url: string
+  provider: ArticleVideoProvider
+  position: number
+  duration_seconds?: number
+}
+
+export interface ArticleTaskLink {
+  task_id: string
+  slug: string
+  title: string
+  type: string
+  difficulty: string
+  position: number
+}
+
+export interface Article {
+  id: string
+  slug: string
+  title: string
+  summary: string
+  body: string
+  status: ArticleStatus
+  reading_minutes?: number
+  skill_keys?: string[]
+  videos?: ArticleVideo[]
+  linked_tasks?: ArticleTaskLink[]
+}
+
+export interface ArticleSummary {
+  id: string
+  slug: string
+  title: string
+  summary: string
+  status: ArticleStatus
+  reading_minutes?: number
+  skill_keys?: string[]
+}
+
 export interface Recommendation {
   id: string
-  type: string
-  priority: string
+  type: RecommendationType
+  priority: RecommendationPriority
   skill_key?: string
   title: string
   description: string
-  status: string
+  status: RecommendationStatus
   created_at?: string
 }
 
 export interface LearningPlanItem {
   id: string
-  type: string
+  type: LearningPlanItemType
   task_id?: string
   skill_key?: string
   title: string
   description?: string
-  status: string
+  status: LearningPlanItemStatus
+}
+
+export interface DailyBriefItem {
+  type: DailyBriefItemType
+  title: string
+  description?: string
+  action_label?: string
+  action_path?: string
+  retry_item_id?: string
+  skill_key?: string
+  secondary_action_label?: string
+  secondary_action_path?: string
+}
+
+export interface DailyBrief {
+  readiness_score: number
+  items: DailyBriefItem[]
 }
 
 export interface Dashboard {
@@ -191,7 +299,8 @@ export interface Dashboard {
   recommendations: Recommendation[]
   learning_plan: LearningPlanItem[]
   pending_retry_count: number
-  profile_summary?: string
+  daily_brief?: DailyBrief
+  read_article_slugs?: string[]
 }
 
 export interface BillingMe {

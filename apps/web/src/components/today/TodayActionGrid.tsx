@@ -3,6 +3,7 @@ import { ArrowRight, Loader2, Target } from 'lucide-react'
 import { SdvgCard } from '@/components/brand/SdvgCard'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
+import { DailyBriefCard } from '@/components/today/DailyBriefCard'
 import { skillLabel, useI18n } from '@/lib/i18n'
 import type { Dashboard } from '@/lib/types'
 
@@ -79,11 +80,7 @@ export function TodayActionGrid({
       </ActionCard>
 
       <ActionCard eyebrow={t('today.actions.briefEyebrow')} title={t('today.actions.briefTitle')}>
-        {dashboard?.profile_summary ? (
-          <p className="text-[13px] leading-relaxed text-text-secondary">{dashboard.profile_summary}</p>
-        ) : (
-          <p className="text-[13px] text-text-muted">{t('today.actions.briefEmpty')}</p>
-        )}
+        <DailyBriefCard brief={dashboard?.daily_brief} />
       </ActionCard>
 
       <ActionCard eyebrow={t('today.actions.focusEyebrow')} title={t('today.actions.focusTitle')}>

@@ -65,6 +65,34 @@ service ContentService {
       get: "/v1/rubrics/{id}"
     };
   }
+
+  rpc ListArticles(ListArticlesRequest) returns (ListArticlesResponse) {
+    option (google.api.http) = {
+      get: "/v1/articles"
+    };
+  }
+
+  rpc GetArticle(GetArticleRequest) returns (GetArticleResponse) {
+    option (google.api.http) = {
+      get: "/v1/articles/{id}"
+      additional_bindings {
+        get: "/v1/articles/by-slug/{slug}"
+      }
+    };
+  }
+}
+
+
+// Internal admin API — no HTTP annotations; protect with x-admin-token.
+service ContentAdminService {
+  rpc UpsertCompany(UpsertCompanyRequest) returns (UpsertCompanyResponse);
+  rpc UpsertTask(UpsertTaskRequest) returns (UpsertTaskResponse);
+  rpc UpsertInterviewTemplate(UpsertInterviewTemplateRequest) returns (UpsertInterviewTemplateResponse);
+  rpc UpsertTemplateSection(UpsertTemplateSectionRequest) returns (UpsertTemplateSectionResponse);
+  rpc ReplaceTemplateStructure(ReplaceTemplateStructureRequest) returns (ReplaceTemplateStructureResponse);
+  rpc UpsertArticle(UpsertArticleRequest) returns (UpsertArticleResponse);
+  rpc GetArticleForAdmin(GetArticleRequest) returns (GetArticleResponse);
+  rpc GetOpsStats(GetOpsStatsRequest) returns (GetOpsStatsResponse);
 }
 
 message Company {
@@ -234,10 +262,86 @@ message GetRubricResponse {
   Rubric rubric = 1;
 }
 
-// Internal admin API — no HTTP annotations; protect with x-admin-token.
-service ContentAdminService {
-  rpc UpsertCompany(UpsertCompanyRequest) returns (UpsertCompanyResponse);
-  rpc UpsertTask(UpsertTaskRequest) returns (UpsertTaskResponse);
+enum ArticleStatus {
+  ARTICLE_STATUS_UNSPECIFIED = 0;
+  ARTICLE_STATUS_DRAFT = 1;
+  ARTICLE_STATUS_PUBLISHED = 2;
+  ARTICLE_STATUS_ARCHIVED = 3;
+}
+
+enum ArticleVideoProvider {
+  ARTICLE_VIDEO_PROVIDER_UNSPECIFIED = 0;
+  ARTICLE_VIDEO_PROVIDER_YOUTUBE = 1;
+  ARTICLE_VIDEO_PROVIDER_VIMEO = 2;
+  ARTICLE_VIDEO_PROVIDER_OTHER = 3;
+}
+
+message ArticleVideo {
+  string title = 1;
+  string url = 2;
+  ArticleVideoProvider provider = 3;
+  int32 position = 4;
+  optional int32 duration_seconds = 5;
+}
+
+message ArticleTaskLink {
+  string task_id = 1;
+  string slug = 2;
+  string title = 3;
+  string type = 4;
+  string difficulty = 5;
+  int32 position = 6;
+}
+
+message ArticleSummary {
+  string id = 1;
+  string slug = 2;
+  string title = 3;
+  string summary = 4;
+  ArticleStatus status = 5;
+  optional int32 reading_minutes = 6;
+  repeated string skill_keys = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message Article {
+  string id = 1;
+  string slug = 2;
+  string title = 3;
+  string summary = 4;
+  string body = 5;
+  ArticleStatus status = 6;
+  optional int32 reading_minutes = 7;
+  repeated string skill_keys = 8;
+  repeated ArticleVideo videos = 11;
+  repeated ArticleTaskLink linked_tasks = 12;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message ListArticlesRequest {
+  optional string skill_key = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+  repeated string skill_keys = 4;
+  bool include_all_statuses = 5;
+  ArticleStatus status = 6;
+  optional string query = 7;
+}
+
+message ListArticlesResponse {
+  repeated ArticleSummary articles = 1;
+}
+
+message GetArticleRequest {
+  string id = 1;
+  string slug = 2;
+}
+
+message GetArticleResponse {
+  Article article = 1;
+  repeated ArticleSummary related_articles = 2;
 }
 
 message UpsertCompanyRequest {
@@ -266,4 +370,83 @@ message UpsertTaskRequest {
 
 message UpsertTaskResponse {
   Task task = 1;
+}
+
+message UpsertInterviewTemplateRequest {
+  optional string id = 1;
+  optional string company_id = 2;
+  string slug = 3;
+  string title = 4;
+  optional string description = 5;
+  optional string target_role = 6;
+  optional string target_level = 7;
+  int32 passing_score = 8;
+  bool is_active = 9;
+}
+
+message UpsertInterviewTemplateResponse {
+  InterviewTemplate template = 1;
+}
+
+message UpsertTemplateSectionRequest {
+  optional string id = 1;
+  string template_id = 2;
+  string section_type = 3;
+  string title = 4;
+  optional string description = 5;
+  int32 position = 6;
+  optional int32 passing_score = 7;
+}
+
+message UpsertTemplateSectionResponse {
+  TemplateSection section = 1;
+}
+
+message TemplateStructureSection {
+  optional string id = 1;
+  string section_type = 2;
+  string title = 3;
+  optional string description = 4;
+  int32 position = 5;
+  optional int32 passing_score = 6;
+  repeated string task_ids = 7;
+}
+
+message ReplaceTemplateStructureRequest {
+  string template_id = 1;
+  repeated TemplateStructureSection sections = 2;
+}
+
+message ReplaceTemplateStructureResponse {
+  InterviewTemplate template = 1;
+  repeated TemplateSection sections = 2;
+}
+
+message UpsertArticleRequest {
+  optional string id = 1;
+  string slug = 2;
+  string title = 3;
+  string summary = 4;
+  string body = 5;
+  ArticleStatus status = 6;
+  optional int32 reading_minutes = 7;
+  repeated string skill_keys = 8;
+  repeated ArticleVideo videos = 9;
+  repeated string task_slugs = 10;
+}
+
+message UpsertArticleResponse {
+  Article article = 1;
+}
+
+message GetOpsStatsRequest {}
+
+message GetOpsStatsResponse {
+  string service_name = 1;
+  string database_name = 2;
+  int64 database_size_bytes = 3;
+  int64 memory_alloc_bytes = 4;
+  int64 memory_sys_bytes = 5;
+  int32 goroutines = 6;
+  double http_rps = 7;
 }

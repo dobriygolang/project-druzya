@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Building2, Users } from 'lucide-react'
 import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
 import { CompanyMockModal } from '@/components/mock/CompanyMockModal'
@@ -29,6 +29,9 @@ import { cn } from '@/lib/cn'
 
 export default function MockHubPage() {
   const { t, locale, formatDate } = useI18n()
+  const [searchParams] = useSearchParams()
+  const soloFocus = searchParams.get('solo')
+  const soloCardRef = useRef<HTMLDivElement>(null)
   const { formatLimitUsage } = useBillingLabels()
   const { sessionModeLabel, formatInterviewError } = useInterviewLabels()
   const navigate = useNavigate()
@@ -150,6 +153,11 @@ export default function MockHubPage() {
 
   const timeLocale = locale === 'en' ? 'en-US' : 'ru-RU'
 
+  useEffect(() => {
+    if (!soloFocus || !soloCardRef.current) return
+    soloCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [soloFocus])
+
   return (
     <PageContent className="gap-8">
       <PageHeader
@@ -192,6 +200,7 @@ export default function MockHubPage() {
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-3">
+        <div ref={soloCardRef} className={soloFocus ? 'rounded-2xl ring-2 ring-brand-green/40' : undefined}>
         <PracticeCard
           eyebrow={t('mock.solo.eyebrow')}
           title={t('mock.solo.title')}
@@ -202,6 +211,7 @@ export default function MockHubPage() {
               <PillButton
                 key={s.id}
                 title={s.hint}
+                active={soloFocus === s.id}
                 loading={startSoloM.isPending && startSoloM.variables === s.mode}
                 disabled={mockQuotaExhausted || startSoloM.isPending}
                 onClick={() => startSoloM.mutate(s.mode)}
@@ -211,6 +221,7 @@ export default function MockHubPage() {
             ))}
           </div>
         </PracticeCard>
+        </div>
 
         <PracticeCard
           eyebrow={t('mock.live.eyebrow')}

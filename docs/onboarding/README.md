@@ -72,8 +72,7 @@ Caddy (prod) / Vite proxy (dev)
 | ai | content | task + rubric bundle |
 | ai | billing | лимит LLM-оценок |
 | recommendation | interview | outbox (4 event types, not `*`), eval summary |
-| recommendation | content | метаданные задачи |
-| recommendation | ai | GenerateProfileSummary (dashboard copy) |
+| recommendation | content | task metadata, KB articles by `skill_key` |
 | sandbox | content | тесты из metadata |
 | sandbox | interview | SubmitAttempt |
 | sandbox | billing | лимит запусков кода |

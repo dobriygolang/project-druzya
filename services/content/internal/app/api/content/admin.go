@@ -85,3 +85,82 @@ func (i *Implementation) UpsertTask(ctx context.Context, req *contentv1.UpsertTa
 	}
 	return &contentv1.UpsertTaskResponse{Task: protoTask}, nil
 }
+
+// UpsertInterviewTemplate creates or updates an interview template (admin).
+func (i *Implementation) UpsertInterviewTemplate(ctx context.Context, req *contentv1.UpsertInterviewTemplateRequest) (*contentv1.UpsertInterviewTemplateResponse, error) {
+	passingScore := int(req.GetPassingScore())
+	if passingScore <= 0 {
+		passingScore = 85
+	}
+	template, err := i.service.UpsertInterviewTemplate(ctx, catalogmodel.InterviewTemplate{
+		ID:           req.GetId(),
+		CompanyID:    optionalString(req.CompanyId),
+		Slug:         req.GetSlug(),
+		Title:        req.GetTitle(),
+		Description:  optionalString(req.Description),
+		TargetRole:   optionalString(req.TargetRole),
+		TargetLevel:  optionalString(req.TargetLevel),
+		PassingScore: passingScore,
+		IsActive:     req.GetIsActive(),
+	})
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	return &contentv1.UpsertInterviewTemplateResponse{Template: toProtoTemplate(template)}, nil
+}
+
+// UpsertTemplateSection creates or updates a template section (admin).
+func (i *Implementation) UpsertTemplateSection(ctx context.Context, req *contentv1.UpsertTemplateSectionRequest) (*contentv1.UpsertTemplateSectionResponse, error) {
+	var passingScore *int
+	if req.PassingScore != nil {
+		v := int(req.GetPassingScore())
+		passingScore = &v
+	}
+	section, err := i.service.UpsertTemplateSection(ctx, catalogmodel.TemplateSection{
+		ID:           req.GetId(),
+		TemplateID:   req.GetTemplateId(),
+		SectionType:  req.GetSectionType(),
+		Title:        req.GetTitle(),
+		Description:  optionalString(req.Description),
+		Position:     int(req.GetPosition()),
+		PassingScore: passingScore,
+	})
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	return &contentv1.UpsertTemplateSectionResponse{Section: toProtoSection(section)}, nil
+}
+
+// ReplaceTemplateStructure replaces all sections and task links for a template (admin).
+func (i *Implementation) ReplaceTemplateStructure(ctx context.Context, req *contentv1.ReplaceTemplateStructureRequest) (*contentv1.ReplaceTemplateStructureResponse, error) {
+	sections := make([]catalogmodel.TemplateSectionInput, 0, len(req.GetSections()))
+	for _, item := range req.GetSections() {
+		var passingScore *int
+		if item.PassingScore != nil {
+			v := int(item.GetPassingScore())
+			passingScore = &v
+		}
+		sections = append(sections, catalogmodel.TemplateSectionInput{
+			ID:           item.GetId(),
+			SectionType:  item.GetSectionType(),
+			Title:        item.GetTitle(),
+			Description:  optionalString(item.Description),
+			Position:     int(item.GetPosition()),
+			PassingScore: passingScore,
+			TaskIDs:      item.GetTaskIds(),
+		})
+	}
+	detail, err := i.service.ReplaceTemplateStructure(ctx, req.GetTemplateId(), sections)
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	outSections := make([]*contentv1.TemplateSection, 0, len(detail.Sections))
+	for idx := range detail.Sections {
+		sec := detail.Sections[idx]
+		outSections = append(outSections, toProtoSection(&sec))
+	}
+	return &contentv1.ReplaceTemplateStructureResponse{
+		Template: toProtoTemplate(detail.Template),
+		Sections: outSections,
+	}, nil
+}

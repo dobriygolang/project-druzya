@@ -49,9 +49,10 @@ Job status: `pending` | `running` | `completed` | `failed`
 | RPC | HTTP | Auth |
 |-----|------|------|
 | RunEvaluation | gRPC only | `x-internal-token` |
-| GenerateProfileSummary | gRPC only | `x-internal-token` (called by recommendation) |
 | GetEvaluationJob | `GET /v1/admin/evaluation-jobs/{id}` | internal |
 | ListEvaluationJobs | `GET /v1/admin/evaluation-jobs` | internal |
+| GetLLMConfig | `GET /v1/admin/llm/config` | internal |
+| UpdateLLMConfig | `PUT /v1/admin/llm/config` | internal |
 
 ## Workers
 

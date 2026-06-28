@@ -3,30 +3,10 @@ package model
 import "time"
 
 const (
-	ConsumerAttemptEvaluated  = "recommendation.attempt_evaluated"
-	ConsumerSessionCompleted  = "recommendation.session_completed"
-	ConsumerRetryItemCreated  = "recommendation.retry_item_created"
-	ConsumerTaskSkipped       = "recommendation.task_skipped"
-
-	RecTypeImproveSkill      = "improve_skill"
-	RecTypeRewriteAnswer     = "rewrite_answer"
-	RecTypePracticeSection   = "practice_section"
-	RecTypeTakeMockInterview = "take_mock_interview"
-
-	PlanTypeRetryTask = "retry_task"
-
-	RecStatusActive    = "active"
-	RecStatusDismissed = "dismissed"
-	RecStatusCompleted = "completed"
-
-	PlanStatusPending    = "pending"
-	PlanStatusInProgress = "in_progress"
-	PlanStatusCompleted  = "completed"
-	PlanStatusDismissed  = "dismissed"
-
-	PriorityHigh   = "high"
-	PriorityMedium = "medium"
-	PriorityLow    = "low"
+	ConsumerAttemptEvaluated = "recommendation.attempt_evaluated"
+	ConsumerSessionCompleted = "recommendation.session_completed"
+	ConsumerRetryItemCreated = "recommendation.retry_item_created"
+	ConsumerTaskSkipped      = "recommendation.task_skipped"
 )
 
 // UserSkillProfile tracks aggregate readiness for a user.
@@ -57,12 +37,12 @@ type SkillScore struct {
 type Recommendation struct {
 	ID          string
 	UserID      string
-	Type        string
-	Priority    string
+	Type        RecommendationType
+	Priority    RecommendationPriority
 	SkillKey    *string
 	Title       string
 	Description string
-	Status      string
+	Status      RecommendationStatus
 	Metadata    map[string]any
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -75,12 +55,12 @@ type LearningPlanItem struct {
 	ID               string
 	UserID           string
 	RecommendationID *string
-	Type             string
+	Type             LearningPlanItemType
 	TaskID           *string
 	SkillKey         *string
 	Title            string
 	Description      *string
-	Status           string
+	Status           LearningPlanItemStatus
 	Position         int
 	Metadata         map[string]any
 	CreatedAt        time.Time
@@ -146,15 +126,41 @@ type SkillInsight struct {
 	Confidence int
 }
 
+// DailyBriefItem is one actionable row on Today.
+type DailyBriefItem struct {
+	Type        DailyBriefItemType
+	Title       string
+	Description *string
+	ActionLabel *string
+	ActionPath  *string
+	RetryItemID *string
+	SkillKey    *string
+	SecondaryActionLabel *string
+	SecondaryActionPath  *string
+}
+
+// DailyBrief is a structured Today summary built by recommendation-service.
+type DailyBrief struct {
+	ReadinessScore int
+	Items          []DailyBriefItem
+}
+
 // Dashboard aggregates user recommendation state.
 type Dashboard struct {
 	ReadinessScore    int
-	ProfileSummary    *string
+	DailyBrief        DailyBrief
 	Strengths         []SkillInsight
 	Weaknesses        []SkillInsight
 	Recommendations   []Recommendation
 	LearningPlan      []LearningPlanItem
 	PendingRetryCount int
+	ReadArticleSlugs  []string
+}
+
+// ArticleRead records that a user finished a knowledge-base article.
+type ArticleRead struct {
+	Slug   string
+	ReadAt time.Time
 }
 
 // DashboardSnapshot is postgres-backed dashboard data.

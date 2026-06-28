@@ -21,3 +21,10 @@ export function completeLearningPlanItem(id: string) {
 export function dismissLearningPlanItem(id: string) {
   return api(`/recommendations/learning-plan/${id}/dismiss`, { method: 'POST', body: '{}' })
 }
+
+export function markArticleRead(slug: string) {
+  return api<{ slug: string; read_at?: string }>(
+    `/recommendations/articles/${encodeURIComponent(slug)}/read`,
+    { method: 'POST', body: '{}' },
+  )
+}

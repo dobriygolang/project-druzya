@@ -1,0 +1,110 @@
+{
+  "uid": "druzya-http-routes",
+  "title": "druzya — HTTP routes",
+  "tags": ["druzya", "http", "routes"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "table",
+      "title": "RPS by route (now)",
+      "description": "Grouped by service + route prefix + HTTP method. Route labels collapse path segments to /v1/resource.",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "sortBy": [{ "displayName": "RPS", "desc": true }]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "filterable": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "RPS" },
+            "properties": [
+              { "id": "unit", "value": "reqps" },
+              { "id": "decimals", "value": 3 }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "sum by (service, route, method) (rate(http_requests_total[5m]))",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "transformations": [
+        { "id": "seriesToColumns", "options": { "byField": "Time" } },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": { "Time": true },
+            "renameByName": { "Value": "RPS" }
+          }
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Top routes RPS",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "topk(20, sum by (service, route, method) (rate(http_requests_total[5m])))",
+          "legendFormat": "{{service}} {{method}} {{route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Route latency p95 (s)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "topk(20, histogram_quantile(0.95, sum by (service, route, method, le) (rate(http_request_duration_seconds_bucket[5m]))))",
+          "legendFormat": "{{service}} {{method}} {{route}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "5xx rate by route",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 32 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "expr": "topk(20, sum by (service, route, method) (rate(http_requests_total{status=~\"5..\"}[5m])))",
+          "legendFormat": "{{service}} {{method}} {{route}}"
+        }
+      ]
+    }
+  ]
+}

@@ -239,7 +239,7 @@ func (r *Repository) InsertSpecialRecommendation(ctx context.Context, rec model.
 		ON CONFLICT (user_id, type, skill_key) WHERE status = 'active' AND type IN ('rewrite_answer', 'practice_section')
 		DO NOTHING
 		RETURNING id, user_id, type, priority, skill_key, title, description, status, metadata, created_at, updated_at, dismissed_at, completed_at
-	`, id, uid, rec.Type, rec.Priority, rec.SkillKey, rec.Title, rec.Description, model.RecStatusActive, meta)
+	`, id, uid, rec.Type, rec.Priority, rec.SkillKey, rec.Title, rec.Description, model.RecommendationStatusActive, meta)
 
 	planRec, err := scanRecommendation(row)
 	if err != nil {
@@ -280,7 +280,7 @@ func (r *Repository) upsertActiveRecommendation(ctx context.Context, rec model.R
 			metadata = EXCLUDED.metadata,
 			updated_at = now()
 		RETURNING id, user_id, type, priority, skill_key, title, description, status, metadata, created_at, updated_at, dismissed_at, completed_at
-	`, id, uid, rec.Type, rec.Priority, rec.SkillKey, rec.Title, rec.Description, model.RecStatusActive, meta)
+	`, id, uid, rec.Type, rec.Priority, rec.SkillKey, rec.Title, rec.Description, model.RecommendationStatusActive, meta)
 
 	return scanRecommendation(row)
 }
@@ -418,7 +418,7 @@ func (r *Repository) GetRecommendation(ctx context.Context, userID, id string) (
 }
 
 // UpdateRecommendationStatus updates recommendation status.
-func (r *Repository) UpdateRecommendationStatus(ctx context.Context, userID, id, status string) error {
+func (r *Repository) UpdateRecommendationStatus(ctx context.Context, userID, id string, status model.RecommendationStatus) error {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return fmt.Errorf("invalid user_id: %w", err)
@@ -431,17 +431,17 @@ func (r *Repository) UpdateRecommendationStatus(ctx context.Context, userID, id,
 	var dismissedAt, completedAt *time.Time
 	now := time.Now().UTC()
 	switch status {
-	case model.RecStatusDismissed:
+	case model.RecommendationStatusDismissed:
 		dismissedAt = &now
-	case model.RecStatusCompleted:
+	case model.RecommendationStatusCompleted:
 		completedAt = &now
 	}
 
 	tag, err := r.conn(ctx).Exec(ctx, `
 		UPDATE recommendations
 		SET status = $3, dismissed_at = COALESCE($4, dismissed_at), completed_at = COALESCE($5, completed_at), updated_at = now()
-		WHERE id = $1 AND user_id = $2 AND status = 'active'
-	`, rid, uid, status, dismissedAt, completedAt)
+		WHERE id = $1 AND user_id = $2 AND status = $6
+	`, rid, uid, status, dismissedAt, completedAt, model.RecommendationStatusActive)
 	if err != nil {
 		return err
 	}
@@ -470,7 +470,7 @@ func (r *Repository) GetLearningPlanItem(ctx context.Context, userID, id string)
 }
 
 // UpdateLearningPlanItemStatus updates plan item status.
-func (r *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID, id, status string) error {
+func (r *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID, id string, status model.LearningPlanItemStatus) error {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return fmt.Errorf("invalid user_id: %w", err)
@@ -481,7 +481,7 @@ func (r *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID, i
 	}
 
 	var completedAt *time.Time
-	if status == model.PlanStatusCompleted {
+	if status == model.LearningPlanItemStatusCompleted {
 		now := time.Now().UTC()
 		completedAt = &now
 	}
@@ -650,7 +650,7 @@ func (r *Repository) InsertTakeMockRecommendation(ctx context.Context, rec model
 		ON CONFLICT (user_id, type) WHERE status = 'active' AND type = 'take_mock_interview'
 		DO NOTHING
 		RETURNING id, user_id, type, priority, skill_key, title, description, status, metadata, created_at, updated_at, dismissed_at, completed_at
-	`, id, uid, rec.Type, rec.Priority, rec.SkillKey, rec.Title, rec.Description, model.RecStatusActive, meta)
+	`, id, uid, rec.Type, rec.Priority, rec.SkillKey, rec.Title, rec.Description, model.RecommendationStatusActive, meta)
 
 	planRec, err := scanRecommendation(row)
 	if err != nil {

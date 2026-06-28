@@ -9,7 +9,6 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/usecase/command/run_evaluation"
-	"github.com/sedorofeevd/project-druzya/services/ai/internal/summary"
 )
 
 // Service is AI evaluation use cases.
@@ -21,7 +20,6 @@ type Service interface {
 	GetEvaluationJob(ctx context.Context, id string) (*evaluationmodel.EvaluationJob, error)
 	GetEvaluationJobByAttemptID(ctx context.Context, attemptID string) (*evaluationmodel.EvaluationJob, error)
 	ListEvaluationJobs(ctx context.Context, status *evaluationmodel.JobStatus, limit int) ([]evaluationmodel.EvaluationJob, error)
-	GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []summary.SkillScore, locale string) (string, error)
 }
 
 type evaluationService struct {
@@ -30,7 +28,6 @@ type evaluationService struct {
 	content    contentadapter.Client
 	billing    billingadapter.Client
 	evaluator  evaluator.Client
-	summary    *summary.Generator
 	maxRetries int
 
 	// CQRS usecase handler. RunEvaluation/HandleAttemptSubmitted delegate here.
@@ -44,7 +41,6 @@ type Deps struct {
 	Content    contentadapter.Client
 	Billing    billingadapter.Client
 	Evaluator  evaluator.Client
-	Summary    *summary.Generator
 	MaxRetries int
 }
 
@@ -60,7 +56,6 @@ func New(deps Deps) Service {
 		content:    deps.Content,
 		billing:    deps.Billing,
 		evaluator:  deps.Evaluator,
-		summary:    deps.Summary,
 		maxRetries: maxRetries,
 		runEvaluation: run_evaluation.New(run_evaluation.Deps{
 			Repo:       deps.Repo,

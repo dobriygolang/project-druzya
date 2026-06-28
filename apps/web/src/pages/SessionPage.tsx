@@ -93,7 +93,7 @@ export default function SessionPage() {
       const isCode = isCodeTask(stateQ.data?.current_task?.task_type ?? taskQ.data?.task.type)
       if (isCode) {
         if (!verifiedSubmitRunId) {
-          throw new Error('Run FULL check before submitting')
+          throw new Error(t('session.editorSubmitNeedsVerify'))
         }
         const result = await submitAttemptFromCodeRun(verifiedSubmitRunId, sessionTaskId)
         return {

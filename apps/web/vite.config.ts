@@ -9,6 +9,7 @@ const recommendation = process.env.VITE_RECOMMENDATION_URL ?? 'http://localhost:
 const billing = process.env.VITE_BILLING_URL ?? 'http://localhost:8085'
 const sandbox = process.env.VITE_SANDBOX_URL ?? 'http://localhost:8086'
 const rooms = process.env.VITE_ROOMS_URL ?? 'http://localhost:8087'
+const admin = process.env.VITE_ADMIN_URL ?? 'http://localhost:8088'
 
 export default defineConfig({
   plugins: [react()],
@@ -25,11 +26,13 @@ export default defineConfig({
       '/v1/interview-templates': { target: content, changeOrigin: true },
       '/v1/tasks': { target: content, changeOrigin: true },
       '/v1/rubrics': { target: content, changeOrigin: true },
+      '/v1/articles': { target: content, changeOrigin: true },
       '/v1/interview': { target: interview, changeOrigin: true },
       '/v1/recommendations': { target: recommendation, changeOrigin: true },
       '/v1/billing': { target: billing, changeOrigin: true },
       '/v1/sandbox': { target: sandbox, changeOrigin: true },
       '/v1/rooms': { target: rooms, changeOrigin: true },
+      '/v1/admin': { target: admin, changeOrigin: true },
       '/ws/lsp': { target: sandbox, changeOrigin: true, ws: true },
       '/ws': { target: rooms, changeOrigin: true, ws: true },
     },

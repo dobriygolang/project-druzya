@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,7 +23,31 @@ var (
 		Help:    "HTTP request latency",
 		Buckets: prometheus.DefBuckets,
 	}, []string{"service", "route", "method"})
+
+	httpRequestSamples = atomic.Uint64{}
+	httpRPSMilli       = atomic.Uint64{}
 )
+
+func init() {
+	go trackHTTPRPS()
+}
+
+func trackHTTPRPS() {
+	var prev uint64
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		cur := httpRequestSamples.Load()
+		rps := float64(cur-prev) / 5.0
+		httpRPSMilli.Store(uint64(rps * 1000))
+		prev = cur
+	}
+}
+
+// HTTPRPS returns a smoothed HTTP requests-per-second estimate.
+func HTTPRPS() float64 {
+	return float64(httpRPSMilli.Load()) / 1000.0
+}
 
 // MetricsHandler exposes Prometheus metrics.
 func MetricsHandler() http.Handler {
@@ -38,6 +63,7 @@ func InstrumentHTTP(service string, h http.Handler) http.Handler {
 		route := routeLabel(r.URL.Path)
 		status := strconv.Itoa(rw.status)
 		httpRequestsTotal.WithLabelValues(service, route, r.Method, status).Inc()
+		httpRequestSamples.Add(1)
 		httpRequestDuration.WithLabelValues(service, route, r.Method).Observe(time.Since(start).Seconds())
 	})
 }

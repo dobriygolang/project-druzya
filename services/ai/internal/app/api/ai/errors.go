@@ -16,3 +16,7 @@ func notFound(message string) error {
 func unauthorized() error {
 	return status.Error(codes.Unauthenticated, "unauthorized")
 }
+
+func failedPrecondition(message string) error {
+	return status.Error(codes.FailedPrecondition, message)
+}

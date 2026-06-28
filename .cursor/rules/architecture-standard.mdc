@@ -47,6 +47,11 @@ under `internal/<worker>/` or `internal/services/`.
 - **Quotas / external side effects**: gate (no consume) before work; consume after the
   durable write succeeds; compensate on later failure.
 - **One RPC per transport file**; thin handlers (validate → call service → map error).
+- **Typed enums, not raw strings**: finite domain values (status, type, mode, priority) use
+  proto `enum` in `.proto`, typed aliases in `model/enums.go` (DB/API wire values as snake_case
+  string constants), and `internal/app/api/<name>/proto_enums.go` for domain↔proto mapping.
+  Do not expose bare `string` fields for closed sets in public API or domain models. Reference:
+  `services/interview/internal/interview/model/enums.go`, `services/recommendation/internal/recommendation/model/enums.go`.
 - English code/logs/comments; user commits manually; minimal diffs.
 
 ## Migration posture

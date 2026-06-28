@@ -3,6 +3,7 @@ package copy
 import (
 	"fmt"
 
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
 )
 
@@ -78,6 +79,97 @@ func PracticeSystemDesignDescription(lang, criterion string, score int) string {
 		return fmt.Sprintf("Focus on %s when designing systems — your recent score was %d/100.", criterion, score)
 	}
 	return fmt.Sprintf("Обрати внимание на %s при проектировании — недавняя оценка %d/100.", criterion, score)
+}
+
+func BriefRetryAction(lang string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return "Start"
+	}
+	return "Пройти"
+}
+
+func BriefWeakSkillTitle(lang, skill string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return fmt.Sprintf("Weak area: %s", skill)
+	}
+	return fmt.Sprintf("Слабая зона: %s", skill)
+}
+
+func BriefWeakSkillDescription(lang, skill string, score int) string {
+	if locale.Normalize(lang) == locale.EN {
+		return fmt.Sprintf("Score %d/100 — practice tasks in this area.", score)
+	}
+	return fmt.Sprintf("Оценка %d/100 — потренируй задачи в этой зоне.", score)
+}
+
+func BriefPracticeAction(lang string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return "Practice"
+	}
+	return "Тренировать"
+}
+
+func BriefReadArticleTitle(lang, articleTitle string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return fmt.Sprintf("Read: %s", articleTitle)
+	}
+	return fmt.Sprintf("Прочитать: %s", articleTitle)
+}
+
+func BriefReadArticleAction(lang string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return "Read"
+	}
+	return "Читать"
+}
+
+func BriefPracticeAfterReadTitle(lang, skill string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return fmt.Sprintf("Practice: %s", skill)
+	}
+	return fmt.Sprintf("Практика: %s", skill)
+}
+
+func BriefPracticeAfterReadDescription(lang, articleTitle string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return fmt.Sprintf("You read «%s» — apply it in a solo session.", articleTitle)
+	}
+	return fmt.Sprintf("Вы прочитали «%s» — закрепи в solo-сессии.", articleTitle)
+}
+
+func BriefRecommendationAction(lang string, recType model.RecommendationType) string {
+	switch recType {
+	case model.RecommendationTypeTakeMockInterview:
+		return BriefTakeMockAction(lang)
+	case model.RecommendationTypeRewriteAnswer:
+		if locale.Normalize(lang) == locale.EN {
+			return "Review"
+		}
+		return "Разобрать"
+	default:
+		return BriefPracticeAction(lang)
+	}
+}
+
+func BriefTakeMockAction(lang string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return "Start mock"
+	}
+	return "Запустить mock"
+}
+
+func BriefStartMockTitle(lang string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return "Start your first mock"
+	}
+	return "Начни с первого mock"
+}
+
+func BriefStartMockDescription(lang string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return "Complete a mock interview to unlock readiness, weak spots, and a learning plan."
+	}
+	return "Пройди mock-интервью — появятся readiness, слабые зоны и план обучения."
 }
 
 func RetryTaskTitle(lang, taskTitle string) string {

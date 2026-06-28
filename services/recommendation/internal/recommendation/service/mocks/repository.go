@@ -720,6 +720,65 @@ func (_c *Repository_ListActiveRecommendations_Call) RunAndReturn(run func(conte
 	return _c
 }
 
+// ListArticleReadSlugs provides a mock function with given fields: ctx, userID
+func (_m *Repository) ListArticleReadSlugs(ctx context.Context, userID string) ([]string, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListArticleReadSlugs")
+	}
+
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]string, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []string); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ListArticleReadSlugs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArticleReadSlugs'
+type Repository_ListArticleReadSlugs_Call struct {
+	*mock.Call
+}
+
+// ListArticleReadSlugs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+func (_e *Repository_Expecter) ListArticleReadSlugs(ctx interface{}, userID interface{}) *Repository_ListArticleReadSlugs_Call {
+	return &Repository_ListArticleReadSlugs_Call{Call: _e.mock.On("ListArticleReadSlugs", ctx, userID)}
+}
+
+func (_c *Repository_ListArticleReadSlugs_Call) Run(run func(ctx context.Context, userID string)) *Repository_ListArticleReadSlugs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_ListArticleReadSlugs_Call) Return(_a0 []string, _a1 error) *Repository_ListArticleReadSlugs_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ListArticleReadSlugs_Call) RunAndReturn(run func(context.Context, string) ([]string, error)) *Repository_ListArticleReadSlugs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListSkillScoresByUser provides a mock function with given fields: ctx, userID
 func (_m *Repository) ListSkillScoresByUser(ctx context.Context, userID string) ([]model.SkillScore, error) {
 	ret := _m.Called(ctx, userID)
@@ -837,7 +896,7 @@ func (_c *Repository_NextLearningPlanPosition_Call) RunAndReturn(run func(contex
 }
 
 // UpdateLearningPlanItemStatus provides a mock function with given fields: ctx, userID, id, status
-func (_m *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID string, id string, status string) error {
+func (_m *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID string, id string, status model.LearningPlanItemStatus) error {
 	ret := _m.Called(ctx, userID, id, status)
 
 	if len(ret) == 0 {
@@ -845,7 +904,7 @@ func (_m *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID s
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, model.LearningPlanItemStatus) error); ok {
 		r0 = rf(ctx, userID, id, status)
 	} else {
 		r0 = ret.Error(0)
@@ -863,14 +922,14 @@ type Repository_UpdateLearningPlanItemStatus_Call struct {
 //   - ctx context.Context
 //   - userID string
 //   - id string
-//   - status string
+//   - status model.LearningPlanItemStatus
 func (_e *Repository_Expecter) UpdateLearningPlanItemStatus(ctx interface{}, userID interface{}, id interface{}, status interface{}) *Repository_UpdateLearningPlanItemStatus_Call {
 	return &Repository_UpdateLearningPlanItemStatus_Call{Call: _e.mock.On("UpdateLearningPlanItemStatus", ctx, userID, id, status)}
 }
 
-func (_c *Repository_UpdateLearningPlanItemStatus_Call) Run(run func(ctx context.Context, userID string, id string, status string)) *Repository_UpdateLearningPlanItemStatus_Call {
+func (_c *Repository_UpdateLearningPlanItemStatus_Call) Run(run func(ctx context.Context, userID string, id string, status model.LearningPlanItemStatus)) *Repository_UpdateLearningPlanItemStatus_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(model.LearningPlanItemStatus))
 	})
 	return _c
 }
@@ -880,55 +939,7 @@ func (_c *Repository_UpdateLearningPlanItemStatus_Call) Return(_a0 error) *Repos
 	return _c
 }
 
-func (_c *Repository_UpdateLearningPlanItemStatus_Call) RunAndReturn(run func(context.Context, string, string, string) error) *Repository_UpdateLearningPlanItemStatus_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// UpdateProfileSummary provides a mock function with given fields: ctx, userID, summary
-func (_m *Repository) UpdateProfileSummary(ctx context.Context, userID string, summary string) error {
-	ret := _m.Called(ctx, userID, summary)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateProfileSummary")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, userID, summary)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Repository_UpdateProfileSummary_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateProfileSummary'
-type Repository_UpdateProfileSummary_Call struct {
-	*mock.Call
-}
-
-// UpdateProfileSummary is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-//   - summary string
-func (_e *Repository_Expecter) UpdateProfileSummary(ctx interface{}, userID interface{}, summary interface{}) *Repository_UpdateProfileSummary_Call {
-	return &Repository_UpdateProfileSummary_Call{Call: _e.mock.On("UpdateProfileSummary", ctx, userID, summary)}
-}
-
-func (_c *Repository_UpdateProfileSummary_Call) Run(run func(ctx context.Context, userID string, summary string)) *Repository_UpdateProfileSummary_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *Repository_UpdateProfileSummary_Call) Return(_a0 error) *Repository_UpdateProfileSummary_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Repository_UpdateProfileSummary_Call) RunAndReturn(run func(context.Context, string, string) error) *Repository_UpdateProfileSummary_Call {
+func (_c *Repository_UpdateLearningPlanItemStatus_Call) RunAndReturn(run func(context.Context, string, string, model.LearningPlanItemStatus) error) *Repository_UpdateLearningPlanItemStatus_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -982,7 +993,7 @@ func (_c *Repository_UpdateReadinessScore_Call) RunAndReturn(run func(context.Co
 }
 
 // UpdateRecommendationStatus provides a mock function with given fields: ctx, userID, id, status
-func (_m *Repository) UpdateRecommendationStatus(ctx context.Context, userID string, id string, status string) error {
+func (_m *Repository) UpdateRecommendationStatus(ctx context.Context, userID string, id string, status model.RecommendationStatus) error {
 	ret := _m.Called(ctx, userID, id, status)
 
 	if len(ret) == 0 {
@@ -990,7 +1001,7 @@ func (_m *Repository) UpdateRecommendationStatus(ctx context.Context, userID str
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, model.RecommendationStatus) error); ok {
 		r0 = rf(ctx, userID, id, status)
 	} else {
 		r0 = ret.Error(0)
@@ -1008,14 +1019,14 @@ type Repository_UpdateRecommendationStatus_Call struct {
 //   - ctx context.Context
 //   - userID string
 //   - id string
-//   - status string
+//   - status model.RecommendationStatus
 func (_e *Repository_Expecter) UpdateRecommendationStatus(ctx interface{}, userID interface{}, id interface{}, status interface{}) *Repository_UpdateRecommendationStatus_Call {
 	return &Repository_UpdateRecommendationStatus_Call{Call: _e.mock.On("UpdateRecommendationStatus", ctx, userID, id, status)}
 }
 
-func (_c *Repository_UpdateRecommendationStatus_Call) Run(run func(ctx context.Context, userID string, id string, status string)) *Repository_UpdateRecommendationStatus_Call {
+func (_c *Repository_UpdateRecommendationStatus_Call) Run(run func(ctx context.Context, userID string, id string, status model.RecommendationStatus)) *Repository_UpdateRecommendationStatus_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(model.RecommendationStatus))
 	})
 	return _c
 }
@@ -1025,7 +1036,67 @@ func (_c *Repository_UpdateRecommendationStatus_Call) Return(_a0 error) *Reposit
 	return _c
 }
 
-func (_c *Repository_UpdateRecommendationStatus_Call) RunAndReturn(run func(context.Context, string, string, string) error) *Repository_UpdateRecommendationStatus_Call {
+func (_c *Repository_UpdateRecommendationStatus_Call) RunAndReturn(run func(context.Context, string, string, model.RecommendationStatus) error) *Repository_UpdateRecommendationStatus_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertArticleRead provides a mock function with given fields: ctx, userID, slug
+func (_m *Repository) UpsertArticleRead(ctx context.Context, userID string, slug string) (*model.ArticleRead, error) {
+	ret := _m.Called(ctx, userID, slug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertArticleRead")
+	}
+
+	var r0 *model.ArticleRead
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*model.ArticleRead, error)); ok {
+		return rf(ctx, userID, slug)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *model.ArticleRead); ok {
+		r0 = rf(ctx, userID, slug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.ArticleRead)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, userID, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_UpsertArticleRead_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertArticleRead'
+type Repository_UpsertArticleRead_Call struct {
+	*mock.Call
+}
+
+// UpsertArticleRead is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - slug string
+func (_e *Repository_Expecter) UpsertArticleRead(ctx interface{}, userID interface{}, slug interface{}) *Repository_UpsertArticleRead_Call {
+	return &Repository_UpsertArticleRead_Call{Call: _e.mock.On("UpsertArticleRead", ctx, userID, slug)}
+}
+
+func (_c *Repository_UpsertArticleRead_Call) Run(run func(ctx context.Context, userID string, slug string)) *Repository_UpsertArticleRead_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_UpsertArticleRead_Call) Return(_a0 *model.ArticleRead, _a1 error) *Repository_UpsertArticleRead_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_UpsertArticleRead_Call) RunAndReturn(run func(context.Context, string, string) (*model.ArticleRead, error)) *Repository_UpsertArticleRead_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -16,6 +16,7 @@ var protectedMethods = map[string]struct{}{
 	recommendationv1.RecommendationService_CompleteRecommendation_FullMethodName:   {},
 	recommendationv1.RecommendationService_CompleteLearningPlanItem_FullMethodName: {},
 	recommendationv1.RecommendationService_DismissLearningPlanItem_FullMethodName:  {},
+	recommendationv1.RecommendationService_MarkArticleRead_FullMethodName:          {},
 }
 
 // AuthInterceptor validates Bearer JWT for user-facing RPC methods.

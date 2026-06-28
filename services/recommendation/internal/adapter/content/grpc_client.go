@@ -64,4 +64,31 @@ func (c *GRPCClient) GetTask(ctx context.Context, taskID string) (*Task, error) 
 	}, nil
 }
 
+func (c *GRPCClient) ListArticlesBySkillKeys(ctx context.Context, skillKeys []string) ([]Article, error) {
+	if len(skillKeys) == 0 {
+		return nil, nil
+	}
+	resp, err := c.client.ListArticles(ctx, &contentv1.ListArticlesRequest{
+		SkillKeys: skillKeys,
+	})
+	if err != nil {
+		return nil, MapGRPCError(err)
+	}
+
+	out := make([]Article, 0, len(resp.GetArticles()))
+	for _, summary := range resp.GetArticles() {
+		if summary == nil {
+			continue
+		}
+		out = append(out, Article{
+			ID:        summary.GetId(),
+			Slug:      summary.GetSlug(),
+			Title:     summary.GetTitle(),
+			Summary:   summary.GetSummary(),
+			SkillKeys: summary.GetSkillKeys(),
+		})
+	}
+	return out, nil
+}
+
 var _ Client = (*GRPCClient)(nil)

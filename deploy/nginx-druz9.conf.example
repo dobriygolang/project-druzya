@@ -36,7 +36,7 @@ server {
 # druz9 sites → Caddy
 server {
 	listen 127.0.0.1:8123 ssl proxy_protocol;
-	server_name druz9.online app.druz9.online api.druz9.online druz9.ru app.druz9.ru api.druz9.ru;
+	server_name druz9.online app.druz9.online api.druz9.online grafana.druz9.online druz9.ru app.druz9.ru api.druz9.ru;
 
 	ssl_certificate     /etc/letsencrypt/live/druz9.online/fullchain.pem;
 	ssl_certificate_key /etc/letsencrypt/live/druz9.online/privkey.pem;
@@ -61,6 +61,11 @@ server {
 server {
 	listen 80;
 	listen [::]:80;
-	server_name druz9.online app.druz9.online api.druz9.online druz9.ru app.druz9.ru api.druz9.ru;
+	server_name druz9.online app.druz9.online api.druz9.online grafana.druz9.online druz9.ru app.druz9.ru api.druz9.ru;
+
+	location /.well-known/acme-challenge/ {
+		root /var/www/html;
+	}
+
 	return 301 https://$host$request_uri;
 }

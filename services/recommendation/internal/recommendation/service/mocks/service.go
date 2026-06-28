@@ -465,6 +465,66 @@ func (_c *Service_HandleTaskSkipped_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// MarkArticleRead provides a mock function with given fields: ctx, userID, slug
+func (_m *Service) MarkArticleRead(ctx context.Context, userID string, slug string) (*model.ArticleRead, error) {
+	ret := _m.Called(ctx, userID, slug)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MarkArticleRead")
+	}
+
+	var r0 *model.ArticleRead
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*model.ArticleRead, error)); ok {
+		return rf(ctx, userID, slug)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *model.ArticleRead); ok {
+		r0 = rf(ctx, userID, slug)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.ArticleRead)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, userID, slug)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Service_MarkArticleRead_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MarkArticleRead'
+type Service_MarkArticleRead_Call struct {
+	*mock.Call
+}
+
+// MarkArticleRead is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - slug string
+func (_e *Service_Expecter) MarkArticleRead(ctx interface{}, userID interface{}, slug interface{}) *Service_MarkArticleRead_Call {
+	return &Service_MarkArticleRead_Call{Call: _e.mock.On("MarkArticleRead", ctx, userID, slug)}
+}
+
+func (_c *Service_MarkArticleRead_Call) Run(run func(ctx context.Context, userID string, slug string)) *Service_MarkArticleRead_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Service_MarkArticleRead_Call) Return(_a0 *model.ArticleRead, _a1 error) *Service_MarkArticleRead_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Service_MarkArticleRead_Call) RunAndReturn(run func(context.Context, string, string) (*model.ArticleRead, error)) *Service_MarkArticleRead_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewService creates a new instance of Service. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewService(t interface {

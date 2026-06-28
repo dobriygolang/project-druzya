@@ -57,6 +57,7 @@ Other services use `pkg/client.ContentClient` or gRPC — never read content tab
 | `tasks` | Task definitions; `metadata JSONB` per type |
 | `task_solutions` | Reference solutions |
 | `rubrics` + `rubric_criteria` | Scoring rubrics by `task_type` |
+| `articles` + `article_skill_keys` + `article_videos` + `article_tasks` | Knowledge-base articles; videos; linked catalog tasks |
 
 Rubrics resolve by active rubric for `task.type` (no per-task override table).
 
@@ -78,6 +79,10 @@ Rubrics resolve by active rubric for `task.type` (no per-task override table).
 | GetTask | `GET /v1/tasks/{id}` or `/by-slug/{slug}` |
 | GetTaskBundle | `GET /v1/tasks/{task_id}/bundle` |
 | GetRubric | `GET /v1/rubrics/{id}` |
+| ListArticles | `GET /v1/articles` (`query`, `skill_key`) |
+| GetArticle | `GET /v1/articles/{id}` or `/by-slug/{slug}` — includes `linked_tasks`, `related_articles` |
+
+Admin writes (gRPC `ContentAdminService`, `x-admin-token`): UpsertArticle, GetArticleForAdmin, …
 
 ## Commands
 

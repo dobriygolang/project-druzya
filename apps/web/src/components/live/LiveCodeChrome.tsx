@@ -2,15 +2,16 @@ type RunButtonProps = {
   running: boolean
   onRun: () => void
   disabled?: boolean
+  title?: string
 }
 
-export function LiveCodeRunButton({ running, onRun, disabled }: RunButtonProps) {
+export function LiveCodeRunButton({ running, onRun, disabled, title }: RunButtonProps) {
   return (
     <button
       type="button"
       onClick={onRun}
       disabled={disabled || running}
-      title="Run code (⌘↵)"
+      title={title ?? 'Run code (⌘↵)'}
       className="rounded-full border-none px-3.5 py-1.5 font-mono text-xs font-medium tracking-[0.08em] transition-opacity disabled:cursor-default"
       style={{
         background: 'rgb(var(--ink))',

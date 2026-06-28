@@ -30,6 +30,12 @@ type Service interface {
 	GetTask(ctx context.Context, id, slug string) (*catalogmodel.Task, error)
 	GetTaskBundle(ctx context.Context, taskID string) (*catalogmodel.TaskBundle, error)
 	GetRubric(ctx context.Context, rubricID string) (*catalogmodel.Rubric, []catalogmodel.RubricCriterion, error)
+	ListArticles(ctx context.Context, skillKey, query *string, limit, offset int) ([]catalogmodel.Article, error)
+	ListArticlesAdmin(ctx context.Context, status *catalogmodel.ArticleStatus, allStatuses bool, query *string, limit, offset int) ([]catalogmodel.Article, error)
+	ListPublishedArticlesBySkillKeys(ctx context.Context, skillKeys []string) ([]catalogmodel.Article, error)
+	GetArticle(ctx context.Context, id, slug string) (*catalogmodel.Article, error)
+	ListRelatedArticles(ctx context.Context, articleID string, skillKeys []string, limit int) ([]catalogmodel.Article, error)
+	ResolveTaskIDs(ctx context.Context, slugs []string) ([]string, error)
 	AdminService
 }
 

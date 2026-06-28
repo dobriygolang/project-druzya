@@ -12,12 +12,49 @@ func toProtoDashboard(d *model.Dashboard) *recommendationv1.GetDashboardResponse
 	}
 	return &recommendationv1.GetDashboardResponse{
 		ReadinessScore:    int32(d.ReadinessScore),
-		ProfileSummary:    optionalString(d.ProfileSummary),
+		DailyBrief:        toProtoDailyBrief(d.DailyBrief),
 		Strengths:         toProtoInsights(d.Strengths),
 		Weaknesses:        toProtoInsights(d.Weaknesses),
 		Recommendations:   toProtoRecommendations(d.Recommendations),
 		LearningPlan:      toProtoLearningPlan(d.LearningPlan),
 		PendingRetryCount: int32(d.PendingRetryCount),
+		ReadArticleSlugs:  append([]string(nil), d.ReadArticleSlugs...),
+	}
+}
+
+func toProtoDailyBrief(b model.DailyBrief) *recommendationv1.DailyBrief {
+	items := make([]*recommendationv1.DailyBriefItem, 0, len(b.Items))
+	for _, item := range b.Items {
+		protoItem := &recommendationv1.DailyBriefItem{
+			Type:  dailyBriefItemTypeToProto(item.Type),
+			Title: item.Title,
+		}
+		if item.Description != nil {
+			protoItem.Description = item.Description
+		}
+		if item.ActionLabel != nil {
+			protoItem.ActionLabel = item.ActionLabel
+		}
+		if item.ActionPath != nil {
+			protoItem.ActionPath = item.ActionPath
+		}
+		if item.RetryItemID != nil {
+			protoItem.RetryItemId = item.RetryItemID
+		}
+		if item.SkillKey != nil {
+			protoItem.SkillKey = item.SkillKey
+		}
+		if item.SecondaryActionLabel != nil {
+			protoItem.SecondaryActionLabel = item.SecondaryActionLabel
+		}
+		if item.SecondaryActionPath != nil {
+			protoItem.SecondaryActionPath = item.SecondaryActionPath
+		}
+		items = append(items, protoItem)
+	}
+	return &recommendationv1.DailyBrief{
+		ReadinessScore: int32(b.ReadinessScore),
+		Items:          items,
 	}
 }
 
@@ -38,11 +75,11 @@ func toProtoRecommendations(items []model.Recommendation) []*recommendationv1.Re
 	for _, item := range items {
 		rec := &recommendationv1.Recommendation{
 			Id:          item.ID,
-			Type:        item.Type,
-			Priority:    item.Priority,
+			Type:        recommendationTypeToProto(item.Type),
+			Priority:    recommendationPriorityToProto(item.Priority),
 			Title:       item.Title,
 			Description: item.Description,
-			Status:      item.Status,
+			Status:      recommendationStatusToProto(item.Status),
 			CreatedAt:   timestamppb.New(item.CreatedAt),
 		}
 		if item.SkillKey != nil {
@@ -58,9 +95,9 @@ func toProtoLearningPlan(items []model.LearningPlanItem) []*recommendationv1.Lea
 	for _, item := range items {
 		plan := &recommendationv1.LearningPlanItem{
 			Id:        item.ID,
-			Type:      item.Type,
+			Type:      learningPlanItemTypeToProto(item.Type),
 			Title:     item.Title,
-			Status:    item.Status,
+			Status:    learningPlanItemStatusToProto(item.Status),
 			Position:  int32(item.Position),
 			CreatedAt: timestamppb.New(item.CreatedAt),
 		}
@@ -76,11 +113,4 @@ func toProtoLearningPlan(items []model.LearningPlanItem) []*recommendationv1.Lea
 		out = append(out, plan)
 	}
 	return out
-}
-
-func optionalString(v *string) *string {
-	if v == nil || *v == "" {
-		return nil
-	}
-	return v
 }

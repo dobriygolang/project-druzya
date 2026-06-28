@@ -3,6 +3,7 @@ package billingapi
 import (
 	billingv1 "github.com/sedorofeevd/project-druzya/services/billing/pkg/api/billing/v1"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/catalog"
+	billingrepo "github.com/sedorofeevd/project-druzya/services/billing/internal/billing/repository"
 	billingservice "github.com/sedorofeevd/project-druzya/services/billing/internal/billing/service"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/model"
 	"google.golang.org/grpc"
@@ -14,12 +15,14 @@ type Implementation struct {
 	billingv1.UnimplementedBillingServiceServer
 	billingv1.UnimplementedBillingInternalServiceServer
 	billingv1.UnimplementedBillingAdminServiceServer
-	svc billingservice.Service
+	svc  billingservice.Service
+	repo *billingrepo.Repository
+	pg   *billingrepo.Pool
 }
 
 // NewImplementation constructs transport handlers.
-func NewImplementation(svc billingservice.Service) *Implementation {
-	return &Implementation{svc: svc}
+func NewImplementation(svc billingservice.Service, repo *billingrepo.Repository, pg *billingrepo.Pool) *Implementation {
+	return &Implementation{svc: svc, repo: repo, pg: pg}
 }
 
 // Register mounts billing services on the gRPC server.

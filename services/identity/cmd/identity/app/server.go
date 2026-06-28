@@ -8,6 +8,7 @@ import (
 	"time"
 
 	identityapi "github.com/sedorofeevd/project-druzya/services/identity/internal/app/api/identity"
+	userrepo "github.com/sedorofeevd/project-druzya/services/identity/internal/user/repository"
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/tools/ops"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -22,7 +23,7 @@ func RunAPI(ctx context.Context, a *App) error {
 		return fmt.Errorf("listen grpc %s: %w", listenAddr, err)
 	}
 
-	impl := identityapi.NewImplementation(a.Service, a.Config.TelegramBotToken)
+	impl := identityapi.NewImplementation(a.Service, userrepo.New(a.Postgres), a.Postgres, a.Config.TelegramBotToken)
 	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		identityapi.InternalAuthInterceptor(a.Config.InternalAPIToken),
 		identityapi.AuthInterceptor(a.Service),

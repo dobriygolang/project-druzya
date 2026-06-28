@@ -13,6 +13,8 @@ type Props = {
   /** viewport = full screen bottom (CollabRoom); contained = inside editor block */
   placement?: 'viewport' | 'contained'
   theme?: 'light' | 'dark'
+  panelLabel?: string
+  closeTitle?: string
 }
 
 function isRunnerError(status: string): boolean {
@@ -60,6 +62,8 @@ export function RunOutputPanel({
   error,
   placement = 'viewport',
   theme = 'dark',
+  panelLabel,
+  closeTitle,
 }: Props) {
   if (!open) return null
 
@@ -91,6 +95,14 @@ export function RunOutputPanel({
         className={`flex items-center justify-between border-b px-4 py-2.5 ${light ? 'border-border' : 'border-[var(--hair)]'}`}
       >
         <div className="flex items-center gap-3.5">
+          {panelLabel ? (
+            <span
+              className={`text-[10px] uppercase tracking-[0.08em] ${light ? 'font-medium text-text-muted' : ''}`}
+              style={light ? undefined : { color: 'var(--ink-40)' }}
+            >
+              {panelLabel}
+            </span>
+          ) : null}
           {(['stdout', 'stderr'] as const).map((t) => (
             <button
               key={t}
@@ -122,7 +134,7 @@ export function RunOutputPanel({
           type="button"
           onClick={onClose}
           className={`border-none bg-transparent text-sm leading-none transition-colors hover:text-text-primary ${light ? 'text-text-muted' : 'text-[var(--ink-40)] hover:text-[rgb(var(--ink))]'}`}
-          title="Close output"
+          title={closeTitle ?? 'Close output'}
         >
           ×
         </button>

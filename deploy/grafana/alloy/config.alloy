@@ -1,0 +1,66 @@
+// Grafana Alloy — scrape druzya docker-compose services and remote_write to Grafana Cloud.
+
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = sys.env("GRAFANA_CLOUD_PROMETHEUS_URL")
+
+    basic_auth {
+      username = sys.env("GRAFANA_CLOUD_PROMETHEUS_USER")
+      password = sys.env("GRAFANA_CLOUD_PROMETHEUS_API_KEY")
+    }
+  }
+}
+
+prometheus.scrape "identity" {
+  targets    = [{ __address__ = "identity:8080" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "identity"
+}
+
+prometheus.scrape "content" {
+  targets    = [{ __address__ = "content:8081" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "content"
+}
+
+prometheus.scrape "interview" {
+  targets    = [{ __address__ = "interview:8082" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "interview"
+}
+
+prometheus.scrape "ai" {
+  targets    = [{ __address__ = "ai:8083" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "ai"
+}
+
+prometheus.scrape "recommendation" {
+  targets    = [{ __address__ = "recommendation:8084" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "recommendation"
+}
+
+prometheus.scrape "billing" {
+  targets    = [{ __address__ = "billing:8085" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "billing"
+}
+
+prometheus.scrape "sandbox" {
+  targets    = [{ __address__ = "sandbox:8086" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "sandbox"
+}
+
+prometheus.scrape "rooms" {
+  targets    = [{ __address__ = "rooms:8087" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "rooms"
+}
+
+prometheus.scrape "admin" {
+  targets    = [{ __address__ = "admin:8088" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "admin"
+}

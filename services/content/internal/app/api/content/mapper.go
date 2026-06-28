@@ -199,6 +199,61 @@ func int32PtrToOptional(v *int) *int32 {
 	return &val
 }
 
+func toProtoArticleSummary(a *catalogmodel.Article) *contentv1.ArticleSummary {
+	if a == nil {
+		return nil
+	}
+	return &contentv1.ArticleSummary{
+		Id:             a.ID,
+		Slug:           a.Slug,
+		Title:          a.Title,
+		Summary:        a.Summary,
+		Status:         articleStatusToProto(a.Status),
+		ReadingMinutes: int32PtrToOptional(a.ReadingMinutes),
+		SkillKeys:      a.SkillKeys,
+		CreatedAt:      timestamppb.New(a.CreatedAt),
+		UpdatedAt:      timestamppb.New(a.UpdatedAt),
+	}
+}
+
+func toProtoArticle(a *catalogmodel.Article) *contentv1.Article {
+	if a == nil {
+		return nil
+	}
+	return &contentv1.Article{
+		Id:             a.ID,
+		Slug:           a.Slug,
+		Title:          a.Title,
+		Summary:        a.Summary,
+		Body:           a.Body,
+		Status:         articleStatusToProto(a.Status),
+		ReadingMinutes: int32PtrToOptional(a.ReadingMinutes),
+		SkillKeys:      a.SkillKeys,
+		Videos:         toProtoArticleVideos(a.Videos),
+		LinkedTasks:    toProtoArticleTaskLinks(a.LinkedTasks),
+		CreatedAt:      timestamppb.New(a.CreatedAt),
+		UpdatedAt:      timestamppb.New(a.UpdatedAt),
+	}
+}
+
+func toProtoArticleTaskLinks(links []catalogmodel.ArticleTaskLink) []*contentv1.ArticleTaskLink {
+	if len(links) == 0 {
+		return nil
+	}
+	out := make([]*contentv1.ArticleTaskLink, 0, len(links))
+	for _, link := range links {
+		out = append(out, &contentv1.ArticleTaskLink{
+			TaskId:     link.TaskID,
+			Slug:       link.Slug,
+			Title:      link.Title,
+			Type:       link.Type,
+			Difficulty: link.Difficulty,
+			Position:   int32(link.Position),
+		})
+	}
+	return out
+}
+
 func mapServiceError(err error) error {
 	switch {
 	case catalogservice.IsNotFound(err):

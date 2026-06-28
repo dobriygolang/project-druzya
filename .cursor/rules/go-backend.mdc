@@ -1,0 +1,28 @@
+---
+description: Go backend conventions (monorepo)
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go backend
+
+Follow service-local `AGENTS.md` and [.cursor/rules/architecture-standard.mdc](architecture-standard.mdc).
+
+## Range loops (Go 1.22+)
+
+Do **not** copy the range variable before append/map calls — per-iteration loop vars are already distinct:
+
+```go
+// bad — leftover pre-1.22 closure workaround
+for _, item := range items {
+    x := item
+    out = append(out, toProto(x))
+}
+
+// good
+for _, item := range items {
+    out = append(out, toProto(item))
+}
+```
+
+Only copy when you genuinely need a stable pointer to the loop variable (rare; e.g. `&item` escaping into a goroutine).

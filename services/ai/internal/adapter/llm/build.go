@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -20,9 +21,19 @@ type BuildConfig struct {
 	Caveman  string
 }
 
+// BuildChainOpts configures llmchain assembly.
+type BuildChainOpts struct {
+	Config              BuildConfig
+	Log                 *slog.Logger
+	RuntimeConfigSource llmchain.ConfigSource
+	RuntimeCtx          context.Context
+}
+
 // BuildChain assembles the provider chain from environment config.
-// Returns nil when no API keys are configured (caller should use fake client).
-func BuildChain(cfg BuildConfig, log *slog.Logger) (llmchain.ChatClient, error) {
+// Returns nil chain when no API keys are configured (caller should use fake client).
+func BuildChain(opts BuildChainOpts) (llmchain.ChatClient, *llmchain.Chain, error) {
+	cfg := opts.Config
+	log := opts.Log
 	if log == nil {
 		log = slog.Default()
 	}
@@ -55,17 +66,19 @@ func BuildChain(cfg BuildConfig, log *slog.Logger) (llmchain.ChatClient, error) 
 	addKeys("openai", cfg.OpenAI, llmchain.NewOpenAIProviderDriver)
 
 	if len(drivers) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	chain, err := llmchain.NewChain(drivers, llmchain.Options{
-		Order: parseChainOrder(cfg.Order),
-		Log:   log,
+		Order:                parseChainOrder(cfg.Order),
+		Log:                  log,
+		RuntimeConfigSource:  opts.RuntimeConfigSource,
+		RuntimeCtx:           opts.RuntimeCtx,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("build llm chain: %w", err)
+		return nil, nil, fmt.Errorf("build llm chain: %w", err)
 	}
-	return caveman.New(chain, caveman.ParseLevel(cfg.Caveman), log), nil
+	return caveman.New(chain, caveman.ParseLevel(cfg.Caveman), log), chain, nil
 }
 
 func parseChainOrder(raw string) []llmchain.Provider {

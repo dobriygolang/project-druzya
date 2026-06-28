@@ -10,7 +10,6 @@ import (
 
 	contentadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/content"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
-	aiadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/ai"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
@@ -37,14 +36,15 @@ type Repository interface {
 	InsertTakeMockRecommendation(ctx context.Context, rec model.Recommendation) (*model.Recommendation, error)
 	CreateRetryTaskPlanItem(ctx context.Context, item model.LearningPlanItem) (*model.LearningPlanItem, error)
 	NextLearningPlanPosition(ctx context.Context, userID string) (int, error)
-	UpdateProfileSummary(ctx context.Context, userID, summary string) error
 	FetchDashboardSnapshot(ctx context.Context, userID string) (*model.DashboardSnapshot, error)
 	ListActiveRecommendations(ctx context.Context, userID string) ([]model.Recommendation, error)
 	ListActiveLearningPlanItems(ctx context.Context, userID string) ([]model.LearningPlanItem, error)
 	GetRecommendation(ctx context.Context, userID, id string) (*model.Recommendation, error)
-	UpdateRecommendationStatus(ctx context.Context, userID, id, status string) error
+	UpdateRecommendationStatus(ctx context.Context, userID, id string, status model.RecommendationStatus) error
 	GetLearningPlanItem(ctx context.Context, userID, id string) (*model.LearningPlanItem, error)
-	UpdateLearningPlanItemStatus(ctx context.Context, userID, id, status string) error
+	UpdateLearningPlanItemStatus(ctx context.Context, userID, id string, status model.LearningPlanItemStatus) error
+	ListArticleReadSlugs(ctx context.Context, userID string) ([]string, error)
+	UpsertArticleRead(ctx context.Context, userID, slug string) (*model.ArticleRead, error)
 }
 
 // Service is the recommendation domain API.
@@ -60,13 +60,13 @@ type Service interface {
 	CompleteRecommendation(ctx context.Context, userID, id string) error
 	CompleteLearningPlanItem(ctx context.Context, userID, id string) error
 	DismissLearningPlanItem(ctx context.Context, userID, id string) error
+	MarkArticleRead(ctx context.Context, userID, slug string) (*model.ArticleRead, error)
 }
 
 type recommendationService struct {
 	repo      Repository
 	interview interviewadapter.Client
 	content   contentadapter.Client
-	ai        aiadapter.Client
 }
 
 // Deps wires recommendation service dependencies.
@@ -74,7 +74,6 @@ type Deps struct {
 	Repo      Repository
 	Interview interviewadapter.Client
 	Content   contentadapter.Client
-	AI        aiadapter.Client
 }
 
 // New constructs the recommendation service.
@@ -83,7 +82,6 @@ func New(deps Deps) Service {
 		repo:      deps.Repo,
 		interview: deps.Interview,
 		content:   deps.Content,
-		ai:        deps.AI,
 	}
 }
 
@@ -162,7 +160,7 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 				skillKey := c.SkillKey
 				rec := model.Recommendation{
 					UserID:      event.UserID,
-					Type:        model.RecTypeImproveSkill,
+					Type:        model.RecommendationTypeImproveSkill,
 					Priority:    priorityForScore(c.Normalized),
 					SkillKey:    &skillKey,
 					Title:       copy.ImproveSkillTitle(lang, humanizeSkillKey(c.SkillKey)),
@@ -186,34 +184,7 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 		return err
 	}
 
-	go s.refreshProfileSummary(context.WithoutCancel(ctx), event.UserID)
 	return nil
-}
-
-// refreshProfileSummary regenerates the cached LLM profile summary when stale.
-// Best-effort: failures are ignored so they never break event processing.
-func (s *recommendationService) refreshProfileSummary(ctx context.Context, userID string) {
-	if s.ai == nil {
-		return
-	}
-	profile, err := s.repo.GetUserProfile(ctx, userID)
-	if err != nil || profile == nil || !shouldRefreshSummary(profile.SummaryUpdatedAt) {
-		return
-	}
-	scores, err := s.repo.ListSkillScoresByUser(ctx, userID)
-	if err != nil {
-		return
-	}
-	skills := make([]aiadapter.SkillScore, 0, len(scores))
-	for _, sc := range scores {
-		skills = append(skills, aiadapter.SkillScore{SkillKey: sc.SkillKey, Score: sc.Score, Confidence: sc.Confidence})
-	}
-	llmCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
-	defer cancel()
-	text, err := s.ai.GenerateProfileSummary(llmCtx, userID, profile.ReadinessScore, skills, locale.From(ctx))
-	if err == nil && text != "" {
-		_ = s.repo.UpdateProfileSummary(ctx, userID, text)
-	}
 }
 
 func (s *recommendationService) applySpecialRules(ctx context.Context, event model.AttemptEvaluatedEvent, c model.CriterionScore, lang string) error {
@@ -229,7 +200,7 @@ func (s *recommendationService) applySpecialRules(ctx context.Context, event mod
 		skillKey := c.SkillKey
 		rec := model.Recommendation{
 			UserID:      event.UserID,
-			Type:        model.RecTypeRewriteAnswer,
+			Type:        model.RecommendationTypeRewriteAnswer,
 			Priority:    priorityForScore(c.Normalized),
 			SkillKey:    &skillKey,
 			Title:       copy.RewriteAnswerTitle(lang),
@@ -246,7 +217,7 @@ func (s *recommendationService) applySpecialRules(ctx context.Context, event mod
 		skillKey := c.SkillKey
 		rec := model.Recommendation{
 			UserID:      event.UserID,
-			Type:        model.RecTypePracticeSection,
+			Type:        model.RecommendationTypePracticeSection,
 			Priority:    priorityForScore(c.Normalized),
 			SkillKey:    &skillKey,
 			Title:       copy.PracticeSystemDesignTitle(lang, humanizeSkillKey(criterionKey)),
@@ -274,33 +245,59 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 		return nil, fmt.Errorf("list pending retries: %w", err)
 	}
 
-	// Read-only path: return the cached summary. Regeneration happens out of band
-	// in refreshProfileSummary after an attempt is evaluated.
+	weaknesses := computeWeaknesses(snap.SkillScores)
+	skillKeys := make([]string, 0, len(weaknesses))
+	for _, w := range weaknesses {
+		skillKeys = append(skillKeys, w.SkillKey)
+	}
+	articles, err := s.content.ListArticlesBySkillKeys(ctx, skillKeys)
+	if err != nil {
+		return nil, fmt.Errorf("list articles: %w", err)
+	}
+
+	readSlugs, err := s.repo.ListArticleReadSlugs(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list article reads: %w", err)
+	}
+
+	lang := locale.From(ctx)
+	brief := buildDailyBrief(
+		lang,
+		snap.Profile.ReadinessScore,
+		weaknesses,
+		snap.Recommendations,
+		snap.LearningPlan,
+		pendingRetries,
+		indexArticlesBySkill(articles),
+		indexReadSlugs(readSlugs),
+	)
+
 	return &model.Dashboard{
 		ReadinessScore:    snap.Profile.ReadinessScore,
-		ProfileSummary:    snap.Profile.ProfileSummary,
+		DailyBrief:        brief,
 		Strengths:         computeStrengths(snap.SkillScores),
-		Weaknesses:        computeWeaknesses(snap.SkillScores),
+		Weaknesses:        weaknesses,
 		Recommendations:   snap.Recommendations,
 		LearningPlan:      snap.LearningPlan,
 		PendingRetryCount: len(pendingRetries),
+		ReadArticleSlugs:  readSlugs,
 	}, nil
 }
 
 func (s *recommendationService) DismissRecommendation(ctx context.Context, userID, id string) error {
-	return s.repo.UpdateRecommendationStatus(ctx, userID, id, model.RecStatusDismissed)
+	return s.repo.UpdateRecommendationStatus(ctx, userID, id, model.RecommendationStatusDismissed)
 }
 
 func (s *recommendationService) CompleteRecommendation(ctx context.Context, userID, id string) error {
-	return s.repo.UpdateRecommendationStatus(ctx, userID, id, model.RecStatusCompleted)
+	return s.repo.UpdateRecommendationStatus(ctx, userID, id, model.RecommendationStatusCompleted)
 }
 
 func (s *recommendationService) CompleteLearningPlanItem(ctx context.Context, userID, id string) error {
-	return s.repo.UpdateLearningPlanItemStatus(ctx, userID, id, model.PlanStatusCompleted)
+	return s.repo.UpdateLearningPlanItemStatus(ctx, userID, id, model.LearningPlanItemStatusCompleted)
 }
 
 func (s *recommendationService) DismissLearningPlanItem(ctx context.Context, userID, id string) error {
-	return s.repo.UpdateLearningPlanItemStatus(ctx, userID, id, model.PlanStatusDismissed)
+	return s.repo.UpdateLearningPlanItemStatus(ctx, userID, id, model.LearningPlanItemStatusDismissed)
 }
 
 func parseCriteria(feedback map[string]any, taskType string, overallScore float64) []model.CriterionScore {
@@ -397,14 +394,14 @@ func computeWeaknesses(scores []model.SkillScore) []model.SkillInsight {
 	return out
 }
 
-func priorityForScore(normalized int) string {
+func priorityForScore(normalized int) model.RecommendationPriority {
 	switch {
 	case normalized < 50:
-		return model.PriorityHigh
+		return model.RecommendationPriorityHigh
 	case normalized < 70:
-		return model.PriorityMedium
+		return model.RecommendationPriorityMedium
 	default:
-		return model.PriorityLow
+		return model.RecommendationPriorityLow
 	}
 }
 

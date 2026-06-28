@@ -23,7 +23,7 @@ func RunAPI(ctx context.Context, a *App) error {
 	}
 
 	grpcSrv := grpc.NewServer(grpc.UnaryInterceptor(contentapi.AdminInterceptor(a.Config.AdminAPIToken)))
-	contentapi.NewRegisteredImplementation(grpcSrv, a.Service)
+	contentapi.NewRegisteredImplementation(grpcSrv, a.Service, a.Postgres)
 	reflection.Register(grpcSrv)
 
 	go func() {

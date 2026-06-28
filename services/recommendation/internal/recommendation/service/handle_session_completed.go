@@ -46,8 +46,8 @@ func (s *recommendationService) HandleSessionCompleted(ctx context.Context, even
 			lang := locale.From(ctx)
 			rec := model.Recommendation{
 				UserID:      event.UserID,
-				Type:        model.RecTypeTakeMockInterview,
-				Priority:    model.PriorityMedium,
+				Type:        model.RecommendationTypeTakeMockInterview,
+				Priority:    model.RecommendationPriorityMedium,
 				Title:       copy.TakeMockTitle(lang),
 				Description: copy.TakeMockDescription(lang, profile.ReadinessScore),
 				Metadata: map[string]any{
@@ -67,7 +67,7 @@ func (s *recommendationService) HandleSessionCompleted(ctx context.Context, even
 			lang := locale.From(ctx)
 			rec := model.Recommendation{
 				UserID:      event.UserID,
-				Type:        model.RecTypePracticeSection,
+				Type:        model.RecommendationTypePracticeSection,
 				Priority:    priorityForScore(weak.Score),
 				SkillKey:    &skillKey,
 				Title:       copy.PracticeSectionTitle(lang, section),

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	billingapi "github.com/sedorofeevd/project-druzya/services/billing/internal/app/api/billing"
+	billingrepo "github.com/sedorofeevd/project-druzya/services/billing/internal/billing/repository"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/tools/ops"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -26,7 +27,7 @@ func RunAPI(ctx context.Context, a *App) error {
 		billingapi.AuthInterceptor(a.JWT),
 		billingapi.InternalAuthInterceptor(a.Config.InternalAPIToken),
 	))
-	billingapi.NewRegisteredImplementation(grpcSrv, a.Service)
+	billingapi.NewRegisteredImplementation(grpcSrv, a.Service, billingrepo.New(a.Postgres), a.Postgres)
 	reflection.Register(grpcSrv)
 
 	go func() {

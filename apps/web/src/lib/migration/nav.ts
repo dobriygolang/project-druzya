@@ -16,6 +16,7 @@ export function usePrimaryNav(): NavItem[] {
       [
         { to: '/today', label: t('nav.today') },
         { to: '/mock', label: t('nav.mock') },
+        { to: '/learn', label: t('nav.learn') },
         { to: '/profile', label: t('nav.profile') },
       ].filter((item) => isRouteVisible(item.to)),
     [t],

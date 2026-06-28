@@ -20,6 +20,7 @@
 | `api.druz9.ru` | API mirror |
 | **`druz9.online`** | **SPA (canonical)** |
 | `app.druz9.online` | SPA alias (same site) |
+| `grafana.druz9.online` | Grafana dashboards (monitoring profile) — **A → server IP at reg.ru** |
 | `druz9.ru`, `app.druz9.ru` | 301 → `https://druz9.online` |
 
 ---
@@ -35,6 +36,7 @@
 | `POSTGRES_PASSWORD` | `openssl rand -hex 24` |
 | `INTERNAL_API_TOKEN` | `openssl rand -hex 32` — один токен для всех internal gRPC |
 | `ADMIN_API_TOKEN` | `openssl rand -hex 32` — content admin RPC |
+| `ADMIN_USER_IDS` | comma-separated identity user UUIDs for `/v1/admin/*` |
 | `ROOM_INVITE_SECRET` | `openssl rand -hex 32` — HMAC для invite-ссылок live-комнат |
 | `TELEGRAM_BOT_TOKEN` | [@BotFather](https://t.me/BotFather) |
 | `TELEGRAM_BOT_USERNAME` | без `@`, напр. `druzya_bot` |

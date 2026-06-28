@@ -3,12 +3,15 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { readAccessToken } from '@/lib/apiClient'
 import { AppShell } from '@/components/AppShell'
 import { RequireAuth } from '@/components/RequireAuth'
+import { RequireAdmin } from '@/components/RequireAdmin'
 import { RouteLoader } from '@/components/RouteLoader'
 
 const WelcomePage = lazy(() => import('@/pages/WelcomePage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
+const LearnIndexPage = lazy(() => import('@/pages/LearnIndexPage'))
+const LearnArticlePage = lazy(() => import('@/pages/LearnArticlePage'))
 const MockHubPage = lazy(() => import('@/pages/MockHubPage'))
 const SessionPage = lazy(() => import('@/pages/SessionPage'))
 const SessionResultsPage = lazy(() => import('@/pages/SessionResultsPage'))
@@ -17,6 +20,16 @@ const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
 const FeatureStubPage = lazy(() => import('@/pages/FeatureStubPage'))
 const MigrationStatusPage = lazy(() => import('@/pages/MigrationStatusPage'))
 const PricingPage = lazy(() => import('@/pages/PricingPage'))
+const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'))
+const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
+const AdminCompaniesPage = lazy(() => import('@/pages/admin/AdminCompaniesPage'))
+const AdminTasksPage = lazy(() => import('@/pages/admin/AdminTasksPage'))
+const AdminArticlesPage = lazy(() => import('@/pages/admin/AdminArticlesPage'))
+const AdminArticleEditPage = lazy(() => import('@/pages/admin/AdminArticleEditPage'))
+const AdminTemplatesPage = lazy(() => import('@/pages/admin/AdminTemplatesPage'))
+const AdminTemplateDetailPage = lazy(() => import('@/pages/admin/AdminTemplateDetailPage'))
+const AdminBillingPage = lazy(() => import('@/pages/admin/AdminBillingPage'))
+const AdminAIPage = lazy(() => import('@/pages/admin/AdminAIPage'))
 const LegalTermsPage = lazy(() => import('@/pages/LegalTermsPage'))
 const LegalPrivacyPage = lazy(() => import('@/pages/LegalPrivacyPage'))
 const LegacyMockSessionRedirect = lazy(() =>
@@ -70,6 +83,22 @@ export default function App() {
             }
           />
           <Route
+            path="/learn"
+            element={
+              <AuthedLayout>
+                <LearnIndexPage />
+              </AuthedLayout>
+            }
+          />
+          <Route
+            path="/learn/:slug"
+            element={
+              <AuthedLayout>
+                <LearnArticlePage />
+              </AuthedLayout>
+            }
+          />
+          <Route
             path="/mock"
             element={
               <AuthedLayout>
@@ -116,7 +145,27 @@ export default function App() {
           <Route path="/tutor/:tab" element={<AuthedStub />} />
           <Route path="/circles" element={<AuthedStub />} />
           <Route path="/notifications" element={<AuthedStub />} />
-          <Route path="/admin" element={<AuthedStub />} />
+          <Route element={<RequireAdmin />}>
+            <Route
+              path="/admin"
+              element={
+                <AuthedLayout>
+                  <AdminLayout />
+                </AuthedLayout>
+              }
+            >
+              <Route index element={<AdminHomePage />} />
+              <Route path="companies" element={<AdminCompaniesPage />} />
+              <Route path="tasks" element={<AdminTasksPage />} />
+              <Route path="articles" element={<AdminArticlesPage />} />
+              <Route path="articles/new" element={<AdminArticleEditPage />} />
+              <Route path="articles/:slug/edit" element={<AdminArticleEditPage />} />
+              <Route path="templates" element={<AdminTemplatesPage />} />
+              <Route path="templates/:templateId" element={<AdminTemplateDetailPage />} />
+              <Route path="billing" element={<AdminBillingPage />} />
+              <Route path="ai" element={<AdminAIPage />} />
+            </Route>
+          </Route>
           <Route path="/onboarding" element={<AuthedStub />} />
           <Route path="/podcasts" element={<AuthedStub />} />
           <Route path="/editor/:id" element={<AuthedStub />} />

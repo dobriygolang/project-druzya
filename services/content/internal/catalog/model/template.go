@@ -37,3 +37,14 @@ type InterviewTemplateDetail struct {
 	Template *InterviewTemplate
 	Sections []TemplateSection
 }
+
+// TemplateSectionInput is a section payload for ReplaceTemplateStructure.
+type TemplateSectionInput struct {
+	ID           string
+	SectionType  string
+	Title        string
+	Description  *string
+	Position     int
+	PassingScore *int
+	TaskIDs      []string
+}

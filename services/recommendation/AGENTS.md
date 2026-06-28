@@ -6,7 +6,9 @@ Module: `github.com/sedorofeevd/project-druzya/services/recommendation`
 
 ## Purpose
 
-Consume interview outbox → update skill profiles/scores → recommendations + learning plan API.
+Consume interview outbox → update skill profiles/scores → recommendations + learning plan + **structured daily brief** for Today.
+
+**Does not call ai-service.** AI only evaluates attempts; this service owns all user-facing Today copy.
 
 ## Ports
 
@@ -16,10 +18,9 @@ HTTP `8084` | gRPC `9094` | PG `5436` `druzya_recommendation`
 
 ```
 cmd/recommendation/app/
-internal/recommendation/     model, repository, service
+internal/recommendation/     model, repository, service, copy/, brief builder
 internal/adapter/interview/  outbox claim/ack/fail, eval summary, retries
 internal/adapter/content/    GetTask (legacy fallback when outbox payload lacks task_type)
-internal/adapter/ai/         GenerateProfileSummary (best-effort dashboard copy)
 internal/outboxworker/       poll interview outbox by event name (4 types)
 internal/app/api/recommendation/
 scripts/migrations/
@@ -50,13 +51,22 @@ On success: `AckOutboxEvents`. On handler error: `FailOutboxEvent`.
 
 Idempotency: `processed_events(consumer, event_id)`. Writes in `Repository.WithTx`.
 
-Profile summary refresh runs in a goroutine after the DB tx (does not block outbox ack).
+## Daily brief (`GetDashboard`)
+
+Built on read in `service/brief.go` from readiness, weaknesses, active recommendations, learning plan retry items, pending retry queue, and content articles. Returns `daily_brief.items[]` with typed `DailyBriefItemType`, `title`, `description`, `action_label`, `action_path`, `retry_item_id`, optional `secondary_action_*`.
+
+For weaknesses with a matching content article (`article_skill_keys`), brief emits `DAILY_BRIEF_ITEM_TYPE_READ_ARTICLE` with `action_path=/learn/{slug}` and `secondary_action_path=/mock?solo=…`. If the user already read the article (`article_reads`), brief switches to a practice-only weak-skill row.
+
+## Article read progress
+
+Table `article_reads(user_id, article_slug)`. `MarkArticleRead` upserts on scroll/complete from web. `GetDashboard.read_article_slugs` lists slugs for catalog badges and brief logic.
 
 ## API
 
 | RPC | HTTP | Auth |
 |-----|------|------|
 | GetDashboard | `GET /v1/recommendations/dashboard` | JWT |
+| MarkArticleRead | `POST /v1/recommendations/articles/{slug}/read` | JWT |
 | DismissRecommendation | `POST /v1/recommendations/{id}/dismiss` | JWT |
 | CompleteRecommendation | `POST /v1/recommendations/{id}/complete` | JWT |
 | CompleteLearningPlanItem | `POST /v1/recommendations/learning-plan/{id}/complete` | JWT |
@@ -80,7 +90,6 @@ make start | gen-proto | test | lint | build
 | INTERNAL_API_TOKEN | required |
 | INTERVIEW_GRPC_ADDR | `127.0.0.1:9092` |
 | CONTENT_GRPC_ADDR | `127.0.0.1:9091` |
-| AI_GRPC_ADDR | `127.0.0.1:9093` (optional; noop profile summary if unset) |
 | WORKER_POLL_INTERVAL | `2s` |
 
 ## Agent tokens (cavecrew)

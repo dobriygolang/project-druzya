@@ -49,10 +49,10 @@ func (s *recommendationService) HandleRetryItemCreated(ctx context.Context, even
 		taskID := event.TaskID
 		_, err = s.repo.CreateRetryTaskPlanItem(txCtx, model.LearningPlanItem{
 			UserID:   event.UserID,
-			Type:     model.PlanTypeRetryTask,
+			Type:     model.LearningPlanItemTypeRetryTask,
 			TaskID:   &taskID,
 			Title:    title,
-			Status:   model.PlanStatusPending,
+			Status:   model.LearningPlanItemStatusPending,
 			Position: position,
 			Metadata: map[string]any{
 				"task_id":       event.TaskID,

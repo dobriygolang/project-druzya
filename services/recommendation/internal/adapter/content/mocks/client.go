@@ -82,6 +82,65 @@ func (_c *Client_GetTask_Call) RunAndReturn(run func(context.Context, string) (*
 	return _c
 }
 
+// ListArticlesBySkillKeys provides a mock function with given fields: ctx, skillKeys
+func (_m *Client) ListArticlesBySkillKeys(ctx context.Context, skillKeys []string) ([]content.Article, error) {
+	ret := _m.Called(ctx, skillKeys)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListArticlesBySkillKeys")
+	}
+
+	var r0 []content.Article
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, []string) ([]content.Article, error)); ok {
+		return rf(ctx, skillKeys)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, []string) []content.Article); ok {
+		r0 = rf(ctx, skillKeys)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]content.Article)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, []string) error); ok {
+		r1 = rf(ctx, skillKeys)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Client_ListArticlesBySkillKeys_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListArticlesBySkillKeys'
+type Client_ListArticlesBySkillKeys_Call struct {
+	*mock.Call
+}
+
+// ListArticlesBySkillKeys is a helper method to define mock.On call
+//   - ctx context.Context
+//   - skillKeys []string
+func (_e *Client_Expecter) ListArticlesBySkillKeys(ctx interface{}, skillKeys interface{}) *Client_ListArticlesBySkillKeys_Call {
+	return &Client_ListArticlesBySkillKeys_Call{Call: _e.mock.On("ListArticlesBySkillKeys", ctx, skillKeys)}
+}
+
+func (_c *Client_ListArticlesBySkillKeys_Call) Run(run func(ctx context.Context, skillKeys []string)) *Client_ListArticlesBySkillKeys_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].([]string))
+	})
+	return _c
+}
+
+func (_c *Client_ListArticlesBySkillKeys_Call) Return(_a0 []content.Article, _a1 error) *Client_ListArticlesBySkillKeys_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Client_ListArticlesBySkillKeys_Call) RunAndReturn(run func(context.Context, []string) ([]content.Article, error)) *Client_ListArticlesBySkillKeys_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewClient creates a new instance of Client. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewClient(t interface {

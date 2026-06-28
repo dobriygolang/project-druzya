@@ -27,3 +27,27 @@ scrape_configs:
     static_configs:
       - targets: ["recommendation:8084"]
     metrics_path: /metrics
+
+  - job_name: billing
+    static_configs:
+      - targets: ["billing:8085"]
+    metrics_path: /metrics
+
+  - job_name: sandbox
+    static_configs:
+      - targets: ["sandbox:8086"]
+    metrics_path: /metrics
+
+  - job_name: rooms
+    static_configs:
+      - targets: ["rooms:8087"]
+    metrics_path: /metrics
+
+  - job_name: admin
+    static_configs:
+      - targets: ["admin:8088"]
+    metrics_path: /metrics
+
+  - job_name: node
+    static_configs:
+      - targets: ["node_exporter:9100"]

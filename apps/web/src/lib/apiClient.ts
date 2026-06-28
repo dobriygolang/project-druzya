@@ -183,7 +183,17 @@ export async function apiWithBearer<T = unknown>(
   return parseResponse<T>(path, res)
 }
 
-export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
+export type ApiOptions = {
+  /** When false, 401 throws ApiError without clearing tokens or redirecting to login. */
+  redirectOnUnauthorized?: boolean
+}
+
+export async function api<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+  options: ApiOptions = {},
+): Promise<T> {
+  const redirectOnUnauthorized = options.redirectOnUnauthorized !== false
   let token = readAccessToken()
   let res = await doFetch(path, init, token)
 
@@ -195,8 +205,10 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
       res = await doFetch(path, init, token)
     }
     if (res.status === 401) {
-      clearTokens()
-      redirectToLogin()
+      if (redirectOnUnauthorized) {
+        clearTokens()
+        redirectToLogin()
+      }
       throw new ApiError(401, 'unauthorized')
     }
   }

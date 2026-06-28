@@ -96,7 +96,7 @@ func TestHandleAttemptEvaluated_CreatesProfileAndUpdatesSkills(t *testing.T) {
 	}, nil)
 	fx.repo.EXPECT().UpdateReadinessScore(ctx, userID, 30).Return(nil)
 	fx.repo.EXPECT().UpsertImproveSkillRecommendation(ctx, mock.AnythingOfType("model.Recommendation")).
-		Return(&model.Recommendation{Type: model.RecTypeImproveSkill}, nil)
+		Return(&model.Recommendation{Type: model.RecommendationTypeImproveSkill}, nil)
 	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerAttemptEvaluated, eventID).Return(true, nil)
 
 	err := fx.svc.HandleAttemptEvaluated(ctx, eventID, event)
@@ -117,7 +117,7 @@ func TestHandleAttemptEvaluated_PassedDoesNotCreateRetryPlan(t *testing.T) {
 	fx.repo.EXPECT().ListSkillScoresByUser(ctx, userID).Return([]model.SkillScore{{Score: 30, Confidence: 10}}, nil)
 	fx.repo.EXPECT().UpdateReadinessScore(ctx, userID, 30).Return(nil)
 	fx.repo.EXPECT().UpsertImproveSkillRecommendation(ctx, mock.AnythingOfType("model.Recommendation")).
-		Return(&model.Recommendation{Type: model.RecTypeImproveSkill}, nil)
+		Return(&model.Recommendation{Type: model.RecommendationTypeImproveSkill}, nil)
 	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerAttemptEvaluated, eventID).Return(true, nil)
 
 	err := fx.svc.HandleAttemptEvaluated(ctx, eventID, event)
@@ -152,10 +152,10 @@ func TestHandleSessionCompleted_HighReadinessCreatesMockInterview(t *testing.T) 
 		{SkillKey: "algorithm.correctness", Score: 60, Confidence: 30},
 	}, nil)
 	fx.repo.EXPECT().InsertTakeMockRecommendation(ctx, mock.MatchedBy(func(rec model.Recommendation) bool {
-		return rec.Type == model.RecTypeTakeMockInterview && rec.Metadata["suggested_mode"] == "algorithms_training"
-	})).Return(&model.Recommendation{Type: model.RecTypeTakeMockInterview}, nil)
+		return rec.Type == model.RecommendationTypeTakeMockInterview && rec.Metadata["suggested_mode"] == "algorithms_training"
+	})).Return(&model.Recommendation{Type: model.RecommendationTypeTakeMockInterview}, nil)
 	fx.repo.EXPECT().InsertSpecialRecommendation(ctx, mock.AnythingOfType("model.Recommendation")).
-		Return(&model.Recommendation{Type: model.RecTypePracticeSection}, nil)
+		Return(&model.Recommendation{Type: model.RecommendationTypePracticeSection}, nil)
 	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerSessionCompleted, eventID).Return(true, nil)
 
 	err := fx.svc.HandleSessionCompleted(ctx, eventID, event)
@@ -179,7 +179,7 @@ func TestHandleRetryItemCreated_ReconcilesPlanItem(t *testing.T) {
 	fx.repo.EXPECT().NextLearningPlanPosition(ctx, userID).Return(1, nil)
 	fx.repo.EXPECT().CreateRetryTaskPlanItem(ctx, mock.MatchedBy(func(item model.LearningPlanItem) bool {
 		return item.Metadata["retry_item_id"] == "retry-1"
-	})).Return(&model.LearningPlanItem{Type: model.PlanTypeRetryTask}, nil)
+	})).Return(&model.LearningPlanItem{Type: model.LearningPlanItemTypeRetryTask}, nil)
 	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerRetryItemCreated, eventID).Return(true, nil)
 
 	err := fx.svc.HandleRetryItemCreated(ctx, eventID, event)

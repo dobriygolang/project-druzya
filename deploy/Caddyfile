@@ -30,6 +30,9 @@
 	handle /v1/rubrics* {
 		reverse_proxy content:8081
 	}
+	handle /v1/articles* {
+		reverse_proxy content:8081
+	}
 	handle /v1/interview* {
 		reverse_proxy interview:8082
 	}
@@ -41,6 +44,9 @@
 	}
 	handle /v1/sandbox* {
 		reverse_proxy sandbox:8086
+	}
+	handle /v1/admin* {
+		reverse_proxy admin:8088
 	}
 	handle /v1/billing* {
 		reverse_proxy billing:8085
@@ -88,4 +94,10 @@ http://druz9.online, http://app.druz9.online {
 # RU apex + app → canonical .online
 http://druz9.ru, http://app.druz9.ru {
 	redir https://druz9.online{uri} permanent
+}
+
+# Grafana — monitoring UI (TLS at host nginx)
+http://grafana.druz9.online {
+	encode gzip
+	reverse_proxy grafana:3000
 }

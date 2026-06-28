@@ -42,9 +42,6 @@ func RunAPI(ctx context.Context, a *App) error {
 		func(ctx context.Context) error { return a.interviewConn.Ping(ctx) },
 		func(ctx context.Context) error { return a.contentConn.Ping(ctx) },
 	}
-	if a.aiConn != nil {
-		checkers = append(checkers, func(ctx context.Context) error { return a.aiConn.Ping(ctx) })
-	}
 	httpMux.HandleFunc("/readyz", ops.ReadyzHandler(checkers...))
 	httpMux.Handle("/metrics", ops.MetricsHandler())
 

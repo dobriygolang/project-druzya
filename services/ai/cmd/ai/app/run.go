@@ -11,12 +11,14 @@ import (
 	contentgrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content/grpc"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
 	interviewgrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview/grpc"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
 	llmadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/config"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationrepo "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/repository"
 	evaluationservice "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/service"
-	"github.com/sedorofeevd/project-druzya/services/ai/internal/summary"
+	llmconfigrepo "github.com/sedorofeevd/project-druzya/services/ai/internal/llmconfig/repository"
+	llmconfigservice "github.com/sedorofeevd/project-druzya/services/ai/internal/llmconfig/service"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/logger"
 )
 
@@ -32,6 +34,9 @@ type App struct {
 	contentConn     *contentgrpc.Client
 	billingConn     *billinggrpc.Client
 	Repo            *evaluationrepo.Repository
+	LLMConfigRepo   *llmconfigrepo.Repository
+	LLMConfig       llmconfigservice.Service
+	LLMChain        *llmchain.Chain
 	Service         evaluationservice.Service
 }
 
@@ -78,14 +83,22 @@ func New(ctx context.Context) (*App, error) {
 		billingClient = billingConn
 	}
 
-	chain, err := llmadapter.BuildChain(llmadapter.BuildConfig{
-		Order:    cfg.LLMChainOrder,
-		OpenAI:   cfg.OpenAIAPIKey,
-		Groq:     cfg.GroqAPIKey,
-		Cerebras: cfg.CerebrasAPIKey,
-		Google:   cfg.GoogleAPIKey,
-		Caveman:  cfg.LLMCavemanLevel,
-	}, slog.Default())
+	repo := evaluationrepo.New(pg)
+	llmConfigRepo := llmconfigrepo.New(pg)
+
+	chatClient, chain, err := llmadapter.BuildChain(llmadapter.BuildChainOpts{
+		Config: llmadapter.BuildConfig{
+			Order:    cfg.LLMChainOrder,
+			OpenAI:   cfg.OpenAIAPIKey,
+			Groq:     cfg.GroqAPIKey,
+			Cerebras: cfg.CerebrasAPIKey,
+			Google:   cfg.GoogleAPIKey,
+			Caveman:  cfg.LLMCavemanLevel,
+		},
+		Log:                 slog.Default(),
+		RuntimeConfigSource: llmConfigRepo,
+		RuntimeCtx:          ctx,
+	})
 	if err != nil {
 		if billingConn != nil {
 			_ = billingConn.Close()
@@ -97,21 +110,23 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	var evalClient evaluator.Client
-	if chain == nil {
+	if chatClient == nil {
 		log.Info("no LLM API keys configured — using fake evaluator")
 		evalClient = evaluator.NewFakeClient()
 	} else {
-		evalClient = evaluator.NewLLMJudge(chain, slog.Default())
+		evalClient = evaluator.NewLLMJudge(chatClient, slog.Default())
 	}
 
-	repo := evaluationrepo.New(pg)
+	llmConfigSvc := llmconfigservice.New(llmconfigservice.Deps{
+		Repo:     llmConfigRepo,
+		Reloader: chain,
+	})
 	svc := evaluationservice.New(evaluationservice.Deps{
 		Repo:       repo,
 		Interview:  interviewClient,
 		Content:    contentClient,
 		Billing:    billingClient,
 		Evaluator:  evalClient,
-		Summary:    summary.New(chain),
 		MaxRetries: cfg.EvalMaxRetries,
 	})
 
@@ -126,6 +141,9 @@ func New(ctx context.Context) (*App, error) {
 		contentConn:     contentClient,
 		billingConn:     billingConn,
 		Repo:            repo,
+		LLMConfigRepo:   llmConfigRepo,
+		LLMConfig:       llmConfigSvc,
+		LLMChain:        chain,
 		Service:         svc,
 	}, nil
 }
