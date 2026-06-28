@@ -227,7 +227,8 @@ func (s *trackerService) CreateTask(ctx context.Context, userID string, in Creat
 		meta = map[string]any{}
 	}
 	epicID := in.EpicID
-	if source == model.TaskSourceUser {
+	switch source {
+	case model.TaskSourceUser:
 		cr := classify.Title(title)
 		meta["task_kind"] = cr.Kind
 		for k, v := range cr.Meta {
@@ -250,7 +251,7 @@ func (s *trackerService) CreateTask(ctx context.Context, userID string, in Creat
 				}
 			}
 		}
-	} else if source == model.TaskSourceRecommendation || source == model.TaskSourceEnrichment {
+	case model.TaskSourceRecommendation, model.TaskSourceEnrichment:
 		if _, ok := meta["task_kind"]; !ok {
 			meta["task_kind"] = classify.KindSystem
 		}
