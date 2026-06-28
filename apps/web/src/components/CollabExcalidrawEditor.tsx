@@ -11,6 +11,15 @@ import {
 } from '@/components/system-design/excalidrawTheme'
 import { collabUserColors } from '@/lib/codemirror/collabColors'
 import { peersFromAwareness, type CollabPeer } from '@/lib/codemirror/collabPresence'
+import {
+  migrateLegacySceneText,
+  observeSceneChanges,
+  readSceneFromYjs,
+  sceneHasContent,
+  sceneToJSON,
+  writeSceneToYjs,
+  type ScenePayload,
+} from '@/lib/collab/excalidrawYjsDoc'
 import { getSystemDesignWorkspace, patchSystemDesignWorkspace } from '@/lib/api/systemDesign'
 import {
   applyWsEnvelope,
@@ -24,11 +33,6 @@ export type CollabExcalidrawHandle = {
   reconnect: () => void
 }
 
-type ScenePayload = {
-  elements: unknown[]
-  files?: Record<string, unknown>
-}
-
 type Props = {
   roomId: string
   frozen: boolean
@@ -39,19 +43,6 @@ type Props = {
   workspaceVersion?: number
   onPeersChange?: (peers: CollabPeer[]) => void
   onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
-}
-
-function parseScene(raw: string): ScenePayload {
-  if (!raw.trim()) return { elements: [], files: {} }
-  try {
-    const parsed = JSON.parse(raw) as ScenePayload
-    return {
-      elements: Array.isArray(parsed.elements) ? parsed.elements : [],
-      files: parsed.files && typeof parsed.files === 'object' ? parsed.files : {},
-    }
-  } catch {
-    return { elements: [], files: {} }
-  }
 }
 
 function isTabActive(): boolean {
@@ -74,12 +65,12 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
     ref,
   ) {
     const ydocRef = useRef<Y.Doc | null>(null)
-    const ytextRef = useRef<Y.Text | null>(null)
     const awarenessRef = useRef<Awareness | null>(null)
     const apiRef = useRef<{
       updateScene: (scene: { elements: readonly unknown[]; files?: Record<string, unknown> }) => void
     } | null>(null)
     const applyingRemoteRef = useRef(false)
+    const remoteApplyTimerRef = useRef<number | null>(null)
     const wsSendRef = useRef<(env: EditorWsEnvelope) => boolean>(() => false)
     const sendRef = useRef<(update: Uint8Array) => void>(() => {})
     const sendSnapshotRef = useRef<(full: Uint8Array) => void>(() => {})
@@ -87,6 +78,8 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
     const pendingEnvelopesRef = useRef<EditorWsEnvelope[]>([])
     const sessionSyncTimer = useRef<number | null>(null)
     const workspaceVersionRef = useRef(workspaceVersion ?? 1)
+    const pendingLocalRef = useRef<ScenePayload | null>(null)
+    const localRafRef = useRef(0)
 
     const [initialScene, setInitialScene] = useState<ScenePayload>({ elements: [], files: {} })
     const [ready, setReady] = useState(false)
@@ -125,19 +118,47 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
     }, [status, onWsStatusChange])
 
     useImperativeHandle(ref, () => ({
-      getSceneJSON: () => ytextRef.current?.toString() ?? '',
+      getSceneJSON: () => (ydocRef.current ? sceneToJSON(ydocRef.current) : ''),
       reconnect,
     }))
+
+    const flushLocalToYjs = useCallback(() => {
+      const pending = pendingLocalRef.current
+      const ydoc = ydocRef.current
+      if (!pending || !ydoc) return
+      pendingLocalRef.current = null
+      writeSceneToYjs(ydoc, pending.elements, pending.files, 'local')
+    }, [])
+
+    const pushSceneToExcalidraw = useCallback((scene: ScenePayload) => {
+      setInitialScene(scene)
+      if (!apiRef.current) return
+
+      if (remoteApplyTimerRef.current) window.clearTimeout(remoteApplyTimerRef.current)
+      applyingRemoteRef.current = true
+      try {
+        apiRef.current.updateScene({
+          elements: scene.elements,
+          files: scene.files,
+        })
+      } finally {
+        // Excalidraw may emit onChange after updateScene — hold the guard briefly.
+        remoteApplyTimerRef.current = window.setTimeout(() => {
+          applyingRemoteRef.current = false
+          remoteApplyTimerRef.current = null
+        }, 100)
+      }
+    }, [])
 
     useEffect(() => {
       if (!token) return
 
       const ydoc = new Y.Doc()
       ydocRef.current = ydoc
-      const ytext = ydoc.getText('scene')
-      ytextRef.current = ytext
       const awareness = new Awareness(ydoc)
       awarenessRef.current = awareness
+
+      migrateLegacySceneText(ydoc)
 
       const label = displayName ?? userId?.slice(0, 8) ?? 'you'
       const colors = collabUserColors(userId ?? roomId)
@@ -173,36 +194,18 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
         }, 1500)
       }
 
-      const pushSceneToExcalidraw = (raw: string) => {
-        const scene = parseScene(raw)
-        setInitialScene(scene)
-        if (apiRef.current) {
-          applyingRemoteRef.current = true
-          try {
-            apiRef.current.updateScene({
-              elements: scene.elements,
-              files: scene.files,
-            })
-          } finally {
-            window.setTimeout(() => {
-              applyingRemoteRef.current = false
-            }, 0)
-          }
-        }
-      }
-
-      const scheduleSessionSync = (raw: string) => {
+      const scheduleSessionSync = () => {
         if (!sessionTaskId) return
         if (sessionSyncTimer.current) window.clearTimeout(sessionSyncTimer.current)
         sessionSyncTimer.current = window.setTimeout(() => {
           sessionSyncTimer.current = null
-          const scene = parseScene(raw)
+          const scene = readSceneFromYjs(ydoc)
           void patchSystemDesignWorkspace({
             sessionTaskId,
             expectedVersion: workspaceVersionRef.current,
             diagram: {
               elements: scene.elements,
-              files: scene.files ?? {},
+              files: scene.files,
             },
           })
             .then((res) => {
@@ -215,30 +218,29 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
       }
 
       const seedFromSessionWorkspace = async () => {
-        if (!sessionTaskId || ytext.length > 0) return
+        if (!sessionTaskId || sceneHasContent(ydoc)) return
         try {
           const res = await getSystemDesignWorkspace(sessionTaskId)
           workspaceVersionRef.current = res.workspace.version
           const diagram = res.workspace.diagram
           if (!diagram || !Array.isArray(diagram.elements)) return
-          const payload = JSON.stringify({
-            elements: diagram.elements,
-            files: diagram.files && typeof diagram.files === 'object' ? diagram.files : {},
-          })
-          ydoc.transact(() => {
-            ytext.insert(0, payload)
-          })
+          writeSceneToYjs(
+            ydoc,
+            diagram.elements,
+            diagram.files && typeof diagram.files === 'object'
+              ? (diagram.files as Record<string, unknown>)
+              : {},
+            'seed',
+          )
         } catch {
           /* empty collab doc is fine */
         }
       }
 
-      const onYText = () => {
-        const raw = ytext.toString()
-        pushSceneToExcalidraw(raw)
-        scheduleSessionSync(raw)
-      }
-      ytext.observe(onYText)
+      const stopObserving = observeSceneChanges(ydoc, (scene) => {
+        pushSceneToExcalidraw(scene)
+        scheduleSessionSync()
+      })
 
       const onYUpdate = (update: Uint8Array, origin: unknown) => {
         if (origin === 'remote') return
@@ -268,9 +270,8 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
         wsSendRef.current({ kind: 'presence', data: { update: bytesToB64(update) } })
       }
 
-      if (ytext.length > 0) {
-        pushSceneToExcalidraw(ytext.toString())
-      } else {
+      setInitialScene(readSceneFromYjs(ydoc))
+      if (!sceneHasContent(ydoc)) {
         void seedFromSessionWorkspace()
       }
       setReady(true)
@@ -278,48 +279,50 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
 
       return () => {
         pendingEnvelopesRef.current = []
+        if (localRafRef.current) cancelAnimationFrame(localRafRef.current)
+        if (remoteApplyTimerRef.current) window.clearTimeout(remoteApplyTimerRef.current)
         try {
           sendFullSnapshot()
         } catch {
           /* ignore */
         }
         if (sessionSyncTimer.current) window.clearTimeout(sessionSyncTimer.current)
+        stopObserving()
         document.removeEventListener('visibilitychange', onTabActivity)
         window.removeEventListener('focus', onTabActivity)
         window.removeEventListener('blur', onTabActivity)
         awareness.off('change', emitPeers)
         awareness.setLocalState(null)
         if (snapshotTimer !== null) window.clearTimeout(snapshotTimer)
-        ytext.unobserve(onYText)
         ydoc.off('update', onYUpdate)
         awareness.off('update', onAwUpdate)
         awareness.destroy()
         ydoc.destroy()
         ydocRef.current = null
-        ytextRef.current = null
         awarenessRef.current = null
         apiRef.current = null
+        pendingLocalRef.current = null
         setReady(false)
       }
-    }, [roomId, token, displayName, userId, sessionTaskId, flushPendingEnvelopes])
+    }, [roomId, token, displayName, userId, sessionTaskId, flushPendingEnvelopes, pushSceneToExcalidraw])
 
     const handleChange = useCallback(
       (elements: readonly unknown[], _appState: unknown, files: unknown) => {
         if (frozen || applyingRemoteRef.current) return
-        const ytext = ytextRef.current
         const ydoc = ydocRef.current
-        if (!ytext || !ydoc) return
-        const payload = JSON.stringify({
+        if (!ydoc) return
+
+        pendingLocalRef.current = {
           elements: [...elements],
           files: (files as Record<string, unknown>) ?? {},
-        })
-        if (ytext.toString() === payload) return
-        ydoc.transact(() => {
-          ytext.delete(0, ytext.length)
-          ytext.insert(0, payload)
+        }
+        if (localRafRef.current) return
+        localRafRef.current = requestAnimationFrame(() => {
+          localRafRef.current = 0
+          flushLocalToYjs()
         })
       },
-      [frozen],
+      [frozen, flushLocalToYjs],
     )
 
     if (!token) {

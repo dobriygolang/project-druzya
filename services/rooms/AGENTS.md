@@ -6,7 +6,7 @@ Module: `github.com/sedorofeevd/project-druzya/services/rooms`
 
 ## Purpose
 
-Live collab rooms: REST lifecycle + WebSocket Yjs sync for **code** (`Y.Text code`) and **system design** (`Y.Text scene` / Excalidraw JSON).
+Live collab rooms: REST lifecycle + WebSocket Yjs sync for **code** (`Y.Text code`) and **system design** (Excalidraw: `Y.Map elements` + `Y.Array elementIds` + `Y.Map files`; legacy `Y.Text scene` auto-migrated).
 
 Room types: `practice`, `interview`, `pair_mock`, `system_design`. Languages include `diagram` for Excalidraw boards.
 

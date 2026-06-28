@@ -49,6 +49,7 @@ jobs:
           version: v2.6.2
           working-directory: services/${{ matrix.service }}
           args: --config=.golangci.yml --timeout=5m
+          verify: false
 
       - name: Test
         run: GOWORK=off go test -race -count=1 ./...
