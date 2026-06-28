@@ -75,7 +75,8 @@ func WarmGoCompiler(ctx context.Context, log logger.Logger, r *DockerRunner) {
 		warmCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer cancel()
 		name := fmt.Sprintf("sbx-warm-%d", time.Now().UnixNano())
-		args := dockerRunArgs(name, r.GoImage, dir, goCacheDirForRun(r, "go"), 128, r.CPUs, "go", "run", "main.go")
+		// Go compile needs more RAM than a typical user run; warm-up is off the hot path.
+		args := dockerRunArgs(name, r.GoImage, dir, goCacheDirForRun(r, "go"), 512, r.CPUs, "go", "run", "main.go")
 		out, err := exec.CommandContext(warmCtx, "docker", args...).CombinedOutput()
 		if err != nil {
 			log.Warn("go warm-up compile failed", "err", err, "output", string(out))
