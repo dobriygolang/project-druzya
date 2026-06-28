@@ -9,6 +9,9 @@
 	handle /v1/auth* {
 		reverse_proxy identity:8080
 	}
+	handle /v1/me* {
+		reverse_proxy identity:8080
+	}
 	handle /v1/users* {
 		reverse_proxy identity:8080
 	}

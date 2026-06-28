@@ -1,16 +1,19 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import clsx from 'clsx'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { getBillingMe } from '@/lib/api/billing'
 import {
   getInterviewTemplateDetail,
   listCompanies,
   listInterviewTemplates,
 } from '@/lib/api/content'
 import { startSession } from '@/lib/api/interview'
+import { formatApiError } from '@/lib/apiClient'
+import { formatLimitUsage } from '@/lib/billingLabels'
 
 export default function InterviewStartPage() {
   const navigate = useNavigate()
@@ -28,6 +31,15 @@ export default function InterviewStartPage() {
     queryFn: () => getInterviewTemplateDetail(templateId!),
     enabled: !!templateId,
   })
+  const billingQ = useQuery({ queryKey: ['billing-me'], queryFn: getBillingMe })
+
+  const companyTemplatesEnabled = billingQ.data?.features.company_templates_enabled !== false
+  const mockQuota = billingQ.data?.limits.mock_interviews_per_month
+  const mockQuotaExhausted =
+    mockQuota != null &&
+    !mockQuota.unlimited &&
+    mockQuota.limit != null &&
+    mockQuota.used >= mockQuota.limit
 
   const startM = useMutation({
     mutationFn: (id: string) => startSession(id),
@@ -57,9 +69,26 @@ export default function InterviewStartPage() {
       </div>
 
       {startM.isError ? (
-        <ErrorMessage
-          message={startM.error instanceof Error ? startM.error.message : 'Не удалось начать сессию'}
-        />
+        <ErrorMessage message={formatStartError(startM.error)} />
+      ) : null}
+
+      {!companyTemplatesEnabled && billingQ.isSuccess ? (
+        <Card elevation="e1" className="border-border-strong">
+          <p className="text-sm text-text-secondary">
+            Шаблоны компаний доступны на Pro.{' '}
+            <Link to="/profile" className="underline">
+              Посмотреть тариф
+            </Link>
+          </p>
+        </Card>
+      ) : null}
+
+      {mockQuotaExhausted && billingQ.isSuccess && mockQuota ? (
+        <Card elevation="e1" className="border-border-strong">
+          <p className="text-sm text-text-secondary">
+            {formatLimitUsage('mock_interviews_per_month', mockQuota)} — лимит исчерпан.
+          </p>
+        </Card>
       ) : null}
 
       <section className="space-y-3">
@@ -154,9 +183,24 @@ export default function InterviewStartPage() {
         </Card>
       ) : null}
 
-      <Button loading={startM.isPending} disabled={!templateId} onClick={() => templateId && startM.mutate(templateId)}>
+      <Button
+        loading={startM.isPending}
+        disabled={!templateId || !companyTemplatesEnabled || mockQuotaExhausted}
+        onClick={() => templateId && startM.mutate(templateId)}
+      >
         Начать интервью
       </Button>
     </div>
   )
+}
+
+function formatStartError(err: unknown): string {
+  const msg = formatApiError(err)
+  if (msg.includes('feature not available on current plan')) {
+    return 'Шаблоны компаний недоступны на текущем тарифе. Подключи Pro или дождись обновления лимитов.'
+  }
+  if (msg.includes('quota exceeded')) {
+    return 'Лимит mock-интервью на этот месяц исчерпан.'
+  }
+  return msg || 'Не удалось начать сессию'
 }

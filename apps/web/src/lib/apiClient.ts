@@ -125,6 +125,27 @@ export class ApiError extends Error {
   }
 }
 
+/** Human-readable message from ApiError JSON body or HTML misroute. */
+export function formatApiError(err: unknown): string {
+  if (err instanceof ApiError) {
+    const trimmed = err.body.trim()
+    if (trimmed.startsWith('<')) {
+      return 'API вернул HTML вместо JSON — проверь роутинг /v1 на прокси (Caddy).'
+    }
+    try {
+      const parsed = JSON.parse(trimmed) as { error?: string; message?: string }
+      if (parsed.error) return parsed.error
+      if (parsed.message) return parsed.message
+    } catch {
+      /* plain text body */
+    }
+    if (trimmed) return trimmed
+    return err.message
+  }
+  if (err instanceof Error) return err.message
+  return 'Неизвестная ошибка'
+}
+
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   let token = readAccessToken()
   let res = await doFetch(path, init, token)
@@ -149,6 +170,19 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
   }
 
   if (res.status === 204) return undefined as T
-  const body = await res.json()
+  const text = await res.text()
+  if (!text) return undefined as T
+  if (text.trimStart().startsWith('<')) {
+    throw new ApiError(
+      res.status,
+      `API returned HTML instead of JSON for ${path} — check /v1 routing on reverse proxy`,
+    )
+  }
+  let body: unknown
+  try {
+    body = JSON.parse(text)
+  } catch {
+    throw new ApiError(res.status, text.slice(0, 500))
+  }
   return normalizeProtoJson(body) as T
 }
