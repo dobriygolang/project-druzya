@@ -122,7 +122,8 @@ export default function SessionPage() {
         session_id: sessionId,
       }),
     onSuccess: (room) => {
-      window.open(`/live/${room.id}`, '_blank', 'noopener,noreferrer')
+      const qs = sessionTaskId ? `?sessionTaskId=${encodeURIComponent(sessionTaskId)}` : ''
+      window.open(`/live/${room.id}${qs}`, '_blank', 'noopener,noreferrer')
     },
   })
 

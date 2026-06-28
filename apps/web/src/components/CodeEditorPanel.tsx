@@ -1,9 +1,11 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { getCodeRun, isTerminalRunStatus, runCode, type RunType } from '@/lib/api/sandbox'
-import type { CodeRun } from '@/lib/types'
+import { Card } from '@/components/ui/Card'
+import { LiveCodeRunButton, LiveCodeToolButton } from '@/components/live/LiveCodeChrome'
+import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel'
+import { SoloCodeEditor } from '@/components/SoloCodeEditor'
+import { useSandboxRun } from '@/hooks/useSandboxRun'
+import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
 
 interface CodeEditorPanelProps {
   taskId: string
@@ -17,49 +19,12 @@ interface CodeEditorPanelProps {
   submitDisabled?: boolean
 }
 
-function RunOutput({ run }: { run: CodeRun }) {
-  return (
-    <div className="space-y-3 font-mono text-xs">
-      <div className="flex flex-wrap gap-3 text-text-muted">
-        <span>status: {run.status}</span>
-        {run.tests_total > 0 ? (
-          <span>
-            tests: {run.tests_passed}/{run.tests_total}
-          </span>
-        ) : null}
-        {run.time_ms != null ? <span>{run.time_ms} ms</span> : null}
-        {run.runner ? <span>runner: {run.runner}</span> : null}
-      </div>
-      {run.compile_output ? (
-        <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3 text-danger">{run.compile_output}</pre>
-      ) : null}
-      {run.stderr ? (
-        <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3 text-danger">{run.stderr}</pre>
-      ) : null}
-      {run.stdout ? (
-        <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3">{run.stdout}</pre>
-      ) : null}
-      {run.error ? (
-        <pre className="overflow-x-auto rounded-lg bg-surface-2 p-3 text-danger">{run.error}</pre>
-      ) : null}
-      {run.test_results.length > 0 ? (
-        <ul className="space-y-2">
-          {run.test_results.map((t) => (
-            <li key={t.name} className="rounded-lg border border-border bg-surface-2 p-3">
-              <div className="flex justify-between gap-2">
-                <span>{t.name}</span>
-                <span className={t.status === 'passed' ? 'text-text-primary' : 'text-danger'}>
-                  {t.status}
-                </span>
-              </div>
-              {t.error ? <p className="mt-1 text-danger">{t.error}</p> : null}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  )
-}
+const LANG_OPTIONS = [
+  { value: 'go', label: 'Go' },
+  { value: 'python', label: 'Python' },
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+] as const
 
 export function CodeEditorPanel({
   taskId,
@@ -72,114 +37,114 @@ export function CodeEditorPanel({
   submitPending,
   submitDisabled,
 }: CodeEditorPanelProps) {
-  const [runId, setRunId] = useState<string | null>(null)
-  const [lastRunType, setLastRunType] = useState<RunType | null>(null)
+  const run = useSandboxRun()
+  const [fullCheckPending, setFullCheckPending] = useState(false)
+  const panelBottom = runPanelHeight(run.panelOpen)
 
-  const runQ = useQuery({
-    queryKey: ['code-run', runId],
-    queryFn: () => getCodeRun(runId!),
-    enabled: !!runId,
-    refetchInterval: (q) => {
-      const status = q.state.data?.run.status
-      if (!status || isTerminalRunStatus(status)) return false
-      return 1000
-    },
-  })
+  const handleRun = (runType: 'sample' | 'submit') => {
+    if (!code.trim() || run.running) return
+    void run.executeRun({ taskId, sessionTaskId, language, code, runType })
+  }
 
-  const runM = useMutation({
-    mutationFn: (runType: RunType) =>
-      runCode({
-        taskId,
-        sessionTaskId,
-        language,
-        code,
-        runType,
-      }),
-    onSuccess: (data, runType) => {
-      setRunId(data.run.id)
-      setLastRunType(runType)
-    },
-  })
+  const handleFullCheck = async () => {
+    if (!code.trim() || run.running) return
+    setFullCheckPending(true)
+    try {
+      await run.executeRun({ taskId, sessionTaskId, language, code, runType: 'submit' })
+    } finally {
+      setFullCheckPending(false)
+    }
+  }
 
-  const activeRun = runQ.data?.run
-  const running = runM.isPending || (activeRun != null && !isTerminalRunStatus(activeRun.status))
+  const lineCount = code.length === 0 ? 0 : code.split('\n').length
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <div>
-          <label htmlFor="lang" className="block text-sm font-medium">
-            Язык
-          </label>
-          <select
-            id="lang"
-            value={language}
-            onChange={(e) => onLanguageChange(e.target.value)}
-            className="mt-1 rounded-lg border border-border bg-bg px-3 py-2 text-sm"
+    <div className="space-y-3">
+      <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#1e1e1e]">
+        <div className="relative min-h-[420px]">
+          <SoloCodeEditor
+            value={code}
+            onChange={onCodeChange}
+            language={language}
+            bottomInset={panelBottom}
+            onRun={() => handleRun('sample')}
+          />
+
+          <div className="absolute top-3 right-4 z-[25] flex items-center gap-2">
+            <LiveCodeRunButton
+              running={run.running}
+              onRun={() => handleRun('sample')}
+              disabled={!code.trim()}
+            />
+            <LiveCodeToolButton
+              loading={fullCheckPending}
+              onClick={() => void handleFullCheck()}
+              title="Полная проверка"
+            >
+              FULL
+            </LiveCodeToolButton>
+          </div>
+
+          <RunOutputPanel
+            open={run.panelOpen}
+            onClose={() => run.setPanelOpen(false)}
+            tab={run.outputTab}
+            onTabChange={run.setOutputTab}
+            run={run.activeRun}
+            running={run.running}
+            error={run.runError}
+            placement="contained"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 px-4 py-2.5">
+          <div className="flex flex-wrap items-center gap-3">
+            <label htmlFor="lang" className="sr-only">
+              Язык
+            </label>
+            <select
+              id="lang"
+              value={normalizeEditorLang(language)}
+              onChange={(e) => onLanguageChange(e.target.value)}
+              className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5 font-mono text-xs text-[#d4d4d4] outline-none"
+            >
+              {LANG_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-[#1e1e1e]">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <span className="font-mono text-[10px] tracking-[0.06em] text-[#858585]">
+              {lineCount} lines · {code.length} chars
+            </span>
+          </div>
+          <Button
+            loading={submitPending}
+            disabled={submitDisabled || !code.trim() || run.running}
+            onClick={onSubmit}
+            size="sm"
           >
-            <option value="go">Go</option>
-            <option value="python">Python</option>
-            <option value="javascript">JavaScript</option>
-          </select>
+            Отправить на оценку
+          </Button>
         </div>
       </div>
 
-      <div>
-        <label htmlFor="code" className="block text-sm font-medium">
-          Код
-        </label>
-        <textarea
-          id="code"
-          value={code}
-          onChange={(e) => onCodeChange(e.target.value)}
-          rows={16}
-          spellCheck={false}
-          className="mono mt-1 w-full rounded-xl border border-border bg-bg px-3 py-3 text-sm leading-relaxed"
-          placeholder="package main&#10;&#10;func solve() { ... }"
-        />
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          loading={runM.isPending && lastRunType === 'sample'}
-          disabled={running || !code.trim()}
-          onClick={() => runM.mutate('sample')}
-        >
-          Запустить примеры
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          loading={runM.isPending && lastRunType === 'submit'}
-          disabled={running || !code.trim()}
-          onClick={() => runM.mutate('submit')}
-        >
-          Полная проверка
-        </Button>
-        <Button
-          loading={submitPending}
-          disabled={submitDisabled || !code.trim() || running}
-          onClick={onSubmit}
-        >
-          Отправить на оценку
-        </Button>
-      </div>
-
-      {runM.isError ? (
-        <p className="text-sm text-danger">
-          {runM.error instanceof Error ? runM.error.message : 'Ошибка запуска'}
-        </p>
-      ) : null}
-
-      {activeRun ? (
+      {run.activeRun && run.activeRun.test_results.length > 0 ? (
         <Card elevation="e2" padding="md">
-          <p className="mb-3 text-sm font-medium">
-            Результат ({activeRun.run_type})
-            {running ? ' — выполняется…' : ''}
-          </p>
-          <RunOutput run={activeRun} />
+          <p className="mb-3 text-sm font-medium">Тесты</p>
+          <ul className="space-y-2 font-mono text-xs">
+            {run.activeRun.test_results.map((t) => (
+              <li key={t.name} className="rounded-lg border border-border bg-surface-2 p-3">
+                <div className="flex justify-between gap-2">
+                  <span>{t.name}</span>
+                  <span className={t.status === 'passed' ? 'text-text-primary' : 'text-danger'}>
+                    {t.status}
+                  </span>
+                </div>
+                {t.error ? <p className="mt-1 text-danger">{t.error}</p> : null}
+              </li>
+            ))}
+          </ul>
         </Card>
       ) : null}
     </div>

@@ -1,15 +1,18 @@
-import { useEffect, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import * as Y from 'yjs'
 import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate } from 'y-protocols/awareness'
 import { yCollab } from 'y-codemirror.next'
 import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
-import { go } from '@codemirror/lang-go'
-import { python } from '@codemirror/lang-python'
-import { javascript } from '@codemirror/lang-javascript'
+import { cmLanguageExt } from '@/lib/codemirror/langExtension'
 import { b64ToBytes, bytesToB64, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
 import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
+
+export type CollabCodeEditorHandle = {
+  getCode: () => string
+  reconnect: () => void
+}
 
 type Props = {
   roomId: string
@@ -18,21 +21,9 @@ type Props = {
   userId?: string
   displayName?: string
   accessToken?: string
-}
-
-function langExt(language: string) {
-  switch (language) {
-    case 'go':
-      return go()
-    case 'python':
-      return python()
-    case 'typescript':
-      return javascript({ typescript: true })
-    case 'javascript':
-      return javascript()
-    default:
-      return go()
-  }
+  bottomInset?: number
+  onRun?: () => void
+  onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
 }
 
 function userColor(id: string): string {
@@ -42,52 +33,35 @@ function userColor(id: string): string {
   return `hsl(${hue} 70% 55%)`
 }
 
-function wsStatusLabel(status: string, frozen: boolean): string {
-  if (frozen) return 'FROZEN'
-  switch (status) {
-    case 'open':
-      return 'LIVE'
-    case 'failed':
-      return 'OFFLINE'
-    case 'reconnecting':
-      return 'RECONNECT…'
-    case 'connecting':
-      return 'CONNECT…'
-    default:
-      return status.toUpperCase()
-  }
-}
-
-function wsStatusColor(status: string, frozen: boolean): string {
-  if (frozen) return 'var(--red)'
-  if (status === 'open') return 'rgb(var(--ink))'
-  if (status === 'failed') return 'var(--red)'
-  return 'var(--ink-60)'
-}
-
-export function CollabCodeEditor({
-  roomId,
-  language,
-  frozen,
-  userId,
-  displayName,
-  accessToken,
-}: Props) {
+export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(function CollabCodeEditor(
+  { roomId, language, frozen, userId, displayName, accessToken, bottomInset = 0, onRun, onWsStatusChange },
+  ref,
+) {
   const mountRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const ydocRef = useRef<Y.Doc | null>(null)
   const awarenessRef = useRef<Awareness | null>(null)
   const frozenCompartment = useRef(new Compartment())
   const wsSendRef = useRef<(env: EditorWsEnvelope) => boolean>(() => false)
-
-  const token = accessToken ?? ''
-  const { status, lastMessage, send, reconnect } = useEditorWs(roomId, token || undefined)
-
-  wsSendRef.current = send
-
   const sendRef = useRef<(update: Uint8Array) => void>(() => {})
   const sendSnapshotRef = useRef<(full: Uint8Array) => void>(() => {})
   const sendAwarenessRef = useRef<(update: Uint8Array) => void>(() => {})
+  const onRunRef = useRef(onRun)
+  onRunRef.current = onRun
+
+  const token = accessToken ?? ''
+  const { lastMessage, send, status, reconnect } = useEditorWs(roomId, token || undefined)
+
+  wsSendRef.current = send
+
+  useEffect(() => {
+    onWsStatusChange?.(status)
+  }, [status, onWsStatusChange])
+
+  useImperativeHandle(ref, () => ({
+    getCode: () => ydocRef.current?.getText('code').toString() ?? '',
+    reconnect,
+  }))
 
   useEffect(() => {
     if (!lastMessage) return
@@ -116,7 +90,6 @@ export function CollabCodeEditor({
     }
   }, [lastMessage])
 
-  // Mount editor once per room/language/token — never depend on `send` or WS status.
   useEffect(() => {
     const mount = mountRef.current
     if (!mount || !token) return
@@ -180,7 +153,7 @@ export function CollabCodeEditor({
         lineNumbers(),
         history(),
         keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
-        langExt(language),
+        cmLanguageExt(language),
         ...vscodeEditorExtensions,
         yCollab(ytext, awareness),
         frozenCompartment.current.of(EditorView.editable.of(!frozen)),
@@ -208,7 +181,6 @@ export function CollabCodeEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- token/room/language only
   }, [roomId, language, token])
 
-  // Toggle frozen without remounting editor.
   useEffect(() => {
     const view = viewRef.current
     if (!view) return
@@ -217,7 +189,6 @@ export function CollabCodeEditor({
     })
   }, [frozen])
 
-  // Update awareness label when user info arrives.
   useEffect(() => {
     const awareness = awarenessRef.current
     if (!awareness) return
@@ -228,28 +199,49 @@ export function CollabCodeEditor({
     })
   }, [displayName, userId, roomId])
 
-  return (
-    <div className="relative h-full min-h-0 flex-1">
-      <div ref={mountRef} className="absolute inset-0 always-show-cursor-labels" />
+  useEffect(() => {
+    if (!onRun) return
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        onRunRef.current?.()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onRun])
 
-      <div
-        className="pointer-events-none fixed bottom-4 right-6 z-30 flex items-center gap-2 rounded-full border border-white/10 bg-[rgba(20,20,22,0.78)] px-3.5 py-1.5 font-mono text-[10px] tracking-[0.08em] backdrop-blur-md"
-        style={{ paddingBottom: 'max(6px, env(safe-area-inset-bottom))' }}
-      >
-        <span className="text-[#858585]">{language.toUpperCase()}</span>
-        <span className="text-[#858585]">·</span>
-        <span style={{ color: wsStatusColor(status, frozen) }}>{wsStatusLabel(status, frozen)}</span>
-        {status === 'failed' ? (
-          <button
-            type="button"
-            className="pointer-events-auto ml-1 underline"
-            style={{ color: 'var(--red)' }}
-            onClick={reconnect}
-          >
-            retry
-          </button>
-        ) : null}
-      </div>
-    </div>
+  return (
+    <div
+      ref={mountRef}
+      className="absolute inset-0 always-show-cursor-labels"
+      style={{
+        paddingBottom: bottomInset,
+        transition: 'padding-bottom var(--motion-dur-medium) var(--motion-ease-standard)',
+      }}
+    />
   )
+})
+
+export function wsStatusLabel(status: string, frozen: boolean): string {
+  if (frozen) return 'FROZEN'
+  switch (status) {
+    case 'open':
+      return 'LIVE'
+    case 'failed':
+      return 'OFFLINE'
+    case 'reconnecting':
+      return 'RECONNECT…'
+    case 'connecting':
+      return 'CONNECT…'
+    default:
+      return status.toUpperCase()
+  }
+}
+
+export function wsStatusColor(status: string, frozen: boolean): string {
+  if (frozen) return 'var(--red)'
+  if (status === 'open') return 'rgb(var(--ink))'
+  if (status === 'failed') return 'var(--red)'
+  return 'var(--ink-60)'
 }

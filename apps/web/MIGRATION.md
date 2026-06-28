@@ -96,7 +96,9 @@
 | `/live/:roomId` | `ready` | `GET/POST /v1/rooms/*`, `WS /ws/editor/{id}` |
 
 - [x] CollabRoomPage + Yjs
-- [ ] Legacy `/editor/:id`, `/whiteboard/:id` — **rooms API другой контракт**
+- [x] UI shell 1:1 с legacy `EditorPage`: full-viewport CM6, ▶ RUN (⌘↵), stdout/stderr panel, status chip
+- [x] Session `CodeEditorPanel` — тот же CM6 + RUN/FULL вместо textarea
+- [ ] Legacy `/editor/:id`, `/whiteboard/:id` — **rooms API другой контракт** (solo persistence на старом `/editor/room/*`)
 
 ---
 

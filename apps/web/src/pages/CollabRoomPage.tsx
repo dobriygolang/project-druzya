@@ -1,10 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
-import { CollabCodeEditor } from '@/components/CollabCodeEditor'
+import {
+  CollabCodeEditor,
+  wsStatusColor,
+  wsStatusLabel,
+  type CollabCodeEditorHandle,
+} from '@/components/CollabCodeEditor'
+import { LiveCodeRunButton, LiveCodeStatusChip, LiveCodeToolButton } from '@/components/live/LiveCodeChrome'
+import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { useSandboxRun } from '@/hooks/useSandboxRun'
 import { getMe } from '@/lib/api/auth'
 import {
   createInvite,
@@ -17,15 +25,19 @@ import {
   readGuestToken,
 } from '@/lib/api/rooms'
 import { readAccessToken } from '@/lib/apiClient'
+import type { EditorWsStatus } from '@/lib/ws/collabEditor'
 
-/** Immersive live room — layout from druzya/frontend EditorPage (full-viewport dark editor). */
+/** Immersive live room — layout 1:1 with druzya/frontend EditorPage (full-viewport + RUN + output panel). */
 export default function CollabRoomPage() {
   const { roomId = '' } = useParams()
   const [searchParams] = useSearchParams()
   const inviteToken = searchParams.get('invite') ?? undefined
+  const sessionTaskId = searchParams.get('sessionTaskId') ?? undefined
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const editorRef = useRef<CollabCodeEditorHandle>(null)
   const [copied, setCopied] = useState(false)
+  const [wsStatus, setWsStatus] = useState<EditorWsStatus>('connecting')
   const [guestName, setGuestName] = useState('')
   const [guestToken, setGuestToken] = useState(() => readGuestToken(roomId))
   const [guestRoom, setGuestRoom] = useState<import('@/lib/api/rooms').CodeRoom | null>(null)
@@ -82,6 +94,9 @@ export default function CollabRoomPage() {
       window.setTimeout(() => setCopied(false), 2000)
     },
   })
+
+  const wsToken = guestToken ?? readAccessToken() ?? ''
+  const run = useSandboxRun()
 
   useEffect(() => {
     const prev = document.body.style.backgroundColor
@@ -196,60 +211,84 @@ export default function CollabRoomPage() {
   const myRole = room.participants.find((p) => p.user_id === myId)?.role
   const canFreeze = myRole === 'owner' || myRole === 'interviewer'
   const isOwner = myId === room.owner_id
-  const wsToken = guestToken ?? readAccessToken() ?? ''
+  const canRun = !!(authed || guestToken)
+  const panelBottom = runPanelHeight(run.panelOpen)
+
+  const handleRun = () => {
+    const code = editorRef.current?.getCode() ?? ''
+    if (!code.trim()) return
+    void run.executeRun({
+      taskId: room.task_id,
+      sessionTaskId,
+      language: room.language,
+      code,
+      runType: room.task_id ? 'sample' : 'custom',
+    })
+  }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#1e1e1e] text-[#d4d4d4]">
-      <header className="z-20 flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-2.5 sm:px-6">
-        <div className="min-w-0">
-          <p className="font-mono text-[10px] tracking-[0.08em] text-[#858585]">LIVE CODING</p>
-          <p className="truncate text-sm font-medium text-[#d4d4d4]">
-            {room.id.slice(0, 8)}… · {room.language} · {room.participants.length} участник(ов)
-            {guestToken ? ' · гость' : ''}
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {isOwner ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={inviteM.isPending}
-              onClick={() => inviteM.mutate()}
-              className="border-white/15 bg-white/5 text-[#d4d4d4] hover:bg-white/10"
-            >
-              {copied ? 'Скопировано' : 'Пригласить'}
-            </Button>
-          ) : null}
-          {canFreeze ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={freezeM.isPending}
-              onClick={() => freezeM.mutate(!room.is_frozen)}
-              className="border-white/15 bg-white/5 text-[#d4d4d4] hover:bg-white/10"
-            >
-              {room.is_frozen ? 'Разморозить' : 'Заморозить'}
-            </Button>
-          ) : null}
-          <Link to="/today">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="border-white/15 text-[#858585] hover:bg-white/5 hover:text-[#d4d4d4]"
-            >
-              Закрыть
-            </Button>
-          </Link>
-        </div>
-      </header>
-
+    <div className="fixed inset-0 bg-[#1e1e1e] text-[#d4d4d4]">
       <CollabCodeEditor
+        ref={editorRef}
         roomId={room.id}
         language={room.language}
         frozen={room.is_frozen}
         userId={myId ?? guestName}
         displayName={meQ.data?.username ?? (guestName || undefined)}
         accessToken={wsToken}
+        bottomInset={panelBottom}
+        onRun={canRun ? handleRun : undefined}
+        onWsStatusChange={setWsStatus}
+      />
+
+      <div className="fixed top-3.5 right-6 z-[25] flex items-center gap-2">
+        {canRun ? <LiveCodeRunButton running={run.running} onRun={handleRun} /> : null}
+        {isOwner ? (
+          <LiveCodeToolButton loading={inviteM.isPending} onClick={() => inviteM.mutate()}>
+            {copied ? 'Скопировано' : 'Пригласить'}
+          </LiveCodeToolButton>
+        ) : null}
+        {canFreeze ? (
+          <LiveCodeToolButton loading={freezeM.isPending} onClick={() => freezeM.mutate(!room.is_frozen)}>
+            {room.is_frozen ? 'Разморозить' : 'Заморозить'}
+          </LiveCodeToolButton>
+        ) : null}
+        <Link to="/today">
+          <LiveCodeToolButton title="Закрыть">×</LiveCodeToolButton>
+        </Link>
+      </div>
+
+      <RunOutputPanel
+        open={run.panelOpen}
+        onClose={() => run.setPanelOpen(false)}
+        tab={run.outputTab}
+        onTabChange={run.setOutputTab}
+        run={run.activeRun}
+        running={run.running}
+        error={run.runError}
+      />
+
+      <LiveCodeStatusChip
+        language={room.language}
+        statusLabel={wsStatusLabel(wsStatus, room.is_frozen)}
+        statusColor={wsStatusColor(wsStatus, room.is_frozen)}
+        bottomOffset={panelBottom + 16}
+        extra={
+          wsStatus === 'failed' ? (
+            <button
+              type="button"
+              className="pointer-events-auto ml-1 underline"
+              style={{ color: 'var(--red)' }}
+              onClick={() => editorRef.current?.reconnect()}
+            >
+              retry
+            </button>
+          ) : room.participants.length > 0 ? (
+            <span className="pointer-events-none ml-1 text-[#858585]">
+              · {room.participants.length} online
+            </span>
+          ) : null
+        }
       />
     </div>
   )
