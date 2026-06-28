@@ -88,12 +88,16 @@ func New(ctx context.Context) (*App, error) {
 
 	chatClient, chain, err := llmadapter.BuildChain(llmadapter.BuildChainOpts{
 		Config: llmadapter.BuildConfig{
-			Order:    cfg.LLMChainOrder,
-			OpenAI:   cfg.OpenAIAPIKey,
-			Groq:     cfg.GroqAPIKey,
-			Cerebras: cfg.CerebrasAPIKey,
-			Google:   cfg.GoogleAPIKey,
-			Caveman:  cfg.LLMCavemanLevel,
+			Order:               cfg.LLMChainOrder,
+			OpenAI:              cfg.OpenAIAPIKey,
+			Groq:                cfg.GroqAPIKey,
+			Cerebras:            cfg.CerebrasAPIKey,
+			Google:              cfg.GoogleAPIKey,
+			Mistral:             cfg.MistralAPIKey,
+			OpenRouter:          cfg.OpenRouterAPIKey,
+			Cloudflare:          cfg.CloudflareAPIKey,
+			CloudflareAccountID: cfg.CloudflareAccountID,
+			Caveman:             cfg.LLMCavemanLevel,
 		},
 		Log:                 slog.Default(),
 		RuntimeConfigSource: llmConfigRepo,

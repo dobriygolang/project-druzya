@@ -106,7 +106,7 @@ INSERT INTO plans (id, slug, name, description, priority, is_active, metadata) V
 INSERT INTO plan_entitlements (plan_id, key, value_json) VALUES
     ('f0000000-0000-4000-8000-000000000001', 'ai_evaluations_per_day', '{"type":"counter","period":"day"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'mock_interviews_per_month', '{"type":"counter","period":"month"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'code_runs_per_day', '{"type":"counter","period":"day"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'code_runs_per_day', '{"type":"counter","limit":50,"period":"day"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'hidden_tests_enabled', '{"type":"bool","value":false}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'company_templates_enabled', '{"type":"bool","value":true}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'recommendations_enabled', '{"type":"bool","value":true}'::jsonb),

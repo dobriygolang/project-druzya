@@ -17,9 +17,17 @@ import (
 
 const defaultTrainingTaskLimit = 10
 
+// StartSessionInput starts a company or training session.
+type StartSessionInput struct {
+	TemplateID *string
+	Mode       interviewmodel.SessionMode
+	CompanyID  *string
+	Scope      interviewmodel.PracticeScope
+}
+
 // Service is interview runtime use cases.
 type Service interface {
-	StartInterviewSession(ctx context.Context, userID string, templateID *string, mode interviewmodel.SessionMode) (*interviewmodel.SessionDetail, error)
+	StartInterviewSession(ctx context.Context, userID string, input StartSessionInput) (*interviewmodel.SessionDetail, error)
 	GetInterviewSession(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionDetail, error)
 	GetCurrentSessionState(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionState, error)
 	GetSessionResults(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionResults, error)

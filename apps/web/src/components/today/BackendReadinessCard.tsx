@@ -56,7 +56,7 @@ export function BackendReadinessCard({
           </p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {strengths.slice(0, 4).map((s) => (
-              <li key={s.skill_key} className="sdvg-pill font-mono text-[11px] tracking-[0.04em]">
+              <li key={s.skill_key} className="sdvg-pill text-[11px]">
                 {skillLabel(t, s.skill_key)} · {s.score}%
               </li>
             ))}

@@ -18,11 +18,18 @@ import {
   submitAttempt,
 } from '@/lib/api/interview'
 import { isCodeTask } from '@/lib/interview/taskKind'
+import {
+  initialEditorSolution,
+  mergeEditorPreset,
+  taskRequiresSandboxVerify,
+} from '@/lib/interview/editorPreset'
 import { SessionSectionsProgress } from '@/components/session/SessionSectionsProgress'
 import { useI18n } from '@/lib/i18n'
+import { useDomainLabels } from '@/lib/labels'
 
 export default function SessionPage() {
   const { t } = useI18n()
+  const labels = useDomainLabels()
   const { sessionId = '' } = useParams()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -87,21 +94,38 @@ export default function SessionPage() {
     setVerifiedSubmitRunId(null)
   }, [sessionTaskId])
 
+  useEffect(() => {
+    const meta = taskQ.data?.task.metadata
+    if (!meta || !taskId) return
+    setCode(initialEditorSolution(meta, language))
+    setVerifiedSubmitRunId(null)
+  }, [taskId, language, taskQ.data?.task.metadata])
+
   const submitM = useMutation({
     mutationFn: async () => {
       if (!sessionTaskId) throw new Error('no current task')
       const isCode = isCodeTask(stateQ.data?.current_task?.task_type ?? taskQ.data?.task.type)
+      const meta = taskQ.data?.task.metadata
+      const requiresVerify = taskRequiresSandboxVerify(meta)
       if (isCode) {
-        if (!verifiedSubmitRunId) {
-          throw new Error(t('session.editorSubmitNeedsVerify'))
+        if (requiresVerify) {
+          if (!verifiedSubmitRunId) {
+            throw new Error(t('session.editorSubmitNeedsVerify'))
+          }
+          const result = await submitAttemptFromCodeRun(verifiedSubmitRunId, sessionTaskId)
+          return {
+            attempt: {
+              id: result.attempt_id,
+              status: result.status,
+            },
+          }
         }
-        const result = await submitAttemptFromCodeRun(verifiedSubmitRunId, sessionTaskId)
-        return {
-          attempt: {
-            id: result.attempt_id,
-            status: result.status,
-          },
-        }
+        const merged = mergeEditorPreset(meta, language, code)
+        return submitAttempt({
+          sessionTaskId,
+          code: merged,
+          language,
+        })
       }
       return submitAttempt({
         sessionTaskId,
@@ -229,9 +253,9 @@ export default function SessionPage() {
         <SectionCard title={task?.title ?? current_task.task_title ?? t('session.taskFallback')}>
           <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
             <span className="mono rounded bg-surface-2 px-2 py-0.5">
-              {task?.type ?? current_task.task_type}
+              {labels.taskType(task?.type ?? current_task.task_type ?? '')}
             </span>
-            {task?.difficulty ? <span>{task.difficulty}</span> : null}
+            {task?.difficulty ? <span>{labels.difficulty(task.difficulty)}</span> : null}
             {task?.estimated_minutes ? <span>{task.estimated_minutes} min</span> : null}
           </div>
           {task?.description ? (
@@ -248,7 +272,7 @@ export default function SessionPage() {
         <Card elevation="e2">
           <p className="text-sm font-medium">{t('session.evaluating')}</p>
           <p className="mt-1 text-sm text-text-muted">
-            {t('session.evaluatingHint', { status: attemptStatus })}
+            {t('session.evaluatingHint', { status: labels.attemptStatus(attemptStatus) })}
           </p>
         </Card>
       ) : codeTask && taskId && sessionTaskId ? (
@@ -274,6 +298,7 @@ export default function SessionPage() {
           <CodeEditorPanel
             taskId={taskId}
             sessionTaskId={sessionTaskId}
+            taskMetadata={task?.metadata}
             language={language}
             onLanguageChange={setLanguage}
             code={code}
@@ -336,7 +361,10 @@ export default function SessionPage() {
       ) : null}
 
       <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-        Session {session.id.slice(0, 8)}… · {session.mode.replace('SESSION_MODE_', '').toLowerCase()}
+        {t('session.sessionMeta', {
+          id: session.id.slice(0, 8),
+          mode: labels.sessionMode(session.mode),
+        })}
       </p>
     </PageContent>
   )

@@ -141,6 +141,67 @@ func (_c *Client_GetTask_Call) RunAndReturn(run func(context.Context, string) (*
 	return _c
 }
 
+// ListInterviewTemplates provides a mock function with given fields: ctx, companyID, activeOnly, limit
+func (_m *Client) ListInterviewTemplates(ctx context.Context, companyID string, activeOnly bool, limit int) ([]content.InterviewTemplate, error) {
+	ret := _m.Called(ctx, companyID, activeOnly, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListInterviewTemplates")
+	}
+
+	var r0 []content.InterviewTemplate
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, bool, int) ([]content.InterviewTemplate, error)); ok {
+		return rf(ctx, companyID, activeOnly, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, bool, int) []content.InterviewTemplate); ok {
+		r0 = rf(ctx, companyID, activeOnly, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]content.InterviewTemplate)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, bool, int) error); ok {
+		r1 = rf(ctx, companyID, activeOnly, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Client_ListInterviewTemplates_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListInterviewTemplates'
+type Client_ListInterviewTemplates_Call struct {
+	*mock.Call
+}
+
+// ListInterviewTemplates is a helper method to define mock.On call
+//   - ctx context.Context
+//   - companyID string
+//   - activeOnly bool
+//   - limit int
+func (_e *Client_Expecter) ListInterviewTemplates(ctx interface{}, companyID interface{}, activeOnly interface{}, limit interface{}) *Client_ListInterviewTemplates_Call {
+	return &Client_ListInterviewTemplates_Call{Call: _e.mock.On("ListInterviewTemplates", ctx, companyID, activeOnly, limit)}
+}
+
+func (_c *Client_ListInterviewTemplates_Call) Run(run func(ctx context.Context, companyID string, activeOnly bool, limit int)) *Client_ListInterviewTemplates_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(bool), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *Client_ListInterviewTemplates_Call) Return(_a0 []content.InterviewTemplate, _a1 error) *Client_ListInterviewTemplates_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Client_ListInterviewTemplates_Call) RunAndReturn(run func(context.Context, string, bool, int) ([]content.InterviewTemplate, error)) *Client_ListInterviewTemplates_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListTasks provides a mock function with given fields: ctx, taskType, limit
 func (_m *Client) ListTasks(ctx context.Context, taskType string, limit int) ([]content.Task, error) {
 	ret := _m.Called(ctx, taskType, limit)

@@ -1,4 +1,5 @@
 import { legalRu } from './legal.ru'
+import { enumsRu } from '@/lib/labels/enums.ru'
 
 export const ru = {
   locale: {
@@ -45,6 +46,7 @@ export const ru = {
     profile: 'Профиль',
     pricing: 'Тарифы',
     about: 'О продукте',
+    admin: 'Админка',
     logout: 'Выйти',
     accountMenu: 'Меню аккаунта',
     accountFallback: 'Аккаунт',
@@ -191,6 +193,12 @@ export const ru = {
       sysdesignHint: 'Architecture & scaling',
       behavioral: 'Behavioral',
       behavioralHint: 'STAR & culture fit',
+      scopeLabel: 'Формат',
+      scopeRandom: 'Random · 1 задача',
+      scopeCompany: 'Под компанию · весь трек',
+      companyLabel: 'Компания',
+      randomHint: 'Одна случайная задача из каталога — порядок перемешивается каждый раз.',
+      start: 'Начать задачу',
     },
     live: {
       eyebrow: 'Live',
@@ -254,6 +262,9 @@ export const ru = {
     eyebrow: 'Mock-интервью',
     taskFallback: 'Задача',
     progress: 'Прогресс: {{done}}/{{total}} задач',
+    sectionsTitle: 'Секции сессии',
+    sectionsTasks: 'Задачи: {{done}}/{{total}}',
+    sessionMeta: 'Сессия {{id}}… · {{mode}}',
     cancel: 'Отменить сессию',
     loadingTask: 'Загрузка задачи…',
     evaluating: 'Оцениваем ответ…',
@@ -282,6 +293,11 @@ export const ru = {
     editorFormatGoOnly: 'Форматирование доступно только для Go',
     editorFormatAuthExpired: 'Сессия авторизации истекла. Обновите страницу или войдите снова.',
     editorSubmitNeedsVerify: 'Сначала пройдите проверку «Проверить»',
+    editorSubmitDirectHint: 'Отправьте решение на AI-оценку. Run/Verify — опционально, если есть автотесты.',
+    editorRunQuota: 'Дневной лимит запусков кода исчерпан. Обновите план на /pricing.',
+    editorRunProFeature: 'Эта функция недоступна на текущем плане.',
+    editorVerifyFreeHint:
+      'На Free проверяются только публичные тесты. Pro — все тесты, включая скрытые.',
   },
   results: {
     loading: 'Загрузка результатов…',
@@ -437,6 +453,7 @@ export const ru = {
     wsConnecting: 'CONNECT…',
   },
   legal: legalRu,
+  enums: enumsRu,
   skills: {
     star_structure: 'STAR-структура',
     communication: 'Коммуникация',

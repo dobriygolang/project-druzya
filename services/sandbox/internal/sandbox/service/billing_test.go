@@ -21,15 +21,37 @@ func (s *stubBilling) CheckAndConsumeUsage(context.Context, string, string, int)
 	return s.usageErr
 }
 
-func TestGateCodeRunSubmitRequiresHiddenTests(t *testing.T) {
+func TestIncludeHiddenTestsRequiresEntitlement(t *testing.T) {
 	t.Parallel()
 	svc := New(Deps{
 		Billing: &stubBilling{entitlementErr: billingadapter.ErrFeatureDisabled},
 	}).(*sandboxService)
 
-	err := svc.gateCodeRun(context.Background(), "user-1", model.RunTypeSubmit)
-	if err != ErrFeatureDisabled {
-		t.Fatalf("expected feature disabled, got %v", err)
+	if svc.includeHiddenTests(context.Background(), "user-1", model.RunTypeSubmit) {
+		t.Fatal("expected hidden tests disabled on free plan")
+	}
+	if svc.includeHiddenTests(context.Background(), "user-1", model.RunTypeSample) {
+		t.Fatal("sample runs must not include hidden tests")
+	}
+}
+
+func TestIncludeHiddenTestsWhenEntitled(t *testing.T) {
+	t.Parallel()
+	svc := New(Deps{Billing: &stubBilling{}}).(*sandboxService)
+
+	if !svc.includeHiddenTests(context.Background(), "user-1", model.RunTypeSubmit) {
+		t.Fatal("expected hidden tests when entitlement passes")
+	}
+}
+
+func TestGateCodeRunSubmitAllowedWithoutHiddenEntitlement(t *testing.T) {
+	t.Parallel()
+	svc := New(Deps{
+		Billing: &stubBilling{entitlementErr: billingadapter.ErrFeatureDisabled},
+	}).(*sandboxService)
+
+	if err := svc.gateCodeRun(context.Background(), "user-1", model.RunTypeSubmit); err != nil {
+		t.Fatalf("submit run should not be blocked without hidden tests, got %v", err)
 	}
 }
 

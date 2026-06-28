@@ -1,6 +1,6 @@
 import type { CodeRun } from '@/lib/types'
 
-const PANEL_HEIGHT = 220
+const PANEL_HEIGHT = 160
 
 type Props = {
   open: boolean
@@ -48,9 +48,12 @@ function panelBody({
   return err || '(no stderr)'
 }
 
+/** @deprecated use {@link runPanelHeight} with explicit open flag */
 export function runPanelHeight(open: boolean): number {
   return open ? PANEL_HEIGHT : 0
 }
+
+export { PANEL_HEIGHT as RUN_OUTPUT_PANEL_HEIGHT }
 
 export function RunOutputPanel({
   open,

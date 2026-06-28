@@ -1,0 +1,105 @@
+import type { enumsRu } from './enums.ru'
+
+type EnumMessages = {
+  [K in keyof typeof enumsRu]: {
+    [P in keyof (typeof enumsRu)[K]]: string
+  }
+}
+
+export const enumsEn: EnumMessages = {
+  sessionMode: {
+    company_interview: 'Company mock',
+    algorithms_training: 'Algorithms',
+    live_coding_training: 'Live coding',
+    system_design_training: 'System design',
+    behavioral_training: 'Behavioral',
+    sql_training: 'SQL',
+    retry_mistakes: 'Retry mistakes',
+    unspecified: 'Session',
+  },
+  sessionStatus: {
+    active: 'Active',
+    completed: 'Completed',
+    cancelled: 'Cancelled',
+    expired: 'Expired',
+    unspecified: '—',
+  },
+  sectionStatus: {
+    pending: 'Pending',
+    active: 'Current',
+    completed: 'Done',
+    unspecified: '—',
+  },
+  attemptStatus: {
+    submitted: 'Submitted',
+    evaluating: 'Evaluating',
+    evaluated: 'Evaluated',
+    failed: 'Failed',
+    cancelled: 'Cancelled',
+    unspecified: '—',
+  },
+  taskType: {
+    algorithm: 'Algorithms',
+    live_coding: 'Live coding',
+    system_design: 'System design',
+    behavioral: 'Behavioral',
+    sql: 'SQL',
+    unspecified: 'Task',
+  },
+  skillDomain: {
+    algorithm: 'Algorithms',
+    algorithms: 'Algorithms',
+    behavioral: 'Behavioral',
+    system: 'System design',
+    sysdesign: 'System design',
+    system_design: 'System design',
+    coding: 'Live coding',
+    live_coding: 'Live coding',
+    sql: 'SQL',
+  },
+  skillCriterion: {
+    overall: 'Overall',
+    correctness: 'Correctness',
+    communication: 'Communication',
+    star_structure: 'STAR structure',
+    complexity_analysis: 'Complexity',
+    code_quality: 'Code quality',
+    scalability: 'Scalability',
+    tradeoffs: 'Trade-offs',
+    arrays: 'Arrays',
+    strings: 'Strings',
+    trees: 'Trees',
+    graphs: 'Graphs',
+    dynamic_programming: 'Dynamic programming',
+    recursion: 'Recursion',
+    sorting: 'Sorting',
+    searching: 'Search',
+    hash_tables: 'Hash tables',
+    heaps: 'Heaps',
+    greedy: 'Greedy',
+    design: 'Design',
+  },
+  skillKeys: {
+    behavioral_overall: 'Behavioral — overall',
+    algorithm_overall: 'Algorithms — overall',
+    algorithm_correctness: 'Algorithms — correctness',
+    algorithm_arrays: 'Algorithms — arrays',
+    live_coding_overall: 'Live coding — overall',
+    system_design_overall: 'System design — overall',
+    sql_overall: 'SQL — overall',
+  },
+  difficulty: {
+    easy: 'Easy',
+    medium: 'Medium',
+    hard: 'Hard',
+    unspecified: '—',
+  },
+  sectionType: {
+    algorithm: 'Algorithms',
+    algorithms: 'Algorithms',
+    live_coding: 'Live coding',
+    system_design: 'System design',
+    behavioral: 'Behavioral',
+    sql: 'SQL',
+  },
+}

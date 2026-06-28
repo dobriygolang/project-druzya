@@ -12,13 +12,16 @@ import (
 
 // BuildConfig holds provider keys and chain order for llmchain assembly.
 type BuildConfig struct {
-	Order    string
-	OpenAI   string
-	Groq     string
-	Cerebras string
-	Google   string
-	Mistral  string
-	Caveman  string
+	Order               string
+	OpenAI              string
+	Groq                string
+	Cerebras            string
+	Google              string
+	Mistral             string
+	OpenRouter          string
+	Cloudflare          string
+	CloudflareAccountID string
+	Caveman             string
 }
 
 // BuildChainOpts configures llmchain assembly.
@@ -63,17 +66,31 @@ func BuildChain(opts BuildChainOpts) (llmchain.ChatClient, *llmchain.Chain, erro
 	addKeys("cerebras", cfg.Cerebras, llmchain.NewCerebrasDriver)
 	addKeys("google", cfg.Google, llmchain.NewGoogleDriver)
 	addKeys("mistral", cfg.Mistral, llmchain.NewMistralDriver)
+	addKeys("openrouter", cfg.OpenRouter, llmchain.NewOpenRouterDriver)
 	addKeys("openai", cfg.OpenAI, llmchain.NewOpenAIProviderDriver)
+
+	if cfg.Cloudflare != "" && cfg.CloudflareAccountID != "" {
+		keys := splitKeys(cfg.Cloudflare)
+		ds := make([]llmchain.Driver, 0, len(keys))
+		for _, k := range keys {
+			if d := llmchain.NewCloudflareDriver(k, cfg.CloudflareAccountID); d != nil {
+				ds = append(ds, d)
+			}
+		}
+		if len(ds) > 0 {
+			drivers[llmchain.ProviderCloudflare] = wrapMulti(llmchain.ProviderCloudflare, ds)
+		}
+	}
 
 	if len(drivers) == 0 {
 		return nil, nil, nil
 	}
 
 	chain, err := llmchain.NewChain(drivers, llmchain.Options{
-		Order:                parseChainOrder(cfg.Order),
-		Log:                  log,
-		RuntimeConfigSource:  opts.RuntimeConfigSource,
-		RuntimeCtx:           opts.RuntimeCtx,
+		Order:               parseChainOrder(cfg.Order),
+		Log:                 log,
+		RuntimeConfigSource: opts.RuntimeConfigSource,
+		RuntimeCtx:          opts.RuntimeCtx,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("build llm chain: %w", err)
@@ -87,6 +104,8 @@ func parseChainOrder(raw string) []llmchain.Provider {
 		return []llmchain.Provider{
 			llmchain.ProviderGroq,
 			llmchain.ProviderCerebras,
+			llmchain.ProviderGoogle,
+			llmchain.ProviderCloudflare,
 			llmchain.ProviderOpenRouter,
 		}
 	}

@@ -38,6 +38,9 @@ export default function MockHubPage() {
   const qc = useQueryClient()
   const toast = useToast()
   const authed = !!readAccessToken()
+  const [soloMode, setSoloMode] = useState<SessionMode>('SESSION_MODE_ALGORITHMS_TRAINING')
+  const [soloScope, setSoloScope] = useState<'random' | 'company'>('random')
+  const [soloCompanyId, setSoloCompanyId] = useState('')
   const [companyModalOpen, setCompanyModalOpen] = useState(false)
   const [liveLanguage, setLiveLanguage] = useState('go')
   const [guestName, setGuestName] = useState(() => readGuestDisplayName())
@@ -107,7 +110,13 @@ export default function MockHubPage() {
   })
 
   const startSoloM = useMutation({
-    mutationFn: (mode: SessionMode) => startTrainingSession(mode),
+    mutationFn: () =>
+      startTrainingSession({
+        mode: soloMode,
+        practiceScope:
+          soloScope === 'company' ? 'PRACTICE_SCOPE_COMPANY_TRACK' : 'PRACTICE_SCOPE_RANDOM_ONE',
+        companyId: soloScope === 'company' ? soloCompanyId : undefined,
+      }),
     onSuccess: (data) => {
       void qc.invalidateQueries({ queryKey: ['active-session'] })
       navigate(`/interview/session/${data.session.id}`)
@@ -152,6 +161,23 @@ export default function MockHubPage() {
   }
 
   const timeLocale = locale === 'en' ? 'en-US' : 'ru-RU'
+
+  useEffect(() => {
+    if (companies.length > 0 && !soloCompanyId) {
+      setSoloCompanyId(companies[0]!.id)
+    }
+  }, [companies, soloCompanyId])
+
+  const soloStartDisabled =
+    mockQuotaExhausted ||
+    startSoloM.isPending ||
+    (soloScope === 'company' && (!soloCompanyId || companies.length === 0))
+
+  useEffect(() => {
+    if (!soloFocus) return
+    const section = soloSections.find((s) => s.id === soloFocus)
+    if (section) setSoloMode(section.mode)
+  }, [soloFocus, soloSections])
 
   useEffect(() => {
     if (!soloFocus || !soloCardRef.current) return
@@ -206,19 +232,70 @@ export default function MockHubPage() {
           title={t('mock.solo.title')}
           description={t('mock.solo.description')}
         >
-          <div className="flex flex-wrap gap-2">
-            {soloSections.map((s) => (
-              <PillButton
-                key={s.id}
-                title={s.hint}
-                active={soloFocus === s.id}
-                loading={startSoloM.isPending && startSoloM.variables === s.mode}
-                disabled={mockQuotaExhausted || startSoloM.isPending}
-                onClick={() => startSoloM.mutate(s.mode)}
-              >
-                {s.label}
-              </PillButton>
-            ))}
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap gap-2">
+              {soloSections.map((s) => (
+                <PillButton
+                  key={s.id}
+                  title={s.hint}
+                  active={soloMode === s.mode || soloFocus === s.id}
+                  onClick={() => setSoloMode(s.mode)}
+                >
+                  {s.label}
+                </PillButton>
+              ))}
+            </div>
+
+            <div>
+              <span className="text-[13px] text-text-secondary">{t('mock.solo.scopeLabel')}</span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <PillButton active={soloScope === 'random'} onClick={() => setSoloScope('random')}>
+                  {t('mock.solo.scopeRandom')}
+                </PillButton>
+                <PillButton
+                  active={soloScope === 'company'}
+                  onClick={() => setSoloScope('company')}
+                  disabled={companies.length === 0}
+                >
+                  {t('mock.solo.scopeCompany')}
+                </PillButton>
+              </div>
+            </div>
+
+            {soloScope === 'company' ? (
+              companiesQ.isLoading ? (
+                <div className="h-9 w-full animate-pulse rounded-lg bg-surface-2" />
+              ) : (
+                <label className="block">
+                  <span className="text-[13px] text-text-secondary">{t('mock.solo.companyLabel')}</span>
+                  <select
+                    value={soloCompanyId}
+                    onChange={(e) => setSoloCompanyId(e.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+                  >
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )
+            ) : (
+              <p className="text-[13px] text-text-muted">{t('mock.solo.randomHint')}</p>
+            )}
+
+            <Button
+              variant="primary"
+              size="sm"
+              className="w-full sm:w-auto"
+              iconRight={<ArrowRight className="h-4 w-4" />}
+              loading={startSoloM.isPending}
+              disabled={soloStartDisabled}
+              onClick={() => startSoloM.mutate()}
+            >
+              {t('mock.solo.start')}
+            </Button>
           </div>
         </PracticeCard>
         </div>

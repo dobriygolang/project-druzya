@@ -147,6 +147,11 @@ jobs:
               exit 1
             fi
 
+            if ! grep -qE '^ADMIN_USER_IDS=.+' deploy/.env || grep -qE '^ADMIN_USER_IDS=(CHANGE_ME|00000000-0000-0000-0000-000000000001)?$' deploy/.env; then
+              echo "ERROR: set ADMIN_USER_IDS in deploy/.env (comma-separated identity user UUIDs)"
+              exit 1
+            fi
+
             if [ ! -f apps/web/dist/index.html ]; then
               echo "ERROR: missing apps/web/dist — SPA upload step failed"
               exit 1

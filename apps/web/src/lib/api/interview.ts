@@ -29,7 +29,11 @@ export function startSession(templateId: string, mode: SessionMode = 'SESSION_MO
 }
 
 /** Start a single-section training session (no company template). */
-export function startTrainingSession(mode: SessionMode) {
+export function startTrainingSession(input: {
+  mode: SessionMode
+  practiceScope?: 'PRACTICE_SCOPE_RANDOM_ONE' | 'PRACTICE_SCOPE_COMPANY_TRACK'
+  companyId?: string
+}) {
   return api<{
     session: Session
     sections?: SessionSection[]
@@ -37,7 +41,11 @@ export function startTrainingSession(mode: SessionMode) {
     progress?: Progress
   }>('/interview/sessions', {
     method: 'POST',
-    body: JSON.stringify({ mode }),
+    body: JSON.stringify({
+      mode: input.mode,
+      practice_scope: input.practiceScope ?? 'PRACTICE_SCOPE_RANDOM_ONE',
+      company_id: input.companyId,
+    }),
   }).then(normalizeSessionBundle)
 }
 

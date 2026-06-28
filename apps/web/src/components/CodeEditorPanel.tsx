@@ -7,6 +7,12 @@ import { SoloCodeEditor } from '@/components/SoloCodeEditor'
 import { useFormatCode } from '@/hooks/useFormatCode'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
 import { isTerminalRunStatus } from '@/lib/api/sandbox'
+import {
+  mergeEditorPreset,
+  readEditorPreset,
+  taskHasSandboxTests,
+  taskRequiresSandboxVerify,
+} from '@/lib/interview/editorPreset'
 import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
 import { useI18n } from '@/lib/i18n'
 import type { CodeRun } from '@/lib/types'
@@ -23,6 +29,7 @@ function isSuccessfulSubmitRun(run: CodeRun | undefined): boolean {
 interface CodeEditorPanelProps {
   taskId: string
   sessionTaskId: string
+  taskMetadata?: Record<string, unknown>
   language: string
   onLanguageChange: (lang: string) => void
   code: string
@@ -40,9 +47,12 @@ const LANG_OPTIONS = [
   { value: 'typescript', label: 'TypeScript' },
 ] as const
 
+const EDITOR_MIN_H = 540
+
 export function CodeEditorPanel({
   taskId,
   sessionTaskId,
+  taskMetadata,
   language,
   onLanguageChange,
   code,
@@ -58,6 +68,9 @@ export function CodeEditorPanel({
   const [fullCheckPending, setFullCheckPending] = useState(false)
   const panelBottom = runPanelHeight(run.panelOpen)
   const isGo = normalizeEditorLang(language) === 'go'
+  const hasTests = taskHasSandboxTests(taskMetadata)
+  const requiresVerify = taskRequiresSandboxVerify(taskMetadata)
+  const canSubmit = Boolean(code.trim()) && !run.running && (!requiresVerify || verifiedSubmitRunId)
 
   useEffect(() => {
     onVerifiedSubmitRunChange(null)
@@ -69,22 +82,25 @@ export function CodeEditorPanel({
     }
   }, [run.activeRun, onVerifiedSubmitRunChange])
 
+  const runnableCode = mergeEditorPreset(taskMetadata, language, code)
+
   const handleFormat = async () => {
     if (!code.trim() || fmt.formatting) return
-    const formatted = await fmt.format(language, code)
+    const target = readEditorPreset(taskMetadata)?.[language]?.harness ? code : runnableCode
+    const formatted = await fmt.format(language, target)
     if (formatted != null) onCodeChange(formatted)
   }
 
   const handleRun = (runType: 'sample' | 'submit') => {
     if (!code.trim() || run.running) return
-    void run.executeRun({ taskId, sessionTaskId, language, code, runType })
+    void run.executeRun({ taskId, sessionTaskId, language, code: runnableCode, runType })
   }
 
   const handleFullCheck = async () => {
     if (!code.trim() || run.running) return
     setFullCheckPending(true)
     try {
-      await run.executeRun({ taskId, sessionTaskId, language, code, runType: 'submit' })
+      await run.executeRun({ taskId, sessionTaskId, language, code: runnableCode, runType: 'submit' })
     } finally {
       setFullCheckPending(false)
     }
@@ -95,40 +111,42 @@ export function CodeEditorPanel({
   return (
     <div className="space-y-3">
       <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#1e1e1e]">
-        <div className="relative min-h-[420px]">
+        <div className="relative" style={{ minHeight: EDITOR_MIN_H }}>
           <SoloCodeEditor
             value={code}
             onChange={onCodeChange}
             language={language}
             bottomInset={panelBottom}
-            onRun={() => handleRun('sample')}
+            onRun={hasTests ? () => handleRun('sample') : undefined}
             onFormat={isGo ? () => void handleFormat() : undefined}
           />
 
-          <div className="absolute top-3 right-4 z-[25] flex items-center gap-2">
-            <LiveCodeRunButton
-              running={run.running}
-              onRun={() => handleRun('sample')}
-              disabled={!code.trim()}
-              title={t('session.editorRunTitle')}
-            />
-            {isGo ? (
+          {hasTests ? (
+            <div className="absolute top-3 right-4 z-[25] flex items-center gap-2">
+              <LiveCodeRunButton
+                running={run.running}
+                onRun={() => handleRun('sample')}
+                disabled={!code.trim()}
+                title={t('session.editorRunTitle')}
+              />
+              {isGo ? (
+                <LiveCodeToolButton
+                  loading={fmt.formatting}
+                  onClick={() => void handleFormat()}
+                  title={t('session.editorFmtTitle')}
+                >
+                  {t('session.editorFmt')}
+                </LiveCodeToolButton>
+              ) : null}
               <LiveCodeToolButton
-                loading={fmt.formatting}
-                onClick={() => void handleFormat()}
-                title={t('session.editorFmtTitle')}
+                loading={fullCheckPending}
+                onClick={() => void handleFullCheck()}
+                title={t('session.editorVerifyTitle')}
               >
-                {t('session.editorFmt')}
+                {t('session.editorVerify')}
               </LiveCodeToolButton>
-            ) : null}
-            <LiveCodeToolButton
-              loading={fullCheckPending}
-              onClick={() => void handleFullCheck()}
-              title={t('session.editorVerifyTitle')}
-            >
-              {t('session.editorVerify')}
-            </LiveCodeToolButton>
-          </div>
+            </div>
+          ) : null}
 
           <RunOutputPanel
             open={run.panelOpen}
@@ -165,40 +183,37 @@ export function CodeEditorPanel({
               {lineCount} lines · {code.length} chars
             </span>
           </div>
-          <Button
-            loading={submitPending}
-            disabled={!code.trim() || run.running || !verifiedSubmitRunId}
-            onClick={onSubmit}
-            size="sm"
-          >
+          <Button loading={submitPending} disabled={!canSubmit} onClick={onSubmit} size="sm">
             {t('session.editorSubmit')}
           </Button>
         </div>
       </div>
 
-      {verifiedSubmitRunId ? (
-        <p className="text-sm text-text-secondary">{t('session.editorVerifyOk')}</p>
+      {requiresVerify ? (
+        verifiedSubmitRunId ? (
+          <p className="text-sm text-text-secondary">{t('session.editorVerifyOk')}</p>
+        ) : (
+          <p className="text-sm text-text-muted">{t('session.editorVerifyHint')}</p>
+        )
       ) : (
-        <p className="text-sm text-text-muted">{t('session.editorVerifyHint')}</p>
+        <p className="text-sm text-text-muted">{t('session.editorSubmitDirectHint')}</p>
       )}
 
-      {fmt.formatError ? (
-        <p className="text-sm text-danger">{fmt.formatError}</p>
-      ) : null}
+      {fmt.formatError ? <p className="text-sm text-danger">{fmt.formatError}</p> : null}
 
       {run.activeRun && run.activeRun.test_results.length > 0 ? (
         <Card elevation="e2" padding="md">
           <p className="mb-3 text-sm font-medium">{t('session.editorTests')}</p>
           <ul className="space-y-2 font-mono text-xs">
-            {run.activeRun.test_results.map((t) => (
-              <li key={t.name} className="rounded-lg border border-border bg-surface-2 p-3">
+            {run.activeRun.test_results.map((tr) => (
+              <li key={tr.name} className="rounded-lg border border-border bg-surface-2 p-3">
                 <div className="flex justify-between gap-2">
-                  <span>{t.name}</span>
-                  <span className={t.status === 'passed' ? 'text-text-primary' : 'text-danger'}>
-                    {t.status}
+                  <span>{tr.name}</span>
+                  <span className={tr.status === 'passed' ? 'text-text-primary' : 'text-danger'}>
+                    {tr.status}
                   </span>
                 </div>
-                {t.error ? <p className="mt-1 text-danger">{t.error}</p> : null}
+                {tr.error ? <p className="mt-1 text-danger">{tr.error}</p> : null}
               </li>
             ))}
           </ul>

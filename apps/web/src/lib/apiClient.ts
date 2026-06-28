@@ -5,9 +5,44 @@ export const API_BASE: string = import.meta.env.VITE_API_BASE ?? '/v1'
 
 export const ACCESS_TOKEN_KEY = 'druzya_access_token'
 const REFRESH_TOKEN_KEY = 'druzya_refresh_token'
+const REFRESH_LOCK_KEY = 'druzya_token_refresh_at'
 
 let memAccessToken: string | null = null
 let inflightRefresh: Promise<string | null> | null = null
+
+const ACCESS_TOKEN_SKEW_MS = 30_000
+const REFRESH_LOCK_STALE_MS = 15_000
+const REFRESH_WAIT_MS = 10_000
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function decodeJwtExp(token: string): number | null {
+  const part = token.split('.')[1]
+  if (!part) return null
+  try {
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/')
+    const json = JSON.parse(atob(padded)) as { exp?: number }
+    return typeof json.exp === 'number' ? json.exp : null
+  } catch {
+    return null
+  }
+}
+
+function isAccessTokenFresh(token: string, skewMs = ACCESS_TOKEN_SKEW_MS): boolean {
+  const exp = decodeJwtExp(token)
+  if (!exp) return false
+  return exp * 1000 > Date.now() + skewMs
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === ACCESS_TOKEN_KEY || event.key === REFRESH_TOKEN_KEY) {
+      memAccessToken = safeRead(ACCESS_TOKEN_KEY)
+    }
+  })
+}
 
 function safeRead(key: string): string | null {
   try {
@@ -34,8 +69,8 @@ function safeDelete(key: string): void {
 }
 
 export function readAccessToken(): string | null {
-  if (memAccessToken) return memAccessToken
-  memAccessToken = safeRead(ACCESS_TOKEN_KEY)
+  const stored = safeRead(ACCESS_TOKEN_KEY)
+  if (stored !== memAccessToken) memAccessToken = stored
   return memAccessToken
 }
 
@@ -81,23 +116,63 @@ function redirectToLogin(): void {
   window.location.href = `/login?next=${next}`
 }
 
+async function waitForCrossTabRefresh(): Promise<string | null> {
+  const started = Date.now()
+  while (Date.now() - started < REFRESH_WAIT_MS) {
+    const lockAt = safeRead(REFRESH_LOCK_KEY)
+    if (!lockAt) {
+      const token = safeRead(ACCESS_TOKEN_KEY)
+      return token && isAccessTokenFresh(token) ? token : null
+    }
+    const lockAge = Date.now() - Number(lockAt)
+    if (Number.isNaN(lockAge) || lockAge > REFRESH_LOCK_STALE_MS) break
+    const token = safeRead(ACCESS_TOKEN_KEY)
+    if (token && isAccessTokenFresh(token)) {
+      memAccessToken = token
+      return token
+    }
+    await sleep(50)
+  }
+  return null
+}
+
 async function performRefresh(): Promise<string | null> {
   const refresh = readRefreshToken()
   if (!refresh) return null
+
+  if (safeRead(REFRESH_LOCK_KEY)) {
+    const waited = await waitForCrossTabRefresh()
+    if (waited) return waited
+  }
+
+  safeWrite(REFRESH_LOCK_KEY, String(Date.now()))
   try {
     const res = await fetch(`${API_BASE}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refresh }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const waited = await waitForCrossTabRefresh()
+      if (waited) return waited
+      return null
+    }
     const body = normalizeProtoJson(await res.json()) as Record<string, unknown>
     const tokens = parseAuthTokens(body)
     persistTokens(tokens.access_token, tokens.refresh_token || refresh)
     return tokens.access_token
   } catch {
     return null
+  } finally {
+    safeDelete(REFRESH_LOCK_KEY)
   }
+}
+
+/** Refresh access token when expired or close to expiry (e.g. WebSocket/LSP). */
+export async function ensureFreshAccessToken(): Promise<string | null> {
+  const token = readAccessToken()
+  if (token && isAccessTokenFresh(token)) return token
+  return refreshAccessTokenOnce()
 }
 
 async function refreshAccessTokenOnce(): Promise<string | null> {
@@ -195,6 +270,10 @@ export async function api<T = unknown>(
 ): Promise<T> {
   const redirectOnUnauthorized = options.redirectOnUnauthorized !== false
   let token = readAccessToken()
+  if (token && !isAccessTokenFresh(token)) {
+    const refreshed = await refreshAccessTokenOnce()
+    if (refreshed) token = refreshed
+  }
   let res = await doFetch(path, init, token)
 
   const isAuthPath = path.startsWith('/auth/')

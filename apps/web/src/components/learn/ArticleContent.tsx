@@ -3,6 +3,7 @@ import type { Article, ArticleVideo } from '@/lib/types'
 import { ArticleMarkdown } from '@/lib/learn/markdown'
 import { formatVideoDuration, vimeoEmbedUrl, youtubeEmbedUrl } from '@/lib/learn/video'
 import { useI18n } from '@/lib/i18n'
+import { useDomainLabels } from '@/lib/labels'
 
 function ArticleVideoEmbed({ video }: { video: ArticleVideo }) {
   const embed =
@@ -53,6 +54,7 @@ export function ArticleContent({
   showDraftBanner?: boolean
 }) {
   const { t } = useI18n()
+  const labels = useDomainLabels()
   const videos = [...(article.videos ?? [])].sort((a, b) => a.position - b.position)
 
   return (
@@ -87,9 +89,9 @@ export function ArticleContent({
             {article.skill_keys.map((key) => (
               <li
                 key={key}
-                className="rounded-full border border-border bg-surface-2 px-3 py-1 font-mono text-[11px] text-text-secondary"
+                className="rounded-full border border-border bg-surface-2 px-3 py-1 text-[11px] text-text-secondary"
               >
-                {key}
+                {labels.skillKey(key)}
               </li>
             ))}
           </ul>

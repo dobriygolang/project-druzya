@@ -25,9 +25,13 @@ type Config struct {
 	InternalAPIToken   string
 	LLMChainOrder      string
 	OpenAIAPIKey       string
-	GroqAPIKey         string
-	CerebrasAPIKey     string
-	GoogleAPIKey       string
+	GroqAPIKey             string
+	CerebrasAPIKey         string
+	GoogleAPIKey           string
+	MistralAPIKey          string
+	OpenRouterAPIKey       string
+	CloudflareAPIKey       string
+	CloudflareAccountID    string
 	EvalMaxRetries     int
 	WorkerPollInterval time.Duration
 	LLMCavemanLevel    string
@@ -82,11 +86,15 @@ func Load() (*Config, error) {
 		ContentGRPCAddr:    getEnv("CONTENT_GRPC_ADDR", "127.0.0.1:9091"),
 		BillingGRPCAddr:    os.Getenv("BILLING_GRPC_ADDR"),
 		InternalAPIToken:   internalToken,
-		LLMChainOrder:      getEnv("LLM_CHAIN_ORDER", "groq,cerebras,openai,google"),
-		OpenAIAPIKey:       os.Getenv("OPENAI_API_KEY"),
-		GroqAPIKey:         os.Getenv("GROQ_API_KEY"),
-		CerebrasAPIKey:     os.Getenv("CEREBRAS_API_KEY"),
-		GoogleAPIKey:       os.Getenv("GOOGLE_API_KEY"),
+		LLMChainOrder:       getEnv("LLM_CHAIN_ORDER", "groq,cerebras,google,cloudflare,openrouter"),
+		OpenAIAPIKey:        os.Getenv("OPENAI_API_KEY"),
+		GroqAPIKey:          os.Getenv("GROQ_API_KEY"),
+		CerebrasAPIKey:      os.Getenv("CEREBRAS_API_KEY"),
+		GoogleAPIKey:        os.Getenv("GOOGLE_API_KEY"),
+		MistralAPIKey:       os.Getenv("MISTRAL_API_KEY"),
+		OpenRouterAPIKey:    os.Getenv("OPENROUTER_API_KEY"),
+		CloudflareAPIKey:    os.Getenv("CLOUDFLARE_API_KEY"),
+		CloudflareAccountID: os.Getenv("CLOUDFLARE_ACCOUNT_ID"),
 		EvalMaxRetries:     evalMaxRetries,
 		WorkerPollInterval: workerPoll,
 		LLMCavemanLevel:    getEnv("LLM_CAVEMAN", "lite"),

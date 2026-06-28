@@ -120,8 +120,10 @@ func TestStartInterviewSession(t *testing.T) {
 	detail, err := fx.svc.StartInterviewSession(
 		context.Background(),
 		userID,
-		&templateID,
-		interviewmodel.ModeCompanyInterview,
+		interviewservice.StartSessionInput{
+			TemplateID: &templateID,
+			Mode:       interviewmodel.ModeCompanyInterview,
+		},
 	)
 	require.NoError(t, err)
 	require.NotNil(t, detail)
@@ -399,8 +401,10 @@ func TestStartInterviewSession_templateNotFound(t *testing.T) {
 	_, err := fx.svc.StartInterviewSession(
 		context.Background(),
 		userID,
-		&templateID,
-		interviewmodel.ModeCompanyInterview,
+		interviewservice.StartSessionInput{
+			TemplateID: &templateID,
+			Mode:       interviewmodel.ModeCompanyInterview,
+		},
 	)
 	require.ErrorIs(t, err, interviewservice.ErrNotFound)
 }

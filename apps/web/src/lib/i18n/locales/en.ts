@@ -1,5 +1,6 @@
 import type { Messages } from './ru'
 import { legalEn } from './legal.en'
+import { enumsEn } from '@/lib/labels/enums.en'
 
 export const en: Messages = {
   locale: {
@@ -46,6 +47,7 @@ export const en: Messages = {
     profile: 'Profile',
     pricing: 'Pricing',
     about: 'About',
+    admin: 'Admin',
     logout: 'Log out',
     accountMenu: 'Account menu',
     accountFallback: 'Account',
@@ -191,6 +193,12 @@ export const en: Messages = {
       sysdesignHint: 'Architecture & scaling',
       behavioral: 'Behavioral',
       behavioralHint: 'STAR & culture fit',
+      scopeLabel: 'Format',
+      scopeRandom: 'Random · 1 task',
+      scopeCompany: 'By company · full track',
+      companyLabel: 'Company',
+      randomHint: 'One random task from the catalog — shuffled every time.',
+      start: 'Start task',
     },
     live: {
       eyebrow: 'Live',
@@ -254,6 +262,9 @@ export const en: Messages = {
     eyebrow: 'Mock interview',
     taskFallback: 'Task',
     progress: 'Progress: {{done}}/{{total}} tasks',
+    sectionsTitle: 'Session sections',
+    sectionsTasks: 'Tasks: {{done}}/{{total}}',
+    sessionMeta: 'Session {{id}}… · {{mode}}',
     cancel: 'Cancel session',
     loadingTask: 'Loading task…',
     evaluating: 'Evaluating answer…',
@@ -282,6 +293,10 @@ export const en: Messages = {
     editorFormatGoOnly: 'Formatting is available for Go only',
     editorFormatAuthExpired: 'Your session expired. Refresh the page or sign in again.',
     editorSubmitNeedsVerify: 'Run Verify before submitting',
+    editorSubmitDirectHint: 'Submit for AI grading. Run/Verify are optional when autotests exist.',
+    editorRunQuota: 'Daily code run limit reached. Upgrade at /pricing.',
+    editorRunProFeature: 'This feature is not available on your current plan.',
+    editorVerifyFreeHint: 'Free plan runs public tests only. Pro includes hidden tests.',
   },
   results: {
     loading: 'Loading results…',
@@ -437,6 +452,7 @@ export const en: Messages = {
     wsConnecting: 'CONNECT…',
   },
   legal: legalEn,
+  enums: enumsEn,
   skills: {
     star_structure: 'STAR structure',
     communication: 'Communication',

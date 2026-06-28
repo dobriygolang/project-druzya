@@ -61,13 +61,14 @@ var costTable = map[string]modelCost{
 	"openai/gpt-oss-120b":      {0.15, 0.60},
 	// Cerebras
 	"cerebras/llama-3.3-70b": {0.85, 1.20},
-	"cerebras/llama3.1-8b":   {0.10, 0.10},
+	"cerebras/zai-glm-4.7":   {0.50, 0.50},
+	"cerebras/gpt-oss-120b":  {0.35, 0.75},
 	// Mistral
 	"mistralai/mistral-large":  {2.00, 6.00},
 	"mistralai/mistral-medium": {0.40, 2.00},
 	"mistralai/mistral-small":  {0.20, 0.60},
 	// Google Gemini (через generativelanguage API)
-	"google/gemini-2.0-flash": {0.10, 0.40},
+	"google/gemini-2.0-flash": {0, 0},
 	"google/gemini-1.5-pro":   {1.25, 5.00},
 	"google/gemini-1.5-flash": {0.075, 0.30},
 	// DeepSeek
@@ -84,6 +85,9 @@ var costTable = map[string]modelCost{
 	// чтобы lookup гарантированно матчил.
 	"deepseek/deepseek-r1":     {0, 0},
 	"openai/gpt-oss-120b:free": {0, 0},
+	"google/gemma-3-27b-it:free": {0, 0},
+	"@cf/meta/llama-3.1-8b-instruct-fast": {0, 0},
+	"@cf/meta/llama-3.3-70b-instruct-fp8-fast": {0, 0},
 	// Cloudflare Workers AI — все модели бесплатны до 10K request/day
 	// на free-tier; платный tier ~$0.011/1k neurons. Trace минимальный,
 	// ставим 0 для MVP, обновим когда CF выйдет на paid load.

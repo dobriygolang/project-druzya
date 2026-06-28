@@ -124,7 +124,7 @@ Never read content postgres tables.
 
 | RPC | HTTP | Auth |
 |-----|------|------|
-| StartInterviewSession | `POST /v1/interview/sessions` | JWT |
+| StartInterviewSession | `POST /v1/interview/sessions` | JWT — body: `mode`, optional `practice_scope` (`random_one` \| `company_track`), `company_id` for company track |
 | GetInterviewSession | `GET /v1/interview/sessions/{id}` | JWT |
 | GetCurrentSessionState | `GET /v1/interview/sessions/{id}/current` | JWT (includes `sections`) |
 | GetSessionResults | `GET /v1/interview/sessions/{id}/results` | JWT |

@@ -1,20 +1,18 @@
-/** Strip protobuf-style enum prefix for UI labels. */
-export function formatEnumLabel(value: string, prefix: string): string {
-  if (!value.startsWith(prefix)) return value.replace(/_/g, ' ').toLowerCase()
-  return value
-    .slice(prefix.length)
-    .toLowerCase()
-    .replace(/_/g, ' ')
+import { lookupEnum, type TFn } from '@/lib/labels/domainLabels'
+
+/** @deprecated use useDomainLabels().sessionMode */
+export function formatSessionMode(t: TFn, mode: string): string {
+  return lookupEnum(t, 'sessionMode', mode)
 }
 
-export function formatSessionMode(mode: string): string {
-  return formatEnumLabel(mode, 'SESSION_MODE_')
+/** @deprecated use useDomainLabels().sessionStatus */
+export function formatSessionStatus(t: TFn, status: string): string {
+  return lookupEnum(t, 'sessionStatus', status)
 }
 
-export function formatSessionStatus(status: string): string {
-  return formatEnumLabel(status, 'SESSION_STATUS_')
+/** @deprecated use useDomainLabels().sectionStatus */
+export function formatSectionStatus(t: TFn, status: string): string {
+  return lookupEnum(t, 'sectionStatus', status)
 }
 
-export function formatSectionStatus(status: string): string {
-  return formatEnumLabel(status, 'SECTION_STATUS_')
-}
+export type { TFn }

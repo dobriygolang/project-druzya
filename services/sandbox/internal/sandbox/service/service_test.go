@@ -17,7 +17,7 @@ func TestSelectTestsSampleExcludesHidden(t *testing.T) {
 		},
 		HiddenCases: []model.TestCaseMeta{{Name: "hidden case", Input: "4", ExpectedOutput: "4"}},
 	}
-	tests, _, _ := selectTests(meta, model.RunTypeSample, runDefaults{timeoutMS: 1000, memoryMB: 64})
+	tests, _, _ := selectTests(meta, model.RunTypeSample, runDefaults{timeoutMS: 1000, memoryMB: 64}, false)
 	if len(tests) != 2 {
 		t.Fatalf("expected 2 public tests, got %d", len(tests))
 	}
@@ -29,9 +29,21 @@ func TestSelectTestsSubmitIncludesHidden(t *testing.T) {
 		TestCases:   []model.TestCaseMeta{{Name: "public", Input: "1", ExpectedOutput: "1"}},
 		HiddenCases: []model.TestCaseMeta{{Name: "hidden case", Input: "2", ExpectedOutput: "2"}},
 	}
-	tests, _, _ := selectTests(meta, model.RunTypeSubmit, runDefaults{timeoutMS: 1000, memoryMB: 64})
+	tests, _, _ := selectTests(meta, model.RunTypeSubmit, runDefaults{timeoutMS: 1000, memoryMB: 64}, true)
 	if len(tests) != 2 {
 		t.Fatalf("expected 2 tests including hidden, got %d", len(tests))
+	}
+}
+
+func TestSelectTestsSubmitWithoutHiddenUsesPublicOnly(t *testing.T) {
+	t.Parallel()
+	meta := &model.TaskMetadata{
+		TestCases:   []model.TestCaseMeta{{Name: "public", Input: "1", ExpectedOutput: "1"}},
+		HiddenCases: []model.TestCaseMeta{{Name: "hidden case", Input: "2", ExpectedOutput: "2"}},
+	}
+	tests, _, _ := selectTests(meta, model.RunTypeSubmit, runDefaults{timeoutMS: 1000, memoryMB: 64}, false)
+	if len(tests) != 1 {
+		t.Fatalf("expected 1 public test on free submit verify, got %d", len(tests))
 	}
 }
 

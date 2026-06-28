@@ -46,6 +46,29 @@ func (c *GRPCClient) Ping(ctx context.Context) error {
 	return err
 }
 
+func (c *GRPCClient) ListInterviewTemplates(ctx context.Context, companyID string, activeOnly bool, limit int) ([]InterviewTemplate, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	resp, err := c.client.ListInterviewTemplates(ctx, &contentv1.ListInterviewTemplatesRequest{
+		CompanyId:  &companyID,
+		ActiveOnly: activeOnly,
+		Limit:      int32(limit),
+	})
+	if err != nil {
+		return nil, mapGRPCError(err)
+	}
+	items := make([]InterviewTemplate, 0, len(resp.GetTemplates()))
+	for _, t := range resp.GetTemplates() {
+		items = append(items, InterviewTemplate{
+			ID:        t.GetId(),
+			CompanyID: t.GetCompanyId(),
+			Title:     t.GetTitle(),
+		})
+	}
+	return items, nil
+}
+
 func (c *GRPCClient) GetInterviewTemplateDetail(ctx context.Context, templateID string) (*TemplateDetail, error) {
 	resp, err := c.client.GetInterviewTemplateDetail(ctx, &contentv1.GetInterviewTemplateDetailRequest{Id: templateID})
 	if err != nil {

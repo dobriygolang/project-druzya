@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
 import { brand } from '@/lib/brand/tokens'
 import { getBillingPlans } from '@/lib/api/billing'
@@ -98,16 +97,13 @@ export default function WelcomePage() {
     <PublicPageShell>
       <PublicNav
         right={
-          <div className="flex items-center gap-3">
-            <LocaleSwitcher compact />
-            <Link
-              to="/login"
-              className="rounded-lg px-3.5 py-2 text-sm font-medium no-underline"
-              style={{ background: brand.ink, color: brand.bg }}
-            >
-              {t('public.startFree')}
-            </Link>
-          </div>
+          <Link
+            to="/login"
+            className="rounded-lg px-3.5 py-2 text-sm font-medium no-underline"
+            style={{ background: brand.ink, color: brand.bg }}
+          >
+            {t('public.startFree')}
+          </Link>
         }
       />
       <section className="mx-auto max-w-[1200px] px-8 pb-24 pt-[88px]">

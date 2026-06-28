@@ -2,15 +2,12 @@ import { useMemo } from 'react'
 import type { SessionMode } from '@/lib/types'
 import { formatApiError } from '@/lib/apiClient'
 import { useI18n } from '@/lib/i18n'
+import { sessionModeLabel as resolveSessionModeLabel } from '@/lib/labels/domainLabels'
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string
 
 export function sessionModeLabelWith(t: TFn, mode?: SessionMode | string): string {
-  if (!mode) return t('interview.defaultSession')
-  const key = `interview.modes.${mode}`
-  const label = t(key)
-  if (label !== key) return label
-  return String(mode).replace(/^SESSION_MODE_/, '').replace(/_/g, ' ')
+  return resolveSessionModeLabel(t, mode)
 }
 
 export function isActiveSessionConflict(message: string): boolean {
@@ -45,7 +42,7 @@ export function useInterviewLabels() {
 /** @deprecated use useInterviewLabels */
 export function sessionModeLabel(mode?: SessionMode | string): string {
   if (!mode) return 'Interview session'
-  return String(mode).replace(/^SESSION_MODE_/, '').replace(/_/g, ' ')
+  return String(mode).replace(/^SESSION_MODE_/, '').replace(/_/g, ' ').toLowerCase()
 }
 
 /** @deprecated use useInterviewLabels */

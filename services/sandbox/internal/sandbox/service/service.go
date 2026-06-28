@@ -157,7 +157,8 @@ func (s *sandboxService) RunCode(ctx context.Context, input RunCodeInput) (*mode
 		meta, _ = contentadapter.ParseTaskMetadata(task.Metadata)
 	}
 
-	tests, timeoutMS, memoryMB := selectTests(meta, runType, s.defaults)
+	includeHidden := s.includeHiddenTests(ctx, input.UserID, runType)
+	tests, timeoutMS, memoryMB := selectTests(meta, runType, s.defaults, includeHidden)
 	now := time.Now().UTC()
 	status := model.StatusRunning
 	if s.asyncRuns {
@@ -196,7 +197,8 @@ func (s *sandboxService) ProcessQueuedRuns(ctx context.Context, limit int) (int,
 	for i := range runs {
 		run := &runs[i]
 		meta := s.loadTaskMetadata(ctx, run.TaskID)
-		tests, timeoutMS, memoryMB := selectTests(meta, run.RunType, s.defaults)
+		includeHidden := s.includeHiddenTests(ctx, run.UserID, run.RunType)
+		tests, timeoutMS, memoryMB := selectTests(meta, run.RunType, s.defaults, includeHidden)
 		if _, err := s.executeRun(ctx, run, run.Stdin, tests, timeoutMS, memoryMB); err != nil {
 			return i, err
 		}
@@ -346,7 +348,7 @@ func normalizeRunType(runType string) (string, error) {
 	}
 }
 
-func selectTests(meta *model.TaskMetadata, runType string, defaults runDefaults) ([]model.TestCaseMeta, int, int) {
+func selectTests(meta *model.TaskMetadata, runType string, defaults runDefaults, includeHidden bool) ([]model.TestCaseMeta, int, int) {
 	timeout := defaults.timeoutMS
 	memory := defaults.memoryMB
 	if meta != nil && meta.Limits != nil {
@@ -364,7 +366,10 @@ func selectTests(meta *model.TaskMetadata, runType string, defaults runDefaults)
 	case model.RunTypeSample:
 		return publicTests(meta), timeout, memory
 	case model.RunTypeSubmit:
-		return allTests(meta), timeout, memory
+		if includeHidden {
+			return allTests(meta), timeout, memory
+		}
+		return publicTests(meta), timeout, memory
 	default:
 		return nil, timeout, memory
 	}

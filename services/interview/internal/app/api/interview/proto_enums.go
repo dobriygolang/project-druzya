@@ -5,6 +5,18 @@ import (
 	interviewv1 "github.com/sedorofeevd/project-druzya/services/interview/pkg/api/interview/v1"
 )
 
+func practiceScopeFromProto(scope interviewv1.PracticeScope) (interviewmodel.PracticeScope, error) {
+	switch scope {
+	case interviewv1.PracticeScope_PRACTICE_SCOPE_UNSPECIFIED,
+		interviewv1.PracticeScope_PRACTICE_SCOPE_RANDOM_ONE:
+		return interviewmodel.PracticeScopeRandomOne, nil
+	case interviewv1.PracticeScope_PRACTICE_SCOPE_COMPANY_TRACK:
+		return interviewmodel.PracticeScopeCompanyTrack, nil
+	default:
+		return "", invalidArgument("invalid practice scope")
+	}
+}
+
 func sessionModeToProto(mode interviewmodel.SessionMode) interviewv1.SessionMode {
 	switch mode {
 	case interviewmodel.ModeCompanyInterview:

@@ -37,7 +37,7 @@ WebSocket `/ws/lsp/go` proxies JSON-RPC to per-session `gopls` (`SANDBOX_GOPLS_P
 
 - `custom` — stdin only, no task tests
 - `sample` — public examples + non-hidden test_cases
-- `submit` — public + hidden tests (hidden failures redacted)
+- `submit` — public tests always; hidden tests only when billing entitlement `hidden_tests_enabled` is true (Pro). Free plan verify uses public tests only.
 
 ## Runner modes (`RUNNER_MODE`)
 

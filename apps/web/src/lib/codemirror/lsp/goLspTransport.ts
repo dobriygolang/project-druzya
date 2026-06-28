@@ -1,5 +1,5 @@
 import type { Transport } from '@codemirror/lsp-client'
-import { readAccessToken } from '@/lib/apiClient'
+import { ensureFreshAccessToken } from '@/lib/apiClient'
 
 export type LspSessionConfig = {
   rootUri: string
@@ -90,7 +90,7 @@ export function connectGoLspTransport(token: string): Promise<LspSessionConfig> 
 }
 
 export async function connectGoLspWithAuth(): Promise<LspSessionConfig | null> {
-  const token = readAccessToken()
+  const token = await ensureFreshAccessToken()
   if (!token) return null
   try {
     return await connectGoLspTransport(token)

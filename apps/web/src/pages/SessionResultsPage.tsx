@@ -8,12 +8,13 @@ import { SectionCard } from '@/components/SectionCard'
 import { getTask } from '@/lib/api/content'
 import { getSessionResults, listRetryItems } from '@/lib/api/interview'
 import { getDashboard } from '@/lib/api/recommendation'
-import { formatSessionMode, formatSessionStatus, formatSectionStatus } from '@/lib/interview/labels'
+import { useDomainLabels } from '@/lib/labels'
 import { useI18n } from '@/lib/i18n'
 import type { EvaluationResult, SessionSection } from '@/lib/types'
 
 export default function SessionResultsPage() {
   const { t } = useI18n()
+  const labels = useDomainLabels()
   const { sessionId = '' } = useParams()
 
   const resultsQ = useQuery({
@@ -102,11 +103,11 @@ export default function SessionResultsPage() {
     <PageContent>
       <header className="flex flex-col gap-2">
         <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
-          {formatSessionMode(session.mode)}
+          {labels.sessionMode(session.mode)}
         </p>
         <h1 className="font-display text-3xl font-bold leading-tight">{t('results.title')}</h1>
         <p className="text-[14px] text-text-secondary">
-          {formatSessionStatus(session.status)}
+          {labels.sessionStatus(session.status)}
           {session.total_score ? t('results.totalScore', { score: session.total_score }) : ''}
         </p>
         <p className="text-[13px] text-text-muted">
@@ -137,7 +138,7 @@ export default function SessionResultsPage() {
                   {s.position}. {s.title}
                 </span>
                 <span className="text-text-muted">
-                  {formatSectionStatus(s.status)}
+                  {labels.sectionStatus(s.status)}
                   {s.score ? ` · ${s.score}` : ''}
                 </span>
               </li>
@@ -193,9 +194,9 @@ export default function SessionResultsPage() {
               {weaknesses.slice(0, 4).map((w) => (
                 <li
                   key={w.skill_key}
-                  className="rounded-full border border-border px-3 py-1 font-mono text-[11px] text-text-secondary"
+                  className="rounded-full border border-border px-3 py-1 text-[11px] text-text-secondary"
                 >
-                  {w.skill_key} · {w.score}%
+                  {labels.skillKey(w.skill_key)} · {w.score}%
                 </li>
               ))}
             </ul>

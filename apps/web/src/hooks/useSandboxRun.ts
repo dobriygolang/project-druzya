@@ -1,9 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
 import { getCodeRun, isTerminalRunStatus, runCode, type RunType } from '@/lib/api/sandbox'
+import { formatSandboxRunError } from '@/lib/sandbox/formatRunError'
+import { useI18n } from '@/lib/i18n'
 import type { CodeRun } from '@/lib/types'
 
 export function useSandboxRun() {
+  const { t } = useI18n()
   const [runId, setRunId] = useState<string | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
   const [outputTab, setOutputTab] = useState<'stdout' | 'stderr'>('stdout')
@@ -36,7 +39,12 @@ export function useSandboxRun() {
       else setOutputTab('stdout')
     },
     onError: (err) => {
-      setRunError(err instanceof Error ? err.message : 'Run failed')
+      setRunError(
+        formatSandboxRunError(err, {
+          quota: t('session.editorRunQuota'),
+          proFeature: t('session.editorRunProFeature'),
+        }),
+      )
       setRunId(null)
     },
   })

@@ -1,8 +1,6 @@
 import type { SessionSection } from '@/lib/types'
-
-function labelStatus(status: string): string {
-  return status.replace('SECTION_STATUS_', '').toLowerCase().replace(/_/g, ' ')
-}
+import { useI18n } from '@/lib/i18n'
+import { useDomainLabels } from '@/lib/labels'
 
 export function SessionSectionsProgress({
   sections,
@@ -17,18 +15,22 @@ export function SessionSectionsProgress({
     skipped_tasks: number
   }
 }) {
+  const { t } = useI18n()
+  const labels = useDomainLabels()
   const sorted = [...sections].sort((a, b) => a.position - b.position)
   if (sorted.length === 0) return null
+
+  const doneTasks = progress ? progress.evaluated_tasks + progress.skipped_tasks : 0
 
   return (
     <section className="rounded-xl border border-border bg-surface-1 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-          Секции сессии
+          {t('session.sectionsTitle')}
         </h2>
         {progress ? (
           <span className="text-xs text-text-secondary">
-            Задачи: {progress.evaluated_tasks + progress.skipped_tasks}/{progress.total_tasks}
+            {t('session.sectionsTasks', { done: doneTasks, total: progress.total_tasks })}
           </span>
         ) : null}
       </div>
@@ -52,8 +54,8 @@ export function SessionSectionsProgress({
               <span className="font-medium text-text-primary">
                 {section.position}. {section.title}
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-wide text-text-muted">
-                {labelStatus(section.status)}
+              <span className="text-[10px] uppercase tracking-wide text-text-muted">
+                {labels.sectionStatus(section.status)}
                 {section.score ? ` · ${section.score}` : ''}
               </span>
             </li>

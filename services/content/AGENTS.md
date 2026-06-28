@@ -54,9 +54,29 @@ Other services use `pkg/client.ContentClient` or gRPC — never read content tab
 | `interview_templates` | Interview blueprints |
 | `template_sections` | Ordered sections |
 | `template_section_tasks` | Section → task links with `position` |
-| `tasks` | Task definitions; `metadata JSONB` per type |
+## Schema
+
+| Table | Notes |
+|-------|-------|
+| `companies` | Preparation profiles / employer tracks (`yandex`, `google`, …) |
+| `interview_templates` | Interview blueprints |
+| `template_sections` | Ordered sections (`algorithm`, `live_coding`, `system_design`, `behavioral`, …) |
+| `template_section_tasks` | Section → task links with `position` |
+| `tasks` | Task definitions; `metadata JSONB` per type (see below) |
 | `task_solutions` | Reference solutions |
 | `rubrics` + `rubric_criteria` | Scoring rubrics by `task_type` |
+
+### Task metadata conventions
+
+| Field | When |
+|-------|------|
+| `execution`: `"sandbox"` | Runnable tasks with `examples` / `test_cases`; optional Run/Verify in UI |
+| `execution`: `"none"` | Behavioral, system design, code review — AI grading only |
+| `editor_preset.{lang}.solution` | What the user edits in the solo editor |
+| `editor_preset.{lang}.harness` | Wrapped around `{{SOLUTION}}` for sandbox runs (stdin/stdout I/O) |
+| `prompt` / `hints` | Shown to user or passed into evaluation context |
+
+Seed catalog: `00002_seed.sql` + `00010_seed_catalog_excellence.sql` (5 algorithm + live_coding track + 2 system design + Yandex/Google templates).
 | `articles` + `article_skill_keys` + `article_videos` + `article_tasks` | Knowledge-base articles; videos; linked catalog tasks |
 
 Rubrics resolve by active rubric for `task.type` (no per-task override table).

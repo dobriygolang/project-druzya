@@ -7,9 +7,12 @@ import (
 	interviewservice "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/service"
 )
 
+// StartSessionInput is the port-level input for starting a session.
+type StartSessionInput = interviewservice.StartSessionInput
+
 // Client is the user-facing interview API port for other services.
 type Client interface {
-	StartInterviewSession(ctx context.Context, userID string, templateID *string, mode interviewmodel.SessionMode) (*interviewmodel.SessionDetail, error)
+	StartInterviewSession(ctx context.Context, userID string, input StartSessionInput) (*interviewmodel.SessionDetail, error)
 	GetInterviewSession(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionDetail, error)
 	GetCurrentSessionState(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionState, error)
 	GetSessionResults(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionResults, error)

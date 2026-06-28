@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ChevronDown, LogOut, Menu, User, X } from 'lucide-react'
+import { ChevronDown, CreditCard, Info, LogOut, Menu, Shield, User, X } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
 import { LocaleSwitcher } from '@/components/LocaleSwitcher'
 import { PAGE_MAX_WIDTH_CLASS } from '@/lib/brand/layout'
@@ -13,6 +13,7 @@ import { cn } from '@/lib/cn'
 import { usePrimaryNav } from '@/lib/migration/nav'
 import { useMotion } from '@/lib/motion-presets'
 import { useI18n } from '@/lib/i18n'
+import { useIsAdmin } from '@/hooks/useIsAdmin'
 
 const IMMERSIVE: RegExp[] = [/^\/interview\/session\//, /^\/live\//]
 
@@ -36,7 +37,30 @@ function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: 
   )
 }
 
-function UserMenu({ onClose }: { onClose: () => void }) {
+function ShellDrawerLink({
+  to,
+  icon: Icon,
+  children,
+  onClick,
+}: {
+  to: string
+  icon: typeof User
+  children: ReactNode
+  onClick: () => void
+}) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className="flex items-center gap-2.5 rounded-lg border border-transparent px-3 py-2 text-sm text-text-primary no-underline hover:bg-surface-2"
+    >
+      <Icon className="h-4 w-4 shrink-0 text-text-muted" />
+      {children}
+    </Link>
+  )
+}
+
+function UserMenu({ onClose, isAdmin }: { onClose: () => void; isAdmin: boolean }) {
   const navigate = useNavigate()
   const { t } = useI18n()
 
@@ -48,8 +72,9 @@ function UserMenu({ onClose }: { onClose: () => void }) {
 
   const items = [
     { to: '/profile', label: t('shell.profile'), icon: User },
-    { to: '/pricing', label: t('shell.pricing'), icon: null },
-    { to: '/welcome', label: t('shell.about'), icon: null },
+    { to: '/pricing', label: t('shell.pricing'), icon: CreditCard },
+    { to: '/welcome', label: t('shell.about'), icon: Info },
+    ...(isAdmin ? [{ to: '/admin', label: t('shell.admin'), icon: Shield }] : []),
   ]
 
   return (
@@ -65,7 +90,7 @@ function UserMenu({ onClose }: { onClose: () => void }) {
           className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm text-text-primary no-underline transition-colors hover:bg-surface-2"
           role="menuitem"
         >
-          {it.icon ? <it.icon className="h-4 w-4 shrink-0 text-text-muted" /> : null}
+          <it.icon className="h-4 w-4 shrink-0 text-text-muted" />
           <span className="truncate">{it.label}</span>
         </Link>
       ))}
@@ -91,6 +116,7 @@ function TopNav() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
+  const { isAdmin } = useIsAdmin()
   const username = meQ.data?.username ?? t('shell.accountFallback')
 
   useEffect(() => {
@@ -151,7 +177,7 @@ function TopNav() {
                 )}
               />
             </button>
-            {userMenuOpen ? <UserMenu onClose={() => setUserMenuOpen(false)} /> : null}
+            {userMenuOpen ? <UserMenu onClose={() => setUserMenuOpen(false)} isAdmin={isAdmin} /> : null}
           </div>
           <button
             type="button"
@@ -194,28 +220,29 @@ function TopNav() {
               <LocaleSwitcher />
             </div>
             <div className="mt-auto space-y-1 border-t border-border pt-4">
-              <Link
-                to="/profile"
-                onClick={() => setMenuOpen(false)}
-                className="block rounded-lg border border-transparent px-3 py-2 text-sm text-text-primary no-underline hover:bg-surface-2"
-              >
+              <ShellDrawerLink to="/profile" icon={User} onClick={() => setMenuOpen(false)}>
                 {t('shell.profile')}
-              </Link>
-              <Link
-                to="/pricing"
-                onClick={() => setMenuOpen(false)}
-                className="block rounded-lg border border-transparent px-3 py-2 text-sm text-text-primary no-underline hover:bg-surface-2"
-              >
+              </ShellDrawerLink>
+              <ShellDrawerLink to="/pricing" icon={CreditCard} onClick={() => setMenuOpen(false)}>
                 {t('shell.pricing')}
-              </Link>
+              </ShellDrawerLink>
+              <ShellDrawerLink to="/welcome" icon={Info} onClick={() => setMenuOpen(false)}>
+                {t('shell.about')}
+              </ShellDrawerLink>
+              {isAdmin ? (
+                <ShellDrawerLink to="/admin" icon={Shield} onClick={() => setMenuOpen(false)}>
+                  {t('shell.admin')}
+                </ShellDrawerLink>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
                   setMenuOpen(false)
                   void logout().then(() => navigate('/welcome', { replace: true }))
                 }}
-                className="block w-full rounded-lg px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-2"
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-text-primary hover:bg-surface-2"
               >
+                <LogOut className="h-4 w-4 shrink-0 text-text-muted" />
                 {t('shell.logout')}
               </button>
             </div>

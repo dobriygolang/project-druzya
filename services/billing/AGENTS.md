@@ -28,7 +28,9 @@ AI scoring (ai). It only resolves Telegram → user via the identity gRPC client
 - `{"type":"bool","value":true}` — feature gate
 - `{"type":"counter","limit":100,"period":"day"|"month"}` — quota (omit `limit` for unlimited)
 
-Seeded plans (`scripts/migrations/00002_entitlements.sql`): `free`, `pro_monthly`.
+Seeded plans (`scripts/migrations/00001_init.sql`, `00002_free_code_runs_limit.sql`): `free`, `pro_monthly`.
+
+Free plan defaults include `code_runs_per_day` limit **50/day**; Pro **500/day**. Hidden tests (`hidden_tests_enabled`) are Pro-only; sandbox still allows `submit` runs on Free against public tests.
 
 ## API
 

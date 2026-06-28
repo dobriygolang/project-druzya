@@ -16,9 +16,11 @@ import {
 import { startSession } from '@/lib/api/interview'
 import { formatApiError } from '@/lib/apiClient'
 import { formatLimitUsage } from '@/lib/billingLabels'
+import { useDomainLabels } from '@/lib/labels'
 
 export default function InterviewStartPage() {
   const navigate = useNavigate()
+  const labels = useDomainLabels()
   const [companyId, setCompanyId] = useState<string | null>(null)
   const [templateId, setTemplateId] = useState<string | null>(null)
 
@@ -190,7 +192,7 @@ export default function InterviewStartPage() {
                 <li key={s.id} className="flex justify-between text-sm">
                   <span>
                     {s.position}. {s.title}{' '}
-                    <span className="text-text-muted">({s.section_type})</span>
+                    <span className="text-text-muted">({labels.sectionType(s.section_type)})</span>
                   </span>
                   <span className="text-text-muted">{s.tasks_count} tasks</span>
                 </li>

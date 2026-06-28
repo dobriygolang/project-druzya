@@ -96,8 +96,8 @@ var virtualChains = map[string][]VirtualCandidate{
 		// Дублирует логику task_map для TaskCopilotStream (free-chain),
 		// на случай если caller прислал druz9/turbo через ModelOverride.
 		{Provider: ProviderGroq, Model: "llama-3.3-70b-versatile"},
-		{Provider: ProviderCerebras, Model: "llama3.3-70b"},
-		{Provider: ProviderMistral, Model: "mistral-large-latest"},
+		{Provider: ProviderCerebras, Model: "zai-glm-4.7"},
+		{Provider: ProviderMistral, Model: "mistral-small-latest"},
 		{Provider: ProviderOpenRouter, Model: "qwen/qwen3-coder:free"},
 	},
 	VirtualPro: {
@@ -110,7 +110,7 @@ var virtualChains = map[string][]VirtualCandidate{
 		// Fallback в free-chain если все paid провайдеры легли —
 		// юзер не остаётся без ответа.
 		{Provider: ProviderGroq, Model: "llama-3.3-70b-versatile"},
-		{Provider: ProviderCerebras, Model: "llama3.3-70b"},
+		{Provider: ProviderCerebras, Model: "zai-glm-4.7"},
 	},
 	VirtualUltra: {
 		// Top-tier. Claude Sonnet 4.5 — гибкий best-all-around; gpt-4.1

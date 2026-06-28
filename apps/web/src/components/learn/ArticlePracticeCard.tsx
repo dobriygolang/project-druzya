@@ -14,7 +14,7 @@ export function ArticlePracticeCard({ article }: { article: Article }) {
   const suggestion = resolveArticlePractice(article.skill_keys)
 
   const startM = useMutation({
-    mutationFn: () => startTrainingSession(suggestion!.mode),
+    mutationFn: () => startTrainingSession({ mode: suggestion!.mode }),
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })
 

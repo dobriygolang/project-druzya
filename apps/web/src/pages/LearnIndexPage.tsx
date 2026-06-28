@@ -8,8 +8,9 @@ import { PageContent } from '@/components/PageContent'
 import { listArticles } from '@/lib/api/content'
 import { getDashboard } from '@/lib/api/recommendation'
 import { formatApiError } from '@/lib/apiClient'
-import { humanizeSkillDomain, skillDomain } from '@/lib/learn/practice'
+import { skillDomain } from '@/lib/learn/practice'
 import { useI18n } from '@/lib/i18n'
+import { useDomainLabels } from '@/lib/labels'
 import type { ArticleSummary } from '@/lib/types'
 import { cn } from '@/lib/cn'
 
@@ -25,6 +26,7 @@ function collectDomains(articles: ArticleSummary[]): string[] {
 
 export default function LearnIndexPage() {
   const { t } = useI18n()
+  const labels = useDomainLabels()
   const [domain, setDomain] = useState<string | null>(null)
   const [searchInput, setSearchInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -88,7 +90,7 @@ export default function LearnIndexPage() {
           </FilterChip>
           {domains.map((d) => (
             <FilterChip key={d} active={domain === d} onClick={() => setDomain(d)}>
-              {humanizeSkillDomain(d)}
+              {labels.skillDomain(d)}
             </FilterChip>
           ))}
         </div>
@@ -140,9 +142,9 @@ export default function LearnIndexPage() {
                       {article.skill_keys.map((key) => (
                         <span
                           key={key}
-                          className="rounded-full border border-border bg-surface-2 px-2.5 py-0.5 font-mono text-[10px] text-text-secondary"
+                          className="rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-[10px] text-text-secondary"
                         >
-                          {key}
+                          {labels.skillKey(key)}
                         </span>
                       ))}
                     </div>

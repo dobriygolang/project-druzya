@@ -24,7 +24,7 @@ function LinkedTaskRow({
   })
 
   const soloM = useMutation({
-    mutationFn: () => startTrainingSession(suggestion!.mode),
+    mutationFn: () => startTrainingSession({ mode: suggestion!.mode }),
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })
 

@@ -10,6 +10,7 @@ import {
 import { readStoredLocale, writeStoredLocale, type Locale } from './localeStorage'
 import { en } from './locales/en'
 import { ru, type Messages } from './locales/ru'
+import { skillKeyLabel } from '@/lib/labels/domainLabels'
 
 export type { Locale } from './localeStorage'
 export { readStoredLocale } from './localeStorage'
@@ -82,9 +83,7 @@ export function useI18n(): I18nContextValue {
   return ctx
 }
 export function skillLabel(t: I18nContextValue['t'], skillKey: string): string {
-  const key = `skills.${skillKey}`
-  const translated = t(key)
-  return translated === key ? skillKey.replaceAll('_', ' ') : translated
+  return skillKeyLabel(t, skillKey)
 }
 
 export function pluralTasks(t: I18nContextValue['t'], count: number): string {

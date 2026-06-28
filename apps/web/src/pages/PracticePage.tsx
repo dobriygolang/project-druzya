@@ -15,7 +15,7 @@ export default function PracticePage() {
   const startM = useMutation({
     mutationFn: (mode: PracticeMode) => {
       if (mode.kind !== 'session') throw new Error('invalid mode')
-      return startTrainingSession(mode.mode)
+      return startTrainingSession({ mode: mode.mode })
     },
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })

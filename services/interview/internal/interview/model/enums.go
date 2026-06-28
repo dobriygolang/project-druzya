@@ -15,6 +15,14 @@ const (
 	ModeRetryMistakes         SessionMode = "retry_mistakes"
 )
 
+// PracticeScope controls solo training task selection.
+type PracticeScope string
+
+const (
+	PracticeScopeRandomOne    PracticeScope = "random_one"
+	PracticeScopeCompanyTrack PracticeScope = "company_track"
+)
+
 // TaskTypeForMode maps training modes to content task types.
 var TaskTypeForMode = map[SessionMode]string{
 	ModeAlgorithmsTraining:   "algorithm",

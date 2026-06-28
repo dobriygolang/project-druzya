@@ -59,6 +59,15 @@ enum RetryItemStatus {
   RETRY_ITEM_STATUS_DISMISSED = 4;
 }
 
+// PracticeScope controls solo/training task selection (not company_interview templates).
+enum PracticeScope {
+  PRACTICE_SCOPE_UNSPECIFIED = 0;
+  // One random published task of the training mode type (default for solo).
+  PRACTICE_SCOPE_RANDOM_ONE = 1;
+  // All tasks from the company's interview template section for this mode, shuffled.
+  PRACTICE_SCOPE_COMPANY_TRACK = 2;
+}
+
 service InterviewService {
   rpc StartInterviewSession(StartInterviewSessionRequest) returns (StartInterviewSessionResponse) {
     option (google.api.http) = {
@@ -241,6 +250,8 @@ message Progress {
 message StartInterviewSessionRequest {
   optional string template_id = 1;
   SessionMode mode = 2;
+  optional string company_id = 3;
+  PracticeScope practice_scope = 4;
 }
 
 message StartInterviewSessionResponse {

@@ -19,9 +19,10 @@ import (
 func (s *interviewService) StartInterviewSession(
 	ctx context.Context,
 	userID string,
-	templateID *string,
-	mode interviewmodel.SessionMode,
+	input StartSessionInput,
 ) (*interviewmodel.SessionDetail, error) {
+	templateID := input.TemplateID
+	mode := input.Mode
 	if userID == "" {
 		return nil, fmt.Errorf("user_id required: %w", ErrInvalidInput)
 	}
@@ -30,6 +31,11 @@ func (s *interviewService) StartInterviewSession(
 	}
 	if mode == interviewmodel.ModeRetryMistakes {
 		return nil, fmt.Errorf("use StartRetrySession for retry_mistakes: %w", ErrInvalidInput)
+	}
+	if normalizePracticeScope(input.Scope) == interviewmodel.PracticeScopeCompanyTrack &&
+		mode != interviewmodel.ModeCompanyInterview &&
+		(input.CompanyID == nil || *input.CompanyID == "") {
+		return nil, fmt.Errorf("company_id required for company track: %w", ErrInvalidInput)
 	}
 	// Feature gate first (no side effects). Quota is consumed only after the
 	// session is created so failures never burn quota.
@@ -59,14 +65,10 @@ func (s *interviewService) StartInterviewSession(
 		if !ok {
 			return nil, fmt.Errorf("unsupported training mode: %w", ErrInvalidInput)
 		}
-		catalogTasks, err := s.content.ListTasks(ctx, taskType, s.trainingLimit)
+		catalogTasks, err := s.resolveTrainingTasks(ctx, mode, input.Scope, input.CompanyID)
 		if err != nil {
-			return nil, mapContentError(err)
+			return nil, err
 		}
-		if len(catalogTasks) == 0 {
-			return nil, fmt.Errorf("no tasks available: %w", ErrNotFound)
-		}
-		shuffleTasks(catalogTasks)
 		sections, tasks = buildTrainingSection(sessionID, taskType, catalogTasks, now)
 	}
 
