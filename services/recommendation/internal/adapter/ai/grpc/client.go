@@ -73,19 +73,18 @@ func (c *Client) GenerateProfileSummary(ctx context.Context, userID string, read
 
 var _ aiadapter.Client = (*Client)(nil)
 
-// Ping checks gRPC connectivity.
+// Ping waits until the ai gRPC channel is ready.
 func (c *Client) Ping(ctx context.Context) error {
 	if c.conn == nil {
 		return fmt.Errorf("no connection")
 	}
-	if c.conn.GetState() == connectivity.Ready {
-		return nil
+	for {
+		state := c.conn.GetState()
+		if state == connectivity.Ready {
+			return nil
+		}
+		if !c.conn.WaitForStateChange(ctx, state) {
+			return ctx.Err()
+		}
 	}
-	if !c.conn.WaitForStateChange(ctx, c.conn.GetState()) {
-		return ctx.Err()
-	}
-	if c.conn.GetState() != connectivity.Ready {
-		return fmt.Errorf("grpc not ready: %v", c.conn.GetState())
-	}
-	return nil
 }

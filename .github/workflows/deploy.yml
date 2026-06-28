@@ -160,6 +160,8 @@ jobs:
               docker compose -f docker-compose.prod.yml --env-file .env ps
               docker compose -f docker-compose.prod.yml --env-file .env logs identity --tail 80
               docker compose -f docker-compose.prod.yml --env-file .env logs billing --tail 40
+              docker compose -f docker-compose.prod.yml --env-file .env logs recommendation --tail 40
+              docker compose -f docker-compose.prod.yml --env-file .env logs sandbox --tail 40
               exit 1
             fi
 
