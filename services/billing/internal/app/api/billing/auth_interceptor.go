@@ -9,7 +9,8 @@ import (
 )
 
 var protectedMethods = map[string]struct{}{
-	billingv1.BillingService_GetMe_FullMethodName: {},
+	billingv1.BillingService_GetMe_FullMethodName:          {},
+	billingv1.BillingService_StartProTrial_FullMethodName: {},
 }
 
 // AuthInterceptor validates Bearer JWT for user-facing RPC methods.

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmcache"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain/caveman"
 )
 
@@ -48,6 +49,7 @@ type BuildTierChainOpts struct {
 	Log                 *slog.Logger
 	RuntimeConfigSource llmchain.ConfigSource
 	RuntimeCtx          context.Context
+	PromptCache         llmcache.Options
 }
 
 // BuildChain assembles a single provider chain from environment config.
@@ -107,7 +109,8 @@ func BuildTierChains(opts BuildTierChainOpts) (llmchain.ChatClient, *llmchain.Ti
 
 	chains := &llmchain.TierChains{Free: freeChain, Pro: proChain}
 	router := llmchain.NewTierRouter(freeClient, proClient, chains, log)
-	return router, chains, nil
+	opts.PromptCache.Log = log
+	return llmcache.NewClient(router, opts.PromptCache), chains, nil
 }
 
 type chainBuildOpts struct {

@@ -54,6 +54,14 @@ docker compose -f docker-compose.prod.yml logs -f interview
 - **Cause:** first `go run` in Docker can take ~5s (compile); default timeout was 2s.
 - **Fix:** `SANDBOX_DEFAULT_TIMEOUT_MS=10000`, persistent GOCACHE at `/var/lib/sandbox-work/gocache`, rebuild sandbox (warm-up on start).
 
+### RAM tuning (30 GB single-node)
+
+- **Postgres:** `shared_buffers=6GB`, `effective_cache_size=20GB` (see `docker-compose.prod.yml`).
+- **Redis:** `maxmemory 512mb`, policy `allkeys-lru` — identity sessions + billing entitlements cache.
+- **Content:** in-process catalog snapshot; watch `content_catalog_*` metrics on `/metrics`.
+- **Billing:** in-process plans snapshot + optional Redis entitlements (`ENTITLEMENTS_CACHE_TTL`).
+- **AI:** exact prompt hash cache (`LLM_PROMPT_CACHE=on`); watch `llm_prompt_cache_saved_tokens_total` on `/metrics`.
+
 ### sandbox Go compile_error: go.mod file not found
 
 - **Cause:** sandbox runs code via host Docker (`/var/run/docker.sock`). Work dirs must live on a **host path** bind-mounted into the sandbox container at the same path (`/var/lib/sandbox-work`).

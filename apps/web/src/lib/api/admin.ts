@@ -342,6 +342,15 @@ export interface AdminPlan {
   highlight: boolean
   highlights: string[]
   features: Record<string, boolean>
+  limits?: Record<string, AdminPlanEntitlementSpec>
+}
+
+export interface AdminPlanEntitlementSpec {
+  type: string
+  limit?: number
+  unlimited?: boolean
+  period?: string
+  value?: boolean
 }
 
 export interface AdminUsageLimit {
@@ -385,6 +394,20 @@ export function revokeAdminSubscription(userId: string) {
     method: 'POST',
     body: JSON.stringify({ user_id: userId }),
   })
+}
+
+export function updateAdminPlanEntitlement(
+  planSlug: string,
+  key: string,
+  spec: AdminPlanEntitlementSpec,
+) {
+  return api<{ plan_slug: string; key: string; spec: AdminPlanEntitlementSpec }>(
+    `/admin/billing/plans/${encodeURIComponent(planSlug)}/entitlements/${encodeURIComponent(key)}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ spec }),
+    },
+  )
 }
 
 export type AdminEvaluationJobStatus = 'pending' | 'running' | 'completed' | 'failed'

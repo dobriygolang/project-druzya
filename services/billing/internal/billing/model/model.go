@@ -19,6 +19,8 @@ const (
 	SubStatusPastDue   = "past_due"
 	SubStatusPaused    = "paused"
 
+	TrialKindPro = "pro_trial"
+
 	EntitlementAIEvaluationsPerDay     = "ai_evaluations_per_day"
 	EntitlementMockInterviewsPerMonth  = "mock_interviews_per_month"
 	EntitlementCodeRunsPerDay          = "code_runs_per_day"
@@ -110,11 +112,15 @@ type UsageLimitState struct {
 
 // EntitlementsView is the aggregated billing state for a user.
 type EntitlementsView struct {
-	UserID   string
-	PlanSlug string
-	PlanName string
-	Features map[string]bool
-	Limits   map[string]UsageLimitState
+	UserID         string
+	PlanSlug       string
+	PlanName       string
+	Features       map[string]bool
+	Limits         map[string]UsageLimitState
+	IsTrialing     bool
+	TrialAvailable bool
+	TrialDays      int
+	TrialEndsAt    *time.Time
 }
 
 // CheckEntitlementResult is the outcome of a feature gate.

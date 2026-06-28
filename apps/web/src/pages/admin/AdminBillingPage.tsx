@@ -8,7 +8,17 @@ import {
   grantAdminSubscription,
   listAdminPlans,
   revokeAdminSubscription,
+  updateAdminPlanEntitlement,
+  type AdminPlan,
+  type AdminPlanEntitlementSpec,
 } from '@/lib/api/admin'
+import { formatApiError } from '@/lib/apiClient'
+
+const EDITABLE_COUNTER_KEYS = [
+  'mock_interviews_per_month',
+  'ai_evaluations_per_day',
+  'code_runs_per_day',
+] as const
 
 export default function AdminBillingPage() {
   const qc = useQueryClient()
@@ -56,18 +66,14 @@ export default function AdminBillingPage() {
   return (
     <div className="grid gap-6 xl:grid-cols-2">
       <Card elevation="e1" className="p-4">
-        <h2 className="mb-3 font-medium">Plans catalog</h2>
-        <p className="mb-3 text-xs text-text-muted">Read-only — plan rows live in billing DB migrations.</p>
+        <h2 className="mb-3 font-medium">Plans & limits</h2>
+        <p className="mb-3 text-xs text-text-muted">
+          PATCH → billing DB + in-memory plan cache reload. Usage counters in Postgres are unchanged.
+        </p>
         {plansQ.isLoading ? <p className="text-sm text-text-muted">Loading…</p> : null}
-        <ul className="space-y-3 text-sm">
+        <ul className="space-y-4 text-sm">
           {(plansQ.data?.plans ?? []).map((plan) => (
-            <li key={plan.slug} className="rounded border border-border px-3 py-2">
-              <div className="font-medium">
-                {plan.name} {plan.highlight ? '· featured' : ''}
-              </div>
-              <div className="text-text-muted">{plan.slug}</div>
-              {plan.tagline ? <p className="mt-1">{plan.tagline}</p> : null}
-            </li>
+            <PlanLimitsEditor key={plan.slug} plan={plan} />
           ))}
         </ul>
       </Card>
@@ -157,5 +163,95 @@ export default function AdminBillingPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+function PlanLimitsEditor({ plan }: { plan: AdminPlan }) {
+  const qc = useQueryClient()
+  const limits = plan.limits ?? {}
+  const counterKeys = EDITABLE_COUNTER_KEYS.filter((key) => limits[key]?.type === 'counter')
+
+  return (
+    <li className="rounded border border-border px-3 py-3">
+      <div className="font-medium">
+        {plan.name} {plan.highlight ? '· featured' : ''}
+      </div>
+      <div className="text-text-muted">{plan.slug}</div>
+      {counterKeys.length === 0 ? (
+        <p className="mt-2 text-xs text-text-muted">No editable counter limits.</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {counterKeys.map((key) => (
+            <LimitRow
+              key={key}
+              planSlug={plan.slug}
+              entitlementKey={key}
+              spec={limits[key]!}
+              onSaved={() => void qc.invalidateQueries({ queryKey: ['admin-plans'] })}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+function LimitRow({
+  planSlug,
+  entitlementKey,
+  spec,
+  onSaved,
+}: {
+  planSlug: string
+  entitlementKey: string
+  spec: AdminPlanEntitlementSpec
+  onSaved: () => void
+}) {
+  const [unlimited, setUnlimited] = useState(!!spec.unlimited || spec.limit == null)
+  const [limit, setLimit] = useState(spec.limit != null ? String(spec.limit) : '')
+  const [error, setError] = useState<string | null>(null)
+
+  const saveM = useMutation({
+    mutationFn: () => {
+      const body: AdminPlanEntitlementSpec = {
+        type: 'counter',
+        period: spec.period ?? (entitlementKey.endsWith('_per_day') ? 'day' : 'month'),
+        unlimited,
+      }
+      if (!unlimited) {
+        const parsed = Number.parseInt(limit, 10)
+        if (!Number.isFinite(parsed) || parsed < 0) {
+          throw new Error('limit must be a non-negative integer')
+        }
+        body.limit = parsed
+      }
+      return updateAdminPlanEntitlement(planSlug, entitlementKey, body)
+    },
+    onSuccess: () => {
+      setError(null)
+      onSaved()
+    },
+    onError: (err) => setError(formatApiError(err)),
+  })
+
+  return (
+    <li className="flex flex-wrap items-end gap-2 rounded bg-surface-2 px-2 py-2">
+      <span className="min-w-[10rem] flex-1 font-mono text-xs">{entitlementKey}</span>
+      <label className="flex items-center gap-1 text-xs">
+        <input type="checkbox" checked={unlimited} onChange={(e) => setUnlimited(e.target.checked)} />
+        unlimited
+      </label>
+      {!unlimited ? (
+        <input
+          className="w-20 rounded border border-border bg-surface-1 px-2 py-1 text-xs font-mono"
+          value={limit}
+          onChange={(e) => setLimit(e.target.value)}
+        />
+      ) : null}
+      <Button size="sm" variant="secondary" loading={saveM.isPending} onClick={() => saveM.mutate()}>
+        Save
+      </Button>
+      {error ? <span className="w-full text-xs text-danger">{error}</span> : null}
+    </li>
   )
 }

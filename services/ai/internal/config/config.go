@@ -40,8 +40,12 @@ type Config struct {
 	EvalMaxRetries         int
 	EvalWorkerConcurrency  int
 	WorkerPollInterval     time.Duration
-	LLMCavemanLevel    string
-	CORSAllowedOrigins []string
+	LLMCavemanLevel        string
+	LLMPromptCacheEnabled  bool
+	LLMPromptCacheMaxEntries int
+	LLMPromptCacheTTL      time.Duration
+	RedisAddr              string
+	CORSAllowedOrigins     []string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -72,6 +76,16 @@ func Load() (*Config, error) {
 	workerPoll, err := time.ParseDuration(getEnv("WORKER_POLL_INTERVAL", "2s"))
 	if err != nil {
 		return nil, fmt.Errorf("invalid WORKER_POLL_INTERVAL: %w", err)
+	}
+
+	promptCacheTTL, err := time.ParseDuration(getEnv("LLM_PROMPT_CACHE_TTL", "24h"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid LLM_PROMPT_CACHE_TTL: %w", err)
+	}
+
+	promptCacheMax, err := strconv.Atoi(getEnv("LLM_PROMPT_CACHE_MAX_ENTRIES", "1000"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid LLM_PROMPT_CACHE_MAX_ENTRIES: %w", err)
 	}
 
 	internalToken := os.Getenv("INTERNAL_API_TOKEN")
@@ -119,9 +133,22 @@ func Load() (*Config, error) {
 		EvalMaxRetries:      evalMaxRetries,
 		EvalWorkerConcurrency: evalWorkerConcurrency,
 		WorkerPollInterval:  workerPoll,
-		LLMCavemanLevel:    getEnv("LLM_CAVEMAN", "lite"),
-		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
+		LLMCavemanLevel:          getEnv("LLM_CAVEMAN", "lite"),
+		LLMPromptCacheEnabled:    parseBoolEnv(getEnv("LLM_PROMPT_CACHE", "on")),
+		LLMPromptCacheMaxEntries: promptCacheMax,
+		LLMPromptCacheTTL:        promptCacheTTL,
+		RedisAddr:                getEnv("REDIS_ADDR", ""),
+		CORSAllowedOrigins:       ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 	}, nil
+}
+
+func parseBoolEnv(raw string) bool {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true", "on", "yes":
+		return true
+	default:
+		return false
+	}
 }
 
 func getEnv(key, fallback string) string {

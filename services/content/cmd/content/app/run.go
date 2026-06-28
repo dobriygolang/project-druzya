@@ -3,7 +3,9 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
+	catalogcache "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/cache"
 	catalogrepo "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/repository"
 	catalogservice "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/service"
 	"github.com/sedorofeevd/project-druzya/services/content/internal/config"
@@ -36,7 +38,12 @@ func New(ctx context.Context) (*App, error) {
 	}
 
 	repo := catalogrepo.New(pg)
-	svc := catalogservice.New(catalogservice.Deps{Repo: repo})
+	cacheMgr := catalogcache.NewManager(repo, slog.Default())
+	svc := catalogservice.New(catalogservice.Deps{Repo: repo, Cache: cacheMgr})
+	if err := cacheMgr.Reload(ctx); err != nil {
+		pg.Close()
+		return nil, fmt.Errorf("warm catalog cache: %w", err)
+	}
 
 	return &App{
 		Config:   cfg,

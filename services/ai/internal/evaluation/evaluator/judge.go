@@ -244,7 +244,7 @@ func fallbackCriterionScores(in Input, overall float64) []CriterionScore {
 }
 
 func callRecordFromResponse(phase string, resp llmchain.Response, start time.Time, err error) CallRecord {
-	reqPayload, _ := json.Marshal(map[string]string{"phase": phase})
+	reqPayload, _ := json.Marshal(map[string]any{"phase": phase, "cache_hit": resp.FromCache})
 	respPayload, _ := json.Marshal(map[string]any{
 		"content":  resp.Content,
 		"provider": resp.Provider,
@@ -269,7 +269,7 @@ func callRecordFromResponse(phase string, resp llmchain.Response, start time.Tim
 		v := resp.TokensIn + resp.TokensOut
 		call.TotalTokens = &v
 	}
-	if resp.Model != "" && resp.TokensIn+resp.TokensOut > 0 {
+	if resp.Model != "" && resp.TokensIn+resp.TokensOut > 0 && !resp.FromCache {
 		cost := llmchain.EstimateCostUSD(resp.Model, resp.TokensIn, resp.TokensOut)
 		if cost > 0 {
 			call.CostUSD = &cost

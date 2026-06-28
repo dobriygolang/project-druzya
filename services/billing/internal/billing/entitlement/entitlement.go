@@ -85,3 +85,28 @@ func Remaining(limit *int, used int) *int {
 	}
 	return &left
 }
+
+// MarshalJSON encodes a plan entitlement definition for plan_entitlements.value_json.
+func MarshalJSON(v Value) (json.RawMessage, error) {
+	switch v.Type {
+	case TypeBool:
+		return json.Marshal(map[string]any{"type": TypeBool, "value": v.Value})
+	case TypeCounter:
+		if v.Period == "" {
+			return nil, fmt.Errorf("counter entitlement requires period")
+		}
+		out := map[string]any{"type": TypeCounter, "period": v.Period}
+		if v.Limit != nil {
+			out["limit"] = *v.Limit
+		}
+		return json.Marshal(out)
+	case TypeGauge:
+		out := map[string]any{"type": TypeGauge}
+		if v.Limit != nil {
+			out["limit"] = *v.Limit
+		}
+		return json.Marshal(out)
+	default:
+		return nil, fmt.Errorf("unsupported entitlement type %q", v.Type)
+	}
+}

@@ -23,7 +23,12 @@ func (s *catalogService) UpsertCompany(ctx context.Context, c catalogmodel.Compa
 	if c.Slug == "" || c.Name == "" {
 		return nil, fmt.Errorf("slug and name are required: %w", ErrInvalidArgument)
 	}
-	return s.repo.UpsertCompany(ctx, c)
+	out, err := s.repo.UpsertCompany(ctx, c)
+	if err != nil {
+		return nil, err
+	}
+	s.reloadCache(ctx)
+	return out, nil
 }
 
 func (s *catalogService) UpsertTask(ctx context.Context, t catalogmodel.Task) (*catalogmodel.Task, error) {
@@ -33,7 +38,12 @@ func (s *catalogService) UpsertTask(ctx context.Context, t catalogmodel.Task) (*
 	if t.Status == "" {
 		t.Status = "draft"
 	}
-	return s.repo.UpsertTask(ctx, t)
+	out, err := s.repo.UpsertTask(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	s.reloadCache(ctx)
+	return out, nil
 }
 
 func (s *catalogService) GetTaskForAdmin(ctx context.Context, id, slug string) (*catalogmodel.Task, []catalogmodel.Solution, error) {
@@ -79,7 +89,12 @@ func (s *catalogService) ReplaceTaskSolutions(
 	if primaryCount > 1 {
 		return nil, fmt.Errorf("at most one primary solution allowed: %w", ErrInvalidArgument)
 	}
-	return s.repo.ReplaceTaskSolutions(ctx, taskID, solutions)
+	out, err := s.repo.ReplaceTaskSolutions(ctx, taskID, solutions)
+	if err != nil {
+		return nil, err
+	}
+	s.reloadCache(ctx)
+	return out, nil
 }
 
 func (s *catalogService) UpsertInterviewTemplate(ctx context.Context, t catalogmodel.InterviewTemplate) (*catalogmodel.InterviewTemplate, error) {
@@ -89,7 +104,12 @@ func (s *catalogService) UpsertInterviewTemplate(ctx context.Context, t catalogm
 	if t.PassingScore <= 0 {
 		t.PassingScore = 85
 	}
-	return s.repo.UpsertInterviewTemplate(ctx, t)
+	out, err := s.repo.UpsertInterviewTemplate(ctx, t)
+	if err != nil {
+		return nil, err
+	}
+	s.reloadCache(ctx)
+	return out, nil
 }
 
 func (s *catalogService) UpsertTemplateSection(ctx context.Context, sec catalogmodel.TemplateSection) (*catalogmodel.TemplateSection, error) {
@@ -99,7 +119,12 @@ func (s *catalogService) UpsertTemplateSection(ctx context.Context, sec catalogm
 	if sec.Position <= 0 {
 		return nil, fmt.Errorf("position must be positive: %w", ErrInvalidArgument)
 	}
-	return s.repo.UpsertTemplateSection(ctx, sec)
+	out, err := s.repo.UpsertTemplateSection(ctx, sec)
+	if err != nil {
+		return nil, err
+	}
+	s.reloadCache(ctx)
+	return out, nil
 }
 
 func (s *catalogService) ReplaceTemplateStructure(
@@ -123,7 +148,12 @@ func (s *catalogService) ReplaceTemplateStructure(
 		}
 		positions[sec.Position] = struct{}{}
 	}
-	return s.repo.ReplaceTemplateStructure(ctx, templateID, sections)
+	out, err := s.repo.ReplaceTemplateStructure(ctx, templateID, sections)
+	if err != nil {
+		return nil, err
+	}
+	s.reloadCache(ctx)
+	return out, nil
 }
 
 func (s *catalogService) UpsertArticle(ctx context.Context, a catalogmodel.Article) (*catalogmodel.Article, error) {
@@ -133,5 +163,10 @@ func (s *catalogService) UpsertArticle(ctx context.Context, a catalogmodel.Artic
 	if a.Status == "" {
 		a.Status = catalogmodel.ArticleStatusDraft
 	}
-	return s.repo.UpsertArticle(ctx, a)
+	out, err := s.repo.UpsertArticle(ctx, a)
+	if err != nil {
+		return nil, err
+	}
+	s.reloadCache(ctx)
+	return out, nil
 }

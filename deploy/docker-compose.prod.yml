@@ -16,6 +16,13 @@ services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+    command: >
+      postgres
+      -c shared_buffers=6GB
+      -c effective_cache_size=20GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=512MB
+      -c random_page_cost=1.1
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -32,6 +39,10 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -187,6 +198,10 @@ services:
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       LLM_CAVEMAN: ${LLM_CAVEMAN:-lite}
+      LLM_PROMPT_CACHE: ${LLM_PROMPT_CACHE:-on}
+      LLM_PROMPT_CACHE_MAX_ENTRIES: ${LLM_PROMPT_CACHE_MAX_ENTRIES:-1000}
+      LLM_PROMPT_CACHE_TTL: ${LLM_PROMPT_CACHE_TTL:-24h}
+      REDIS_ADDR: redis:6379
       WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-2s}
       EVAL_WORKER_CONCURRENCY: ${EVAL_WORKER_CONCURRENCY:-1}
       EVAL_MAX_RETRIES: ${EVAL_MAX_RETRIES:-3}
@@ -196,6 +211,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
       interview:
         condition: service_healthy
       content:
@@ -250,6 +267,8 @@ services:
       HTTP_PORT: 8085
       GRPC_PORT: 9095
       POSTGRES_DSN: ${BILLING_POSTGRES_DSN}
+      REDIS_ADDR: redis:6379
+      ENTITLEMENTS_CACHE_TTL: ${ENTITLEMENTS_CACHE_TTL:-60s}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       IDENTITY_GRPC_ADDR: identity:9090
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
@@ -259,6 +278,8 @@ services:
       TRIBUTE_PRO_TELEGRAM_CHECKOUT_URL: ${TRIBUTE_PRO_TELEGRAM_CHECKOUT_URL:-}
       TRIBUTE_CHECKOUT_URLS: ${TRIBUTE_CHECKOUT_URLS:-}
       TRIBUTE_TELEGRAM_CHECKOUT_URLS: ${TRIBUTE_TELEGRAM_CHECKOUT_URLS:-}
+      PRO_TRIAL_ENABLED: ${PRO_TRIAL_ENABLED:-true}
+      PRO_TRIAL_DAYS: ${PRO_TRIAL_DAYS:-14}
     volumes:
       - ./secrets/jwt:/run/secrets/jwt:ro
     healthcheck:
@@ -267,6 +288,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
       identity:
         condition: service_healthy
 

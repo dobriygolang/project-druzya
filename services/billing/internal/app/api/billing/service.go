@@ -19,11 +19,12 @@ type Implementation struct {
 	repo     *billingrepo.Repository
 	pg       *billingrepo.Pool
 	checkout CheckoutConfig
+	proTrial ProTrialConfig
 }
 
 // NewImplementation constructs transport handlers.
-func NewImplementation(svc billingservice.Service, repo *billingrepo.Repository, pg *billingrepo.Pool, checkout CheckoutConfig) *Implementation {
-	return &Implementation{svc: svc, repo: repo, pg: pg, checkout: checkout}
+func NewImplementation(svc billingservice.Service, repo *billingrepo.Repository, pg *billingrepo.Pool, checkout CheckoutConfig, proTrial ProTrialConfig) *Implementation {
+	return &Implementation{svc: svc, repo: repo, pg: pg, checkout: checkout, proTrial: proTrial}
 }
 
 // Register mounts billing services on the gRPC server.
@@ -38,11 +39,17 @@ func toProtoEntitlements(view *model.EntitlementsView) *billingv1.GetMeResponse 
 		return &billingv1.GetMeResponse{}
 	}
 	out := &billingv1.GetMeResponse{
-		UserId:   view.UserID,
-		PlanSlug: view.PlanSlug,
-		PlanName: view.PlanName,
-		Features: map[string]bool{},
-		Limits:   map[string]*billingv1.UsageLimit{},
+		UserId:         view.UserID,
+		PlanSlug:       view.PlanSlug,
+		PlanName:       view.PlanName,
+		Features:       map[string]bool{},
+		Limits:         map[string]*billingv1.UsageLimit{},
+		IsTrialing:     view.IsTrialing,
+		TrialAvailable: view.TrialAvailable,
+		TrialDays:      int32(view.TrialDays),
+	}
+	if view.TrialEndsAt != nil {
+		out.TrialEnd = timestamppb.New(*view.TrialEndsAt)
 	}
 	for k, v := range view.Features {
 		out.Features[k] = v
@@ -67,7 +74,7 @@ func toProtoEntitlements(view *model.EntitlementsView) *billingv1.GetMeResponse 
 	return out
 }
 
-func toProtoPlanCatalog(item catalog.PlanCatalogItem, checkout PlanCheckoutURLs) *billingv1.PlanCatalog {
+func toProtoPlanCatalog(item catalog.PlanCatalogItem, checkout PlanCheckoutURLs, trialDays int32) *billingv1.PlanCatalog {
 	out := &billingv1.PlanCatalog{
 		Slug:       item.Slug,
 		Name:       item.Name,
@@ -76,6 +83,7 @@ func toProtoPlanCatalog(item catalog.PlanCatalogItem, checkout PlanCheckoutURLs)
 		Highlights: append([]string(nil), item.Highlights...),
 		Features:   map[string]bool{},
 		Limits:     map[string]*billingv1.PlanEntitlementSpec{},
+		TrialDays:  trialDays,
 	}
 	if checkout.WebURL != "" {
 		out.CheckoutUrl = &checkout.WebURL

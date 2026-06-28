@@ -69,6 +69,7 @@ type Client interface {
 	GetUserEntitlements(ctx context.Context, userID string) (*UserEntitlements, error)
 	GrantSubscription(ctx context.Context, input GrantSubscriptionInput) (*GrantSubscriptionResult, error)
 	RevokeSubscription(ctx context.Context, userID string) (bool, error)
+	UpdatePlanEntitlement(ctx context.Context, planSlug, key string, spec PlanEntitlementSpec) (PlanEntitlementSpec, error)
 	GetPlatformStats(ctx context.Context) (int64, error)
 	GetOpsStats(ctx context.Context) (*OpsStats, error)
 }

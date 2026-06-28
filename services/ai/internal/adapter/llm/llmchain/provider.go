@@ -425,6 +425,8 @@ type Response struct {
 	Provider Provider
 	Model    string
 	Latency  time.Duration
+	// FromCache is true when Chat returned a prior response without an upstream LLM call.
+	FromCache bool
 }
 
 // StreamEvent is one frame of a streaming response. Exactly one of

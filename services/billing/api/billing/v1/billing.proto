@@ -20,6 +20,14 @@ service BillingService {
       get: "/v1/billing/plans"
     };
   }
+
+  // One-time 14-day Pro trial (internal subscription, no payment).
+  rpc StartProTrial(StartProTrialRequest) returns (StartProTrialResponse) {
+    option (google.api.http) = {
+      post: "/v1/billing/trial/start"
+      body: "*"
+    };
+  }
 }
 
 service BillingInternalService {
@@ -44,6 +52,13 @@ service BillingAdminService {
       body: "*"
     };
   }
+
+  rpc UpdatePlanEntitlement(UpdatePlanEntitlementRequest) returns (UpdatePlanEntitlementResponse) {
+    option (google.api.http) = {
+      patch: "/v1/billing/admin/plans/{plan_slug}/entitlements/{key}"
+      body: "spec"
+    };
+  }
 }
 
 message GetMeRequest {}
@@ -54,6 +69,10 @@ message GetMeResponse {
   string plan_name = 3;
   map<string, bool> features = 4;
   map<string, UsageLimit> limits = 5;
+  bool is_trialing = 6;
+  google.protobuf.Timestamp trial_end = 7;
+  bool trial_available = 8;
+  int32 trial_days = 9;
 }
 
 message ListPlansRequest {}
@@ -77,10 +96,20 @@ message PlanCatalog {
   // Tribute checkout links from Creator dashboard (web + Telegram).
   optional string checkout_url = 8;
   optional string telegram_checkout_url = 9;
+  // Promo: free trial days before payment (0 = no trial offer).
+  int32 trial_days = 10;
 }
 
 message ListPlansResponse {
   repeated PlanCatalog plans = 1;
+}
+
+message StartProTrialRequest {}
+
+message StartProTrialResponse {
+  string plan_slug = 1;
+  google.protobuf.Timestamp trial_end = 2;
+  int32 trial_days = 3;
 }
 
 message UsageLimit {
@@ -159,6 +188,18 @@ message RevokeSubscriptionRequest {
 
 message RevokeSubscriptionResponse {
   bool revoked = 1;
+}
+
+message UpdatePlanEntitlementRequest {
+  string plan_slug = 1;
+  string key = 2;
+  PlanEntitlementSpec spec = 3;
+}
+
+message UpdatePlanEntitlementResponse {
+  string plan_slug = 1;
+  string key = 2;
+  PlanEntitlementSpec spec = 3;
 }
 
 message GetPlatformStatsRequest {}

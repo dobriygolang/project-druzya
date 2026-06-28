@@ -337,9 +337,14 @@ export const en: Messages = {
     eyebrow: 'Pricing',
     title: 'Free is enough to try it',
     subtitle:
-      'Limits below come from billing service (plan entitlements). Your usage appears after sign-in.',
+      'Try Pro free for 14 days — no card required. Limits below come from billing; your usage appears after sign-in.',
     startFree: 'Start for free',
     loginForPro: 'Sign in for Pro',
+    trialBadge: '{{days}} days Pro free',
+    startTrial: 'Start {{days}}-day Pro trial',
+    trialThenPay: 'Full Pro access now. Subscribe via Tribute anytime before day {{days}} — no charge until you pay.',
+    trialUntil: 'Trial until {{date}}',
+    trialActivePayHint: 'Trial is active. Subscribe before it ends to keep Pro limits.',
     subscribeWeb: 'Subscribe via Tribute',
     subscribeTelegram: 'Pay in Telegram',
     linkTelegramFirst: 'Link Telegram to your account first — payment is matched by Telegram ID.',
@@ -349,7 +354,7 @@ export const en: Messages = {
     paymentPending: 'Waiting for payment confirmation… This page refreshes automatically.',
     paymentSuccess: 'Pro is active — thanks for subscribing!',
     paymentNote:
-      'Pro is billed via Tribute. Link Telegram before checkout; the webhook activates your plan within a minute.',
+      'Pro trial is free and one-time per account. After 14 days, limits revert to Free unless you subscribe via Tribute.',
     learnMorePro: 'Learn about Pro',
   },
   welcome: {

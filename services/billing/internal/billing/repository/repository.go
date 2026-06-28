@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -163,6 +164,47 @@ func (r *Repository) CancelActiveSubscriptions(ctx context.Context, userID strin
 		WHERE user_id = $1 AND status IN ('active', 'trialing')
 	`, uid)
 	return err
+}
+
+func (r *Repository) HasUsedProTrial(ctx context.Context, userID string) (bool, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return false, fmt.Errorf("invalid user id: %w", err)
+	}
+	var used bool
+	err = r.conn(ctx).QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM subscriptions
+			WHERE user_id = $1 AND metadata->>'kind' = $2
+		)
+	`, uid, model.TrialKindPro).Scan(&used)
+	if err != nil {
+		return false, fmt.Errorf("HasUsedProTrial: %w", err)
+	}
+	return used, nil
+}
+
+func (r *Repository) UpdatePlanEntitlement(ctx context.Context, planID, key string, valueJSON json.RawMessage) error {
+	pid, err := uuid.Parse(planID)
+	if err != nil {
+		return fmt.Errorf("invalid plan id: %w", err)
+	}
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return fmt.Errorf("entitlement key required: %w", model.ErrInvalidInput)
+	}
+	tag, err := r.conn(ctx).Exec(ctx, `
+		UPDATE plan_entitlements
+		SET value_json = $3, updated_at = now()
+		WHERE plan_id = $1 AND key = $2
+	`, pid, key, valueJSON)
+	if err != nil {
+		return fmt.Errorf("UpdatePlanEntitlement: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
 }
 
 func (r *Repository) UpsertProviderAccount(ctx context.Context, acct *model.ProviderAccount) error {

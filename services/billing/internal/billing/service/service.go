@@ -11,6 +11,7 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/events"
 	identityadapter "github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/identity"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/providers"
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/cache"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/catalog"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/entitlement"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/model"
@@ -18,14 +19,19 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/consume_usage"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/grant_subscription"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/release_usage"
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/start_pro_trial"
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/update_plan_entitlement"
 )
 
 var (
-	ErrInvalidInput   = model.ErrInvalidInput
-	ErrLimitExceeded  = repository.ErrLimitExceeded
-	ErrNotFound       = repository.ErrNotFound
-	ErrUnknownUser    = model.ErrUnknownUser
-	ErrDuplicateEvent = model.ErrDuplicateEvent
+	ErrInvalidInput      = model.ErrInvalidInput
+	ErrLimitExceeded     = repository.ErrLimitExceeded
+	ErrNotFound          = repository.ErrNotFound
+	ErrUnknownUser       = model.ErrUnknownUser
+	ErrDuplicateEvent    = model.ErrDuplicateEvent
+	ErrTrialAlreadyUsed  = model.ErrTrialAlreadyUsed
+	ErrAlreadySubscribed = model.ErrAlreadySubscribed
+	ErrTrialDisabled     = model.ErrTrialDisabled
 )
 
 // Service is billing domain logic.
@@ -37,6 +43,8 @@ type Service interface {
 	CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) (*model.ConsumeUsageResult, error)
 	ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) (*model.ReleaseUsageResult, error)
 	GrantSubscription(ctx context.Context, userID, planSlug string, periodEnd *time.Time) (*model.Subscription, error)
+	StartProTrial(ctx context.Context, userID string) (*model.Subscription, error)
+	UpdatePlanEntitlement(ctx context.Context, planSlug, key string, spec entitlement.Value) (entitlement.Value, error)
 	RevokeSubscription(ctx context.Context, userID string) error
 	HandleProviderWebhook(ctx context.Context, providerName string, headers map[string]string, body []byte) error
 }
@@ -48,21 +56,31 @@ type billingService struct {
 	tierToPlan   map[string]string
 	events       events.Publisher
 	now          func() time.Time
+	plansCache   *cache.Plans
+	entitlements *cache.EntitlementsRedis
+	proTrialEnabled bool
+	proTrialDays    int
 
 	// CQRS usecase handlers. Reads + webhook stay in the service; the two clear
 	// write commands delegate here.
 	consumeUsage      *consume_usage.Handler
 	releaseUsage      *release_usage.Handler
 	grantSubscription *grant_subscription.Handler
+	startProTrial     *start_pro_trial.Handler
+	updatePlanEntitlement *update_plan_entitlement.Handler
 }
 
 // Deps holds service dependencies.
 type Deps struct {
-	Repo       repository.Store
-	Identity   identityadapter.Client
-	Providers  []providers.BillingProvider
-	TierToPlan map[string]string
-	Events     events.Publisher
+	Repo               repository.Store
+	Identity           identityadapter.Client
+	Providers          []providers.BillingProvider
+	TierToPlan         map[string]string
+	Events             events.Publisher
+	PlansCache         *cache.Plans
+	EntitlementsCache  *cache.EntitlementsRedis
+	ProTrialEnabled    bool
+	ProTrialDays       int
 }
 
 // New constructs billing service.
@@ -78,16 +96,22 @@ func New(deps Deps) Service {
 		}
 	}
 	svc := &billingService{
-		repo:       deps.Repo,
-		identity:   deps.Identity,
-		providers:  providerMap,
-		tierToPlan: deps.TierToPlan,
-		events:     pub,
-		now:        time.Now,
+		repo:            deps.Repo,
+		identity:        deps.Identity,
+		providers:       providerMap,
+		tierToPlan:      deps.TierToPlan,
+		events:          pub,
+		now:             time.Now,
+		plansCache:      deps.PlansCache,
+		entitlements:    deps.EntitlementsCache,
+		proTrialEnabled: deps.ProTrialEnabled,
+		proTrialDays:    deps.ProTrialDays,
 	}
 	svc.grantSubscription = grant_subscription.New(deps.Repo, pub)
-	svc.consumeUsage = consume_usage.New(deps.Repo, svc, pub)
-	svc.releaseUsage = release_usage.New(deps.Repo, svc)
+	svc.startProTrial = start_pro_trial.New(deps.Repo, pub, deps.ProTrialDays)
+	svc.updatePlanEntitlement = update_plan_entitlement.New(deps.Repo)
+	svc.consumeUsage = consume_usage.New(deps.Repo, svc, svc, pub)
+	svc.releaseUsage = release_usage.New(deps.Repo, svc, svc)
 	return svc
 }
 
@@ -100,11 +124,29 @@ func (s *billingService) GetEntitlements(ctx context.Context, userID string) (*m
 	if userID == "" {
 		return nil, fmt.Errorf("user_id required: %w", ErrInvalidInput)
 	}
-	plan, _, err := s.resolvePlan(ctx, userID)
+	if s.entitlements != nil {
+		if cached, ok, err := s.entitlements.Get(ctx, userID); err != nil {
+			return nil, err
+		} else if ok {
+			return cached, nil
+		}
+	}
+	view, err := s.buildEntitlements(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
-	items, err := s.repo.ListPlanEntitlements(ctx, plan.ID)
+	if s.entitlements != nil {
+		_ = s.entitlements.Set(ctx, userID, view)
+	}
+	return view, nil
+}
+
+func (s *billingService) buildEntitlements(ctx context.Context, userID string) (*model.EntitlementsView, error) {
+	plan, sub, err := s.resolvePlan(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	items, err := s.ListPlanEntitlements(ctx, plan.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -154,10 +196,46 @@ func (s *billingService) GetEntitlements(ctx context.Context, userID string) (*m
 			view.Limits[item.Key] = state
 		}
 	}
+	s.applyTrialState(ctx, view, sub)
 	return view, nil
 }
 
+func (s *billingService) applyTrialState(ctx context.Context, view *model.EntitlementsView, sub *model.Subscription) {
+	if sub != nil && sub.Status == model.SubStatusTrialing {
+		view.IsTrialing = true
+		view.TrialEndsAt = sub.CurrentPeriodEnd
+		return
+	}
+	if !s.proTrialEnabled || view.PlanSlug != model.PlanFree {
+		return
+	}
+	used, err := s.repo.HasUsedProTrial(ctx, view.UserID)
+	if err != nil || used {
+		return
+	}
+	view.TrialAvailable = true
+	view.TrialDays = s.proTrialDays
+	if view.TrialDays <= 0 {
+		view.TrialDays = 14
+	}
+}
+
+// ListPlanEntitlements serves static plan entitlements from the in-memory snapshot when available.
+func (s *billingService) ListPlanEntitlements(ctx context.Context, planID string) ([]model.PlanEntitlement, error) {
+	if s.plansCache != nil {
+		if items, err := s.plansCache.ListPlanEntitlements(planID); err == nil {
+			return items, nil
+		}
+	}
+	return s.repo.ListPlanEntitlements(ctx, planID)
+}
+
 func (s *billingService) ListPlans(ctx context.Context) ([]catalog.PlanCatalogItem, error) {
+	if s.plansCache != nil {
+		if items, err := s.plansCache.ListCatalog(); err == nil {
+			return items, nil
+		}
+	}
 	plans, err := s.repo.ListActivePlans(ctx)
 	if err != nil {
 		return nil, err
@@ -196,22 +274,67 @@ func (s *billingService) CheckEntitlement(ctx context.Context, userID, key strin
 
 // CheckAndConsumeUsage delegates to the consume_usage CQRS command handler.
 func (s *billingService) CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) (*model.ConsumeUsageResult, error) {
-	return s.consumeUsage.Handle(ctx, consume_usage.Command{UserID: userID, Key: key, Amount: amount})
+	result, err := s.consumeUsage.Handle(ctx, consume_usage.Command{UserID: userID, Key: key, Amount: amount})
+	if err == nil && s.entitlements != nil {
+		s.entitlements.Invalidate(ctx, userID)
+	}
+	return result, err
 }
 
 // ReleaseUsage delegates to the release_usage CQRS command handler.
 func (s *billingService) ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) (*model.ReleaseUsageResult, error) {
-	return s.releaseUsage.Handle(ctx, release_usage.Command{
+	result, err := s.releaseUsage.Handle(ctx, release_usage.Command{
 		UserID:         userID,
 		Key:            key,
 		Amount:         amount,
 		IdempotencyKey: idempotencyKey,
 	})
+	if err == nil && s.entitlements != nil {
+		s.entitlements.Invalidate(ctx, userID)
+	}
+	return result, err
 }
 
 // GrantSubscription delegates to the grant_subscription CQRS command handler.
 func (s *billingService) GrantSubscription(ctx context.Context, userID, planSlug string, periodEnd *time.Time) (*model.Subscription, error) {
-	return s.grantSubscription.Handle(ctx, grant_subscription.Command{UserID: userID, PlanSlug: planSlug, PeriodEnd: periodEnd})
+	sub, err := s.grantSubscription.Handle(ctx, grant_subscription.Command{UserID: userID, PlanSlug: planSlug, PeriodEnd: periodEnd})
+	if err == nil && s.entitlements != nil {
+		s.entitlements.Invalidate(ctx, userID)
+	}
+	return sub, err
+}
+
+// StartProTrial grants a one-time internal Pro trial.
+func (s *billingService) StartProTrial(ctx context.Context, userID string) (*model.Subscription, error) {
+	if !s.proTrialEnabled {
+		return nil, ErrTrialDisabled
+	}
+	sub, err := s.startProTrial.Handle(ctx, start_pro_trial.Command{UserID: userID})
+	if err == nil && s.entitlements != nil {
+		s.entitlements.Invalidate(ctx, userID)
+	}
+	return sub, err
+}
+
+// UpdatePlanEntitlement patches one plan entitlement and refreshes caches.
+func (s *billingService) UpdatePlanEntitlement(ctx context.Context, planSlug, key string, spec entitlement.Value) (entitlement.Value, error) {
+	out, err := s.updatePlanEntitlement.Handle(ctx, update_plan_entitlement.Command{
+		PlanSlug: planSlug,
+		Key:      key,
+		Spec:     spec,
+	})
+	if err != nil {
+		return entitlement.Value{}, err
+	}
+	if s.plansCache != nil {
+		if reloadErr := s.plansCache.Reload(ctx); reloadErr != nil {
+			return entitlement.Value{}, reloadErr
+		}
+	}
+	if s.entitlements != nil {
+		_ = s.entitlements.InvalidateAll(ctx)
+	}
+	return out, nil
 }
 
 // ResolvePlan satisfies consume_usage.PlanResolver, keeping plan-resolution
@@ -229,6 +352,9 @@ func (s *billingService) RevokeSubscription(ctx context.Context, userID string) 
 		return err
 	}
 	_ = s.events.SubscriptionCancelled(ctx, &model.Subscription{UserID: userID})
+	if s.entitlements != nil {
+		s.entitlements.Invalidate(ctx, userID)
+	}
 	return nil
 }
 
@@ -301,7 +427,7 @@ func (s *billingService) activateProviderSubscription(ctx context.Context, userI
 	if !ok || planSlug == "" {
 		return fmt.Errorf("unknown tribute tier %q", event.Tier)
 	}
-	plan, err := s.repo.GetPlanBySlug(ctx, planSlug)
+	plan, err := s.getPlanBySlug(ctx, planSlug)
 	if err != nil {
 		return err
 	}
@@ -341,6 +467,9 @@ func (s *billingService) activateProviderSubscription(ctx context.Context, userI
 	} else {
 		_ = s.events.SubscriptionUpdated(ctx, sub)
 	}
+	if s.entitlements != nil {
+		s.entitlements.Invalidate(ctx, userID)
+	}
 	return nil
 }
 
@@ -366,11 +495,29 @@ func (s *billingService) resolvePlan(ctx context.Context, userID string) (*model
 		return nil, nil, err
 	}
 	if sub != nil {
-		plan, err := s.repo.GetPlanByID(ctx, sub.PlanID)
+		plan, err := s.getPlanByID(ctx, sub.PlanID)
 		return plan, sub, err
 	}
-	plan, err := s.repo.GetPlanBySlug(ctx, model.PlanFree)
+	plan, err := s.getPlanBySlug(ctx, model.PlanFree)
 	return plan, nil, err
+}
+
+func (s *billingService) getPlanByID(ctx context.Context, id string) (*model.Plan, error) {
+	if s.plansCache != nil {
+		if plan, err := s.plansCache.GetPlanByID(id); err == nil {
+			return plan, nil
+		}
+	}
+	return s.repo.GetPlanByID(ctx, id)
+}
+
+func (s *billingService) getPlanBySlug(ctx context.Context, slug string) (*model.Plan, error) {
+	if s.plansCache != nil {
+		if plan, err := s.plansCache.GetPlanBySlug(slug); err == nil {
+			return plan, nil
+		}
+	}
+	return s.repo.GetPlanBySlug(ctx, slug)
 }
 
 func parseTelegramID(raw string) (int64, error) {

@@ -123,3 +123,10 @@ make build
 | GRPC_PORT | 9091 |
 | POSTGRES_DSN | `postgres://postgres:postgres@localhost:5433/druzya_content?sslmode=disable` |
 | LOG_LEVEL | info |
+
+## In-memory catalog cache
+
+On startup the service loads a full **catalog snapshot** into RAM (`internal/catalog/cache/`).
+Public reads (`GetTask`, `GetTaskBundle`, templates, published articles, …) are served from
+memory; admin writes reload the snapshot and expose Prometheus metrics
+(`content_catalog_*` on `/metrics`). Postgres remains the source of truth.

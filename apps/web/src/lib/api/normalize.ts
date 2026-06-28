@@ -126,6 +126,12 @@ export function normalizeCodeRun(raw: CodeRun): CodeRun {
 }
 
 export function normalizeBillingMe(raw: BillingMe): BillingMe {
+  const record = raw as BillingMe & {
+    isTrialing?: boolean
+    trialEnd?: string
+    trialAvailable?: boolean
+    trialDays?: number
+  }
   return {
     ...raw,
     user_id: raw.user_id ?? '',
@@ -133,6 +139,10 @@ export function normalizeBillingMe(raw: BillingMe): BillingMe {
     plan_name: raw.plan_name ?? 'Free',
     features: asRecord(raw.features),
     limits: asRecord(raw.limits),
+    is_trialing: record.is_trialing ?? record.isTrialing ?? false,
+    trial_end: record.trial_end ?? record.trialEnd,
+    trial_available: record.trial_available ?? record.trialAvailable ?? false,
+    trial_days: record.trial_days ?? record.trialDays,
   }
 }
 

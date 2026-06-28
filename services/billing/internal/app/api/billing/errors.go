@@ -21,6 +21,12 @@ func mapServiceError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, billingservice.ErrDuplicateEvent):
 		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, billingservice.ErrTrialAlreadyUsed):
+		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, billingservice.ErrAlreadySubscribed):
+		return status.Error(codes.FailedPrecondition, err.Error())
+	case errors.Is(err, billingservice.ErrTrialDisabled):
+		return status.Error(codes.FailedPrecondition, err.Error())
 	default:
 		return status.Error(codes.Internal, err.Error())
 	}

@@ -78,9 +78,10 @@ Do **not** claim outbox events other than `attempt_submitted`.
 3. content `GetTaskBundle` + interview `GetAttemptInternal`
 4. 2-pass judge: pass1 water (skip code) → pass2 rubric + `criteria[]` in feedback
 5. **caveman** (`llmchain/caveman`) — `LLM_CAVEMAN=lite|full|off`
-6. Persist `model_calls`
-7. Success → interview `CompleteEvaluation`
-8. Permanent failure (retries exhausted) → `ReleaseUsage` (idempotent by `attempt_id`) + interview `FailEvaluation`
+6. **Exact prompt cache** (`llmcache`) — SHA-256 of messages/task/tier; LRU in RAM + optional Redis L2; skips upstream LLM on hit (`LLM_PROMPT_CACHE=on`). Metrics: `llm_prompt_cache_*`. Cache hits write `cache_hit` in `model_calls` with `cost_usd=0`.
+7. Persist `model_calls`
+8. Success → interview `CompleteEvaluation`
+9. Permanent failure (retries exhausted) → `ReleaseUsage` (idempotent by `attempt_id`) + interview `FailEvaluation`
 
 ## Mocks
 
@@ -113,6 +114,10 @@ make start | gen-proto | test | lint | build
 | DEEPSEEK_API_KEY | paid chain only |
 | OPENROUTER_PAID_API_KEY | optional paid fallback |
 | LLM_CAVEMAN | `lite` (`off` / `full`) |
+| LLM_PROMPT_CACHE | `on` — exact prompt hash cache (`off` to disable) |
+| LLM_PROMPT_CACHE_MAX_ENTRIES | `1000` in-memory LRU cap |
+| LLM_PROMPT_CACHE_TTL | `24h` memory + Redis TTL |
+| REDIS_ADDR | optional; shared Redis L2 for prompt cache (`redis:6379` in prod) |
 | EVAL_MAX_RETRIES | `3` |
 | EVAL_WORKER_CONCURRENCY | `1` (raise to 10–30 with paid API) |
 | WORKER_POLL_INTERVAL | `2s` |

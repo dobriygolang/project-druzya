@@ -12,10 +12,14 @@ import (
 
 // Store is the persistence port this command needs.
 type Store interface {
-	ListPlanEntitlements(ctx context.Context, planID string) ([]model.PlanEntitlement, error)
 	GetUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time) (int, error)
 	ReleaseUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time, amount int) (int, error)
 	MarkUsageReleaseProcessed(ctx context.Context, idempotencyKey, userID, key string, amount int) (bool, error)
+}
+
+// PlanEntitlements lists static entitlements for a plan.
+type PlanEntitlements interface {
+	ListPlanEntitlements(ctx context.Context, planID string) ([]model.PlanEntitlement, error)
 }
 
 // PlanResolver resolves a user's effective plan.
@@ -27,12 +31,13 @@ type PlanResolver interface {
 type Handler struct {
 	repo  Store
 	plans PlanResolver
+	ents  PlanEntitlements
 	now   func() time.Time
 }
 
 // New constructs the release-usage handler.
-func New(repo Store, plans PlanResolver) *Handler {
-	return &Handler{repo: repo, plans: plans, now: time.Now}
+func New(repo Store, plans PlanResolver, ents PlanEntitlements) *Handler {
+	return &Handler{repo: repo, plans: plans, ents: ents, now: time.Now}
 }
 
 // Handle executes the command.
@@ -111,7 +116,7 @@ func (h *Handler) currentUsed(ctx context.Context, userID, key string) (int, err
 }
 
 func (h *Handler) findEntitlement(ctx context.Context, planID, key string) (*model.PlanEntitlement, error) {
-	items, err := h.repo.ListPlanEntitlements(ctx, planID)
+	items, err := h.ents.ListPlanEntitlements(ctx, planID)
 	if err != nil {
 		return nil, err
 	}

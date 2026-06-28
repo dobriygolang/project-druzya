@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/tools/ops"
 )
@@ -24,6 +25,10 @@ type Config struct {
 	TributeTierToPlan    map[string]string
 	TributeCheckout      TributeCheckoutConfig
 	CORSAllowedOrigins   []string
+	RedisAddr            string
+	EntitlementsCacheTTL time.Duration
+	ProTrialEnabled      bool
+	ProTrialDays         int
 }
 
 // TributeCheckoutConfig holds per-plan payment links from Tribute Creator dashboard.
@@ -48,6 +53,17 @@ func Load() (*Config, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid GRPC_PORT: %w", err)
 	}
+
+	entitlementsTTL, err := time.ParseDuration(getEnv("ENTITLEMENTS_CACHE_TTL", "60s"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid ENTITLEMENTS_CACHE_TTL: %w", err)
+	}
+
+	proTrialDays, err := strconv.Atoi(getEnv("PRO_TRIAL_DAYS", "14"))
+	if err != nil || proTrialDays <= 0 {
+		return nil, fmt.Errorf("invalid PRO_TRIAL_DAYS")
+	}
+	proTrialEnabled := parseBool(getEnv("PRO_TRIAL_ENABLED", "true"))
 
 	internalToken := os.Getenv("INTERNAL_API_TOKEN")
 	if internalToken == "" {
@@ -77,6 +93,10 @@ func Load() (*Config, error) {
 		TributeTierToPlan:    parseTierMap(getEnv("TRIBUTE_TIER_MAP", "tribute_pro_monthly:pro_monthly")),
 		TributeCheckout:      loadTributeCheckout(),
 		CORSAllowedOrigins:   ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
+		RedisAddr:            getEnv("REDIS_ADDR", ""),
+		EntitlementsCacheTTL: entitlementsTTL,
+		ProTrialEnabled:      proTrialEnabled,
+		ProTrialDays:         proTrialDays,
 	}, nil
 }
 
@@ -143,6 +163,15 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func parseBool(raw string) bool {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 func grpcListenHost() string {

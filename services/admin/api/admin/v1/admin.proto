@@ -147,6 +147,13 @@ service AdminService {
     };
   }
 
+  rpc UpdatePlanEntitlement(UpdatePlanEntitlementRequest) returns (UpdatePlanEntitlementResponse) {
+    option (google.api.http) = {
+      patch: "/v1/admin/billing/plans/{plan_slug}/entitlements/{key}"
+      body: "spec"
+    };
+  }
+
   rpc ListEvaluationJobs(ListEvaluationJobsRequest) returns (ListEvaluationJobsResponse) {
     option (google.api.http) = {
       get: "/v1/admin/ai/evaluation-jobs"
@@ -548,6 +555,18 @@ message RevokeSubscriptionRequest {
 
 message RevokeSubscriptionResponse {
   bool revoked = 1;
+}
+
+message UpdatePlanEntitlementRequest {
+  string plan_slug = 1;
+  string key = 2;
+  PlanEntitlementSpec spec = 3;
+}
+
+message UpdatePlanEntitlementResponse {
+  string plan_slug = 1;
+  string key = 2;
+  PlanEntitlementSpec spec = 3;
 }
 
 enum EvaluationJobStatus {

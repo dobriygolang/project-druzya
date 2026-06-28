@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	catalogcache "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/cache"
 	catalogmodel "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/model"
 	catalogrepo "github.com/sedorofeevd/project-druzya/services/content/internal/catalog/repository"
 )
@@ -40,17 +41,19 @@ type Service interface {
 }
 
 type catalogService struct {
-	repo Store
+	repo  Store
+	cache *catalogcache.Manager
 }
 
 // Deps holds catalog service dependencies.
 type Deps struct {
-	Repo Store
+	Repo  Store
+	Cache *catalogcache.Manager
 }
 
 // New constructs a catalog service.
 func New(deps Deps) Service {
-	return &catalogService{repo: deps.Repo}
+	return &catalogService{repo: deps.Repo, cache: deps.Cache}
 }
 
 func normalizeLimit(limit int) int {
@@ -72,18 +75,42 @@ func normalizeOffset(offset int) int {
 }
 
 func (s *catalogService) ListCompanies(ctx context.Context, activeOnly bool, limit, offset int) ([]catalogmodel.Company, error) {
-	return s.repo.ListCompanies(ctx, catalogrepo.ListCompaniesFilter{
+	f := catalogrepo.ListCompaniesFilter{
 		ActiveOnly: activeOnly,
 		Limit:      normalizeLimit(limit),
 		Offset:     normalizeOffset(offset),
-	})
+	}
+	if snap := s.snapshot(); snap != nil {
+		s.cacheHit()
+		return snap.ListCompanies(f), nil
+	}
+	s.cacheBypass()
+	return s.repo.ListCompanies(ctx, f)
 }
 
 func (s *catalogService) GetCompany(ctx context.Context, id, slug string) (*catalogmodel.Company, error) {
 	switch {
 	case id != "":
+		if snap := s.snapshot(); snap != nil {
+			if c, ok := snap.GetCompanyByID(id); ok {
+				s.cacheHit()
+				return c, nil
+			}
+			s.cacheHit()
+			return nil, ErrNotFound
+		}
+		s.cacheBypass()
 		return s.repo.GetCompanyByID(ctx, id)
 	case slug != "":
+		if snap := s.snapshot(); snap != nil {
+			if c, ok := snap.GetCompanyBySlug(slug); ok {
+				s.cacheHit()
+				return c, nil
+			}
+			s.cacheHit()
+			return nil, ErrNotFound
+		}
+		s.cacheBypass()
 		return s.repo.GetCompanyBySlug(ctx, slug)
 	default:
 		return nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
@@ -96,15 +123,35 @@ func (s *catalogService) ListInterviewTemplates(
 	activeOnly bool,
 	limit, offset int,
 ) ([]catalogmodel.InterviewTemplate, error) {
-	return s.repo.ListInterviewTemplates(ctx, catalogrepo.ListTemplatesFilter{
+	f := catalogrepo.ListTemplatesFilter{
 		CompanyID:  companyID,
 		ActiveOnly: activeOnly,
 		Limit:      normalizeLimit(limit),
 		Offset:     normalizeOffset(offset),
-	})
+	}
+	if snap := s.snapshot(); snap != nil {
+		s.cacheHit()
+		return snap.ListInterviewTemplates(f), nil
+	}
+	s.cacheBypass()
+	return s.repo.ListInterviewTemplates(ctx, f)
 }
 
 func (s *catalogService) GetInterviewTemplateDetail(ctx context.Context, id, slug string) (*catalogmodel.InterviewTemplateDetail, error) {
+	switch {
+	case id == "" && slug == "":
+		return nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
+	}
+	if snap := s.snapshot(); snap != nil {
+		if detail, ok := snap.GetInterviewTemplateDetail(id, slug); ok {
+			s.cacheHit()
+			return detail, nil
+		}
+		s.cacheHit()
+		return nil, ErrNotFound
+	}
+	s.cacheBypass()
+
 	var (
 		template *catalogmodel.InterviewTemplate
 		err      error
@@ -114,8 +161,6 @@ func (s *catalogService) GetInterviewTemplateDetail(ctx context.Context, id, slu
 		template, err = s.repo.GetInterviewTemplateByID(ctx, id)
 	case slug != "":
 		template, err = s.repo.GetInterviewTemplateBySlug(ctx, slug)
-	default:
-		return nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
 	}
 	if err != nil {
 		return nil, err
@@ -137,20 +182,44 @@ func (s *catalogService) ListTasks(
 	taskType, difficulty, status *string,
 	limit, offset int,
 ) ([]catalogmodel.Task, error) {
-	return s.repo.ListTasks(ctx, catalogrepo.ListTasksFilter{
+	f := catalogrepo.ListTasksFilter{
 		Type:       taskType,
 		Difficulty: difficulty,
 		Status:     status,
 		Limit:      normalizeLimit(limit),
 		Offset:     normalizeOffset(offset),
-	})
+	}
+	if snap := s.snapshot(); snap != nil {
+		s.cacheHit()
+		return snap.ListTasks(f), nil
+	}
+	s.cacheBypass()
+	return s.repo.ListTasks(ctx, f)
 }
 
 func (s *catalogService) GetTask(ctx context.Context, id, slug string) (*catalogmodel.Task, error) {
 	switch {
 	case id != "":
+		if snap := s.snapshot(); snap != nil {
+			if task, ok := snap.GetTaskByID(id); ok {
+				s.cacheHit()
+				return task, nil
+			}
+			s.cacheHit()
+			return nil, ErrNotFound
+		}
+		s.cacheBypass()
 		return s.repo.GetTaskByID(ctx, id)
 	case slug != "":
+		if snap := s.snapshot(); snap != nil {
+			if task, ok := snap.GetTaskBySlug(slug); ok {
+				s.cacheHit()
+				return task, nil
+			}
+			s.cacheHit()
+			return nil, ErrNotFound
+		}
+		s.cacheBypass()
 		return s.repo.GetTaskBySlug(ctx, slug)
 	default:
 		return nil, fmt.Errorf("id or slug is required: %w", ErrInvalidArgument)
@@ -161,6 +230,15 @@ func (s *catalogService) GetTaskBundle(ctx context.Context, taskID string) (*cat
 	if taskID == "" {
 		return nil, fmt.Errorf("task_id is required: %w", ErrInvalidArgument)
 	}
+	if snap := s.snapshot(); snap != nil {
+		if bundle, ok := snap.GetTaskBundle(taskID); ok {
+			s.cacheHit()
+			return bundle, nil
+		}
+		s.cacheHit()
+		return nil, ErrNotFound
+	}
+	s.cacheBypass()
 
 	task, err := s.repo.GetTaskByID(ctx, taskID)
 	if err != nil {
@@ -194,6 +272,15 @@ func (s *catalogService) GetRubric(ctx context.Context, rubricID string) (*catal
 	if rubricID == "" {
 		return nil, nil, fmt.Errorf("rubric_id is required: %w", ErrInvalidArgument)
 	}
+	if snap := s.snapshot(); snap != nil {
+		if rubric, criteria, ok := snap.GetRubricByID(rubricID); ok {
+			s.cacheHit()
+			return rubric, criteria, nil
+		}
+		s.cacheHit()
+		return nil, nil, ErrNotFound
+	}
+	s.cacheBypass()
 
 	rubric, err := s.repo.GetRubricByID(ctx, rubricID)
 	if err != nil {

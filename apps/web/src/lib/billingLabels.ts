@@ -34,7 +34,8 @@ export function entitlementLabelWith(t: TFn, key: string): string {
 export function formatLimitUsageWith(t: TFn, key: string, lim: UsageLimit): string {
   if (lim.unlimited) return t('common.unlimited')
   const periodKey = counterPeriodKey(key)
-  const period = periodKey ? t(`billing.${periodKey}`) : ''
+  const periodRaw = periodKey ? t(`billing.${periodKey}`) : ''
+  const period = periodRaw ? (periodRaw.startsWith(' ') ? periodRaw : ` ${periodRaw}`) : ''
   if (lim.limit == null) return t('billing.usedOnly', { used: lim.used, period })
   return t('billing.usedOf', { used: lim.used, limit: lim.limit, period })
 }

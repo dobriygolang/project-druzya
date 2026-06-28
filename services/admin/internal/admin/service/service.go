@@ -40,6 +40,7 @@ type Service interface {
 	GetUserEntitlements(ctx context.Context, userID string) (*billingadapter.UserEntitlements, error)
 	GrantSubscription(ctx context.Context, input billingadapter.GrantSubscriptionInput) (*billingadapter.GrantSubscriptionResult, error)
 	RevokeSubscription(ctx context.Context, userID string) (bool, error)
+	UpdatePlanEntitlement(ctx context.Context, planSlug, key string, spec billingadapter.PlanEntitlementSpec) (billingadapter.PlanEntitlementSpec, error)
 	ListEvaluationJobs(ctx context.Context, status *aiadapter.EvaluationJobStatus, limit int) ([]aiadapter.EvaluationJob, error)
 	GetEvaluationJob(ctx context.Context, id string) (*aiadapter.EvaluationJob, error)
 	GetLLMConfig(ctx context.Context) (*aiadapter.LLMRuntimeConfig, error)
@@ -262,6 +263,13 @@ func (s *adminService) RevokeSubscription(ctx context.Context, userID string) (b
 		return false, fmt.Errorf("user_id required: %w", ErrInvalidInput)
 	}
 	return s.billing.RevokeSubscription(ctx, userID)
+}
+
+func (s *adminService) UpdatePlanEntitlement(ctx context.Context, planSlug, key string, spec billingadapter.PlanEntitlementSpec) (billingadapter.PlanEntitlementSpec, error) {
+	if planSlug == "" || key == "" || spec.Type == "" {
+		return billingadapter.PlanEntitlementSpec{}, fmt.Errorf("plan_slug, key and spec.type required: %w", ErrInvalidInput)
+	}
+	return s.billing.UpdatePlanEntitlement(ctx, planSlug, key, spec)
 }
 
 func (s *adminService) ListEvaluationJobs(ctx context.Context, status *aiadapter.EvaluationJobStatus, limit int) ([]aiadapter.EvaluationJob, error) {

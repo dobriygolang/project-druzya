@@ -106,6 +106,50 @@ func (c *Client) RevokeSubscription(ctx context.Context, userID string) (bool, e
 	return resp.GetRevoked(), nil
 }
 
+func (c *Client) UpdatePlanEntitlement(ctx context.Context, planSlug, key string, spec billingadapter.PlanEntitlementSpec) (billingadapter.PlanEntitlementSpec, error) {
+	req := &billingv1.UpdatePlanEntitlementRequest{
+		PlanSlug: planSlug,
+		Key:      key,
+		Spec:     toProtoEntitlementSpec(spec),
+	}
+	resp, err := c.admin.UpdatePlanEntitlement(c.internalCtx(ctx), req)
+	if err != nil {
+		return billingadapter.PlanEntitlementSpec{}, billingadapter.MapGRPCError(err)
+	}
+	return fromProtoEntitlementSpec(resp.GetSpec()), nil
+}
+
+func toProtoEntitlementSpec(spec billingadapter.PlanEntitlementSpec) *billingv1.PlanEntitlementSpec {
+	out := &billingv1.PlanEntitlementSpec{
+		Type:      spec.Type,
+		Unlimited: spec.Unlimited,
+		Period:    spec.Period,
+		Value:     spec.Value,
+	}
+	if spec.Limit != nil {
+		v := int32(*spec.Limit)
+		out.Limit = &v
+	}
+	return out
+}
+
+func fromProtoEntitlementSpec(spec *billingv1.PlanEntitlementSpec) billingadapter.PlanEntitlementSpec {
+	if spec == nil {
+		return billingadapter.PlanEntitlementSpec{}
+	}
+	out := billingadapter.PlanEntitlementSpec{
+		Type:      spec.GetType(),
+		Unlimited: spec.GetUnlimited(),
+		Period:    spec.GetPeriod(),
+		Value:     spec.GetValue(),
+	}
+	if spec.Limit != nil {
+		v := int(spec.GetLimit())
+		out.Limit = &v
+	}
+	return out
+}
+
 func fromProtoPlan(p *billingv1.PlanCatalog) billingadapter.PlanCatalog {
 	if p == nil {
 		return billingadapter.PlanCatalog{}

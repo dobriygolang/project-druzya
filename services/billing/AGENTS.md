@@ -89,6 +89,15 @@ scripts/migrations/  scripts/dev/docker-compose.yml
 | gRPC | 9095 |
 | Postgres | 5438 / `druzya_billing` |
 
+## In-memory / Redis caches
+
+- **Plans snapshot** — `plans` + `plan_entitlements` loaded at startup into RAM
+  (`internal/billing/cache/plans.go`); reloaded on service start. Metrics: `billing_plans_*`.
+- **Entitlements view (optional)** — when `REDIS_ADDR` is set, `GetEntitlements` responses are
+  cached in Redis (`billing:entitlements:{user_id}`, TTL `ENTITLEMENTS_CACHE_TTL`, default `60s`).
+  Invalidated on consume/release/subscription changes. Metrics: `billing_entitlements_redis_*`.
+- Usage counters remain in Postgres (atomic consume).
+
 ## Commands
 
 ```bash

@@ -13,10 +13,14 @@ import (
 
 // Store is the persistence port this command needs.
 type Store interface {
-	ListPlanEntitlements(ctx context.Context, planID string) ([]model.PlanEntitlement, error)
 	GetUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time) (int, error)
 	ConsumeUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time, amount, limit int) (int, error)
 	ConsumeUsageUnlimited(ctx context.Context, userID, key string, periodStart, periodEnd time.Time, amount int) (int, error)
+}
+
+// PlanEntitlements lists static entitlements for a plan.
+type PlanEntitlements interface {
+	ListPlanEntitlements(ctx context.Context, planID string) ([]model.PlanEntitlement, error)
 }
 
 // PlanResolver resolves a user's effective plan. Implemented by the billing
@@ -34,13 +38,14 @@ type EventPublisher interface {
 type Handler struct {
 	repo   Store
 	plans  PlanResolver
+	ents   PlanEntitlements
 	events EventPublisher
 	now    func() time.Time
 }
 
 // New constructs the consume-usage handler.
-func New(repo Store, plans PlanResolver, events EventPublisher) *Handler {
-	return &Handler{repo: repo, plans: plans, events: events, now: time.Now}
+func New(repo Store, plans PlanResolver, ents PlanEntitlements, events EventPublisher) *Handler {
+	return &Handler{repo: repo, plans: plans, ents: ents, events: events, now: time.Now}
 }
 
 // Handle executes the command.
@@ -103,7 +108,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*model.ConsumeUsageR
 }
 
 func (h *Handler) findEntitlement(ctx context.Context, planID, key string) (*model.PlanEntitlement, error) {
-	items, err := h.repo.ListPlanEntitlements(ctx, planID)
+	items, err := h.ents.ListPlanEntitlements(ctx, planID)
 	if err != nil {
 		return nil, err
 	}

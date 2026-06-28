@@ -132,8 +132,22 @@ func (f *fakeRepo) MarkUsageReleaseProcessed(_ context.Context, idempotencyKey, 
 	return true, nil
 }
 
+func (f *fakeRepo) HasUsedProTrial(context.Context, string) (bool, error) {
+	return false, nil
+}
+
+func (f *fakeRepo) UpdatePlanEntitlement(context.Context, string, string, json.RawMessage) error {
+	return nil
+}
+
 func newTestService(repo *fakeRepo) Service {
-	return New(Deps{Repo: repo, Events: events.NoopPublisher{}, TierToPlan: map[string]string{"tribute_pro_monthly": model.PlanProMonthly}})
+	return New(Deps{
+		Repo:            repo,
+		Events:          events.NoopPublisher{},
+		TierToPlan:      map[string]string{"tribute_pro_monthly": model.PlanProMonthly},
+		ProTrialEnabled: true,
+		ProTrialDays:    14,
+	})
 }
 
 func TestGetCurrentPlanDefaultsToFree(t *testing.T) {

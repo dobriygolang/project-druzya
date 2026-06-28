@@ -11,4 +11,10 @@ var (
 	ErrUnknownUser = errors.New("unknown user")
 	// ErrDuplicateEvent marks an already-processed provider event.
 	ErrDuplicateEvent = errors.New("duplicate provider event")
+	// ErrTrialAlreadyUsed marks a user who already redeemed the one-time Pro trial.
+	ErrTrialAlreadyUsed = errors.New("pro trial already used")
+	// ErrAlreadySubscribed marks a user who already has an active paid or trial plan.
+	ErrAlreadySubscribed = errors.New("already subscribed")
+	// ErrTrialDisabled marks Pro trial when the feature is turned off.
+	ErrTrialDisabled = errors.New("pro trial disabled")
 )

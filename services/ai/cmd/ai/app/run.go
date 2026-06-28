@@ -12,8 +12,9 @@ import (
 	contentgrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content/grpc"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
 	interviewgrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview/grpc"
-	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmcache"
 	llmadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/config"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/evaluator"
 	evaluationrepo "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/repository"
@@ -21,6 +22,7 @@ import (
 	llmconfigrepo "github.com/sedorofeevd/project-druzya/services/ai/internal/llmconfig/repository"
 	llmconfigservice "github.com/sedorofeevd/project-druzya/services/ai/internal/llmconfig/service"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/logger"
+	goredis "github.com/redis/go-redis/v9"
 )
 
 // App holds adapters and the domain service.
@@ -28,6 +30,7 @@ type App struct {
 	Config          *config.Config
 	Logger          logger.Logger
 	Postgres        *evaluationrepo.Pool
+	Redis           *goredis.Client
 	InterviewClient interviewadapter.Client
 	ContentClient   contentadapter.Client
 	BillingClient   billingadapter.Client
@@ -88,6 +91,14 @@ func New(ctx context.Context) (*App, error) {
 	llmConfigRepo := llmconfigrepo.New(pg)
 	freeChainOrder := coalesceEnv(cfg.LLMFreeChainOrder, cfg.LLMChainOrder)
 
+	redisClient, err := llmcache.NewRedisClient(ctx, cfg.RedisAddr)
+	if err != nil {
+		_ = contentClient.Close()
+		_ = interviewClient.Close()
+		pg.Close()
+		return nil, fmt.Errorf("init redis: %w", err)
+	}
+
 	chatClient, tierChains, err := llmadapter.BuildTierChains(llmadapter.BuildTierChainOpts{
 		Config: llmadapter.TierBuildConfig{
 			FreeChainOrder: freeChainOrder,
@@ -113,8 +124,17 @@ func New(ctx context.Context) (*App, error) {
 		Log:                 slog.Default(),
 		RuntimeConfigSource: llmConfigRepo,
 		RuntimeCtx:          ctx,
+		PromptCache: llmcache.Options{
+			Enabled:    cfg.LLMPromptCacheEnabled,
+			MaxEntries: cfg.LLMPromptCacheMaxEntries,
+			TTL:        cfg.LLMPromptCacheTTL,
+			Redis:      redisClient,
+		},
 	})
 	if err != nil {
+		if redisClient != nil {
+			_ = redisClient.Close()
+		}
 		if billingConn != nil {
 			_ = billingConn.Close()
 		}
@@ -149,6 +169,7 @@ func New(ctx context.Context) (*App, error) {
 		Config:          cfg,
 		Logger:          log,
 		Postgres:        pg,
+		Redis:           redisClient,
 		InterviewClient: interviewClient,
 		ContentClient:   contentClient,
 		BillingClient:   billingClient,
@@ -165,6 +186,9 @@ func New(ctx context.Context) (*App, error) {
 
 // Close releases adapter resources.
 func (a *App) Close() {
+	if a.Redis != nil {
+		_ = a.Redis.Close()
+	}
 	if a.billingConn != nil {
 		_ = a.billingConn.Close()
 	}

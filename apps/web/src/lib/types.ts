@@ -317,6 +317,10 @@ export interface BillingMe {
       unlimited?: boolean
     }
   >
+  is_trialing?: boolean
+  trial_end?: string
+  trial_available?: boolean
+  trial_days?: number
 }
 
 export interface PlanEntitlementSpec {
@@ -337,6 +341,7 @@ export interface PlanCatalogEntry {
   limits?: Record<string, PlanEntitlementSpec>
   checkout_url?: string
   telegram_checkout_url?: string
+  trial_days?: number
 }
 
 export interface TestResult {
