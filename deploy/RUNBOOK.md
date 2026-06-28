@@ -124,6 +124,8 @@ certbot certonly --webroot -w /var/www/html --cert-name druz9.online --expand \
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
+`migrate-all.sh` uses `goose -allow-missing` so out-of-order billing migrations (e.g. `00009` before `00002`) do not block deploy.
+
 **Grafana Cloud (optional):**
 
 Useful eval-flow metrics:

@@ -20,7 +20,7 @@ type RuntimeConfig struct {
 	// TaskMap — override TaskModelMap. Пустой map / отсутствие ключа task →
 	// fallback на DefaultTaskModelMap.
 	TaskMap TaskModelMap
-	// VirtualChains — override для druz9/turbo|pro|ultra|reasoning. Пустой
+	// VirtualChains — override для druz9/turbo|pro. Пустой
 	// → используем tier.go:virtualChains. Админ может вставить entry для
 	// одного virtual id, остальные остаются на defaults.
 	VirtualChains map[string][]VirtualCandidate

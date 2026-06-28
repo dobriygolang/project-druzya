@@ -63,7 +63,7 @@ const (
 	ProviderCloudflare Provider = "cloudflare"
 	ProviderZAI        Provider = "zai"
 	// ProviderDeepSeek — paid: api.deepseek.com. Используется в virtual-chain'ах
-	// druz9/pro и druz9/reasoning (см. tier.go). В DefaultTaskModelMap
+	// druz9/pro (см. tier.go). В DefaultTaskModelMap
 	// отсутствует — это exclusive для paid-tier'ов.
 	ProviderDeepSeek Provider = "deepseek"
 	// ProviderOllama — self-hosted floor-fallback (Qwen 2.5 3B на CPU).
@@ -129,7 +129,7 @@ const (
 	// (Groq/Cerebras/Mistral llama-3.x) text-only на драйверном уровне.
 	// Drivers без supportsVision возвращают ErrModelNotSupported и chain
 	// переходит дальше. Premium-уровни — claude-sonnet-4.5 / gpt-4o через
-	// VirtualUltra ModelOverride. См task_map.go::TaskVision для актуального
+	// druz9/pro ModelOverride. См task_map.go::TaskVision для актуального
 	// списка alternatives.
 	TaskVision Task = "vision"
 	// TaskEnglishMockHR — AI-собеседующий проводит HR-этап на английском,
@@ -403,11 +403,9 @@ type Request struct {
 	// Individual caller overrides are mostly for tests.
 	AttemptTimeout time.Duration
 
-	// UserTier — актуальный tier подписки (free/pro/max). Пустая
-	// строка трактуется как free (graceful default для legacy-caller'ов).
-	// Используется для tier-gate'а paid-моделей в candidates(): если
-	// ModelOverride требует pro+, а UserTier=free → ErrTierRequired.
-	// Caller обычно заполняет через shared middleware UserTierFromContext.
+	// UserTier — billing plan (free / pro). Пустая строка → free.
+	// Tier-gate для paid ModelOverride и druz9/pro.
+	// Caller заполняет из billing (pro_monthly → "pro").
 	UserTier SubscriptionPlan
 
 	// UserID — admin audit context. Optional; empty means «system /

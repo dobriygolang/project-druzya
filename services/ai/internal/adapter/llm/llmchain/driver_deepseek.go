@@ -11,7 +11,7 @@ import "context"
 //   - "deepseek-chat"     — общая V3-модель (general purpose, streaming, JSON)
 //   - "deepseek-reasoner" — R1, extended-thinking reasoning
 //
-// Используется ТОЛЬКО в paid-цепочках (druz9/pro, druz9/reasoning) —
+// Используется в paid-цепочке druz9/pro (см. tier.go) —
 // free-tier у DeepSeek нет. В default free task_map отсутствует.
 const DeepSeekEndpoint = "https://api.deepseek.com/v1/chat/completions"
 

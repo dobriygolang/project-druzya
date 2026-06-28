@@ -38,7 +38,7 @@ import "maps"
 // Groq (free RPM/RPD), Cerebras (zai-glm-4.7), Google (gemini-2.0-flash),
 // Cloudflare Workers AI, Mistral La Plateforme (mistral-small-latest),
 // OpenRouter (:free-lane). Paid-провайдеры (OpenAI direct, DeepSeek direct)
-// и paid OpenRouter ids — только в virtual druz9/pro|ultra|reasoning (tier.go).
+// и paid OpenRouter ids — только в virtual druz9/pro (tier.go).
 //
 // When a provider doesn't have a model for a task (e.g. Mistral-free
 // lacks an 8B instant option), the chain skips that provider for the
@@ -102,7 +102,7 @@ var DefaultTaskModelMap = TaskModelMap{
 		// — у архитектурного судьи depth > speed. OpenRouter deepseek-r1
 		// — strongest free fallback. Cerebras/Mistral 70B — latency-safe
 		// fallback. Paid-юзеры получают расширенный context через
-		// druz9/ultra (Claude Sonnet 4.5, 200k).
+		// Paid pro users may get stronger models via druz9/pro ModelOverride.
 		ProviderGroq:       "openai/gpt-oss-120b",
 		ProviderCerebras:   "zai-glm-4.7",
 		ProviderMistral:    "mistral-small-latest",

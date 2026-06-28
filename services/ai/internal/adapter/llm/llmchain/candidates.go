@@ -29,7 +29,8 @@ type candidate struct {
 //     стабильную сортировку.
 func (c *Chain) candidates(req Request) ([]candidate, error) {
 	if IsVirtualModel(req.ModelOverride) {
-		required, ok := VirtualModelMinTier[req.ModelOverride]
+		virtualID := ResolveVirtualModelID(req.ModelOverride)
+		required, ok := VirtualModelMinTier[virtualID]
 		if !ok {
 			return nil, fmt.Errorf("%w: unknown virtual model %q", ErrNoProvider, req.ModelOverride)
 		}
@@ -37,9 +38,11 @@ func (c *Chain) candidates(req Request) ([]candidate, error) {
 			return nil, fmt.Errorf("%w: %q needs %s, got %s",
 				ErrTierRequired, req.ModelOverride, required, effectiveTier(req.UserTier))
 		}
-		// Предпочитаем runtime-chain (из БД) над hardcoded static. Админ
-		// меняет порядок провайдеров / состав цепочки через PUT /admin/llm/config.
-		vChain, ok := c.currentVirtualChains()[req.ModelOverride]
+		chains := c.currentVirtualChains()
+		vChain, ok := chains[virtualID]
+		if !ok && virtualID != req.ModelOverride {
+			vChain, ok = chains[req.ModelOverride]
+		}
 		if !ok {
 			return nil, fmt.Errorf("%w: no chain for virtual %q", ErrNoProvider, req.ModelOverride)
 		}

@@ -6,7 +6,7 @@ run_migrate() {
   local dsn="$2"
   local dir="$3"
   echo "==> migrate ${name}"
-  goose -dir "$dir" postgres "$dsn" up
+  goose -dir "$dir" -allow-missing postgres "$dsn" up
 }
 
 run_migrate identity "${IDENTITY_POSTGRES_DSN}" /migrations/identity
