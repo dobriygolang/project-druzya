@@ -14,6 +14,7 @@ const LearnIndexPage = lazy(() => import('@/pages/LearnIndexPage'))
 const LearnArticlePage = lazy(() => import('@/pages/LearnArticlePage'))
 const MockHubPage = lazy(() => import('@/pages/MockHubPage'))
 const SessionPage = lazy(() => import('@/pages/SessionPage'))
+const SystemDesignRoomPage = lazy(() => import('@/pages/SystemDesignRoomPage'))
 const SessionResultsPage = lazy(() => import('@/pages/SessionResultsPage'))
 const CollabRoomPage = lazy(() => import('@/pages/CollabRoomPage'))
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
@@ -114,6 +115,14 @@ export default function App() {
             element={
               <AuthedLayout>
                 <SessionPage />
+              </AuthedLayout>
+            }
+          />
+          <Route
+            path="/interview/session/:sessionId/design"
+            element={
+              <AuthedLayout>
+                <SystemDesignRoomPage />
               </AuthedLayout>
             }
           />

@@ -52,6 +52,10 @@ func (j *LLMJudge) Evaluate(ctx context.Context, in Input) (*Output, error) {
 		return NewFakeClient().Evaluate(ctx, in)
 	}
 
+	if in.TaskType == "system_design" {
+		return j.evaluateSystemDesign(ctx, in)
+	}
+
 	userAnswer := candidateAnswer(in)
 	if strings.TrimSpace(userAnswer) == "" {
 		return nil, fmt.Errorf("empty candidate answer")

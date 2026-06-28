@@ -5,6 +5,7 @@ package ai.v1;
 option go_package = "github.com/sedorofeevd/project-druzya/services/ai/pkg/api/ai/v1;aiv1";
 
 import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 service AiInternalService {
@@ -38,6 +39,9 @@ service AiInternalService {
   rpc GetOpsStats(GetOpsStatsRequest) returns (GetOpsStatsResponse);
 
   rpc ProbeLLMProviders(ProbeLLMProvidersRequest) returns (ProbeLLMProvidersResponse);
+
+  rpc RunSystemDesignInterviewerTurn(RunSystemDesignInterviewerTurnRequest) returns (RunSystemDesignInterviewerTurnResponse);
+  rpc RunSystemDesignCheckpoint(RunSystemDesignCheckpointRequest) returns (RunSystemDesignCheckpointResponse);
 }
 
 enum EvaluationJobStatus {
@@ -134,4 +138,41 @@ message LLMProviderProbe {
 
 message ProbeLLMProvidersResponse {
   repeated LLMProviderProbe probes = 1;
+}
+
+message SystemDesignTurnMessage {
+  string role = 1;
+  string content = 2;
+  string phase = 3;
+}
+
+message RunSystemDesignInterviewerTurnRequest {
+  string user_id = 1;
+  string task_id = 2;
+  string phase = 3;
+  repeated SystemDesignTurnMessage turns = 4;
+  google.protobuf.Struct workspace_snapshot = 5;
+  optional string task_title = 6;
+  optional string task_description = 7;
+}
+
+message RunSystemDesignInterviewerTurnResponse {
+  string reply = 1;
+  optional string suggested_phase = 2;
+  google.protobuf.Struct metadata = 3;
+}
+
+message RunSystemDesignCheckpointRequest {
+  string user_id = 1;
+  string task_id = 2;
+  string phase = 3;
+  google.protobuf.Struct workspace_snapshot = 4;
+  optional string diagram_png_base64 = 5;
+  optional string task_title = 6;
+  optional string task_description = 7;
+}
+
+message RunSystemDesignCheckpointResponse {
+  string critique = 1;
+  google.protobuf.Struct metadata = 2;
 }

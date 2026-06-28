@@ -20,11 +20,12 @@ type TemplateSection struct {
 
 // Task is minimal task metadata from content-service.
 type Task struct {
-	ID     string
-	Slug   string
-	Type   string
-	Title  string
-	Status string
+	ID          string
+	Slug        string
+	Type        string
+	Title       string
+	Description string
+	Status      string
 }
 
 // InterviewTemplate is a catalog interview blueprint summary.

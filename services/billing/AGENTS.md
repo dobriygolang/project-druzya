@@ -22,6 +22,7 @@ Seeded in `00001_init.sql`: `free`, `pro_monthly`.
 |-----|------|-----|
 | ai_evaluations_per_day | 25 | 100 |
 | mock_interviews_per_month | 3 | 30 |
+| sd_ai_turns_per_month | 40 | 400 |
 | code_runs_per_day | 50 | 500 |
 | hidden_tests_enabled | false | true |
 

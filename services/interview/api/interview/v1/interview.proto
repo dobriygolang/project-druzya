@@ -169,6 +169,46 @@ service InterviewService {
       body: "*"
     };
   }
+
+  rpc GetSystemDesignWorkspace(GetSystemDesignWorkspaceRequest) returns (GetSystemDesignWorkspaceResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/session-tasks/{session_task_id}/system-design/workspace"
+    };
+  }
+
+  rpc PatchSystemDesignWorkspace(PatchSystemDesignWorkspaceRequest) returns (PatchSystemDesignWorkspaceResponse) {
+    option (google.api.http) = {
+      patch: "/v1/interview/session-tasks/{session_task_id}/system-design/workspace"
+      body: "*"
+    };
+  }
+
+  rpc ListSystemDesignTurns(ListSystemDesignTurnsRequest) returns (ListSystemDesignTurnsResponse) {
+    option (google.api.http) = {
+      get: "/v1/interview/session-tasks/{session_task_id}/system-design/turns"
+    };
+  }
+
+  rpc PostSystemDesignTurn(PostSystemDesignTurnRequest) returns (PostSystemDesignTurnResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/session-tasks/{session_task_id}/system-design/turns"
+      body: "*"
+    };
+  }
+
+  rpc RequestSystemDesignCheckpoint(RequestSystemDesignCheckpointRequest) returns (RequestSystemDesignCheckpointResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/session-tasks/{session_task_id}/system-design/checkpoint"
+      body: "*"
+    };
+  }
+
+  rpc SubmitSystemDesign(SubmitSystemDesignRequest) returns (SubmitSystemDesignResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/session-tasks/{session_task_id}/system-design/submit"
+      body: "*"
+    };
+  }
 }
 
 service InterviewInternalService {
@@ -488,3 +528,109 @@ message FailOutboxEventRequest {
 }
 
 message FailOutboxEventResponse {}
+
+enum SystemDesignPhase {
+  SYSTEM_DESIGN_PHASE_UNSPECIFIED = 0;
+  SYSTEM_DESIGN_PHASE_BRIEF = 1;
+  SYSTEM_DESIGN_PHASE_CLARIFICATION = 2;
+  SYSTEM_DESIGN_PHASE_NFR = 3;
+  SYSTEM_DESIGN_PHASE_DIAGRAM = 4;
+  SYSTEM_DESIGN_PHASE_API = 5;
+  SYSTEM_DESIGN_PHASE_DATA_MODEL = 6;
+  SYSTEM_DESIGN_PHASE_DEEP_DIVE = 7;
+  SYSTEM_DESIGN_PHASE_WRAP_UP = 8;
+  SYSTEM_DESIGN_PHASE_SUBMITTED = 9;
+}
+
+enum SystemDesignTurnRole {
+  SYSTEM_DESIGN_TURN_ROLE_UNSPECIFIED = 0;
+  SYSTEM_DESIGN_TURN_ROLE_USER = 1;
+  SYSTEM_DESIGN_TURN_ROLE_INTERVIEWER = 2;
+  SYSTEM_DESIGN_TURN_ROLE_SYSTEM = 3;
+}
+
+message SystemDesignWorkspace {
+  string session_task_id = 1;
+  SystemDesignPhase phase = 2;
+  google.protobuf.Struct functional_context = 3;
+  google.protobuf.Struct nfr = 4;
+  google.protobuf.Struct diagram = 5;
+  google.protobuf.Struct api_spec = 6;
+  google.protobuf.Struct data_model = 7;
+  google.protobuf.Struct infrastructure = 8;
+  optional string wrap_up = 9;
+  int32 version = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message SystemDesignTurn {
+  string id = 1;
+  string session_task_id = 2;
+  SystemDesignPhase phase = 3;
+  SystemDesignTurnRole role = 4;
+  string content = 5;
+  google.protobuf.Struct metadata = 6;
+  google.protobuf.Timestamp created_at = 7;
+}
+
+message GetSystemDesignWorkspaceRequest {
+  string session_task_id = 1;
+}
+
+message GetSystemDesignWorkspaceResponse {
+  SystemDesignWorkspace workspace = 1;
+  repeated SystemDesignTurn recent_turns = 2;
+}
+
+message PatchSystemDesignWorkspaceRequest {
+  string session_task_id = 1;
+  int32 expected_version = 2;
+  optional SystemDesignPhase phase = 3;
+  optional google.protobuf.Struct functional_context = 4;
+  optional google.protobuf.Struct nfr = 5;
+  optional google.protobuf.Struct diagram = 6;
+  optional google.protobuf.Struct api_spec = 7;
+  optional google.protobuf.Struct data_model = 8;
+  optional google.protobuf.Struct infrastructure = 9;
+  optional string wrap_up = 10;
+}
+
+message PatchSystemDesignWorkspaceResponse {
+  SystemDesignWorkspace workspace = 1;
+}
+
+message ListSystemDesignTurnsRequest {
+  string session_task_id = 1;
+}
+
+message ListSystemDesignTurnsResponse {
+  repeated SystemDesignTurn turns = 1;
+}
+
+message PostSystemDesignTurnRequest {
+  string session_task_id = 1;
+  string content = 2;
+}
+
+message PostSystemDesignTurnResponse {
+  SystemDesignTurn user_turn = 1;
+  SystemDesignTurn interviewer_turn = 2;
+}
+
+message RequestSystemDesignCheckpointRequest {
+  string session_task_id = 1;
+  optional string diagram_png_base64 = 2;
+}
+
+message RequestSystemDesignCheckpointResponse {
+  SystemDesignTurn system_turn = 1;
+}
+
+message SubmitSystemDesignRequest {
+  string session_task_id = 1;
+  optional string diagram_png_base64 = 2;
+}
+
+message SubmitSystemDesignResponse {
+  Attempt attempt = 1;
+}

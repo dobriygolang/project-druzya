@@ -8,6 +8,7 @@ import (
 const (
 	EntitlementMockInterviewsPerMonth  = "mock_interviews_per_month"
 	EntitlementCompanyTemplatesEnabled = "company_templates_enabled"
+	EntitlementSDAITurnsPerMonth       = "sd_ai_turns_per_month"
 )
 
 var (

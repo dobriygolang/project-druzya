@@ -214,12 +214,15 @@ func (h *Handler) executeEvaluation(ctx context.Context, job *evaluationmodel.Ev
 		description = bundle.Task.Description
 	}
 
-	evalOut, err := h.evaluator.Evaluate(ctx, evaluator.InputFromBundle(
+	in := evaluator.InputFromBundle(
 		taskType, title, description,
 		bundle.Criteria, bundle.Solutions,
 		answerText, code, language,
 		h.userTier(ctx, attempt.UserID),
-	))
+	)
+	in.DiagramPNGURL = evaluator.DiagramPNGFromAttachments(attempt.Attachments)
+
+	evalOut, err := h.evaluator.Evaluate(ctx, in)
 	if err != nil {
 		return err
 	}

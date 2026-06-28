@@ -20,6 +20,7 @@ type Input struct {
 	Language        string
 	OffTopicPenalty float64
 	UserTier        llmchain.SubscriptionPlan
+	DiagramPNGURL   string
 }
 
 // Criterion is one rubric row for the judge prompt.

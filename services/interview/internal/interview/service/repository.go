@@ -45,4 +45,9 @@ type Repository interface {
 	ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]interviewmodel.OutboxMessage, error)
 	AckOutboxEvents(ctx context.Context, ids []string) error
 	FailOutboxEvent(ctx context.Context, id string, errMsg string, retryDelay time.Duration) error
+	GetSystemDesignWorkspace(ctx context.Context, sessionTaskID string) (*interviewmodel.SystemDesignWorkspace, error)
+	CreateSystemDesignWorkspace(ctx context.Context, ws *interviewmodel.SystemDesignWorkspace) error
+	PatchSystemDesignWorkspace(ctx context.Context, in interviewmodel.PatchSystemDesignWorkspaceInput) (*interviewmodel.SystemDesignWorkspace, error)
+	ListSystemDesignTurns(ctx context.Context, sessionTaskID string, limit int) ([]interviewmodel.SystemDesignTurn, error)
+	CreateSystemDesignTurn(ctx context.Context, turn *interviewmodel.SystemDesignTurn) error
 }

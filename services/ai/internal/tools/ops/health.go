@@ -10,7 +10,7 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 )
 
-const readyTimeout = 2 * time.Second
+const readyTimeout = 4 * time.Second
 
 // Checker verifies a dependency for readiness probes.
 type Checker func(ctx context.Context) error

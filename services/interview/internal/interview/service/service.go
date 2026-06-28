@@ -6,6 +6,7 @@ import (
 	"time"
 
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
+	aiadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/ai"
 	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
 	recommendationadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/recommendation"
 	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
@@ -45,6 +46,12 @@ type Service interface {
 	SkipTask(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SessionTask, interviewmodel.Progress, error)
 	DismissRetryItem(ctx context.Context, userID, retryItemID string) (*interviewmodel.RetryItem, error)
 	ExpireStaleActiveSessions(ctx context.Context) (int64, error)
+	GetSystemDesignWorkspace(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SystemDesignWorkspaceBundle, error)
+	PatchSystemDesignWorkspace(ctx context.Context, in interviewmodel.PatchSystemDesignWorkspaceInput) (*interviewmodel.SystemDesignWorkspace, error)
+	ListSystemDesignTurns(ctx context.Context, userID, sessionTaskID string) ([]interviewmodel.SystemDesignTurn, error)
+	PostSystemDesignTurn(ctx context.Context, userID, sessionTaskID, content string) (*interviewmodel.SystemDesignTurn, *interviewmodel.SystemDesignTurn, error)
+	RequestSystemDesignCheckpoint(ctx context.Context, userID, sessionTaskID string, diagramPNGBase64 *string) (*interviewmodel.SystemDesignTurn, error)
+	SubmitSystemDesign(ctx context.Context, userID, sessionTaskID string, diagramPNGBase64 *string) (*interviewmodel.Attempt, error)
 	GetAttemptInternal(ctx context.Context, attemptID string) (*interviewmodel.Attempt, error)
 	GetEvaluationSummaryInternal(ctx context.Context, attemptID string) (*interviewmodel.EvaluationSummary, error)
 	ListRetryItemsInternal(ctx context.Context, userID string, status *interviewmodel.RetryItemStatus) ([]interviewmodel.RetryItem, error)
@@ -93,6 +100,7 @@ type interviewService struct {
 	content        contentadapter.Client
 	billing        billingadapter.Client
 	recommendation recommendationadapter.Client
+	ai             aiadapter.Client
 	events         eventsadapter.Publisher
 	sessionTTL     time.Duration
 	staleAfter     time.Duration
@@ -111,6 +119,7 @@ type Deps struct {
 	Content         contentadapter.Client
 	Billing         billingadapter.Client
 	Recommendation  recommendationadapter.Client
+	AI              aiadapter.Client
 	Events          eventsadapter.Publisher
 	SessionTTL      time.Duration
 	StaleAfter      time.Duration
@@ -136,6 +145,7 @@ func New(deps Deps) Service {
 		content:        deps.Content,
 		billing:        deps.Billing,
 		recommendation: deps.Recommendation,
+		ai:             deps.AI,
 		events:         deps.Events,
 		sessionTTL:    ttl,
 		staleAfter:    stale,

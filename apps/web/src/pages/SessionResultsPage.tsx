@@ -7,6 +7,7 @@ import { PageContent } from '@/components/PageContent'
 import { SectionCard } from '@/components/SectionCard'
 import { getTask } from '@/lib/api/content'
 import { getSessionResults, listRetryItems } from '@/lib/api/interview'
+import { SystemDesignDebrief } from '@/components/system-design/SystemDesignDebrief'
 import { getDashboard } from '@/lib/api/recommendation'
 import { useDomainLabels } from '@/lib/labels'
 import { useI18n } from '@/lib/i18n'
@@ -58,6 +59,11 @@ export default function SessionResultsPage() {
   const taskTitles = new Map(
     taskQueries
       .map((q, i) => (q.data?.task ? [taskIds[i], q.data.task.title] as const : null))
+      .filter(Boolean) as [string, string][],
+  )
+  const taskTypes = new Map(
+    taskQueries
+      .map((q, i) => (q.data?.task ? [taskIds[i], q.data.task.type] as const : null))
       .filter(Boolean) as [string, string][],
   )
 
@@ -164,14 +170,18 @@ export default function SessionResultsPage() {
           </p>
         ) : (
           <ul className="space-y-4">
-            {evaluations.map((ev: EvaluationResult) => (
-              <EvaluationRow
-                key={ev.summary.id}
-                ev={ev}
-                title={taskTitles.get(ev.task_id)}
-                t={t}
-              />
-            ))}
+            {evaluations.map((ev: EvaluationResult) =>
+              taskTypes.get(ev.task_id) === 'system_design' ? (
+                <SystemDesignDebrief key={ev.summary.id} ev={ev} title={taskTitles.get(ev.task_id)} />
+              ) : (
+                <EvaluationRow
+                  key={ev.summary.id}
+                  ev={ev}
+                  title={taskTitles.get(ev.task_id)}
+                  t={t}
+                />
+              ),
+            )}
           </ul>
         )}
       </SectionCard>

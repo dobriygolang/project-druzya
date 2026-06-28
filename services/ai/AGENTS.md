@@ -36,7 +36,9 @@ Metrics: `outbox_lag_seconds`, `outbox_handler_duration_seconds`, `llm_*`, `llm_
 
 ## API
 
-Internal only (`x-internal-token`): `RunEvaluation`, admin eval jobs, `GetLLMConfig` / `UpdateLLMConfig`.
+Internal only (`x-internal-token`): `RunEvaluation`, **`RunSystemDesignInterviewerTurn`**, **`RunSystemDesignCheckpoint`**, admin eval jobs, `GetLLMConfig` / `UpdateLLMConfig`.
+
+`system_design` final eval uses `TaskSysDesignCritique` on JSON dossier (not generic 2-pass judge). Interviewer turns use `TaskSystemDesignSeniorMock`.
 
 HTTP admin routes under `/v1/admin/ai/*` (via admin BFF).
 

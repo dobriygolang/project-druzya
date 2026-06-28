@@ -31,6 +31,7 @@ type Config struct {
 	CORSAllowedOrigins []string
 	NATSURL              string
 	OutboxRelayEnabled   bool
+	AIGRPCAddr           string
 }
 
 // Load reads configuration from environment.
@@ -92,6 +93,7 @@ func Load() (*Config, error) {
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 		NATSURL:              os.Getenv("NATS_URL"),
 		OutboxRelayEnabled:   outboxRelayEnabled(os.Getenv("NATS_URL"), os.Getenv("OUTBOX_RELAY_ENABLED")),
+		AIGRPCAddr:           getEnv("AI_GRPC_ADDR", "127.0.0.1:9093"),
 	}, nil
 }
 

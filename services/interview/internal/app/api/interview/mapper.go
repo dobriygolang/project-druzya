@@ -296,5 +296,8 @@ func mapServiceError(err error) error {
 	if errors.Is(err, interviewservice.ErrFeatureDisabled) {
 		return failedPrecondition("feature not available on current plan")
 	}
+	if errors.Is(err, interviewservice.ErrVersionConflict) {
+		return failedPrecondition("workspace version conflict")
+	}
 	return status.Error(codes.Internal, "internal error")
 }

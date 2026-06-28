@@ -6,6 +6,8 @@ import (
 
 	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
 	billinggrpc "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing/grpc"
+	aiadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/ai"
+	aigrpc "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/ai/grpc"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
 	recommendationadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/recommendation"
 	recommendationgrpc "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/recommendation/grpc"
@@ -25,8 +27,10 @@ type App struct {
 	ContentClient       *contentadapter.GRPCClient
 	BillingClient       billingadapter.Client
 	RecommendationClient recommendationadapter.Client
+	AIClient             aiadapter.Client
 	billingConn         *billinggrpc.Client
 	recommendationConn  *recommendationgrpc.Client
+	aiConn              *aigrpc.Client
 	JWT           *jwt.Validator
 	Service       interviewservice.Service
 }
@@ -88,12 +92,31 @@ func New(ctx context.Context) (*App, error) {
 		recommendationClient = recommendationConn
 	}
 
+	var aiClient aiadapter.Client
+	var aiConn *aigrpc.Client
+	if cfg.AIGRPCAddr != "" {
+		aiConn, err = aigrpc.NewClient(ctx, cfg.AIGRPCAddr, cfg.InternalAPIToken)
+		if err != nil {
+			if recommendationConn != nil {
+				_ = recommendationConn.Close()
+			}
+			if billingConn != nil {
+				_ = billingConn.Close()
+			}
+			_ = contentClient.Close()
+			pg.Close()
+			return nil, fmt.Errorf("init ai client: %w", err)
+		}
+		aiClient = aiConn
+	}
+
 	repo := interviewrepo.New(pg)
 	svc := interviewservice.New(interviewservice.Deps{
 		Repo:           repo,
 		Content:        contentClient,
 		Billing:        billingClient,
 		Recommendation: recommendationClient,
+		AI:             aiClient,
 		Events:         events,
 		SessionTTL:     cfg.SessionTTL,
 		StaleAfter:     cfg.SessionStaleAfter,
@@ -107,8 +130,10 @@ func New(ctx context.Context) (*App, error) {
 		ContentClient:        contentClient,
 		BillingClient:        billingClient,
 		RecommendationClient: recommendationClient,
+		AIClient:             aiClient,
 		billingConn:          billingConn,
 		recommendationConn:   recommendationConn,
+		aiConn:               aiConn,
 		JWT:                  jwtValidator,
 		Service:              svc,
 	}, nil
@@ -116,6 +141,9 @@ func New(ctx context.Context) (*App, error) {
 
 // Close releases adapter resources.
 func (a *App) Close() {
+	if a.aiConn != nil {
+		_ = a.aiConn.Close()
+	}
 	if a.recommendationConn != nil {
 		_ = a.recommendationConn.Close()
 	}

@@ -30,6 +30,7 @@ const (
 	EntitlementCompanyTemplatesEnabled = "company_templates_enabled"
 	EntitlementRecommendationsEnabled  = "recommendations_enabled"
 	EntitlementAdvancedFeedbackEnabled = "advanced_feedback_enabled"
+	EntitlementSDAITurnsPerMonth       = "sd_ai_turns_per_month"
 
 	// Legacy alias kept for callers migrating from llm_evaluation metric.
 	MetricLLMEvaluation = EntitlementAIEvaluationsPerDay

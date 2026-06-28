@@ -623,7 +623,7 @@ VALUES
         'Design a service like bit.ly: shorten URLs, redirect, analytics. Cover API, storage, id generation, hot links, and tradeoffs at 10M DAU.',
         'medium',
         35,
-        '{"execution":"none","prompt":"Structure: requirements, API, data model, core flows, scaling, failure modes.","hints":["Base62 vs hash collision","Cache hot redirects"]}'::jsonb,
+        '{"execution":"none","room":"system_design","functional_requirements":["Shorten long URLs","Redirect to original URL","Basic click analytics"],"constraints":["10M DAU","p99 redirect <50ms"],"out_of_scope":["Custom domains MVP"],"deep_dive_topics":["hot links","id generation","cache"],"reference_architecture_notes":"Classic bit.ly-style: API + redirect service + DB + cache for hot keys."}'::jsonb,
         'published'
     ),
     (
@@ -634,7 +634,7 @@ VALUES
         'Design a distributed rate limiter for HTTP APIs (per user + per IP). Compare token bucket vs sliding window. How do you deploy it with minimal latency?',
         'medium',
         30,
-        '{"execution":"none","prompt":"Cover algorithms, Redis vs in-memory, clock skew, burst traffic, and observability.","hints":["Token bucket for bursts","Central vs edge enforcement"]}'::jsonb,
+        '{"execution":"none","room":"system_design","functional_requirements":["Per-user and per-IP limits","HTTP API middleware"],"constraints":["Minimal added latency","Distributed deployment"],"out_of_scope":["GraphQL gateway"],"deep_dive_topics":["token bucket vs sliding window","Redis cluster","clock skew"],"reference_architecture_notes":"Edge or sidecar limiter with shared Redis counters; token bucket for bursts."}'::jsonb,
         'published'
     )
 ON CONFLICT (id) DO NOTHING;

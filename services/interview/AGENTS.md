@@ -12,11 +12,11 @@ Does not own: auth, catalog, AI calls, billing (uses adapters). **Mock progress*
 
 ## Ports
 
-HTTP `8082` | gRPC `9092` | PG `5434` / `druzya_interview` | content `9091` | billing optional | recommendation `9094`
+HTTP `8082` | gRPC `9092` | PG `5434` / `druzya_interview` | content `9091` | ai `9093` | billing optional | recommendation `9094`
 
 ## Tables
 
-`sessions` (+ `outcome`, `paused`), `session_sections`, `session_tasks`, `attempts`, `evaluation_summaries`, `retry_items`, `domain_outbox`.
+`sessions` (+ `outcome`, `paused`), `session_sections`, `session_tasks`, `attempts`, `evaluation_summaries`, `retry_items`, `domain_outbox`, **`system_design_workspaces`**, **`system_design_turns`**.
 
 One ongoing session per user (`active` or `paused`).
 
@@ -54,9 +54,12 @@ Each worker claims **only its event types** (not `*`). Future bus relay: [docs/a
 | CancelSession | `POST …/cancel` |
 | GetCurrentSessionState, GetSessionResults | `GET …/current`, `GET …/results` |
 | SubmitAttempt, SkipTask | `POST …/attempts`, `POST …/skip` |
+| **System design room** | `GET/PATCH …/system-design/workspace`, `GET/POST …/turns`, `POST …/checkpoint`, `POST …/submit` |
 | ListRetryItems, StartRetrySession | `GET/POST retry-items, retry-sessions` |
 
 Code tasks: frontend submits via sandbox `SubmitAttemptFromCodeRun` after successful `submit` run.
+
+**System design** tasks use `/interview/session/:id/design` (not textarea `SubmitAttempt`). Workspace autosave + AI turns via ai-service (`sd_ai_turns_per_month` per chat/checkpoint). Final submit packs JSON dossier + optional diagram PNG → `attempt_submitted` → ai SD evaluator. Spec: [docs/architecture/system-design-room.md](../../docs/architecture/system-design-room.md).
 
 Internal RPCs (`x-internal-token`): `GetAttemptInternal`, `CompleteEvaluation`, `FailEvaluation`, outbox claim/ack — used by ai and recommendation.
 
@@ -73,6 +76,6 @@ make start | gen-proto | lint | test | build
 
 ## Env
 
-`JWT_PUBLIC_KEY_FILE`, `INTERNAL_API_TOKEN`, `CONTENT_GRPC_ADDR`, `BILLING_GRPC_ADDR`, `RECOMMENDATION_GRPC_ADDR`, `SESSION_TTL` (8h), `TRAINING_TASK_LIMIT` (10).
+`JWT_PUBLIC_KEY_FILE`, `INTERNAL_API_TOKEN`, `CONTENT_GRPC_ADDR`, `AI_GRPC_ADDR`, `BILLING_GRPC_ADDR`, `RECOMMENDATION_GRPC_ADDR`, `SESSION_TTL` (8h), `TRAINING_TASK_LIMIT` (10).
 
 Domain enums: map in `internal/app/api/interview/proto_enums.go`.

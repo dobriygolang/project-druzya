@@ -44,11 +44,31 @@ backup: ## Dump all Postgres databases (requires pg_dump + .env)
 prune: ## Remove dangling images and old build cache (safe after deploy)
 	@./scripts/docker-prune.sh
 
-deploy: keys ## Pull-less prod update: build, migrate, up, prune (run from deploy/ on server)
-	$(COMPOSE) build
-	$(COMPOSE) run --rm migrate
-	$(COMPOSE) --profile monitoring up -d --remove-orphans --wait --wait-timeout 300
-	@./scripts/docker-prune.sh
+deploy: keys ## Pull-less prod update: build changed images, migrate if needed, up, prune
+	@CUR=$$(git rev-parse HEAD); \
+	PREV=$$(cat .last-deploy-sha 2>/dev/null || true); \
+	export DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 COMPOSE_PARALLEL_LIMIT=$${COMPOSE_PARALLEL_LIMIT:-6}; \
+	if [ -z "$$PREV" ]; then \
+	  $(COMPOSE) build; \
+	elif [ "$$PREV" = "$$CUR" ]; then \
+	  echo "No image rebuild needed (same commit)."; \
+	else \
+	  TARGETS=$$(bash scripts/changed-services.sh "$$PREV" "$$CUR" | xargs || true); \
+	  if [ -n "$$TARGETS" ]; then \
+	    echo "Incremental build: $$TARGETS"; \
+	    bash scripts/build-images.sh $$TARGETS; \
+	  else \
+	    echo "No image rebuild needed (no service changes)."; \
+	  fi; \
+	fi; \
+	if [ -z "$$PREV" ] || [ "$$PREV" = "$$CUR" ] || bash scripts/migrations-changed.sh "$$PREV" "$$CUR"; then \
+	  $(COMPOSE) run --rm migrate; \
+	else \
+	  echo "Skipping migrate (no migration changes)."; \
+	fi; \
+	$(COMPOSE) --profile monitoring up -d --remove-orphans --wait --wait-timeout 300; \
+	echo $$CUR > .last-deploy-sha; \
+	./scripts/docker-prune.sh
 
 smoke: ## Run smoke checks against running stack (API_BASE, INTERNAL_API_TOKEN optional)
 	@./scripts/smoke-core-loop.sh

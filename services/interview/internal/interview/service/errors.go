@@ -18,6 +18,7 @@ var (
 	ErrSessionPaused           = interviewmodel.ErrSessionPaused
 	ErrQuotaExceeded           = errors.New("quota exceeded")
 	ErrFeatureDisabled         = errors.New("feature disabled")
+	ErrVersionConflict         = interviewrepo.ErrVersionConflict
 )
 
 func IsNotFound(err error) bool  { return errors.Is(err, ErrNotFound) }

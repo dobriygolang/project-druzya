@@ -223,6 +223,7 @@ services:
       OUTBOX_POLL_ENABLED: ${OUTBOX_POLL_ENABLED:-false}
     healthcheck:
       <<: *health-ready
+      start_period: 90s
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8083/readyz"]
     depends_on:
       migrate:

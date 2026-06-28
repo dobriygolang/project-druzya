@@ -16,7 +16,8 @@ require (
 	github.com/nats-io/nats.go v1.42.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/redis/go-redis/v9 v9.21.0
-	github.com/sedorofeevd/project-druzya/services/billing v0.0.0-00010101000000-000000000000
+	github.com/sedorofeevd/project-druzya/services/ai v0.0.0
+	github.com/sedorofeevd/project-druzya/services/billing v0.0.0
 	github.com/sedorofeevd/project-druzya/services/content v0.0.0
 	github.com/sedorofeevd/project-druzya/services/identity v0.0.0
 	github.com/sedorofeevd/project-druzya/services/recommendation v0.0.0
@@ -54,6 +55,7 @@ require (
 )
 
 replace (
+	github.com/sedorofeevd/project-druzya/services/ai => ../ai
 	github.com/sedorofeevd/project-druzya/services/billing => ../billing
 	github.com/sedorofeevd/project-druzya/services/content => ../content
 	github.com/sedorofeevd/project-druzya/services/identity => ../identity

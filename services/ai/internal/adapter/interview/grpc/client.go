@@ -9,7 +9,6 @@ import (
 	interviewv1 "github.com/sedorofeevd/project-druzya/services/interview/pkg/api/interview/v1"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/correlation"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -54,20 +53,10 @@ func (c *Client) authCtx(ctx context.Context) context.Context {
 	return correlation.AppendOutgoing(ctx)
 }
 
-// Ping waits until the interview gRPC channel is ready.
+// Ping verifies interview-service internal API is reachable.
 func (c *Client) Ping(ctx context.Context) error {
-	if c.conn == nil {
-		return fmt.Errorf("grpc not connected")
-	}
-	for {
-		state := c.conn.GetState()
-		if state == connectivity.Ready {
-			return nil
-		}
-		if !c.conn.WaitForStateChange(ctx, state) {
-			return ctx.Err()
-		}
-	}
+	_, err := c.client.ClaimOutboxEvents(c.authCtx(ctx), &interviewv1.ClaimOutboxEventsRequest{Limit: 0})
+	return err
 }
 
 func (c *Client) GetAttempt(ctx context.Context, attemptID string) (*interviewadapter.Attempt, error) {

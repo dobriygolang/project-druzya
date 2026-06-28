@@ -140,7 +140,7 @@ jobs:
             git checkout "$BRANCH"
             # Server hotfixes must live in git — discard tracked drift; keep gitignored .env/secrets.
             git reset --hard "origin/$BRANCH"
-            git clean -fd --exclude=deploy/.env --exclude=deploy/secrets
+            git clean -fd --exclude=deploy/.env --exclude=deploy/secrets --exclude=deploy/.last-deploy-sha
 
             if [ -f generated-api.tgz ]; then
               echo "Extracting pre-generated pkg/api from CI..."
@@ -167,16 +167,53 @@ jobs:
             make keys
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
-            bash scripts/build-images.sh
-            docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
+            export COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT:-6}"
+
+            CUR_SHA="$(git -C "$REPO_DIR" rev-parse HEAD)"
+            PREV_SHA=""
+            if [ -f .last-deploy-sha ]; then PREV_SHA="$(cat .last-deploy-sha)"; fi
+
+            BUILD_TARGETS=""
+            if [ -n "$PREV_SHA" ] && [ "$PREV_SHA" != "$CUR_SHA" ]; then
+              BUILD_TARGETS="$(bash scripts/changed-services.sh "$PREV_SHA" "$CUR_SHA" | xargs || true)"
+            fi
+
+            if [ -z "$PREV_SHA" ]; then
+              echo "Building all images (first deploy)..."
+              bash scripts/build-images.sh
+            elif [ "$PREV_SHA" = "$CUR_SHA" ]; then
+              echo "No image rebuild needed (same commit)."
+            elif [ -n "$BUILD_TARGETS" ]; then
+              echo "Incremental build: $BUILD_TARGETS"
+              bash scripts/build-images.sh $BUILD_TARGETS
+            else
+              echo "No image rebuild needed (no service changes)."
+            fi
+
+            RUN_MIGRATE=0
+            if [ -z "$PREV_SHA" ] || [ "$PREV_SHA" = "$CUR_SHA" ]; then
+              RUN_MIGRATE=1
+            elif bash scripts/migrations-changed.sh "$PREV_SHA" "$CUR_SHA"; then
+              RUN_MIGRATE=1
+            fi
+            if [ "$RUN_MIGRATE" = 1 ]; then
+              docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
+            else
+              echo "Skipping migrate (no migration changes)."
+            fi
+
             if ! docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans --wait --wait-timeout 300; then
               docker compose -f docker-compose.prod.yml --env-file .env ps
               docker compose -f docker-compose.prod.yml --env-file .env logs identity --tail 80
               docker compose -f docker-compose.prod.yml --env-file .env logs billing --tail 40
+              docker compose -f docker-compose.prod.yml --env-file .env logs interview --tail 40
+              docker compose -f docker-compose.prod.yml --env-file .env logs ai --tail 80
               docker compose -f docker-compose.prod.yml --env-file .env logs recommendation --tail 40
               docker compose -f docker-compose.prod.yml --env-file .env logs sandbox --tail 40
               exit 1
             fi
+
+            echo "$CUR_SHA" > .last-deploy-sha
 
             ./scripts/docker-prune.sh
 

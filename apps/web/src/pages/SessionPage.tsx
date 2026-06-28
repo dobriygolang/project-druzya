@@ -18,7 +18,7 @@ import {
   skipTask,
   submitAttempt,
 } from '@/lib/api/interview'
-import { isCodeTask } from '@/lib/interview/taskKind'
+import { isCodeTask, isSystemDesignTask } from '@/lib/interview/taskKind'
 import {
   initialEditorSolution,
   mergeEditorPreset,
@@ -90,6 +90,13 @@ export default function SessionPage() {
       navigate(`/interview/session/${sessionId}/results`, { replace: true })
     }
   }, [stateQ.data?.session.status, navigate, sessionId])
+
+  useEffect(() => {
+    const taskType = stateQ.data?.current_task?.task_type ?? taskQ.data?.task.type
+    if (isSystemDesignTask(taskType) && sessionId && sessionTaskId) {
+      navigate(`/interview/session/${sessionId}/design`, { replace: true })
+    }
+  }, [stateQ.data?.current_task?.task_type, taskQ.data?.task.type, sessionId, sessionTaskId, navigate])
 
   useEffect(() => {
     setVerifiedSubmitRunId(null)

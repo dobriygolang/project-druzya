@@ -61,3 +61,17 @@ func (s *interviewService) releaseSessionQuota(ctx context.Context, userID, sess
 		1,
 	)
 }
+
+// consumeSDAITurn debits one system-design AI turn (chat or checkpoint).
+func (s *interviewService) consumeSDAITurn(ctx context.Context, userID string) error {
+	if s.billing == nil {
+		return nil
+	}
+	if err := s.billing.CheckAndConsumeUsage(ctx, userID, billingadapter.EntitlementSDAITurnsPerMonth, 1); err != nil {
+		if errors.Is(err, billingadapter.ErrQuotaExceeded) {
+			return ErrQuotaExceeded
+		}
+		return err
+	}
+	return nil
+}

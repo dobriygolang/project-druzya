@@ -120,6 +120,7 @@ INSERT INTO plan_entitlements (plan_id, key, value_json) VALUES
     ('f0000000-0000-4000-8000-000000000001', 'recommendations_enabled', '{"type":"bool","value":true}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'live_rooms_per_month', '{"type":"counter","period":"month"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'live_rooms_concurrent', '{"type":"gauge"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'sd_ai_turns_per_month', '{"type":"counter","limit":40,"period":"month"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'ai_evaluations_per_day', '{"type":"counter","limit":100,"period":"day"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'mock_interviews_per_month', '{"type":"counter","limit":30,"period":"month"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'code_runs_per_day', '{"type":"counter","limit":500,"period":"day"}'::jsonb),
@@ -128,7 +129,8 @@ INSERT INTO plan_entitlements (plan_id, key, value_json) VALUES
     ('f0000000-0000-4000-8000-000000000002', 'recommendations_enabled', '{"type":"bool","value":true}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'advanced_feedback_enabled', '{"type":"bool","value":true}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'live_rooms_per_month', '{"type":"counter","period":"month"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_concurrent', '{"type":"gauge","limit":100}'::jsonb);
+    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_concurrent', '{"type":"gauge","limit":100}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000002', 'sd_ai_turns_per_month', '{"type":"counter","limit":400,"period":"month"}'::jsonb);
 -- +goose StatementEnd
 
 -- +goose Down

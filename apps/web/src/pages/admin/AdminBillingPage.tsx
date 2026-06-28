@@ -17,6 +17,7 @@ import { formatApiError } from '@/lib/apiClient'
 const EDITABLE_COUNTER_KEYS = [
   'mock_interviews_per_month',
   'ai_evaluations_per_day',
+  'sd_ai_turns_per_month',
   'code_runs_per_day',
 ] as const
 

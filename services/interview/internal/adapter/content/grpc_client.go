@@ -111,11 +111,12 @@ func (c *GRPCClient) GetTask(ctx context.Context, taskID string) (*Task, error) 
 		return nil, fmt.Errorf("task not found")
 	}
 	return &Task{
-		ID:     t.GetId(),
-		Slug:   t.GetSlug(),
-		Type:   t.GetType(),
-		Title:  t.GetTitle(),
-		Status: t.GetStatus(),
+		ID:          t.GetId(),
+		Slug:        t.GetSlug(),
+		Type:        t.GetType(),
+		Title:       t.GetTitle(),
+		Description: t.GetDescription(),
+		Status:      t.GetStatus(),
 	}, nil
 }
 
@@ -133,11 +134,12 @@ func (c *GRPCClient) ListTasks(ctx context.Context, taskType string, limit int) 
 	items := make([]Task, 0, len(resp.GetTasks()))
 	for _, t := range resp.GetTasks() {
 		items = append(items, Task{
-			ID:     t.GetId(),
-			Slug:   t.GetSlug(),
-			Type:   t.GetType(),
-			Title:  t.GetTitle(),
-			Status: t.GetStatus(),
+			ID:          t.GetId(),
+			Slug:        t.GetSlug(),
+			Type:        t.GetType(),
+			Title:       t.GetTitle(),
+			Description: t.GetDescription(),
+			Status:      t.GetStatus(),
 		})
 	}
 	return items, nil
