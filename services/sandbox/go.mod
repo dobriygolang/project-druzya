@@ -4,20 +4,17 @@ go 1.25.8
 
 require (
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/prometheus/client_golang v1.23.2
-	go.uber.org/zap v1.28.0
-	google.golang.org/grpc v1.81.1
-	google.golang.org/protobuf v1.36.11
-)
-
-require (
-	github.com/gorilla/websocket v1.5.3
 	github.com/sedorofeevd/project-druzya/services/billing v0.0.0
 	github.com/sedorofeevd/project-druzya/services/content v0.0.0
 	github.com/sedorofeevd/project-druzya/services/identity v0.0.0
 	github.com/sedorofeevd/project-druzya/services/interview v0.0.0
+	go.uber.org/zap v1.28.0
+	google.golang.org/grpc v1.81.1
+	google.golang.org/protobuf v1.36.11
 )
 
 replace (
