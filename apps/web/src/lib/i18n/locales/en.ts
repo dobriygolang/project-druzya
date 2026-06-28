@@ -92,14 +92,14 @@ export const en: Messages = {
   today: {
     greeting: 'Hello',
     greetingNamed: 'Hello, {{name}}',
-    description: 'Recommendations and progress — powered by the backend.',
+    description: 'Your readiness, learning plan, and what to focus on today.',
     startMock: 'Start mock',
     readiness: {
       eyebrow: 'Readiness',
       title: 'Interview readiness',
-      source: 'recommendation service',
+      source: 'Based on your mock attempts',
       errorTitle: 'Failed to load',
-      errorBody: 'Check that recommendation-service is running.',
+      errorBody: 'Could not load recommendations. Refresh the page or try again later.',
       empty: 'Complete a mock — readiness and strengths appear after attempt evaluation.',
       strengths: 'Strengths',
     },
@@ -115,7 +115,7 @@ export const en: Messages = {
     insights: {
       eyebrow: 'Insights',
       title: 'What to do today',
-      description: 'Cards are built from recommendation service after mock sessions.',
+      description: 'Suggestions appear after you complete mock sessions.',
     },
     retry: {
       eyebrow: 'Retry',
@@ -311,7 +311,7 @@ export const en: Messages = {
     evalPending: 'Scores will appear in a few seconds.',
     evalEmpty: 'No scores — tasks were skipped or the session was cancelled.',
     next: 'What’s next',
-    nextHint: 'From recommendation service after this session:',
+    nextHint: 'Suggested next steps after this session:',
     readiness: 'Readiness:',
     openToday: 'Open Today →',
     retryTitle: 'Retry mistakes',

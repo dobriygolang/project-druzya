@@ -91,14 +91,14 @@ export const ru = {
   today: {
     greeting: 'Привет',
     greetingNamed: 'Привет, {{name}}',
-    description: 'Рекомендации и прогресс — только с backend.',
+    description: 'Готовность, план обучения и на чём сфокусироваться сегодня.',
     startMock: 'Начать mock',
     readiness: {
       eyebrow: 'Готовность',
       title: 'Готовность к собесу',
-      source: 'recommendation service',
+      source: 'На основе твоих mock-сессий',
       errorTitle: 'Не удалось загрузить',
-      errorBody: 'Проверь, что recommendation-service запущен.',
+      errorBody: 'Не удалось загрузить рекомендации. Обнови страницу или попробуй позже.',
       empty: 'Пройди mock — readiness и сильные стороны появятся после оценки попыток.',
       strengths: 'Сильные стороны',
     },
@@ -114,7 +114,7 @@ export const ru = {
     insights: {
       eyebrow: 'Инсайты',
       title: 'Что делать сегодня',
-      description: 'Карточки строятся из recommendation service после mock-сессий.',
+      description: 'Подсказки появляются после mock-сессий.',
     },
     retry: {
       eyebrow: 'Повтор',
@@ -312,7 +312,7 @@ export const ru = {
     evalPending: 'Оценки появятся через несколько секунд.',
     evalEmpty: 'Оценок нет — задачи были пропущены или сессия отменена.',
     next: 'Что дальше',
-    nextHint: 'Из recommendation service после этой сессии:',
+    nextHint: 'Рекомендации после этой сессии:',
     readiness: 'Readiness:',
     openToday: 'Открыть Today →',
     retryTitle: 'Повтор ошибок',
