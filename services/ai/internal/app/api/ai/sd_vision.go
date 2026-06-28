@@ -21,7 +21,3 @@ func pngBase64ToImages(b64 string) []llmchain.Image {
 	}
 	return []llmchain.Image{{MimeType: "image/png", Data: data}}
 }
-
-func hasVisionImages(b64 string) bool {
-	return len(pngBase64ToImages(b64)) > 0
-}
