@@ -54,10 +54,11 @@ jobs:
 
       - name: Pack generated API + SPA inputs
         run: |
+          cd "$GITHUB_WORKSPACE"
           # shellcheck source=deploy/scripts/pkg-api-helpers.sh
           source deploy/scripts/pkg-api-helpers.sh
           verify_pkg_api "$GITHUB_WORKSPACE"
-          tar czf generated-api.tgz $(pack_pkg_api_paths "$GITHUB_WORKSPACE" | tr '\n' ' ')
+          tar czf generated-api.tgz $(pack_pkg_api_paths | tr '\n' ' ')
 
       - uses: actions/setup-node@v4
         with:

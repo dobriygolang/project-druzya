@@ -22,8 +22,7 @@ verify_pkg_api() {
 }
 
 pack_pkg_api_paths() {
-  local root="${1:?repo root}"
   for svc in "${PROTO_SERVICES[@]}"; do
-    printf '%s\n' "$root/services/$svc/pkg/api"
+    printf '%s\n' "services/$svc/pkg/api"
   done
 }
