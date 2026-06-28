@@ -231,7 +231,7 @@ export default function CollabRoomPage() {
               {room.is_frozen ? 'Разморозить' : 'Заморозить'}
             </Button>
           ) : null}
-          <Link to="/dashboard">
+          <Link to="/today">
             <Button
               variant="ghost"
               size="sm"

@@ -1,22 +1,23 @@
-import { Home, Sparkles, User } from 'lucide-react'
+import { Map as MapIcon, MessageSquare, Sparkles } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/cn'
 
 const TABS: Array<{
   to: string
-  icon: typeof Home
+  icon: typeof MapIcon
   label: string
   primary?: boolean
 }> = [
-  { to: '/dashboard', icon: Home, label: 'Главная' },
-  { to: '/practice', icon: Sparkles, label: 'Тренировка', primary: true },
-  { to: '/profile', icon: User, label: 'Профиль' },
+  { to: '/today', icon: MapIcon, label: 'atlas' },
+  { to: '/mock', icon: Sparkles, label: 'mock', primary: true },
+  { to: '/profile', icon: MessageSquare, label: 'coach' },
 ]
 
 const HIDE_ON: RegExp[] = [
+  /^\/onboarding(\/|$)/,
+  /^\/auth(\/|$)/,
   /^\/login$/,
   /^\/welcome(\/|$)/,
-  /^\/auth(\/|$)/,
   /^\/interview\/session\//,
   /^\/live\//,
 ]
@@ -28,7 +29,7 @@ export function MobileBottomNav() {
   return (
     <nav
       role="navigation"
-      aria-label="Мобильная навигация"
+      aria-label="Mobile bottom navigation"
       className={cn(
         'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 backdrop-blur sm:hidden',
         'supports-[backdrop-filter]:bg-bg/80',
@@ -40,7 +41,16 @@ export function MobileBottomNav() {
           <NavLink
             key={tab.to}
             to={tab.to}
-            end={tab.to === '/dashboard'}
+            end={tab.to === '/today'}
+            onClick={() => {
+              if ('vibrate' in navigator) {
+                try {
+                  navigator.vibrate(8)
+                } catch {
+                  /* noop */
+                }
+              }
+            }}
             className={({ isActive }) =>
               cn(
                 'relative flex flex-col items-center gap-0.5 py-1 select-none transition-transform duration-[var(--motion-dur-small)]',
@@ -55,7 +65,7 @@ export function MobileBottomNav() {
                   className={cn(
                     'relative grid place-items-center',
                     tab.primary &&
-                      ' -mt-3 h-11 w-11 rounded-full border border-border-strong bg-surface-2',
+                      '-mt-3 h-11 w-11 rounded-full border border-border-strong bg-surface-2',
                   )}
                 >
                   <tab.icon
@@ -65,12 +75,11 @@ export function MobileBottomNav() {
                 </div>
                 <span
                   className={cn(
-                    'font-mono text-[9px] uppercase tracking-[0.08em]',
-                    isActive && 'font-semibold',
+                    'h-1 w-1 rounded-full',
+                    isActive ? 'bg-text-primary' : 'bg-transparent',
                   )}
-                >
-                  {tab.label}
-                </span>
+                  aria-hidden="true"
+                />
               </>
             )}
           </NavLink>

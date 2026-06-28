@@ -112,10 +112,10 @@ export default function SessionResultsPage() {
       </SectionCard>
 
       <div className="flex flex-wrap gap-3">
-        <Link to="/dashboard">
+        <Link to="/today">
           <Button icon={<ArrowRight className="h-4 w-4" />}>На главную</Button>
         </Link>
-        <Link to="/interview">
+        <Link to="/mock">
           <Button variant="secondary">Новое интервью</Button>
         </Link>
       </div>

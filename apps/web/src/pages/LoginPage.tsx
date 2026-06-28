@@ -8,7 +8,7 @@ const DEFAULT_BOT = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? ''
 export default function LoginPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const next = params.get('next') ?? '/dashboard'
+  const next = params.get('next') ?? '/today'
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

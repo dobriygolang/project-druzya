@@ -9,15 +9,14 @@ const WelcomePage = lazy(() => import('@/pages/WelcomePage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
-const PracticePage = lazy(() => import('@/pages/PracticePage'))
-const InterviewStartPage = lazy(() => import('@/pages/InterviewStartPage'))
+const MockHubPage = lazy(() => import('@/pages/MockHubPage'))
 const SessionPage = lazy(() => import('@/pages/SessionPage'))
 const SessionResultsPage = lazy(() => import('@/pages/SessionResultsPage'))
 const CollabRoomPage = lazy(() => import('@/pages/CollabRoomPage'))
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
 
 function RootRedirect() {
-  return <Navigate to={readAccessToken() ? '/dashboard' : '/welcome'} replace />
+  return <Navigate to={readAccessToken() ? '/today' : '/welcome'} replace />
 }
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
@@ -34,9 +33,13 @@ export default function App() {
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
         <Route path="/live/:roomId" element={<CollabRoomPage />} />
 
+        <Route path="/dashboard" element={<Navigate to="/today" replace />} />
+        <Route path="/practice" element={<Navigate to="/mock" replace />} />
+        <Route path="/interview" element={<Navigate to="/mock" replace />} />
+
         <Route element={<RequireAuth />}>
           <Route
-            path="/dashboard"
+            path="/today"
             element={
               <AuthedLayout>
                 <DashboardPage />
@@ -44,18 +47,10 @@ export default function App() {
             }
           />
           <Route
-            path="/practice"
+            path="/mock"
             element={
               <AuthedLayout>
-                <PracticePage />
-              </AuthedLayout>
-            }
-          />
-          <Route
-            path="/interview"
-            element={
-              <AuthedLayout>
-                <InterviewStartPage />
+                <MockHubPage />
               </AuthedLayout>
             }
           />

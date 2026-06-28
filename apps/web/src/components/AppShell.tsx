@@ -1,21 +1,23 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { LogOut, Menu, User, X } from 'lucide-react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import { Bell, HelpCircle, LogOut, Menu, Search, User, X } from 'lucide-react'
 import { getMe, logout } from '@/lib/api/auth'
 import { cn } from '@/lib/cn'
+import { useMotion } from '@/lib/motion-presets'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
 
-const NAV = [
-  { to: '/dashboard', label: 'Главная' },
-  { to: '/practice', label: 'Тренировка' },
+const NAV_ITEMS = [
+  { to: '/today', label: 'Today' },
+  { to: '/mock', label: 'Mock' },
 ] as const
 
 const IMMERSIVE: RegExp[] = [/^\/interview\/session\//, /^\/live\//]
 
 function Logo() {
   return (
-    <Link to="/dashboard" className="flex items-center gap-2.5">
+    <Link to="/today" className="flex items-center gap-2.5">
       <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-border-strong bg-surface-2 font-display text-lg font-extrabold text-text-primary">
         9
       </span>
@@ -25,22 +27,36 @@ function Logo() {
 }
 
 function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: () => void }) {
+  const { pathname } = useLocation()
+  const reduced = useReducedMotion()
+  const active = pathname === to || pathname.startsWith(`${to}/`)
   return (
-    <NavLink
-      to={to}
-      end={to === '/dashboard'}
-      onClick={onClick}
-      className={({ isActive }) =>
-        cn(
+    <motion.div
+      whileHover={reduced ? undefined : { scale: 1.02 }}
+      whileTap={reduced ? undefined : { scale: 0.98 }}
+    >
+      <Link
+        to={to}
+        onClick={onClick}
+        aria-current={active ? 'page' : undefined}
+        className={cn(
           'block rounded-md px-3.5 py-2 text-sm transition-colors',
-          isActive
+          active
             ? 'bg-surface-2 font-semibold text-text-primary'
             : 'font-medium text-text-secondary hover:bg-surface-2 hover:text-text-primary',
-        )
-      }
-    >
-      {label}
-    </NavLink>
+        )}
+      >
+        {label}
+      </Link>
+    </motion.div>
+  )
+}
+
+function Avatar({ initials }: { initials: string }) {
+  return (
+    <span className="grid h-9 w-9 place-items-center rounded-full border border-border-strong bg-surface-2 text-sm font-semibold text-text-primary">
+      {initials.slice(0, 1).toUpperCase()}
+    </span>
   )
 }
 
@@ -53,20 +69,28 @@ function UserMenu({ onClose }: { onClose: () => void }) {
     navigate('/welcome', { replace: true })
   }
 
+  const items = [
+    { to: '/profile', label: 'Profile', icon: User },
+    { to: '/welcome', label: 'Help', icon: HelpCircle },
+  ]
+
   return (
     <div
       className="absolute right-0 top-full z-50 mt-2 flex w-56 flex-col rounded-lg border border-border bg-surface-1 p-1.5 shadow-card"
       role="menu"
     >
-      <Link
-        to="/profile"
-        onClick={onClose}
-        className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
-        role="menuitem"
-      >
-        <User className="h-4 w-4 shrink-0" />
-        Профиль
-      </Link>
+      {items.map((it) => (
+        <Link
+          key={it.to}
+          to={it.to}
+          onClick={onClose}
+          className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary"
+          role="menuitem"
+        >
+          <it.icon className="h-4 w-4 shrink-0" />
+          <span className="flex-1 truncate">{it.label}</span>
+        </Link>
+      ))}
       <div className="my-1 border-t border-border" />
       <button
         type="button"
@@ -75,38 +99,18 @@ function UserMenu({ onClose }: { onClose: () => void }) {
         role="menuitem"
       >
         <LogOut className="h-4 w-4 shrink-0" />
-        Выйти
+        <span>Log out</span>
       </button>
     </div>
   )
 }
 
-function Avatar({ initials }: { initials: string }) {
-  return (
-    <span className="grid h-9 w-9 place-items-center rounded-full border border-border-strong bg-surface-2 text-sm font-semibold text-text-primary">
-      {initials.slice(0, 1).toUpperCase()}
-    </span>
-  )
-}
-
-export function AppShell({ children }: { children: ReactNode }) {
-  const location = useLocation()
-  const immersive = IMMERSIVE.some((re) => re.test(location.pathname))
-  const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
+function TopNav({ onOpenPalette }: { onOpenPalette: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    document.body.classList.add('v2')
-    return () => document.body.classList.remove('v2')
-  }, [])
-
-  useEffect(() => {
-    if (!location.hash) {
-      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-    }
-  }, [location.pathname, location.hash])
+  const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
+  const initials = meQ.data?.username?.slice(0, 1) ?? 'D'
 
   useEffect(() => {
     if (!userMenuOpen) return
@@ -119,50 +123,70 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('mousedown', onClick)
   }, [userMenuOpen])
 
-  const initials = meQ.data?.username?.slice(0, 1) ?? 'D'
-
   return (
-    <div className="min-h-screen bg-bg text-text-primary">
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border bg-bg px-4 sm:px-6 lg:h-[72px] lg:px-8">
-        <div className="flex min-w-0 items-center gap-4 lg:gap-8">
-          <Logo />
-          {!immersive ? (
-            <nav className="hidden items-center gap-1 lg:flex">
-              {NAV.map((item) => (
-                <NavItem key={item.to} {...item} />
-              ))}
-            </nav>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <div ref={userMenuRef} className="relative">
-            <button
-              type="button"
-              onClick={() => setUserMenuOpen((v) => !v)}
-              className="rounded-full transition hover:ring-2 hover:ring-text-primary/20"
-              aria-label="Меню пользователя"
-              aria-expanded={userMenuOpen}
-            >
-              <Avatar initials={initials} />
-            </button>
-            {userMenuOpen ? <UserMenu onClose={() => setUserMenuOpen(false)} /> : null}
-          </div>
+    <header className="sticky top-0 z-40 flex h-[64px] items-center justify-between border-b border-border bg-bg px-4 sm:px-6 lg:h-[72px] lg:px-8">
+      <div className="flex min-w-0 items-center gap-4 lg:gap-8">
+        <Logo />
+        <nav className="hidden items-center gap-1 lg:flex">
+          {NAV_ITEMS.map((item) => (
+            <NavItem key={item.to} {...item} />
+          ))}
+        </nav>
+      </div>
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <button
+          type="button"
+          onClick={onOpenPalette}
+          className="hidden h-9 w-[240px] items-center gap-2 rounded-md border border-border bg-surface-2 px-3 text-left transition-colors hover:border-border-strong lg:flex"
+          aria-label="Search"
+          title="⌘K"
+        >
+          <Search className="h-4 w-4 shrink-0 text-text-muted" />
+          <span className="flex-1 truncate font-sans text-[13px] text-text-muted">Search…</span>
+          <span className="font-mono text-[10px] text-text-muted">⌘K</span>
+        </button>
+        <button
+          type="button"
+          onClick={onOpenPalette}
+          className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-2 lg:hidden"
+          aria-label="Open search"
+        >
+          <Search className="h-5 w-5" />
+        </button>
+        <button
+          type="button"
+          className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-2"
+          aria-label="Notifications"
+          disabled
+        >
+          <Bell className="h-5 w-5" />
+        </button>
+        <div ref={userMenuRef} className="relative">
           <button
             type="button"
-            className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-2 lg:hidden"
-            aria-label="Меню"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen(true)}
+            onClick={() => setUserMenuOpen((v) => !v)}
+            className="rounded-full transition hover:ring-2 hover:ring-text-primary/20"
+            aria-label="User menu"
+            aria-expanded={userMenuOpen}
           >
-            <Menu className="h-5 w-5" />
+            <Avatar initials={initials} />
           </button>
+          {userMenuOpen ? <UserMenu onClose={() => setUserMenuOpen(false)} /> : null}
         </div>
-      </header>
-
+        <button
+          type="button"
+          className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-2 lg:hidden"
+          aria-label="Menu"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen(true)}
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </div>
       {menuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true">
           <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setMenuOpen(false)}
           />
           <div className="absolute right-0 top-0 flex h-full w-[280px] flex-col gap-2 border-l border-border bg-surface-1 p-4">
@@ -171,37 +195,62 @@ export function AppShell({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 className="grid h-9 w-9 place-items-center rounded-md text-text-secondary hover:bg-surface-2"
-                aria-label="Закрыть"
+                aria-label="Close menu"
                 onClick={() => setMenuOpen(false)}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             <nav className="flex flex-col gap-1">
-              {NAV.map((item) => (
+              {NAV_ITEMS.map((item) => (
                 <NavItem key={item.to} {...item} onClick={() => setMenuOpen(false)} />
               ))}
               <div className="my-2 border-t border-border" />
-              <NavItem to="/profile" label="Профиль" onClick={() => setMenuOpen(false)} />
+              <NavItem to="/profile" label="Profile" onClick={() => setMenuOpen(false)} />
             </nav>
           </div>
         </div>
       ) : null}
+    </header>
+  )
+}
 
-      <main
-        id="main"
-        tabIndex={-1}
-        className={cn(
-          'focus:outline-none',
-          immersive
-            ? 'pb-0'
-            : 'pb-[calc(72px+env(safe-area-inset-bottom,0px))] sm:pb-0',
-        )}
-      >
-        {children}
-      </main>
+export function AppShell({ children }: { children: ReactNode }) {
+  const location = useLocation()
+  const immersive = IMMERSIVE.some((re) => re.test(location.pathname))
+  const motionProps = useMotion('pageTransition')
 
-      <MobileBottomNav />
+  useEffect(() => {
+    document.body.classList.add('v2')
+    return () => document.body.classList.remove('v2')
+  }, [])
+
+  useEffect(() => {
+    if (!location.hash) {
+      window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    }
+  }, [location.pathname, location.hash])
+
+  return (
+    <div className="min-h-screen bg-bg text-text-primary">
+      {!immersive ? <TopNav onOpenPalette={() => {}} /> : null}
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={location.pathname}
+          id="main"
+          tabIndex={-1}
+          {...motionProps}
+          style={
+            immersive
+              ? undefined
+              : { paddingBottom: 'calc(72px + env(safe-area-inset-bottom, 0px))' }
+          }
+          className={cn('focus:outline-none', immersive ? 'pb-0' : 'sm:!pb-0')}
+        >
+          {children}
+        </motion.main>
+      </AnimatePresence>
+      {!immersive ? <MobileBottomNav /> : null}
     </div>
   )
 }

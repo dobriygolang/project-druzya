@@ -47,7 +47,7 @@ export const PRACTICE_MODES: PracticeMode[] = [
   {
     kind: 'link',
     id: 'mock-interview',
-    to: '/interview',
+    to: '/mock',
     title: 'Mock-интервью',
     description:
       'Полный флоу под компанию: несколько секций (алгоритмы, system design, behavioral) в одной сессии с AI-оценкой.',

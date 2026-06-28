@@ -1,45 +1,21 @@
 import { useMemo } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, Brain, RefreshCw, Sparkles, Target } from 'lucide-react'
+import { ArrowRight, Brain, Map as MapIcon, RefreshCw, Sparkles, Target } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { PageContent } from '@/components/PageContent'
-import { SectionCard } from '@/components/SectionCard'
 import { getMe } from '@/lib/api/auth'
-import {
-  completeLearningPlanItem,
-  completeRecommendation,
-  dismissLearningPlanItem,
-  dismissRecommendation,
-  getDashboard,
-} from '@/lib/api/recommendation'
+import { getDashboard } from '@/lib/api/recommendation'
 import { listRetryItems, startRetrySession } from '@/lib/api/interview'
 
 export default function DashboardPage() {
-  const qc = useQueryClient()
   const navigate = useNavigate()
 
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
   const dashboardQ = useQuery({ queryKey: ['dashboard'], queryFn: getDashboard })
   const retryQ = useQuery({ queryKey: ['retry-items'], queryFn: listRetryItems })
 
-  const completeRecM = useMutation({
-    mutationFn: completeRecommendation,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['dashboard'] }),
-  })
-  const dismissRecM = useMutation({
-    mutationFn: dismissRecommendation,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['dashboard'] }),
-  })
-  const completePlanM = useMutation({
-    mutationFn: completeLearningPlanItem,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['dashboard'] }),
-  })
-  const dismissPlanM = useMutation({
-    mutationFn: dismissLearningPlanItem,
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['dashboard'] }),
-  })
   const retryM = useMutation({
     mutationFn: (ids: string[]) => startRetrySession(ids),
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
@@ -47,7 +23,7 @@ export default function DashboardPage() {
 
   const today = useMemo(() => {
     const d = new Date()
-    return d.toLocaleDateString('ru-RU', {
+    return d.toLocaleDateString('en-US', {
       day: 'numeric',
       month: 'long',
       weekday: 'long',
@@ -57,7 +33,7 @@ export default function DashboardPage() {
   if (dashboardQ.isLoading) {
     return (
       <PageContent>
-        <p className="text-sm text-text-muted">Загрузка…</p>
+        <p className="text-sm text-text-muted">Loading…</p>
       </PageContent>
     )
   }
@@ -65,7 +41,7 @@ export default function DashboardPage() {
     return (
       <PageContent>
         <ErrorMessage
-          message={dashboardQ.error instanceof Error ? dashboardQ.error.message : 'Ошибка загрузки'}
+          message={dashboardQ.error instanceof Error ? dashboardQ.error.message : 'Load error'}
           onRetry={() => void dashboardQ.refetch()}
         />
       </PageContent>
@@ -76,17 +52,14 @@ export default function DashboardPage() {
   if (!d) {
     return (
       <PageContent>
-        <p className="text-sm text-text-muted">Нет данных.</p>
+        <p className="text-sm text-text-muted">No data.</p>
       </PageContent>
     )
   }
 
-  const recommendations = d.recommendations ?? []
-  const learningPlan = d.learning_plan ?? []
-  const strengths = d.strengths ?? []
-  const weaknesses = d.weaknesses ?? []
   const username = meQ.data?.username ?? ''
-
+  const recommendations = d.recommendations ?? []
+  const weaknesses = d.weaknesses ?? []
   const pendingRetries = (retryQ.data?.items ?? []).filter(
     (i) => i.status === 'RETRY_ITEM_STATUS_PENDING',
   )
@@ -94,24 +67,29 @@ export default function DashboardPage() {
   return (
     <PageContent>
       <header className="flex flex-col gap-2">
-        <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
-          {today}
-        </span>
+        <div className="flex items-center justify-between gap-3">
+          <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+            {today}
+          </span>
+        </div>
         <h1 className="font-display text-3xl font-bold leading-tight">
-          {username ? `Привет, ${username}` : 'Привет'}
+          {username ? `Hey, ${username}` : 'Hey there'}
         </h1>
         <p className="text-[14px] text-text-secondary">
-          Твой прогресс и рекомендации по подготовке. Readiness:{' '}
-          <b>{d.readiness_score ?? 0}%</b>
+          Active mode: <b>General prep</b> — change in{' '}
+          <Link to="/profile" className="underline">
+            profile
+          </Link>
+          . Readiness: <b>{d.readiness_score ?? 0}%</b>
         </p>
       </header>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        <SectionCard icon={<Sparkles className="h-4 w-4" />} title="Mock-интервью">
+        <TodayCard icon={<Sparkles className="h-4 w-4" />} title="Next mock">
           <p className="text-[13px] leading-relaxed text-text-secondary">
-            Пройди алгоритмическое и behavioral-интервью с AI-оценкой и персональным планом.
+            Run a multi-stage interview under a company template — algo, system design, behavioral.
           </p>
-          <Link to="/practice">
+          <Link to="/mock">
             <Button
               variant="primary"
               size="sm"
@@ -119,159 +97,112 @@ export default function DashboardPage() {
               iconRight={<ArrowRight className="h-4 w-4" />}
               className="self-start"
             >
-              К тренировке
+              Open mock picker
             </Button>
           </Link>
-        </SectionCard>
+        </TodayCard>
 
-        {pendingRetries.length > 0 ? (
-          <SectionCard icon={<RefreshCw className="h-4 w-4" />} title="Повтор ошибок">
-            <p className="text-[13px] leading-relaxed text-text-secondary">
-              {pendingRetries.length} задач ждут повторной попытки.
+        <TodayCard icon={<Sparkles className="h-4 w-4" />} title="Coach insight">
+          {recommendations.length === 0 ? (
+            <p className="text-[13px] text-text-muted">
+              Complete a mock to unlock personalized insights.
             </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              loading={retryM.isPending}
-              onClick={() => retryM.mutate(pendingRetries.map((i) => i.id))}
-              className="self-start"
-            >
-              Начать повтор
-            </Button>
-          </SectionCard>
-        ) : (
-          <SectionCard icon={<Brain className="h-4 w-4" />} title="Рекомендации">
-            <p className="text-[13px] leading-relaxed text-text-secondary">
-              {recommendations.length > 0
-                ? `${recommendations.length} активных рекомендаций — смотри ниже.`
-                : 'Пройди mock-интервью, чтобы получить персональные советы.'}
-            </p>
-          </SectionCard>
-        )}
+          ) : (
+            <div className="flex flex-col gap-2">
+              <div className="text-[14px] font-medium text-text-primary">
+                {recommendations[0]?.title}
+              </div>
+              <p className="text-[13px] leading-relaxed text-text-secondary">
+                {recommendations[0]?.description}
+              </p>
+            </div>
+          )}
+        </TodayCard>
+
+        <TodayCard icon={<Brain className="h-4 w-4" />} title="Daily brief">
+          {d.profile_summary ? (
+            <p className="text-[13px] leading-relaxed text-text-secondary">{d.profile_summary}</p>
+          ) : (
+            <p className="text-[13px] text-text-muted">Brief will appear after your first session.</p>
+          )}
+        </TodayCard>
+
+        <TodayCard icon={<MapIcon className="h-4 w-4" />} title="Weak spots">
+          {weaknesses.length === 0 ? (
+            <div className="space-y-2">
+              <p className="text-[13px] text-text-secondary">No weak spots tracked yet.</p>
+              <Link to="/mock">
+                <Button variant="ghost" size="sm" iconRight={<ArrowRight className="h-3.5 w-3.5" />}>
+                  Start mock
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {weaknesses.slice(0, 3).map((w) => (
+                <li
+                  key={w.skill_key}
+                  className="flex flex-col gap-1.5 rounded-md bg-surface-2 px-3 py-2.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[13px] font-medium text-text-primary">{w.skill_key}</span>
+                    <span className="font-mono text-[11px] tabular-nums text-text-secondary">
+                      {w.score}%
+                    </span>
+                  </div>
+                  <Link
+                    to="/mock"
+                    className="inline-flex w-fit items-center gap-1 rounded-full border border-border bg-surface-1 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary hover:text-text-primary"
+                  >
+                    <Target className="h-3 w-3" /> mock
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </TodayCard>
       </div>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Readiness" value={`${d.readiness_score ?? 0}%`} />
-        <StatTile label="Задач на повтор" value={String(d.pending_retry_count ?? 0)} />
-        <StatTile label="Рекомендаций" value={String(recommendations.length)} />
-      </section>
-
-      {d.profile_summary ? (
-        <SectionCard title="Профиль навыков">
-          <p className="text-[13px] leading-relaxed text-text-secondary">{d.profile_summary}</p>
-        </SectionCard>
-      ) : null}
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <InsightList title="Сильные стороны" items={strengths} />
-        <InsightList title="Зоны роста" items={weaknesses} />
-      </div>
-
-      <SectionCard title="Рекомендации">
-        {recommendations.length === 0 ? (
-          <p className="text-[13px] text-text-muted">
-            Пока нет рекомендаций.{' '}
-            <Link to="/practice" className="underline">
-              Пройди тренировку
-            </Link>
-            , чтобы получить персональный план.
+      {pendingRetries.length > 0 ? (
+        <section className="rounded-xl border border-border bg-surface-1 p-5">
+          <header className="mb-3 flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 text-text-secondary" />
+            <h2 className="font-display text-base font-bold">Retry queue</h2>
+          </header>
+          <p className="text-[13px] text-text-secondary">
+            {pendingRetries.length} tasks waiting for a second attempt.
           </p>
-        ) : (
-          <ul className="space-y-4">
-            {recommendations.map((rec) => (
-              <li
-                key={rec.id}
-                className="flex items-start justify-between gap-3 border-b border-border pb-4 last:border-0 last:pb-0"
-              >
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-                    {rec.type}
-                  </p>
-                  <h3 className="font-medium">{rec.title}</h3>
-                  <p className="mt-1 text-[13px] text-text-secondary">{rec.description}</p>
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => completeRecM.mutate(rec.id)}>
-                    Готово
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => dismissRecM.mutate(rec.id)}>
-                    Скрыть
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
-
-      <SectionCard title="План обучения">
-        {learningPlan.length === 0 ? (
-          <p className="text-[13px] text-text-muted">План появится после первых интервью.</p>
-        ) : (
-          <ul className="space-y-4">
-            {learningPlan.map((item) => (
-              <li
-                key={item.id}
-                className="flex items-start justify-between gap-3 border-b border-border pb-4 last:border-0 last:pb-0"
-              >
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-                    {item.type}
-                  </p>
-                  <h3 className="font-medium">{item.title}</h3>
-                  {item.description ? (
-                    <p className="mt-1 text-[13px] text-text-secondary">{item.description}</p>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => completePlanM.mutate(item.id)}>
-                    Готово
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => dismissPlanM.mutate(item.id)}>
-                    Скрыть
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionCard>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-3"
+            loading={retryM.isPending}
+            onClick={() => retryM.mutate(pendingRetries.map((i) => i.id))}
+          >
+            Start retry session
+          </Button>
+        </section>
+      ) : null}
     </PageContent>
   )
 }
 
-function StatTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border bg-surface-1 p-4 card-lift">
-      <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
-    </div>
-  )
-}
-
-function InsightList({
+function TodayCard({
+  icon,
   title,
-  items,
+  children,
 }: {
+  icon?: React.ReactNode
   title: string
-  items: { skill_key: string; score: number; confidence: number }[]
+  children: React.ReactNode
 }) {
   return (
-    <SectionCard title={title}>
-      {items.length === 0 ? (
-        <p className="text-[13px] text-text-muted">Недостаточно данных.</p>
-      ) : (
-        <ul className="space-y-2">
-          {items.map((item) => (
-            <li key={item.skill_key} className="flex items-center justify-between text-sm">
-              <span className="mono">{item.skill_key}</span>
-              <span className="text-text-muted">
-                {item.score} · conf {item.confidence}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </SectionCard>
+    <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface-1 p-5">
+      <header className="flex items-center gap-2">
+        {icon ? <span className="text-text-secondary">{icon}</span> : null}
+        <h2 className="font-display text-base font-bold leading-tight">{title}</h2>
+      </header>
+      {children}
+    </section>
   )
 }

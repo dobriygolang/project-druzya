@@ -65,7 +65,7 @@ function Nav() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: '0 0 auto' }}>
           {isAuthed ? (
             <Link
-              to="/dashboard"
+              to="/today"
               style={{
                 fontSize: 14,
                 fontWeight: 500,

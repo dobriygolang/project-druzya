@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import './_tokens.generated.css';
 
 @tailwind base;
 @tailwind components;
@@ -6,6 +7,33 @@
 
 @layer base {
   :root,
+  .dark {
+    --color-bg: 0 0 0;
+    --color-surface-1: 10 10 10;
+    --color-surface-2: 17 17 17;
+    --color-surface-3: 17 17 17;
+    --color-border: 26 26 26;
+    --color-border-strong: 38 38 38;
+    --color-text-primary: 255 255 255;
+    --color-text-secondary: 200 200 200;
+    --color-text-muted: 140 140 140;
+    --color-accent: 255 255 255;
+    --color-accent-hover: 230 230 230;
+    --color-success: 255 255 255;
+    --color-danger: 255 59 48;
+    --color-warn: 200 200 200;
+    --color-cyan: 255 255 255;
+    --color-pink: 255 255 255;
+    --ink: 255 255 255;
+    --ink-90: rgba(255, 255, 255, 0.9);
+    --ink-60: rgba(255, 255, 255, 0.6);
+    --ink-40: rgba(255, 255, 255, 0.4);
+    --ink-20: rgba(255, 255, 255, 0.2);
+    --hair: rgba(255, 255, 255, 0.06);
+    --hair-2: rgba(255, 255, 255, 0.12);
+    --red: #ff3b30;
+  }
+
   html.light,
   .light {
     --color-bg: 250 250 248;
@@ -22,39 +50,69 @@
     --color-success: 15 15 15;
     --color-danger: 255 59 48;
     --color-warn: 91 91 91;
+    --color-cyan: 15 15 15;
+    --color-pink: 15 15 15;
     --ink: 15 15 15;
+    --ink-90: rgba(15, 15, 15, 0.9);
+    --ink-60: rgba(15, 15, 15, 0.6);
+    --ink-40: rgba(15, 15, 15, 0.4);
+    --ink-20: rgba(15, 15, 15, 0.2);
     --hair: rgba(15, 15, 15, 0.06);
     --hair-2: rgba(15, 15, 15, 0.12);
     --red: #ff3b30;
-    --ink-60: #5b5b5b;
-    --ink-40: #8e8e8e;
-    --motion-dur-small: 120ms;
-    --motion-dur-medium: 200ms;
-    --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-    --radius-outer: 14px;
-    --pad-inline: 16px;
-    --pad-container: 24px;
   }
 
   html {
+    transition:
+      background-color var(--motion-dur-medium) var(--motion-ease-standard),
+      color var(--motion-dur-medium) var(--motion-ease-standard);
     background: rgb(var(--color-bg));
     color: rgb(var(--color-text-primary));
   }
 
   body {
-    @apply min-h-screen bg-bg font-sans text-text-primary antialiased;
+    background: rgb(var(--color-bg));
+    color: rgb(var(--color-text-primary));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv11', 'ss01';
+    overflow-x: hidden;
+  }
+
+  body.v2 {
+    background: rgb(var(--color-bg));
+    color: rgb(var(--color-text-primary));
   }
 
   body.v2 ::selection {
-    background: var(--red);
+    background: #ff3b30;
     color: #fff;
+  }
+
+  body.v2 ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  body.v2 ::-webkit-scrollbar-track {
+    background: rgb(var(--color-bg));
+  }
+  body.v2 ::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-border-strong));
+    border-radius: 5px;
+  }
+  body.v2 ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-text-muted));
   }
 }
 
 @layer components {
   .v2-card {
-    @apply rounded-xl border border-border bg-surface-1 p-5;
+    @apply rounded-xl border border-border bg-surface-2 p-5;
+  }
+  .v2-pill-active {
+    @apply rounded-md bg-surface-2 px-3.5 py-2 font-semibold text-text-primary;
+  }
+  .v2-pill-idle {
+    @apply rounded-md px-3.5 py-2 font-medium text-text-secondary transition-colors hover:bg-surface-2;
   }
 }
 
@@ -63,29 +121,23 @@
     font-family: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
     font-feature-settings: 'zero', 'ss01';
   }
-
   .hair-b {
     border-bottom: 1px solid var(--hair);
   }
-
   .card-lift {
     transition:
       transform var(--motion-dur-small) var(--motion-ease-standard),
       border-color var(--motion-dur-small) var(--motion-ease-standard);
   }
-
   .card-lift:hover {
     transform: translateY(-1px);
     border-color: var(--hair-2);
   }
-
   @media (prefers-reduced-motion: reduce) {
     .card-lift:hover {
       transform: none;
     }
   }
-
-  /* Yjs remote cursors — from druzya/frontend main.css */
   .cm-ySelectionCaret {
     position: relative;
     border-left: 2px solid;

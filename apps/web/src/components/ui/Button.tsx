@@ -1,72 +1,83 @@
-import clsx from 'clsx'
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { motion, useReducedMotion } from 'framer-motion'
+import { cn } from '@/lib/cn'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
-type Size = 'sm' | 'md' | 'lg'
-
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: Variant
-  size?: Size
-  loading?: boolean
-  icon?: ReactNode
-  iconRight?: ReactNode
-}
-
-const variantClass: Record<Variant, string> = {
-  primary: 'bg-text-primary text-bg hover:bg-text-primary/90',
-  secondary: 'border border-border-strong bg-surface-2 text-text-primary hover:bg-surface-1',
-  ghost: 'border border-border-strong bg-transparent text-text-primary hover:bg-surface-2',
-  danger: 'bg-danger text-white hover:brightness-110',
-}
-
-const sizeClass: Record<Size, string> = {
-  sm: 'h-8 px-3 text-[13px]',
-  md: 'h-10 px-4 text-sm',
-  lg: 'h-12 px-6 text-[15px]',
-}
-
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+const button = cva(
+  [
+    'inline-flex items-center justify-center gap-2',
+    'font-sans font-medium whitespace-nowrap select-none',
+    'transition-colors duration-[var(--motion-dur-small)] ease-[var(--motion-ease-standard)]',
+    'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-text-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
+    'disabled:opacity-50 disabled:pointer-events-none',
+  ],
   {
-    className,
-    variant = 'primary',
-    size = 'md',
-    loading,
-    disabled,
-    children,
-    icon,
-    iconRight,
-    type = 'button',
-    ...props
+    variants: {
+      variant: {
+        primary: 'rounded-full bg-text-primary text-bg hover:bg-text-primary/90',
+        secondary:
+          'rounded-full border border-border-strong bg-surface-2 text-text-primary hover:bg-surface-1',
+        ghost:
+          'rounded-full border border-border-strong bg-transparent text-text-primary hover:bg-text-primary/5',
+        danger: 'rounded-full bg-danger text-text-primary hover:brightness-110',
+      },
+      size: {
+        sm: 'h-8 px-3 text-[13px]',
+        md: 'h-10 px-4 text-[14px]',
+        lg: 'h-12 px-6 text-[15px]',
+      },
+    },
+    defaultVariants: { variant: 'primary', size: 'md' },
   },
-  ref,
-) {
-  const isDisabled = disabled || loading
-  return (
-    <button
-      ref={ref}
-      type={type}
-      disabled={isDisabled}
-      aria-busy={loading || undefined}
-      className={clsx(
-        'inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary/30',
-        'disabled:pointer-events-none disabled:opacity-50',
-        variantClass[variant],
-        sizeClass[size],
-        className,
-      )}
-      {...props}
-    >
-      {loading ? (
-        <span
-          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
-          aria-hidden
-        />
-      ) : (
-        icon
-      )}
-      {children}
-      {!loading && iconRight}
-    </button>
-  )
-})
+)
+
+type ButtonVariantProps = VariantProps<typeof button>
+
+export interface ButtonProps
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'>,
+    ButtonVariantProps {
+  loading?: boolean
+  disabled?: boolean
+  icon?: React.ReactNode
+  iconRight?: React.ReactNode
+}
+
+const Spinner: React.FC = () => (
+  <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" strokeWidth="3" />
+    <path
+      d="M22 12a10 10 0 0 0-10-10"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    { className, variant, size, loading = false, disabled, icon, iconRight, children, type, ...props },
+    ref,
+  ) => {
+    const reduced = useReducedMotion()
+    const isDisabled = disabled || loading
+    const motionProps =
+      reduced || isDisabled ? {} : { whileHover: { scale: 1.02 }, whileTap: { scale: 0.98 } }
+    return (
+      <motion.button
+        ref={ref}
+        type={type ?? 'button'}
+        disabled={isDisabled}
+        aria-busy={loading || undefined}
+        className={cn(button({ variant, size }), className)}
+        {...motionProps}
+        {...(props as React.ComponentPropsWithoutRef<typeof motion.button>)}
+      >
+        {loading ? <Spinner /> : icon}
+        {children}
+        {!loading && iconRight}
+      </motion.button>
+    )
+  },
+)
+Button.displayName = 'Button'
