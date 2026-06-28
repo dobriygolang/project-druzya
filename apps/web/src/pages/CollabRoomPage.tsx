@@ -219,6 +219,9 @@ export default function CollabRoomPage() {
         onFreeze={() => freezeM.mutate(!room.is_frozen)}
         wsFailed={wsStatus === 'failed'}
         onReconnect={() => editorRef.current?.reconnect()}
+        timerMode={authed ? 'elapsed' : 'countdown'}
+        createdAt={room.created_at}
+        expiresAt={room.expires_at}
       />
 
       <div className="relative min-h-0 flex-1 bg-[#1e1e1e]">

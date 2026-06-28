@@ -47,8 +47,9 @@ type Room struct {
 	Language   Language
 	IsFrozen   bool
 	Visibility Visibility
-	ExpiresAt  time.Time
-	CreatedAt  time.Time
+	ExpiresAt     time.Time
+	CreatedAt     time.Time
+	IsGuestCreated bool
 }
 
 type Participant struct {
@@ -59,3 +60,4 @@ type Participant struct {
 }
 
 const DefaultRoomTTL = 6 * time.Hour
+const DefaultGuestRoomTTL = 1 * time.Hour

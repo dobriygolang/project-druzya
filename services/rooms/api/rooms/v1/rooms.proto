@@ -65,6 +65,12 @@ service RoomsService {
       body: "*"
     };
   }
+
+  rpc ListMyActiveRooms(ListMyActiveRoomsRequest) returns (ListMyActiveRoomsResponse) {
+    option (google.api.http) = {
+      get: "/v1/rooms/mine/active"
+    };
+  }
 }
 
 message Participant {
@@ -84,6 +90,8 @@ message Room {
   string ws_url = 8;
   google.protobuf.Timestamp expires_at = 9;
   repeated Participant participants = 10;
+  google.protobuf.Timestamp created_at = 11;
+  bool is_guest_created = 12;
 }
 
 message CreateRoomRequest {
@@ -170,4 +178,23 @@ message CreateGuestRoomResponse {
   Room room = 2;
   int32 expires_in = 3;
   InviteLink invite = 4;
+}
+
+message ActiveRoomSummary {
+  string id = 1;
+  string room_type = 2;
+  string language = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp expires_at = 5;
+  bool is_guest_created = 6;
+  string ws_url = 7;
+}
+
+message ListMyActiveRoomsRequest {}
+
+message ListMyActiveRoomsResponse {
+  repeated ActiveRoomSummary rooms = 1;
+  int32 active_count = 2;
+  optional int32 concurrent_limit = 3;
+  bool concurrent_unlimited = 4;
 }

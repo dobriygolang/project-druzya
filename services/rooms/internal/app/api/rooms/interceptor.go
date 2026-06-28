@@ -9,12 +9,13 @@ import (
 )
 
 var protectedMethods = map[string]struct{}{
-	roomsv1.RoomsService_CreateRoom_FullMethodName: {},
-	roomsv1.RoomsService_GetRoom_FullMethodName:    {},
-	roomsv1.RoomsService_JoinRoom_FullMethodName:   {},
-	roomsv1.RoomsService_FreezeRoom_FullMethodName:  {},
-	roomsv1.RoomsService_CreateInvite_FullMethodName: {},
-	roomsv1.RoomsService_GetReplay_FullMethodName:    {},
+	roomsv1.RoomsService_CreateRoom_FullMethodName:         {},
+	roomsv1.RoomsService_GetRoom_FullMethodName:            {},
+	roomsv1.RoomsService_JoinRoom_FullMethodName:           {},
+	roomsv1.RoomsService_FreezeRoom_FullMethodName:         {},
+	roomsv1.RoomsService_CreateInvite_FullMethodName:         {},
+	roomsv1.RoomsService_GetReplay_FullMethodName:            {},
+	roomsv1.RoomsService_ListMyActiveRooms_FullMethodName:    {},
 }
 
 func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {

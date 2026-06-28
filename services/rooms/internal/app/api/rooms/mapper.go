@@ -21,14 +21,16 @@ func toProtoRoom(view *roomservice.RoomView) *roomsv1.Room {
 	}
 	room := view.Room
 	out := &roomsv1.Room{
-		Id:         room.ID.String(),
-		OwnerId:    room.OwnerID.String(),
-		RoomType:   room.Type.String(),
-		Language:   room.Language.String(),
-		IsFrozen:   room.IsFrozen,
-		Visibility: string(room.Visibility),
-		WsUrl:      view.WSURL,
-		ExpiresAt:  timestamppb.New(room.ExpiresAt),
+		Id:             room.ID.String(),
+		OwnerId:        room.OwnerID.String(),
+		RoomType:       room.Type.String(),
+		Language:       room.Language.String(),
+		IsFrozen:       room.IsFrozen,
+		Visibility:     string(room.Visibility),
+		WsUrl:          view.WSURL,
+		ExpiresAt:      timestamppb.New(room.ExpiresAt),
+		CreatedAt:      timestamppb.New(room.CreatedAt),
+		IsGuestCreated: room.IsGuestCreated,
 	}
 	if room.TaskID != nil {
 		taskID := room.TaskID.String()
@@ -39,6 +41,33 @@ func toProtoRoom(view *roomservice.RoomView) *roomsv1.Room {
 			UserId:   p.UserID.String(),
 			Role:     p.Role.String(),
 			JoinedAt: timestamppb.New(p.JoinedAt),
+		})
+	}
+	return out
+}
+
+func toProtoListMyActiveRooms(view *roomservice.ActiveRoomsView) *roomsv1.ListMyActiveRoomsResponse {
+	if view == nil {
+		return &roomsv1.ListMyActiveRoomsResponse{}
+	}
+	out := &roomsv1.ListMyActiveRoomsResponse{
+		ActiveCount:         int32(view.ActiveCount),
+		ConcurrentUnlimited: view.ConcurrentUnlimited,
+	}
+	if view.ConcurrentLimit != nil {
+		limit := int32(*view.ConcurrentLimit)
+		out.ConcurrentLimit = &limit
+	}
+	for _, roomView := range view.Rooms {
+		room := roomView.Room
+		out.Rooms = append(out.Rooms, &roomsv1.ActiveRoomSummary{
+			Id:             room.ID.String(),
+			RoomType:       room.Type.String(),
+			Language:       room.Language.String(),
+			CreatedAt:      timestamppb.New(room.CreatedAt),
+			ExpiresAt:      timestamppb.New(room.ExpiresAt),
+			IsGuestCreated: room.IsGuestCreated,
+			WsUrl:          roomView.WSURL,
 		})
 	}
 	return out

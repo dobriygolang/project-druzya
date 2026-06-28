@@ -139,6 +139,14 @@ func (s *billingService) GetEntitlements(ctx context.Context, userID string) (*m
 			}
 			state.Remaining = entitlement.Remaining(val.Limit, used)
 			view.Limits[item.Key] = state
+		case entitlement.TypeGauge:
+			state := model.UsageLimitState{
+				Key:       item.Key,
+				Limit:     val.Limit,
+				Unlimited: val.Limit == nil,
+			}
+			state.Remaining = entitlement.Remaining(val.Limit, 0)
+			view.Limits[item.Key] = state
 		}
 	}
 	return view, nil

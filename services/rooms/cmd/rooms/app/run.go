@@ -82,9 +82,9 @@ func New(ctx context.Context) (*App, error) {
 		Identity:      identityClient,
 		PublicBaseURL: cfg.PublicBaseURL,
 		RoomTTL:       cfg.RoomTTL,
+		GuestRoomTTL:  cfg.GuestRoomTTL,
 		InviteSecret:  cfg.InviteSecret,
 		InviteTTL:     cfg.InviteTTL,
-		FreeMaxActive: cfg.FreeMaxActive,
 	})
 
 	return &App{

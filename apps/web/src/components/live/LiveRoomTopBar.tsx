@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Code2, Settings, X } from 'lucide-react'
+import { RoomSessionTimer } from '@/components/live/RoomSessionTimer'
 import { brand } from '@/lib/brand/tokens'
 import { cn } from '@/lib/cn'
 
@@ -15,6 +16,9 @@ type Props = {
   onFreeze: () => void
   wsFailed: boolean
   onReconnect: () => void
+  timerMode?: 'countdown' | 'elapsed'
+  createdAt?: string
+  expiresAt?: string
 }
 
 export function LiveRoomTopBar({
@@ -29,6 +33,9 @@ export function LiveRoomTopBar({
   onFreeze,
   wsFailed,
   onReconnect,
+  timerMode,
+  createdAt,
+  expiresAt,
 }: Props) {
   return (
     <header
@@ -51,6 +58,10 @@ export function LiveRoomTopBar({
       </div>
 
       <div className="flex items-center gap-2">
+        {timerMode ? (
+          <RoomSessionTimer mode={timerMode} createdAt={createdAt} expiresAt={expiresAt} />
+        ) : null}
+
         {wsFailed ? (
           <button
             type="button"

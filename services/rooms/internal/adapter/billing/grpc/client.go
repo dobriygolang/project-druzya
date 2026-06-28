@@ -64,4 +64,27 @@ func (c *Client) CheckAndConsumeUsage(ctx context.Context, userID, key string, a
 	return nil
 }
 
+func (c *Client) GetGaugeLimit(ctx context.Context, userID, key string) (billingadapter.GaugeLimit, error) {
+	resp, err := c.client.GetEntitlements(c.authCtx(ctx), &billingv1.GetEntitlementsRequest{UserId: userID})
+	if err != nil {
+		return billingadapter.GaugeLimit{}, err
+	}
+	ent := resp.GetEntitlements()
+	if ent == nil || ent.Limits == nil {
+		return billingadapter.GaugeLimit{Unlimited: true}, nil
+	}
+	lim, ok := ent.Limits[key]
+	if !ok {
+		return billingadapter.GaugeLimit{Unlimited: true}, nil
+	}
+	if lim.GetUnlimited() {
+		return billingadapter.GaugeLimit{Unlimited: true}, nil
+	}
+	if lim.Limit != nil {
+		v := int(lim.GetLimit())
+		return billingadapter.GaugeLimit{Limit: &v}, nil
+	}
+	return billingadapter.GaugeLimit{Unlimited: true}, nil
+}
+
 var _ billingadapter.Client = (*Client)(nil)

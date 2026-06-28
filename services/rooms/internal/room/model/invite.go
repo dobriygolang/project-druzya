@@ -15,7 +15,6 @@ import (
 
 const (
 	DefaultInviteTTL = 24 * time.Hour
-	FreeMaxActive    = 100 // TEMP beta — was 3
 )
 
 var ErrInvalidInvite = errors.New("room: invalid invite token")

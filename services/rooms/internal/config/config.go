@@ -17,9 +17,10 @@ type Config struct {
 	JWTPublicKeyPEM  []byte
 	PublicBaseURL    string
 	RoomTTL          time.Duration
+	GuestRoomTTL     time.Duration
+	RoomArchiveInterval time.Duration
 	InviteSecret     []byte
 	InviteTTL        time.Duration
-	FreeMaxActive    int
 	IdentityGRPCAddr string
 	BillingGRPCAddr  string
 	InternalAPIToken string
@@ -47,9 +48,14 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("invalid ROOM_INVITE_TTL: %w", err)
 	}
 
-	freeMax, err := strconv.Atoi(getEnv("ROOM_FREE_MAX_ACTIVE", "3"))
+	guestRoomTTL, err := time.ParseDuration(getEnv("GUEST_ROOM_TTL", "1h"))
 	if err != nil {
-		return nil, fmt.Errorf("invalid ROOM_FREE_MAX_ACTIVE: %w", err)
+		return nil, fmt.Errorf("invalid GUEST_ROOM_TTL: %w", err)
+	}
+
+	archiveInterval, err := time.ParseDuration(getEnv("ROOM_ARCHIVE_INTERVAL", "1m"))
+	if err != nil {
+		return nil, fmt.Errorf("invalid ROOM_ARCHIVE_INTERVAL: %w", err)
 	}
 
 	publicKey, err := loadPEM("JWT_PUBLIC_KEY", "JWT_PUBLIC_KEY_FILE")
@@ -69,11 +75,12 @@ func Load() (*Config, error) {
 		GRPCPort:        grpcPort,
 		PostgresDSN:     getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5440/druzya_rooms?sslmode=disable"),
 		JWTPublicKeyPEM: publicKey,
-		PublicBaseURL:   getEnv("PUBLIC_BASE_URL", "http://localhost:5173"),
-		RoomTTL:         roomTTL,
-		InviteSecret:    inviteSecret,
-		InviteTTL:       inviteTTL,
-		FreeMaxActive:   freeMax,
+		PublicBaseURL:       getEnv("PUBLIC_BASE_URL", "http://localhost:5173"),
+		RoomTTL:             roomTTL,
+		GuestRoomTTL:        guestRoomTTL,
+		RoomArchiveInterval: archiveInterval,
+		InviteSecret:        inviteSecret,
+		InviteTTL:           inviteTTL,
 		IdentityGRPCAddr: getEnv("IDENTITY_GRPC_ADDR", "127.0.0.1:9090"),
 		BillingGRPCAddr:  getEnv("BILLING_GRPC_ADDR", ""),
 		InternalAPIToken: os.Getenv("INTERNAL_API_TOKEN"),

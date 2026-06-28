@@ -9,6 +9,8 @@ import (
 const (
 	TypeBool    = "bool"
 	TypeCounter = "counter"
+	// TypeGauge — static ceiling checked by the owning service (e.g. concurrent live rooms).
+	TypeGauge = "gauge"
 
 	PeriodDay      = "day"
 	PeriodMonth    = "month"
@@ -42,9 +44,8 @@ func Parse(raw json.RawMessage) (Value, error) {
 		if v.Period == "" {
 			return Value{}, fmt.Errorf("counter entitlement requires period")
 		}
-		if v.Limit == nil {
-			v.Limit = nil // unlimited
-		}
+		return v, nil
+	case TypeGauge:
 		return v, nil
 	default:
 		return Value{}, fmt.Errorf("unsupported entitlement type %q", v.Type)

@@ -18,7 +18,26 @@ export type CodeRoom = {
   visibility: string
   ws_url: string
   expires_at?: string
+  created_at?: string
+  is_guest_created?: boolean
   participants: RoomParticipant[]
+}
+
+export type ActiveRoomSummary = {
+  id: string
+  room_type: string
+  language: string
+  created_at?: string
+  expires_at?: string
+  is_guest_created?: boolean
+  ws_url: string
+}
+
+export type MyActiveRooms = {
+  rooms: ActiveRoomSummary[]
+  active_count: number
+  concurrent_limit?: number
+  concurrent_unlimited?: boolean
 }
 
 export type InviteLink = {
@@ -87,6 +106,14 @@ export async function createRoom(payload: CreateRoomPayload): Promise<CodeRoom> 
     body: JSON.stringify(payload),
   })
   return normalizeRoom(res.room)
+}
+
+export async function listMyActiveRooms(): Promise<MyActiveRooms> {
+  const res = await api<MyActiveRooms>('/rooms/mine/active')
+  return {
+    ...res,
+    rooms: asArray(res.rooms),
+  }
 }
 
 export async function createGuestRoom(input: {

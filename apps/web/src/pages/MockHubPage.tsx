@@ -16,6 +16,7 @@ import {
   startSession,
   startTrainingSession,
 } from '@/lib/api/interview'
+import { listMyActiveRooms } from '@/lib/api/rooms'
 import { formatApiError, readAccessToken } from '@/lib/apiClient'
 import { formatLimitUsage } from '@/lib/billingLabels'
 import { formatInterviewError, isActiveSessionConflict, sessionModeLabel } from '@/lib/interviewLabels'
@@ -69,6 +70,12 @@ export default function MockHubPage() {
     enabled: authed,
     refetchInterval: 60_000,
   })
+  const activeRoomsQ = useQuery({
+    queryKey: ['my-active-rooms'],
+    queryFn: listMyActiveRooms,
+    enabled: authed,
+    refetchInterval: 30_000,
+  })
 
   function notifyError(err: unknown) {
     const raw = formatApiError(err)
@@ -110,6 +117,8 @@ export default function MockHubPage() {
 
   const companyTemplatesEnabled = billingQ.data?.features.company_templates_enabled !== false
   const mockQuota = billingQ.data?.limits.mock_interviews_per_month
+  const liveRoomsQuota = billingQ.data?.limits.live_rooms_per_month
+  const activeRooms = activeRoomsQ.data
   const mockQuotaExhausted =
     mockQuota != null &&
     !mockQuota.unlimited &&
@@ -152,6 +161,16 @@ export default function MockHubPage() {
           loading={cancelActiveM.isPending}
           onContinue={() => navigate(`/interview/session/${activeSession.id}`)}
           onCancel={() => cancelActiveM.mutate(activeSession.id)}
+        />
+      ) : null}
+
+      {authed && activeRoomsQ.isSuccess && activeRooms ? (
+        <ActiveRoomsCard
+          rooms={activeRooms.rooms}
+          activeCount={activeRooms.active_count}
+          concurrentLimit={activeRooms.concurrent_limit}
+          concurrentUnlimited={activeRooms.concurrent_unlimited}
+          monthlyQuota={liveRoomsQuota}
         />
       ) : null}
 
@@ -264,6 +283,66 @@ export default function MockHubPage() {
         onStart={(templateId) => startMockM.mutate(templateId)}
       />
     </PageContent>
+  )
+}
+
+function ActiveRoomsCard({
+  rooms,
+  activeCount,
+  concurrentLimit,
+  concurrentUnlimited,
+  monthlyQuota,
+}: {
+  rooms: import('@/lib/api/rooms').ActiveRoomSummary[]
+  activeCount: number
+  concurrentLimit?: number
+  concurrentUnlimited?: boolean
+  monthlyQuota?: import('@/lib/billingLabels').UsageLimit
+  gaugeQuota?: import('@/lib/billingLabels').UsageLimit
+}) {
+  const concurrentText = concurrentUnlimited
+    ? `${activeCount} активных · без лимита одновременно`
+    : concurrentLimit != null
+      ? `${activeCount} из ${concurrentLimit} активных`
+      : `${activeCount} активных`
+
+  return (
+    <SdvgCard eyebrow="Live rooms" title="Активные комнаты">
+      <div className="flex flex-col gap-4">
+        <p className="text-[13px] text-text-secondary">{concurrentText}</p>
+        {monthlyQuota ? (
+          <p className="text-[13px] text-text-muted">
+            Создано {formatLimitUsage('live_rooms_per_month', monthlyQuota)}
+          </p>
+        ) : null}
+        {rooms.length === 0 ? (
+          <p className="text-[13px] text-text-muted">Нет открытых комнат — создай новую ниже.</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {rooms.map((room) => (
+              <li key={room.id}>
+                <Link
+                  to={`/live/${room.id}`}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm no-underline transition-colors hover:border-border-strong hover:bg-surface-2"
+                >
+                  <span className="font-medium text-text-primary">
+                    {room.language.toUpperCase()} · {room.room_type}
+                  </span>
+                  <span className="text-[12px] text-text-muted">
+                    {room.created_at
+                      ? new Date(room.created_at).toLocaleTimeString('ru-RU', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'открыта'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </SdvgCard>
   )
 }
 

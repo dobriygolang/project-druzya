@@ -9,6 +9,7 @@ import (
 	"time"
 
 	roomsapi "github.com/sedorofeevd/project-druzya/services/rooms/internal/app/api/rooms"
+	"github.com/sedorofeevd/project-druzya/services/rooms/internal/room/archive"
 	roomrepo "github.com/sedorofeevd/project-druzya/services/rooms/internal/room/repository"
 	"github.com/sedorofeevd/project-druzya/services/rooms/internal/ws"
 	"google.golang.org/grpc"
@@ -35,6 +36,8 @@ func RunAPI(ctx context.Context, a *App) error {
 
 	repo := roomrepo.New(a.Postgres)
 	wsHandler := ws.NewHandler(a.Hub, a.JWT, repo, slog.Default())
+
+	go archive.Run(ctx, repo, a.Config.RoomArchiveInterval, a.Logger)
 
 	httpMux := http.NewServeMux()
 	httpMux.HandleFunc("/healthz", roomsapi.HealthzHTTP())

@@ -16,6 +16,7 @@ const COUNTER_META: Record<string, CounterMeta> = {
   ai_evaluations_per_day: { label: 'AI-оценки ответов', period: 'day' },
   code_runs_per_day: { label: 'Запуски кода', period: 'day' },
   live_rooms_per_month: { label: 'Live-комнаты', period: 'month' },
+  live_rooms_concurrent: { label: 'Одновременные live-комнаты', period: 'month' },
 }
 
 const PERIOD_LABEL: Record<CounterMeta['period'], string> = {
@@ -29,6 +30,7 @@ export const COUNTER_DISPLAY_ORDER = [
   'ai_evaluations_per_day',
   'code_runs_per_day',
   'live_rooms_per_month',
+  'live_rooms_concurrent',
 ] as const
 
 export function entitlementLabel(key: string): string {

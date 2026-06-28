@@ -40,9 +40,17 @@ type GuestCreateResult struct {
 	Invite      *model.InviteLink
 }
 
+type ActiveRoomsView struct {
+	Rooms                []RoomView
+	ActiveCount          int
+	ConcurrentLimit      *int
+	ConcurrentUnlimited  bool
+}
+
 type Service interface {
 	CreateRoom(ctx context.Context, userID string, roomType model.RoomType, taskID *string, language model.Language) (*RoomView, error)
 	CreateGuestRoom(ctx context.Context, displayName string, roomType model.RoomType, language model.Language) (*GuestCreateResult, error)
+	ListMyActiveRooms(ctx context.Context, userID string) (*ActiveRoomsView, error)
 	GetRoom(ctx context.Context, userID, roomID string) (*RoomView, error)
 	JoinRoom(ctx context.Context, userID, roomID, roleHint, inviteToken string) (*RoomView, error)
 	FreezeRoom(ctx context.Context, userID, roomID string, frozen bool) (*RoomView, error)
@@ -56,9 +64,9 @@ type roomService struct {
 	identity      identityadapter.TokenMinter
 	publicBaseURL string
 	roomTTL       time.Duration
+	guestRoomTTL  time.Duration
 	inviteSecret  []byte
 	inviteTTL     time.Duration
-	freeMaxActive int
 	now           func() time.Time
 }
 
@@ -68,9 +76,9 @@ type Deps struct {
 	Identity      identityadapter.TokenMinter
 	PublicBaseURL string
 	RoomTTL       time.Duration
+	GuestRoomTTL  time.Duration
 	InviteSecret  []byte
 	InviteTTL     time.Duration
-	FreeMaxActive int
 }
 
 func New(deps Deps) Service {
@@ -82,9 +90,9 @@ func New(deps Deps) Service {
 	if inviteTTL <= 0 {
 		inviteTTL = model.DefaultInviteTTL
 	}
-	maxActive := deps.FreeMaxActive
-	if maxActive <= 0 {
-		maxActive = model.FreeMaxActive
+	guestTTL := deps.GuestRoomTTL
+	if guestTTL <= 0 {
+		guestTTL = model.DefaultGuestRoomTTL
 	}
 	return &roomService{
 		repo:          deps.Repo,
@@ -92,9 +100,9 @@ func New(deps Deps) Service {
 		identity:      deps.Identity,
 		publicBaseURL: strings.TrimRight(deps.PublicBaseURL, "/"),
 		roomTTL:       ttl,
+		guestRoomTTL:  guestTTL,
 		inviteSecret:  deps.InviteSecret,
 		inviteTTL:     inviteTTL,
-		freeMaxActive: maxActive,
 		now:           time.Now,
 	}
 }
@@ -129,12 +137,8 @@ func (s *roomService) CreateRoom(
 		}
 	}
 
-	active, err := s.repo.CountActiveByOwner(ctx, ownerID)
-	if err != nil {
+	if err := s.ensureConcurrentRoomCapacity(ctx, userID, ownerID); err != nil {
 		return nil, err
-	}
-	if active >= s.freeMaxActive {
-		return nil, repository.ErrQuotaExceeded
 	}
 
 	var taskUUID *uuid.UUID
@@ -148,13 +152,14 @@ func (s *roomService) CreateRoom(
 
 	now := s.now().UTC()
 	created, err := s.repo.CreateRoom(ctx, model.Room{
-		OwnerID:    ownerID,
-		Type:       roomType,
-		TaskID:     taskUUID,
-		Language:   language,
-		IsFrozen:   false,
-		Visibility: model.VisibilityShared,
-		ExpiresAt:  now.Add(s.roomTTL),
+		OwnerID:        ownerID,
+		Type:           roomType,
+		TaskID:         taskUUID,
+		Language:       language,
+		IsFrozen:       false,
+		Visibility:     model.VisibilityShared,
+		ExpiresAt:      now.Add(s.roomTTL),
+		IsGuestCreated: false,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("CreateRoom: %w", err)
@@ -198,10 +203,11 @@ func (s *roomService) CreateGuestRoom(
 	}
 
 	roomID := uuid.New()
+	guestTTL := s.guestRoomTTL
 	scope := fmt.Sprintf("editor:%s", roomID)
-	ttlSec := int32(s.roomTTL.Seconds())
+	ttlSec := int32(guestTTL.Seconds())
 	if ttlSec <= 0 {
-		ttlSec = int32(model.DefaultRoomTTL.Seconds())
+		ttlSec = int32(model.DefaultGuestRoomTTL.Seconds())
 	}
 
 	token, ownerID, err := s.identity.MintScopedAccessToken(ctx, string(model.RoleOwner), scope, name, ttlSec)
@@ -215,12 +221,13 @@ func (s *roomService) CreateGuestRoom(
 
 	now := s.now().UTC()
 	created, err := s.repo.CreateRoomWithID(ctx, roomID, model.Room{
-		OwnerID:    ownerUUID,
-		Type:       roomType,
-		Language:   language,
-		IsFrozen:   false,
-		Visibility: model.VisibilityShared,
-		ExpiresAt:  now.Add(s.roomTTL),
+		OwnerID:        ownerUUID,
+		Type:           roomType,
+		Language:       language,
+		IsFrozen:       false,
+		Visibility:     model.VisibilityShared,
+		ExpiresAt:      now.Add(guestTTL),
+		IsGuestCreated: true,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("CreateGuestRoom: %w", err)
@@ -406,6 +413,58 @@ func (s *roomService) GuestJoin(ctx context.Context, roomID, inviteToken, displa
 		ExpiresIn:   ttlSec,
 		Room:        s.view(room, participants),
 	}, nil
+}
+
+func (s *roomService) ListMyActiveRooms(ctx context.Context, userID string) (*ActiveRoomsView, error) {
+	ownerID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("ListMyActiveRooms: invalid user id: %w", err)
+	}
+	rooms, err := s.repo.ListActiveByOwner(ctx, ownerID)
+	if err != nil {
+		return nil, err
+	}
+	gauge, err := s.concurrentGaugeLimit(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	out := &ActiveRoomsView{
+		ActiveCount:         len(rooms),
+		ConcurrentLimit:     gauge.Limit,
+		ConcurrentUnlimited: gauge.Unlimited,
+	}
+	for _, room := range rooms {
+		out.Rooms = append(out.Rooms, *s.view(room, nil))
+	}
+	return out, nil
+}
+
+func (s *roomService) ensureConcurrentRoomCapacity(ctx context.Context, userID string, ownerID uuid.UUID) error {
+	gauge, err := s.concurrentGaugeLimit(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if gauge.Unlimited {
+		return nil
+	}
+	if gauge.Limit == nil {
+		return nil
+	}
+	active, err := s.repo.CountActiveByOwner(ctx, ownerID)
+	if err != nil {
+		return err
+	}
+	if active >= *gauge.Limit {
+		return repository.ErrQuotaExceeded
+	}
+	return nil
+}
+
+func (s *roomService) concurrentGaugeLimit(ctx context.Context, userID string) (billingadapter.GaugeLimit, error) {
+	if s.billing == nil {
+		return billingadapter.GaugeLimit{Unlimited: true}, nil
+	}
+	return s.billing.GetGaugeLimit(ctx, userID, billingadapter.EntitlementLiveRoomsConcurrent)
 }
 
 func (s *roomService) loadRoom(ctx context.Context, userID, roomID string) (uuid.UUID, uuid.UUID, model.Room, []model.Participant, error) {
