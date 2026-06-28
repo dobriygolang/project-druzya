@@ -42,6 +42,13 @@ func (f *fakeRepo) GetPlanByID(_ context.Context, id string) (*model.Plan, error
 	return nil, repository.ErrNotFound
 }
 
+func (f *fakeRepo) ListActivePlans(_ context.Context) ([]model.Plan, error) {
+	if f.plan != nil {
+		return []model.Plan{*f.plan}, nil
+	}
+	return nil, nil
+}
+
 func (f *fakeRepo) ListPlanEntitlements(context.Context, string) ([]model.PlanEntitlement, error) {
 	return f.entitlements, nil
 }
