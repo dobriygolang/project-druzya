@@ -3,6 +3,7 @@ import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { cmLanguageExt } from '@/lib/codemirror/langExtension'
+import { editorAssistExtensions } from '@/lib/codemirror/editorAssist'
 import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
 
 type Props = {
@@ -12,6 +13,7 @@ type Props = {
   readOnly?: boolean
   bottomInset?: number
   onRun?: () => void
+  onFormat?: () => void
   className?: string
 }
 
@@ -22,6 +24,7 @@ export function SoloCodeEditor({
   readOnly = false,
   bottomInset = 0,
   onRun,
+  onFormat,
   className,
 }: Props) {
   const mountRef = useRef<HTMLDivElement>(null)
@@ -29,9 +32,11 @@ export function SoloCodeEditor({
   const readOnlyCompartment = useRef(new Compartment())
   const onChangeRef = useRef(onChange)
   const onRunRef = useRef(onRun)
+  const onFormatRef = useRef(onFormat)
   const syncingRef = useRef(false)
   onChangeRef.current = onChange
   onRunRef.current = onRun
+  onFormatRef.current = onFormat
 
   useEffect(() => {
     const mount = mountRef.current
@@ -44,6 +49,7 @@ export function SoloCodeEditor({
         history(),
         keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
         cmLanguageExt(language),
+        editorAssistExtensions,
         ...vscodeEditorExtensions,
         readOnlyCompartment.current.of(EditorView.editable.of(!readOnly)),
         EditorView.updateListener.of((u) => {
@@ -83,16 +89,21 @@ export function SoloCodeEditor({
   }, [value])
 
   useEffect(() => {
-    if (!onRun) return
+    if (!onRun && !onFormat) return
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
         onRunRef.current?.()
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        onFormatRef.current?.()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onRun])
+  }, [onRun, onFormat])
 
   return (
     <div

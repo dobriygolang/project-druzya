@@ -6,11 +6,13 @@ import { Compartment, EditorState } from '@codemirror/state'
 import { EditorView, keymap, lineNumbers } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands'
 import { cmLanguageExt } from '@/lib/codemirror/langExtension'
+import { editorAssistExtensions } from '@/lib/codemirror/editorAssist'
 import { b64ToBytes, bytesToB64, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
 import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
 
 export type CollabCodeEditorHandle = {
   getCode: () => string
+  setCode: (code: string) => void
   reconnect: () => void
 }
 
@@ -24,6 +26,7 @@ type Props = {
   bottomInset?: number
   fontSize?: number
   onRun?: () => void
+  onFormat?: () => void
   onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
 }
 
@@ -45,6 +48,7 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
     bottomInset = 0,
     fontSize = 14,
     onRun,
+    onFormat,
     onWsStatusChange,
   },
   ref,
@@ -60,7 +64,9 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
   const sendSnapshotRef = useRef<(full: Uint8Array) => void>(() => {})
   const sendAwarenessRef = useRef<(update: Uint8Array) => void>(() => {})
   const onRunRef = useRef(onRun)
+  const onFormatRef = useRef(onFormat)
   onRunRef.current = onRun
+  onFormatRef.current = onFormat
 
   const token = accessToken ?? ''
   const { lastMessage, send, status, reconnect } = useEditorWs(roomId, token || undefined)
@@ -73,6 +79,15 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
 
   useImperativeHandle(ref, () => ({
     getCode: () => ydocRef.current?.getText('code').toString() ?? '',
+    setCode: (code: string) => {
+      const ydoc = ydocRef.current
+      if (!ydoc) return
+      const ytext = ydoc.getText('code')
+      ydoc.transact(() => {
+        ytext.delete(0, ytext.length)
+        ytext.insert(0, code)
+      })
+    },
     reconnect,
   }))
 
@@ -167,6 +182,7 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
         history(),
         keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
         cmLanguageExt(language),
+        editorAssistExtensions,
         ...vscodeEditorExtensions,
         fontSizeCompartment.current.of(
           EditorView.theme({
@@ -234,16 +250,21 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
   }, [displayName, userId, roomId])
 
   useEffect(() => {
-    if (!onRun) return
+    if (!onRun && !onFormat) return
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
         onRunRef.current?.()
+        return
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault()
+        onFormatRef.current?.()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onRun])
+  }, [onRun, onFormat])
 
   return (
     <div

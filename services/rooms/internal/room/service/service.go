@@ -415,9 +415,23 @@ func (s *roomService) GuestJoin(ctx context.Context, roomID, inviteToken, displa
 
 	scope := fmt.Sprintf("editor:%s", rid)
 	ttlSec := int32(s.inviteTTL.Seconds())
-	token, _, err := s.identity.MintScopedAccessToken(ctx, identityjwt.RoleGuest, scope, name, ttlSec)
+	token, guestUserID, err := s.identity.MintScopedAccessToken(ctx, identityjwt.RoleGuest, scope, name, ttlSec)
 	if err != nil {
 		return nil, fmt.Errorf("GuestJoin mint token: %w", err)
+	}
+	guestUUID, err := uuid.Parse(guestUserID)
+	if err != nil {
+		return nil, fmt.Errorf("GuestJoin guest id: %w", err)
+	}
+	if row, err := s.repo.AddParticipant(ctx, model.Participant{
+		RoomID:   rid,
+		UserID:   guestUUID,
+		Role:     model.RoleParticipant,
+		JoinedAt: s.now().UTC(),
+	}); err != nil {
+		return nil, fmt.Errorf("GuestJoin participant: %w", err)
+	} else {
+		participants = append(participants, row)
 	}
 
 	return &GuestJoinResult{

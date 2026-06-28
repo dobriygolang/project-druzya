@@ -42,5 +42,6 @@ type RunResult struct {
 // CodeRunner executes untrusted code in an isolated environment.
 type CodeRunner interface {
 	Run(ctx context.Context, req RunRequest) (*RunResult, error)
+	Format(ctx context.Context, language, code string) (string, error)
 	Name() string
 }

@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { LiveCodeRunButton, LiveCodeToolButton } from '@/components/live/LiveCodeChrome'
 import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel'
 import { SoloCodeEditor } from '@/components/SoloCodeEditor'
+import { useFormatCode } from '@/hooks/useFormatCode'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
 import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
 
@@ -38,8 +39,16 @@ export function CodeEditorPanel({
   submitDisabled,
 }: CodeEditorPanelProps) {
   const run = useSandboxRun()
+  const fmt = useFormatCode()
   const [fullCheckPending, setFullCheckPending] = useState(false)
   const panelBottom = runPanelHeight(run.panelOpen)
+  const isGo = normalizeEditorLang(language) === 'go'
+
+  const handleFormat = async () => {
+    if (!code.trim() || fmt.formatting) return
+    const formatted = await fmt.format(language, code)
+    if (formatted != null) onCodeChange(formatted)
+  }
 
   const handleRun = (runType: 'sample' | 'submit') => {
     if (!code.trim() || run.running) return
@@ -68,6 +77,7 @@ export function CodeEditorPanel({
             language={language}
             bottomInset={panelBottom}
             onRun={() => handleRun('sample')}
+            onFormat={isGo ? () => void handleFormat() : undefined}
           />
 
           <div className="absolute top-3 right-4 z-[25] flex items-center gap-2">
@@ -76,6 +86,15 @@ export function CodeEditorPanel({
               onRun={() => handleRun('sample')}
               disabled={!code.trim()}
             />
+            {isGo ? (
+              <LiveCodeToolButton
+                loading={fmt.formatting}
+                onClick={() => void handleFormat()}
+                title="gofmt (⌘⇧F)"
+              >
+                FMT
+              </LiveCodeToolButton>
+            ) : null}
             <LiveCodeToolButton
               loading={fullCheckPending}
               onClick={() => void handleFullCheck()}
@@ -128,6 +147,10 @@ export function CodeEditorPanel({
           </Button>
         </div>
       </div>
+
+      {fmt.formatError ? (
+        <p className="text-sm text-danger">{fmt.formatError}</p>
+      ) : null}
 
       {run.activeRun && run.activeRun.test_results.length > 0 ? (
         <Card elevation="e2" padding="md">

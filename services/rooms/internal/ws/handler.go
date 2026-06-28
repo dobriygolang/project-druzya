@@ -94,7 +94,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "private room: guests not allowed", http.StatusForbidden)
 			return
 		}
-		role = model.RoleViewer
+		// Invited guests collaborate in the shared editor (not read-only).
+		role = model.RoleParticipant
 	} else {
 		if room.Visibility == model.VisibilityPrivate && uid != room.OwnerID {
 			if _, gerr := h.Store.GetRole(r.Context(), roomID, uid); errors.Is(gerr, repository.ErrNotFound) {

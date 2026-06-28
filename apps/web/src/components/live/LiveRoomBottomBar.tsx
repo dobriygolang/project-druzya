@@ -16,6 +16,9 @@ type Props = {
   canRun: boolean
   running: boolean
   onRun: () => void
+  canFormat?: boolean
+  formatting?: boolean
+  onFormat?: () => void
   outputOpen: boolean
   onToggleOutput: () => void
 }
@@ -30,6 +33,9 @@ export function LiveRoomBottomBar({
   canRun,
   running,
   onRun,
+  canFormat,
+  formatting,
+  onFormat,
   outputOpen,
   onToggleOutput,
 }: Props) {
@@ -54,6 +60,21 @@ export function LiveRoomBottomBar({
           >
             <Play className="h-3.5 w-3.5 fill-current" />
             {running ? 'Running…' : 'Run'}
+          </button>
+        ) : null}
+
+        {canFormat ? (
+          <button
+            type="button"
+            onClick={onFormat}
+            disabled={formatting}
+            title="gofmt (⌘⇧F)"
+            className={cn(
+              'inline-flex items-center rounded-lg border border-border px-3 py-1.5',
+              'font-mono text-[11px] tracking-[0.06em] text-text-secondary transition-colors hover:bg-surface-2 disabled:opacity-50',
+            )}
+          >
+            {formatting ? 'FMT…' : 'FMT'}
           </button>
         ) : null}
 

@@ -41,6 +41,16 @@ export function submitAttemptFromCodeRun(codeRunId: string, sessionTaskId: strin
   )
 }
 
+export function formatCode(input: { language: string; code: string }) {
+  return api<{ code: string }>('/sandbox/format', {
+    method: 'POST',
+    body: JSON.stringify({
+      language: input.language,
+      code: input.code,
+    }),
+  })
+}
+
 export function isTerminalRunStatus(status: string): boolean {
   return !['queued', 'running'].includes(status)
 }

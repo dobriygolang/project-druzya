@@ -33,6 +33,13 @@ service SandboxService {
       body: "*"
     };
   }
+
+  rpc FormatCode(FormatCodeRequest) returns (FormatCodeResponse) {
+    option (google.api.http) = {
+      post: "/v1/sandbox/format"
+      body: "*"
+    };
+  }
 }
 
 message RunCodeRequest {
@@ -74,6 +81,15 @@ message SubmitAttemptFromCodeRunRequest {
 message SubmitAttemptFromCodeRunResponse {
   string attempt_id = 1;
   string status = 2;
+}
+
+message FormatCodeRequest {
+  string language = 1;
+  string code = 2;
+}
+
+message FormatCodeResponse {
+  string code = 1;
 }
 
 message CodeRun {

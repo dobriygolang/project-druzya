@@ -51,6 +51,7 @@ type Service interface {
 	ListCodeRuns(ctx context.Context, userID string, taskID, sessionTaskID *string, limit int) ([]model.CodeRun, error)
 	SubmitAttemptFromCodeRun(ctx context.Context, input SubmitAttemptInput) (*interviewadapter.SubmitAttemptResult, error)
 	ProcessQueuedRuns(ctx context.Context, limit int) (int, error)
+	FormatCode(ctx context.Context, userID, language, code string) (string, error)
 }
 
 type sandboxService struct {
@@ -481,4 +482,25 @@ func strPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func (s *sandboxService) FormatCode(ctx context.Context, userID, language, code string) (string, error) {
+	if userID == "" || strings.TrimSpace(code) == "" {
+		return "", fmt.Errorf("user_id and code required: %w", ErrInvalidInput)
+	}
+	if len(code) > s.limits.maxCodeBytes {
+		return "", fmt.Errorf("code exceeds %d bytes: %w", s.limits.maxCodeBytes, ErrInvalidInput)
+	}
+	lang, err := normalizeLanguage(language)
+	if err != nil {
+		return "", err
+	}
+	if lang != model.LangGo {
+		return "", fmt.Errorf("format supported only for go: %w", ErrInvalidInput)
+	}
+	formatted, err := s.runner.Format(ctx, lang, code)
+	if err != nil {
+		return "", fmt.Errorf("%s: %w", err.Error(), ErrInvalidInput)
+	}
+	return formatted, nil
 }

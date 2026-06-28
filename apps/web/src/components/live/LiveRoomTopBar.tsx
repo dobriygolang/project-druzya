@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Code2, Settings, X } from 'lucide-react'
+import { Code2, Settings, UserPlus, X } from 'lucide-react'
 import { RoomSessionTimer } from '@/components/live/RoomSessionTimer'
 import { brand } from '@/lib/brand/tokens'
 import { cn } from '@/lib/cn'
@@ -78,6 +78,24 @@ export function LiveRoomTopBar({
             className="text-[13px] text-text-secondary underline hover:text-text-primary"
           >
             Reconnect
+          </button>
+        ) : null}
+
+        {isOwner ? (
+          <button
+            type="button"
+            disabled={inviteLoading}
+            onClick={onInvite}
+            title="Скопировать ссылку для гостя"
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[13px] font-medium transition-colors disabled:opacity-50',
+              inviteCopied
+                ? 'border-border-strong bg-surface-2 text-text-primary'
+                : 'border-border bg-surface-1 text-text-primary hover:bg-surface-2',
+            )}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{inviteCopied ? 'Ссылка скопирована' : 'Пригласить'}</span>
           </button>
         ) : null}
 

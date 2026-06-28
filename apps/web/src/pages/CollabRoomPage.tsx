@@ -16,7 +16,9 @@ import { Logo } from '@/components/brand/Logo'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { useFormatCode } from '@/hooks/useFormatCode'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
+import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
 import { getMe } from '@/lib/api/auth'
 import {
   closeRoom,
@@ -29,6 +31,7 @@ import {
   readGuestToken,
 } from '@/lib/api/rooms'
 import { readAccessToken } from '@/lib/apiClient'
+import { markInviteCopied, readInviteCopied } from '@/lib/live/useCreateLiveRoom'
 
 function jwtSubject(token: string): string | null {
   const part = token.split('.')[1]
@@ -51,6 +54,7 @@ export default function CollabRoomPage() {
   const qc = useQueryClient()
   const editorRef = useRef<CollabCodeEditorHandle>(null)
   const [copied, setCopied] = useState(false)
+  const [showInviteBanner, setShowInviteBanner] = useState(false)
   const [wsStatus, setWsStatus] = useState<import('@/lib/ws/collabEditor').EditorWsStatus>('connecting')
   const [guestName, setGuestName] = useState('')
   const [guestToken, setGuestToken] = useState(() => readGuestToken(roomId))
@@ -96,7 +100,9 @@ export default function CollabRoomPage() {
     mutationFn: () => createInvite(roomId),
     onSuccess: async (invite) => {
       await navigator.clipboard.writeText(invite.url)
+      markInviteCopied(roomId)
       setCopied(true)
+      setShowInviteBanner(true)
       window.setTimeout(() => setCopied(false), 2000)
     },
   })
@@ -110,14 +116,19 @@ export default function CollabRoomPage() {
 
   const wsToken = guestToken ?? readAccessToken() ?? ''
   const run = useSandboxRun()
+  const fmt = useFormatCode()
 
   useEffect(() => {
     if (isNew) return
     document.documentElement.classList.add('light')
+    if (readInviteCopied(roomId)) {
+      setShowInviteBanner(true)
+      setCopied(true)
+    }
     return () => {
       document.documentElement.classList.remove('light')
     }
-  }, [isNew])
+  }, [isNew, roomId])
 
   if (isNew) {
     return <LiveNewPage />
@@ -146,7 +157,7 @@ export default function CollabRoomPage() {
         onJoin={() => {}}
         loginTo={`/login?next=/live/${roomId}`}
         title="Нужен доступ"
-        description="Войди в аккаунт или открой ссылку-приглашение от организатора."
+        description="Открой ссылку с ?invite=… от организатора или войди в аккаунт, если ты участник комнаты."
         hideJoin
       />
     )
@@ -205,6 +216,13 @@ export default function CollabRoomPage() {
     navigate(closeTo)
   }
 
+  const handleFormat = async () => {
+    const code = editorRef.current?.getCode() ?? ''
+    if (!code.trim() || fmt.formatting || room.is_frozen) return
+    const formatted = await fmt.format(room.language, code)
+    if (formatted != null) editorRef.current?.setCode(formatted)
+  }
+
   const handleRun = () => {
     const code = editorRef.current?.getCode() ?? ''
     if (!code.trim()) return
@@ -221,6 +239,7 @@ export default function CollabRoomPage() {
   const statusLabel = wsStatusLabel(wsStatus, room.is_frozen)
   const statusColor =
     wsStatus === 'open' && !room.is_frozen ? brand.green : wsStatusColor(wsStatus, room.is_frozen)
+  const isGo = normalizeEditorLang(room.language) === 'go'
 
   return (
     <div className="flex h-[100dvh] flex-col bg-bg text-text-primary">
@@ -243,6 +262,24 @@ export default function CollabRoomPage() {
         expiresAt={room.expires_at}
       />
 
+      {isOwner && showInviteBanner ? (
+        <div
+          className="flex shrink-0 items-center justify-between gap-3 border-b bg-surface-2 px-4 py-2 text-[13px] text-text-secondary sm:px-5"
+          style={{ borderColor: brand.hair }}
+        >
+          <span>
+            Отправь ссылку-приглашение гостю — он сможет войти без регистрации и редактировать код вместе с тобой.
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowInviteBanner(false)}
+            className="shrink-0 text-text-muted hover:text-text-primary"
+          >
+            Скрыть
+          </button>
+        </div>
+      ) : null}
+
       <div className="relative min-h-0 flex-1 bg-[#1e1e1e]">
         <CollabCodeEditor
           ref={editorRef}
@@ -255,8 +292,15 @@ export default function CollabRoomPage() {
           bottomInset={panelHeight}
           fontSize={fontSize}
           onRun={canRun ? handleRun : undefined}
+          onFormat={isGo && !room.is_frozen ? () => void handleFormat() : undefined}
           onWsStatusChange={setWsStatus}
         />
+
+        {fmt.formatError ? (
+          <div className="pointer-events-none absolute left-4 top-4 z-[25] rounded-lg border border-danger/30 bg-surface-1 px-3 py-2 text-xs text-danger shadow-sm">
+            {fmt.formatError}
+          </div>
+        ) : null}
 
         <RunOutputPanel
           open={run.panelOpen}
@@ -281,6 +325,9 @@ export default function CollabRoomPage() {
         canRun={canRun}
         running={run.running}
         onRun={handleRun}
+        canFormat={isGo && !room.is_frozen}
+        formatting={fmt.formatting}
+        onFormat={() => void handleFormat()}
         outputOpen={run.panelOpen}
         onToggleOutput={() => run.setPanelOpen((v) => !v)}
       />
