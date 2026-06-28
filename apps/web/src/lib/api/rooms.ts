@@ -1,4 +1,4 @@
-import { API_BASE, api, parseAuthTokens } from '@/lib/apiClient'
+import { API_BASE, api, apiWithBearer, parseAuthTokens, readAccessToken } from '@/lib/apiClient'
 import { asArray } from '@/lib/api/normalize'
 import { normalizeProtoJson } from '@/lib/protoJson'
 
@@ -40,6 +40,10 @@ export type GuestJoinResult = {
   room: CodeRoom
 }
 
+export type GuestCreateResult = GuestJoinResult & {
+  invite: InviteLink
+}
+
 function normalizeRoom(raw: CodeRoom): CodeRoom {
   return {
     ...raw,
@@ -73,6 +77,10 @@ export function clearGuestToken(roomId: string): void {
   }
 }
 
+function bearerForRoom(roomId: string): string | null {
+  return readAccessToken() ?? readGuestToken(roomId)
+}
+
 export async function createRoom(payload: CreateRoomPayload): Promise<CodeRoom> {
   const res = await api<{ room: CodeRoom }>('/rooms', {
     method: 'POST',
@@ -81,8 +89,51 @@ export async function createRoom(payload: CreateRoomPayload): Promise<CodeRoom> 
   return normalizeRoom(res.room)
 }
 
+export async function createGuestRoom(input: {
+  displayName: string
+  language?: string
+  roomType?: string
+}): Promise<GuestCreateResult> {
+  const res = await fetch(`${API_BASE}/rooms/guest-create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      display_name: input.displayName.trim() || 'guest',
+      language: input.language ?? 'go',
+      room_type: input.roomType ?? 'interview',
+    }),
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(text || `guest create ${res.status}`)
+  }
+  const body = normalizeProtoJson(await res.json()) as Record<string, unknown>
+  const tokens = parseAuthTokens(body)
+  const room = normalizeRoom(body.room as CodeRoom)
+  const inviteRaw = body.invite as InviteLink | undefined
+  const invite: InviteLink = inviteRaw
+    ? {
+        url: inviteRaw.url ?? '',
+        token: inviteRaw.token ?? '',
+        expires_at: inviteRaw.expires_at,
+      }
+    : { url: '', token: '' }
+  return {
+    access_token: tokens.access_token,
+    expires_in: Number(body.expires_in ?? body.expiresIn ?? 0),
+    room,
+    invite,
+  }
+}
+
 export async function getRoom(roomId: string): Promise<CodeRoom> {
-  const res = await api<{ room: CodeRoom }>(`/rooms/${encodeURIComponent(roomId)}`)
+  const token = bearerForRoom(roomId)
+  if (!token) throw new Error('not authenticated')
+  const res = await apiWithBearer<{ room: CodeRoom }>(
+    `/rooms/${encodeURIComponent(roomId)}`,
+    { method: 'GET' },
+    token,
+  )
   return normalizeRoom(res.room)
 }
 
@@ -90,13 +141,19 @@ export async function joinRoom(
   roomId: string,
   opts?: { role?: string; inviteToken?: string },
 ): Promise<CodeRoom> {
-  const res = await api<{ room: CodeRoom }>(`/rooms/${encodeURIComponent(roomId)}/join`, {
-    method: 'POST',
-    body: JSON.stringify({
-      role: opts?.role ?? '',
-      invite_token: opts?.inviteToken ?? '',
-    }),
-  })
+  const token = bearerForRoom(roomId) ?? readAccessToken()
+  if (!token) throw new Error('not authenticated')
+  const res = await apiWithBearer<{ room: CodeRoom }>(
+    `/rooms/${encodeURIComponent(roomId)}/join`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        role: opts?.role ?? '',
+        invite_token: opts?.inviteToken ?? '',
+      }),
+    },
+    token,
+  )
   return normalizeRoom(res.room)
 }
 
@@ -125,27 +182,29 @@ export async function guestJoin(
 }
 
 export async function freezeRoom(roomId: string, frozen: boolean): Promise<CodeRoom> {
-  const res = await api<{ room: CodeRoom }>(`/rooms/${encodeURIComponent(roomId)}/freeze`, {
-    method: 'POST',
-    body: JSON.stringify({ frozen }),
-  })
+  const token = bearerForRoom(roomId)
+  if (!token) throw new Error('not authenticated')
+  const res = await apiWithBearer<{ room: CodeRoom }>(
+    `/rooms/${encodeURIComponent(roomId)}/freeze`,
+    { method: 'POST', body: JSON.stringify({ frozen }) },
+    token,
+  )
   return normalizeRoom(res.room)
 }
 
 export async function createInvite(roomId: string): Promise<InviteLink> {
-  const res = await api<{ invite: InviteLink }>(`/rooms/${encodeURIComponent(roomId)}/invite`, {
-    method: 'POST',
-    body: '{}',
-  })
+  const token = bearerForRoom(roomId)
+  if (!token) throw new Error('not authenticated')
+  const res = await apiWithBearer<{ invite: InviteLink }>(
+    `/rooms/${encodeURIComponent(roomId)}/invite`,
+    { method: 'POST', body: '{}' },
+    token,
+  )
   return res.invite
 }
 
 export async function getReplay(roomId: string): Promise<{ payload_jsonl: string; op_count: number }> {
-  const res = await api<{ payload_jsonl: string; op_count: number }>(
-    `/rooms/${encodeURIComponent(roomId)}/replay`,
-  )
-  return {
-    payload_jsonl: res.payload_jsonl ?? '',
-    op_count: res.op_count ?? 0,
-  }
+  const token = bearerForRoom(roomId)
+  if (!token) throw new Error('not authenticated')
+  return apiWithBearer(`/rooms/${encodeURIComponent(roomId)}/replay`, { method: 'GET' }, token)
 }

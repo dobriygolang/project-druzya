@@ -1,19 +1,22 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
-import { Check, Users } from 'lucide-react'
+import { ArrowRight, Check, Users } from 'lucide-react'
 import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
-import { CompanyCard } from '@/components/mock/CompanyCard'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { PageContent } from '@/components/PageContent'
 import { getBillingMe } from '@/lib/api/billing'
 import { listCompanies, listInterviewTemplates } from '@/lib/api/content'
 import { startSession, startTrainingSession } from '@/lib/api/interview'
-import { formatApiError } from '@/lib/apiClient'
+import { formatApiError, readAccessToken } from '@/lib/apiClient'
 import { formatLimitUsage } from '@/lib/billingLabels'
+import { LIVE_LANGS } from '@/lib/live/constants'
+import { readGuestDisplayName, persistGuestDisplayName } from '@/lib/live/guestDisplayName'
+import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
 import type { Company, InterviewTemplate, SessionMode } from '@/lib/types'
+import { cn } from '@/lib/cn'
 
 const SOLO_SECTIONS = [
   {
@@ -44,7 +47,10 @@ const SOLO_SECTIONS = [
 
 export default function MockHubPage() {
   const navigate = useNavigate()
+  const authed = !!readAccessToken()
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
+  const [liveLanguage, setLiveLanguage] = useState('go')
+  const [guestName, setGuestName] = useState(() => readGuestDisplayName())
 
   const companiesQ = useQuery({ queryKey: ['companies'], queryFn: () => listCompanies() })
   const templatesQ = useQuery({
@@ -64,6 +70,8 @@ export default function MockHubPage() {
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })
 
+  const createLiveM = useCreateLiveRoom()
+
   const companyTemplatesEnabled = billingQ.data?.features.company_templates_enabled !== false
   const mockQuota = billingQ.data?.limits.mock_interviews_per_month
   const mockQuotaExhausted =
@@ -79,60 +87,24 @@ export default function MockHubPage() {
   const canStartCompanyMock =
     companyTemplatesEnabled && !mockQuotaExhausted && !startMockM.isPending
 
+  const anyError =
+    startMockM.error ?? startSoloM.error ?? createLiveM.error ?? companiesQ.error
+
+  function handleCreateLive() {
+    if (!authed) persistGuestDisplayName(guestName || 'Guest')
+    createLiveM.mutate({
+      language: liveLanguage,
+      displayName: guestName || undefined,
+    })
+  }
+
   return (
     <PageContent wide className="gap-8">
       <PageHeader
-        eyebrow="Mock interview"
+        eyebrow="Practice"
         title="Mock & practice"
-        description="Company mock — секции из шаблона content service. Solo — одна тренировочная секция за сессию."
+        description="Три формата подготовки — выбери режим и начинай сразу."
       />
-
-      <FirstRunSteps />
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <SdvgCard
-          eyebrow="Solo practice"
-          title="Одна секция"
-          description="Training-сессия на interview service — выбери тип задач."
-        >
-          <div className="flex flex-wrap gap-2">
-            {SOLO_SECTIONS.map((s) => (
-              <Button
-                key={s.id}
-                variant="ghost"
-                size="sm"
-                title={s.hint}
-                loading={startSoloM.isPending && startSoloM.variables === s.mode}
-                disabled={mockQuotaExhausted || startSoloM.isPending}
-                onClick={() => startSoloM.mutate(s.mode)}
-              >
-                {s.label}
-              </Button>
-            ))}
-          </div>
-        </SdvgCard>
-
-        <SdvgCard
-          eyebrow="Live collab"
-          title="Pair programming"
-          description="Комната создаётся через rooms service — синхронный редактор."
-        >
-          <Link to="/live/new">
-            <Button variant="ghost" size="sm" icon={<Users className="h-4 w-4" />}>
-              Создать live room
-            </Button>
-          </Link>
-        </SdvgCard>
-      </div>
-
-      {!companyTemplatesEnabled && billingQ.isSuccess ? (
-        <QuotaBanner>
-          Шаблоны компаний доступны на Pro.{' '}
-          <Link to="/pricing" className="text-text-primary underline">
-            Тарифы
-          </Link>
-        </QuotaBanner>
-      ) : null}
 
       {mockQuotaExhausted && billingQ.isSuccess && mockQuota ? (
         <QuotaBanner>
@@ -140,184 +112,285 @@ export default function MockHubPage() {
         </QuotaBanner>
       ) : null}
 
-      {startMockM.isError || startSoloM.isError ? (
+      {anyError ? (
         <ErrorMessage
-          message={formatApiError(startMockM.error ?? startSoloM.error)}
+          message={formatApiError(anyError)}
           onRetry={() => {
             startMockM.reset()
             startSoloM.reset()
+            createLiveM.reset()
+            void companiesQ.refetch()
           }}
         />
       ) : null}
 
-      <section>
-        <PageHeader
-          eyebrow="Компании"
-          title="Шаблоны под компанию"
-          description="Выбери компанию → шаблон интервью → multi-section mock с backend."
-        />
-
-        {companiesQ.isLoading ? (
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-2xl bg-surface-2" />
+      <div className="grid gap-5 lg:grid-cols-3">
+        <PracticeCard
+          eyebrow="Solo"
+          title="Одна секция"
+          description="Быстрая тренировка — algo, coding, system design или behavioral."
+        >
+          <div className="flex flex-wrap gap-2">
+            {SOLO_SECTIONS.map((s) => (
+              <PillButton
+                key={s.id}
+                title={s.hint}
+                loading={startSoloM.isPending && startSoloM.variables === s.mode}
+                disabled={mockQuotaExhausted || startSoloM.isPending}
+                onClick={() => startSoloM.mutate(s.mode)}
+              >
+                {s.label}
+              </PillButton>
             ))}
           </div>
-        ) : null}
+        </PracticeCard>
 
-        {companiesQ.isError ? (
-          <div className="mt-5">
-            <ErrorMessage
-              message={formatApiError(companiesQ.error)}
-              onRetry={() => void companiesQ.refetch()}
+        <PracticeCard
+          eyebrow="Live"
+          title="Pair programming"
+          description="Общий редактор в реальном времени — комната создаётся сразу."
+        >
+          <div className="flex flex-col gap-4">
+            {!authed ? (
+              <label className="block">
+                <span className="text-[13px] text-text-secondary">Ваше имя в редакторе</span>
+                <input
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Guest"
+                  className="mt-1.5 w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+                />
+              </label>
+            ) : null}
+
+            <div>
+              <span className="text-[13px] text-text-secondary">Язык</span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {LIVE_LANGS.map((lang) => (
+                  <PillButton
+                    key={lang.id}
+                    active={liveLanguage === lang.id}
+                    onClick={() => setLiveLanguage(lang.id)}
+                  >
+                    {lang.label}
+                  </PillButton>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              variant="primary"
+              size="sm"
+              className="w-full sm:w-auto"
+              icon={<Users className="h-4 w-4" />}
+              iconRight={<ArrowRight className="h-4 w-4" />}
+              loading={createLiveM.isPending}
+              onClick={handleCreateLive}
+            >
+              Создать комнату
+            </Button>
+          </div>
+        </PracticeCard>
+
+        <PracticeCard
+          eyebrow="Company"
+          title="Mock под компанию"
+          description="Полное интервью по шаблону — несколько секций под выбранную компанию."
+        >
+          {!companyTemplatesEnabled && billingQ.isSuccess ? (
+            <p className="text-[13px] leading-relaxed text-text-secondary">
+              Доступно на Pro.{' '}
+              <Link to="/pricing" className="text-text-primary underline">
+                Тарифы
+              </Link>
+            </p>
+          ) : companiesQ.isLoading ? (
+            <div className="flex flex-wrap gap-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-8 w-20 animate-pulse rounded-lg bg-surface-2" />
+              ))}
+            </div>
+          ) : companies.length === 0 ? (
+            <p className="text-[13px] text-text-muted">Каталог компаний пока пуст.</p>
+          ) : (
+            <CompanyMockPanel
+              companies={companies}
+              selectedCompanyId={selectedCompanyId}
+              selectedCompany={selectedCompany}
+              templates={templates}
+              templatesLoading={templatesQ.isLoading || templatesQ.isFetching}
+              onSelectCompany={(id) =>
+                setSelectedCompanyId((prev) => (prev === id ? null : id))
+              }
+              onStart={(templateId) => startMockM.mutate(templateId)}
+              starting={startMockM.isPending}
+              disabled={!canStartCompanyMock || mockQuotaExhausted}
             />
-          </div>
-        ) : null}
-
-        {companiesQ.isSuccess && companies.length === 0 ? (
-          <p className="mt-5 text-sm text-text-muted">Каталог пуст — запусти seed content service.</p>
-        ) : null}
-
-        {companiesQ.isSuccess && companies.length > 0 ? (
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {companies.map((c) => (
-              <CompanyCard
-                key={c.id}
-                id={c.id}
-                name={c.name}
-                slug={c.slug}
-                description={c.description}
-                onSelect={(id) => setSelectedCompanyId(id)}
-                loading={selectedCompanyId === c.id && templatesQ.isFetching}
-                selected={selectedCompanyId === c.id}
-              />
-            ))}
-          </div>
-        ) : null}
-      </section>
-
-      {selectedCompanyId ? (
-        <TemplatePicker
-          company={selectedCompany}
-          templates={templates}
-          loading={templatesQ.isLoading}
-          error={templatesQ.isError ? formatApiError(templatesQ.error) : null}
-          onRetry={() => void templatesQ.refetch()}
-          onClear={() => setSelectedCompanyId(null)}
-          onStart={(templateId) => startMockM.mutate(templateId)}
-          starting={startMockM.isPending}
-          disabled={!canStartCompanyMock}
-        />
-      ) : null}
+          )}
+        </PracticeCard>
+      </div>
     </PageContent>
   )
 }
 
-function TemplatePicker({
-  company,
-  templates,
+function PracticeCard({
+  eyebrow,
+  title,
+  description,
+  children,
+}: {
+  eyebrow: string
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <SdvgCard eyebrow={eyebrow} title={title} description={description} className="flex h-full flex-col">
+      <div className="mt-auto">{children}</div>
+    </SdvgCard>
+  )
+}
+
+function PillButton({
+  children,
+  active,
   loading,
-  error,
-  onRetry,
-  onClear,
+  disabled,
+  title,
+  onClick,
+}: {
+  children: React.ReactNode
+  active?: boolean
+  loading?: boolean
+  disabled?: boolean
+  title?: string
+  onClick?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled || loading}
+      onClick={onClick}
+      className={cn(
+        'rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        active
+          ? 'border-border-strong bg-surface-2 font-medium text-text-primary'
+          : 'border-border text-text-secondary hover:border-border-strong hover:text-text-primary',
+      )}
+    >
+      {loading ? '…' : children}
+    </button>
+  )
+}
+
+function CompanyMockPanel({
+  companies,
+  selectedCompanyId,
+  selectedCompany,
+  templates,
+  templatesLoading,
+  onSelectCompany,
   onStart,
   starting,
   disabled,
 }: {
-  company?: Company
+  companies: Company[]
+  selectedCompanyId: string | null
+  selectedCompany?: Company
   templates: InterviewTemplate[]
-  loading: boolean
-  error: string | null
-  onRetry: () => void
-  onClear: () => void
+  templatesLoading: boolean
+  onSelectCompany: (id: string) => void
   onStart: (templateId: string) => void
   starting: boolean
   disabled: boolean
 }) {
   const [pickedId, setPickedId] = useState<string | null>(null)
-
   const picked = useMemo(
     () => templates.find((t) => t.id === pickedId) ?? null,
     [templates, pickedId],
   )
 
   return (
-    <SdvgCard eyebrow="Шаблон" className="border-border-strong">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold tracking-[-0.01em]">
-            {company?.name ?? 'Interview template'}
-          </h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            Секции и задачи задаются шаблоном в content service.
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={onClear}>
-          Сменить компанию
-        </Button>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap gap-2">
+        {companies.map((c) => (
+          <PillButton
+            key={c.id}
+            active={selectedCompanyId === c.id}
+            loading={selectedCompanyId === c.id && templatesLoading}
+            onClick={() => {
+              onSelectCompany(c.id)
+              setPickedId(null)
+            }}
+          >
+            {c.name}
+          </PillButton>
+        ))}
       </div>
 
-      {loading ? <p className="mt-4 text-sm text-text-muted">Загрузка шаблонов…</p> : null}
-
-      {error ? <div className="mt-4"><ErrorMessage message={error} onRetry={onRetry} /></div> : null}
-
-      {!loading && !error && templates.length === 0 ? (
-        <p className="mt-4 text-sm text-text-muted">Нет активных шаблонов для этой компании.</p>
-      ) : null}
-
-      {templates.length > 0 ? (
-        <ul className="mt-4 flex flex-col gap-2">
-          {templates.map((t) => {
-            const active = pickedId === t.id
-            return (
-              <li key={t.id}>
-                <button
-                  type="button"
-                  onClick={() => setPickedId(t.id)}
-                  className={[
-                    'flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors',
-                    active
-                      ? 'border-border-strong bg-surface-2'
-                      : 'border-border bg-surface-1 hover:border-border-strong',
-                  ].join(' ')}
+      {selectedCompanyId ? (
+        <div className="rounded-xl border border-border bg-surface-2/50 p-3">
+          {templatesLoading ? (
+            <p className="text-[13px] text-text-muted">Загрузка шаблонов…</p>
+          ) : templates.length === 0 ? (
+            <p className="text-[13px] text-text-muted">
+              Нет шаблонов для {selectedCompany?.name ?? 'компании'}.
+            </p>
+          ) : (
+            <>
+              <p className="text-[13px] text-text-secondary">
+                Шаблон для {selectedCompany?.name}
+              </p>
+              <ul className="mt-2 flex flex-col gap-1.5">
+                {templates.map((t) => {
+                  const active = pickedId === t.id
+                  return (
+                    <li key={t.id}>
+                      <button
+                        type="button"
+                        onClick={() => setPickedId(t.id)}
+                        className={cn(
+                          'flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                          active
+                            ? 'border-border-strong bg-surface-1'
+                            : 'border-transparent hover:border-border hover:bg-surface-1',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'grid h-4 w-4 shrink-0 place-items-center rounded-full border',
+                            active
+                              ? 'border-text-primary bg-text-primary text-bg'
+                              : 'border-border',
+                          )}
+                        >
+                          {active ? <Check className="h-2.5 w-2.5" /> : null}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-medium">{t.title}</span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+              {picked ? (
+                <Button
+                  className="mt-3 w-full"
+                  size="sm"
+                  loading={starting}
+                  disabled={disabled}
+                  onClick={() => onStart(picked.id)}
                 >
-                  <span
-                    className={[
-                      'mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border',
-                      active ? 'border-text-primary bg-text-primary text-bg' : 'border-border',
-                    ].join(' ')}
-                  >
-                    {active ? <Check className="h-3 w-3" /> : null}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium">{t.title}</span>
-                    {t.description ? (
-                      <span className="mt-1 block text-[13px] text-text-secondary">{t.description}</span>
-                    ) : null}
-                    {t.target_level ? (
-                      <span className="mt-1.5 inline-block font-mono text-[10px] uppercase tracking-[0.12em] text-text-muted">
-                        {t.target_level}
-                      </span>
-                    ) : null}
-                  </span>
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      ) : null}
-
-      {picked ? (
-        <Button
-          className="mt-4"
-          loading={starting}
-          disabled={disabled || !pickedId}
-          onClick={() => onStart(picked.id)}
-        >
-          Начать mock — {picked.title}
-        </Button>
-      ) : null}
-    </SdvgCard>
+                  Начать — {picked.title}
+                </Button>
+              ) : null}
+            </>
+          )}
+        </div>
+      ) : (
+        <p className="text-[13px] text-text-muted">Выберите компанию выше.</p>
+      )}
+    </div>
   )
 }
 
@@ -331,34 +404,5 @@ function QuotaBanner({ children }: { children: React.ReactNode }) {
       />
       {children}
     </div>
-  )
-}
-
-function FirstRunSteps() {
-  const steps = [
-    { n: '1', title: 'Компания', body: 'Выбери компанию из каталога content.' },
-    { n: '2', title: 'Шаблон', body: 'Секции (algo, SD, …) — из interview-template.' },
-    { n: '3', title: 'AI-разбор', body: 'Оценка попыток через ai + recommendation.' },
-  ]
-  return (
-    <SdvgCard eyebrow="Как это работает" title="Три шага до mock" lift={false}>
-      <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {steps.map((s) => (
-          <li
-            key={s.n}
-            className="flex flex-col gap-2 rounded-xl border border-border bg-surface-2 p-4"
-          >
-            <span className="inline-flex items-center gap-2">
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: brand.dot }} />
-              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-muted">
-                Шаг {s.n}
-              </span>
-            </span>
-            <span className="font-medium">{s.title}</span>
-            <span className="text-[13px] leading-relaxed text-text-secondary">{s.body}</span>
-          </li>
-        ))}
-      </ol>
-    </SdvgCard>
   )
 }

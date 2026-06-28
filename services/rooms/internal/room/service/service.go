@@ -33,8 +33,16 @@ type GuestJoinResult struct {
 	Room        *RoomView
 }
 
+type GuestCreateResult struct {
+	AccessToken string
+	ExpiresIn   int32
+	Room        *RoomView
+	Invite      *model.InviteLink
+}
+
 type Service interface {
 	CreateRoom(ctx context.Context, userID string, roomType model.RoomType, taskID *string, language model.Language) (*RoomView, error)
+	CreateGuestRoom(ctx context.Context, displayName string, roomType model.RoomType, language model.Language) (*GuestCreateResult, error)
 	GetRoom(ctx context.Context, userID, roomID string) (*RoomView, error)
 	JoinRoom(ctx context.Context, userID, roomID, roleHint, inviteToken string) (*RoomView, error)
 	FreezeRoom(ctx context.Context, userID, roomID string, frozen bool) (*RoomView, error)
@@ -163,6 +171,84 @@ func (s *roomService) CreateRoom(
 	}
 
 	return s.view(created, []model.Participant{ownerRow}), nil
+}
+
+func (s *roomService) CreateGuestRoom(
+	ctx context.Context,
+	displayName string,
+	roomType model.RoomType,
+	language model.Language,
+) (*GuestCreateResult, error) {
+	if s.identity == nil {
+		return nil, identityadapter.ErrUnavailable
+	}
+	if roomType == "" {
+		roomType = model.RoomTypeInterview
+	}
+	if language == "" {
+		language = model.LanguageGo
+	}
+	if err := model.ValidateCreate(roomType, language); err != nil {
+		return nil, err
+	}
+
+	name := strings.TrimSpace(displayName)
+	if name == "" {
+		name = "guest"
+	}
+
+	roomID := uuid.New()
+	scope := fmt.Sprintf("editor:%s", roomID)
+	ttlSec := int32(s.roomTTL.Seconds())
+	if ttlSec <= 0 {
+		ttlSec = int32(model.DefaultRoomTTL.Seconds())
+	}
+
+	token, ownerID, err := s.identity.MintScopedAccessToken(ctx, string(model.RoleOwner), scope, name, ttlSec)
+	if err != nil {
+		return nil, fmt.Errorf("CreateGuestRoom mint token: %w", err)
+	}
+	ownerUUID, err := uuid.Parse(ownerID)
+	if err != nil {
+		return nil, fmt.Errorf("CreateGuestRoom owner id: %w", err)
+	}
+
+	now := s.now().UTC()
+	created, err := s.repo.CreateRoomWithID(ctx, roomID, model.Room{
+		OwnerID:    ownerUUID,
+		Type:       roomType,
+		Language:   language,
+		IsFrozen:   false,
+		Visibility: model.VisibilityShared,
+		ExpiresAt:  now.Add(s.roomTTL),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("CreateGuestRoom: %w", err)
+	}
+
+	ownerRow, err := s.repo.AddParticipant(ctx, model.Participant{
+		RoomID:   created.ID,
+		UserID:   ownerUUID,
+		Role:     model.RoleOwner,
+		JoinedAt: now,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("CreateGuestRoom seed owner: %w", err)
+	}
+
+	inviteTok, inviteExp, err := model.GenerateInviteToken(created.ID, s.inviteTTL, s.inviteSecret, now)
+	if err != nil {
+		return nil, fmt.Errorf("CreateGuestRoom invite: %w", err)
+	}
+	inviteURL := fmt.Sprintf("%s/live/%s?invite=%s", s.publicBaseURL, created.ID, inviteTok)
+	invite := &model.InviteLink{URL: inviteURL, Token: inviteTok, ExpiresAt: inviteExp}
+
+	return &GuestCreateResult{
+		AccessToken: token,
+		ExpiresIn:   ttlSec,
+		Room:        s.view(created, []model.Participant{ownerRow}),
+		Invite:      invite,
+	}, nil
 }
 
 func (s *roomService) GetRoom(ctx context.Context, userID, roomID string) (*RoomView, error) {

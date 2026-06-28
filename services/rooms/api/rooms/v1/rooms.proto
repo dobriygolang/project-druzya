@@ -57,6 +57,14 @@ service RoomsService {
       body: "*"
     };
   }
+
+  // Public — no auth. Creates a shared room and returns owner scoped JWT + invite link.
+  rpc CreateGuestRoom(CreateGuestRoomRequest) returns (CreateGuestRoomResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/guest-create"
+      body: "*"
+    };
+  }
 }
 
 message Participant {
@@ -149,4 +157,17 @@ message GuestJoinResponse {
   string access_token = 1;
   Room room = 2;
   int32 expires_in = 3;
+}
+
+message CreateGuestRoomRequest {
+  string display_name = 1;
+  string language = 2;
+  string room_type = 3;
+}
+
+message CreateGuestRoomResponse {
+  string access_token = 1;
+  Room room = 2;
+  int32 expires_in = 3;
+  InviteLink invite = 4;
 }

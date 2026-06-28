@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useState } from 'react'
 import {
   CollabCodeEditor,
@@ -8,15 +8,17 @@ import {
   wsStatusLabel,
   type CollabCodeEditorHandle,
 } from '@/components/CollabCodeEditor'
+import { LiveNewPage } from '@/components/live/LiveNewPage'
 import { LiveCodeRunButton, LiveCodeStatusChip, LiveCodeToolButton } from '@/components/live/LiveCodeChrome'
 import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel'
+import { Logo } from '@/components/brand/Logo'
+import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
 import { getMe } from '@/lib/api/auth'
 import {
   createInvite,
-  createRoom,
   freezeRoom,
   getRoom,
   guestJoin,
@@ -27,13 +29,24 @@ import {
 import { readAccessToken } from '@/lib/apiClient'
 import type { EditorWsStatus } from '@/lib/ws/collabEditor'
 
-/** Immersive live room — layout 1:1 with druzya/frontend EditorPage (full-viewport + RUN + output panel). */
+function jwtSubject(token: string): string | null {
+  const part = token.split('.')[1]
+  if (!part) return null
+  try {
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/')
+    const json = JSON.parse(atob(padded)) as { sub?: string }
+    return json.sub ?? null
+  } catch {
+    return null
+  }
+}
+
+/** Immersive live room — full-viewport editor + RUN + output panel. */
 export default function CollabRoomPage() {
   const { roomId = '' } = useParams()
   const [searchParams] = useSearchParams()
   const inviteToken = searchParams.get('invite') ?? undefined
   const sessionTaskId = searchParams.get('sessionTaskId') ?? undefined
-  const navigate = useNavigate()
   const qc = useQueryClient()
   const editorRef = useRef<CollabCodeEditorHandle>(null)
   const [copied, setCopied] = useState(false)
@@ -43,6 +56,7 @@ export default function CollabRoomPage() {
   const [guestRoom, setGuestRoom] = useState<import('@/lib/api/rooms').CodeRoom | null>(null)
   const isNew = roomId === 'new'
   const authed = !!readAccessToken()
+  const hasSession = authed || !!guestToken
 
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe, enabled: authed })
 
@@ -52,10 +66,11 @@ export default function CollabRoomPage() {
       try {
         return await getRoom(roomId)
       } catch {
-        return joinRoom(roomId, { inviteToken })
+        if (authed) return joinRoom(roomId, { inviteToken })
+        throw new Error('room not found')
       }
     },
-    enabled: !!roomId && !isNew && authed,
+    enabled: !!roomId && !isNew && hasSession,
     retry: false,
   })
 
@@ -65,17 +80,6 @@ export default function CollabRoomPage() {
       persistGuestToken(roomId, result.access_token)
       setGuestToken(result.access_token)
       setGuestRoom(result.room)
-    },
-  })
-
-  const createM = useMutation({
-    mutationFn: () =>
-      createRoom({
-        room_type: 'interview',
-        language: 'go',
-      }),
-    onSuccess: (room) => {
-      navigate(`/live/${room.id}`, { replace: true })
     },
   })
 
@@ -99,45 +103,16 @@ export default function CollabRoomPage() {
   const run = useSandboxRun()
 
   useEffect(() => {
+    if (isNew) return
     const prev = document.body.style.backgroundColor
     document.body.style.backgroundColor = '#1e1e1e'
     return () => {
       document.body.style.backgroundColor = prev
     }
-  }, [])
+  }, [isNew])
 
   if (isNew) {
-    if (!authed) {
-      return (
-        <CenterMessage
-          text="SIGN IN REQUIRED"
-          sub="Войдите, чтобы создать live-комнату."
-          action={
-            <Link to="/login?next=/live/new">
-              <Button size="sm">Войти</Button>
-            </Link>
-          }
-        />
-      )
-    }
-    return (
-      <CenterMessage
-        text={createM.isPending ? 'CREATING ROOM…' : 'LIVE CODING'}
-        sub="Общий редактор с синхронизацией в реальном времени."
-        action={
-          <>
-            {createM.error ? (
-              <ErrorMessage
-                message={createM.error instanceof Error ? createM.error.message : 'Ошибка'}
-              />
-            ) : null}
-            <Button onClick={() => createM.mutate()} loading={createM.isPending}>
-              Создать комнату
-            </Button>
-          </>
-        }
-      />
-    )
+    return <LiveNewPage />
   }
 
   if (!authed && inviteToken && !guestToken) {
@@ -153,24 +128,24 @@ export default function CollabRoomPage() {
     )
   }
 
-  if (!authed && !guestToken) {
+  if (!hasSession) {
     return (
-      <CenterMessage
-        text="INVITE REQUIRED"
-        sub="Нужна ссылка-приглашение или вход в аккаунт."
-        action={
-          <Link to="/login">
-            <Button variant="secondary" size="sm">
-              Войти
-            </Button>
-          </Link>
-        }
+      <GuestGate
+        guestName={guestName}
+        onNameChange={setGuestName}
+        error={null}
+        loading={false}
+        onJoin={() => {}}
+        loginTo={`/login?next=/live/${roomId}`}
+        title="Нужен доступ"
+        description="Войди в аккаунт или открой ссылку-приглашение от организатора."
+        hideJoin
       />
     )
   }
 
   if (roomQ.isLoading || (authed && meQ.isLoading)) {
-    return <CenterMessage text="LOADING ROOM…" />
+    return <EditorShell message="LOADING ROOM…" />
   }
 
   const room =
@@ -179,7 +154,7 @@ export default function CollabRoomPage() {
     (guestToken
       ? {
           id: roomId,
-          owner_id: '',
+          owner_id: jwtSubject(guestToken) ?? '',
           room_type: 'interview',
           language: 'go',
           is_frozen: false,
@@ -191,28 +166,27 @@ export default function CollabRoomPage() {
 
   if (!room) {
     return (
-      <CenterMessage
-        text="ROOM NOT FOUND"
+      <EditorShell
+        message="ROOM NOT FOUND"
         sub={roomQ.error instanceof Error ? roomQ.error.message : undefined}
         action={
-          authed ? (
-            <Link to="/live/new">
-              <Button variant="secondary" size="sm">
-                Создать новую
-              </Button>
-            </Link>
-          ) : undefined
+          <Link to="/live/new">
+            <Button variant="secondary" size="sm">
+              Создать новую
+            </Button>
+          </Link>
         }
       />
     )
   }
 
-  const myId = meQ.data?.id
-  const myRole = room.participants.find((p) => p.user_id === myId)?.role
-  const canFreeze = myRole === 'owner' || myRole === 'interviewer'
-  const isOwner = myId === room.owner_id
-  const canRun = !!(authed || guestToken)
+  const sessionUserId = meQ.data?.id ?? (wsToken ? jwtSubject(wsToken) : null)
+  const myRole = room.participants.find((p) => p.user_id === sessionUserId)?.role
+  const isOwner = sessionUserId === room.owner_id
+  const canFreeze = myRole === 'owner' || myRole === 'interviewer' || isOwner
+  const canRun = !!hasSession
   const panelBottom = runPanelHeight(run.panelOpen)
+  const closeTo = authed ? '/today' : '/welcome'
 
   const handleRun = () => {
     const code = editorRef.current?.getCode() ?? ''
@@ -233,7 +207,7 @@ export default function CollabRoomPage() {
         roomId={room.id}
         language={room.language}
         frozen={room.is_frozen}
-        userId={myId ?? guestName}
+        userId={sessionUserId ?? guestName}
         displayName={meQ.data?.username ?? (guestName || undefined)}
         accessToken={wsToken}
         bottomInset={panelBottom}
@@ -253,7 +227,7 @@ export default function CollabRoomPage() {
             {room.is_frozen ? 'Разморозить' : 'Заморозить'}
           </LiveCodeToolButton>
         ) : null}
-        <Link to="/today">
+        <Link to={closeTo}>
           <LiveCodeToolButton title="Закрыть">×</LiveCodeToolButton>
         </Link>
       </div>
@@ -294,18 +268,18 @@ export default function CollabRoomPage() {
   )
 }
 
-function CenterMessage({
-  text,
+function EditorShell({
+  message,
   sub,
   action,
 }: {
-  text: string
+  message: string
   sub?: string
   action?: React.ReactNode
 }) {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center gap-4 bg-[#1e1e1e] px-6 text-center">
-      <p className="font-mono text-[11px] tracking-[0.08em] text-[#858585]">{text}</p>
+      <p className="font-mono text-[11px] tracking-[0.08em] text-[#858585]">{message}</p>
       {sub ? <p className="max-w-md text-sm leading-relaxed text-[#858585]">{sub}</p> : null}
       {action}
     </div>
@@ -319,6 +293,9 @@ function GuestGate({
   loading,
   onJoin,
   loginTo,
+  title = 'Вход как гость',
+  description = 'Имя для отображения в редакторе. Доступ только на время сессии.',
+  hideJoin = false,
 }: {
   guestName: string
   onNameChange: (v: string) => void
@@ -326,39 +303,71 @@ function GuestGate({
   loading: boolean
   onJoin: () => void
   loginTo: string
+  title?: string
+  description?: string
+  hideJoin?: boolean
 }) {
+  useEffect(() => {
+    document.documentElement.classList.add('light')
+  }, [])
+
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center gap-5 bg-bg px-6">
-      <div className="w-full max-w-sm rounded-xl border border-border bg-surface-1 p-6">
-        <h1 className="font-display text-xl font-bold">Вход как гость</h1>
-        <p className="mt-2 text-sm text-text-secondary">
-          Имя для отображения в редакторе. Доступ только на время сессии.
-        </p>
-        <label htmlFor="guest-name" className="mt-4 block text-sm font-medium">
-          Имя
-        </label>
-        <input
-          id="guest-name"
-          value={guestName}
-          onChange={(e) => onNameChange(e.target.value)}
-          className="mt-1 w-full rounded-xl border border-border bg-bg px-3 py-2 text-sm outline-none focus:border-border-strong"
-          placeholder="Кандидат"
-        />
-        {error ? (
-          <div className="mt-3">
-            <ErrorMessage message={error instanceof Error ? error.message : 'Ошибка входа'} />
-          </div>
-        ) : null}
-        <Button className="mt-4 w-full" loading={loading} onClick={onJoin}>
-          Войти в комнату
-        </Button>
-        <p className="mt-4 text-center text-xs text-text-muted">
-          Уже есть аккаунт?{' '}
-          <Link to={loginTo} className="underline">
+    <div className="min-h-screen bg-bg text-text-primary">
+      <header className="border-b px-6 py-5 sm:px-8" style={{ borderColor: brand.hair }}>
+        <div className="mx-auto flex max-w-lg items-center justify-between">
+          <Logo to="/welcome" />
+          <Link to={loginTo} className="text-sm text-text-secondary no-underline">
             Войти
           </Link>
-        </p>
-      </div>
+        </div>
+      </header>
+      <main className="mx-auto flex max-w-lg flex-col items-center px-6 py-16">
+        <div className="sdvg-card w-full p-6 sm:p-7" style={{ boxShadow: brand.cardShadow }}>
+          <h1 className="text-xl font-semibold tracking-[-0.02em]">{title}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-text-secondary">{description}</p>
+          {!hideJoin ? (
+            <>
+              <label htmlFor="guest-name" className="mt-5 block text-sm font-medium">
+                Имя
+              </label>
+              <input
+                id="guest-name"
+                value={guestName}
+                onChange={(e) => onNameChange(e.target.value)}
+                className="mt-1.5 w-full rounded-xl border border-border bg-surface-1 px-3 py-2.5 text-sm outline-none focus:border-border-strong"
+                placeholder="Кандидат"
+              />
+              {error ? (
+                <div className="mt-3">
+                  <ErrorMessage message={error instanceof Error ? error.message : 'Ошибка входа'} />
+                </div>
+              ) : null}
+              <Button className="mt-5 w-full" loading={loading} onClick={onJoin}>
+                Войти в комнату
+              </Button>
+            </>
+          ) : (
+            <div className="mt-5 flex flex-col gap-2">
+              <Link to={loginTo}>
+                <Button className="w-full">Войти в аккаунт</Button>
+              </Link>
+              <Link to="/live/new">
+                <Button variant="ghost" className="w-full">
+                  Создать свою комнату
+                </Button>
+              </Link>
+            </div>
+          )}
+          {!hideJoin ? (
+            <p className="mt-4 text-center text-xs text-text-muted">
+              Уже есть аккаунт?{' '}
+              <Link to={loginTo} className="text-text-primary underline">
+                Войти
+              </Link>
+            </p>
+          ) : null}
+        </div>
+      </main>
     </div>
   )
 }

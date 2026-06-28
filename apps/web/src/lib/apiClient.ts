@@ -71,7 +71,7 @@ export function parseAuthTokens(body: Record<string, unknown>): {
 }
 
 function isPublicPath(path: string): boolean {
-  return path.startsWith('/login') || path.startsWith('/auth/')
+  return path.startsWith('/login') || path.startsWith('/auth/') || path.startsWith('/live/')
 }
 
 function redirectToLogin(): void {
@@ -116,6 +116,29 @@ async function doFetch(path: string, init: RequestInit, bearer: string | null): 
   return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
 
+async function parseResponse<T>(path: string, res: Response): Promise<T> {
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new ApiError(res.status, body)
+  }
+  if (res.status === 204) return undefined as T
+  const text = await res.text()
+  if (!text) return undefined as T
+  if (text.trimStart().startsWith('<')) {
+    throw new ApiError(
+      res.status,
+      `API returned HTML instead of JSON for ${path} — check /v1 routing on reverse proxy`,
+    )
+  }
+  let body: unknown
+  try {
+    body = JSON.parse(text)
+  } catch {
+    throw new ApiError(res.status, text.slice(0, 500))
+  }
+  return normalizeProtoJson(body) as T
+}
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -146,6 +169,16 @@ export function formatApiError(err: unknown): string {
   return 'Неизвестная ошибка'
 }
 
+/** API call with explicit bearer (e.g. guest scoped JWT). No refresh redirect. */
+export async function apiWithBearer<T = unknown>(
+  path: string,
+  init: RequestInit,
+  bearer: string,
+): Promise<T> {
+  const res = await doFetch(path, init, bearer)
+  return parseResponse<T>(path, res)
+}
+
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   let token = readAccessToken()
   let res = await doFetch(path, init, token)
@@ -164,25 +197,5 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
     }
   }
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new ApiError(res.status, body)
-  }
-
-  if (res.status === 204) return undefined as T
-  const text = await res.text()
-  if (!text) return undefined as T
-  if (text.trimStart().startsWith('<')) {
-    throw new ApiError(
-      res.status,
-      `API returned HTML instead of JSON for ${path} — check /v1 routing on reverse proxy`,
-    )
-  }
-  let body: unknown
-  try {
-    body = JSON.parse(text)
-  } catch {
-    throw new ApiError(res.status, text.slice(0, 500))
-  }
-  return normalizeProtoJson(body) as T
+  return parseResponse<T>(path, res)
 }

@@ -63,6 +63,28 @@ RETURNING id, owner_id, room_type, task_id, language, is_frozen, visibility, exp
 	return out, nil
 }
 
+func (r *Repository) CreateRoomWithID(ctx context.Context, id uuid.UUID, room model.Room) (model.Room, error) {
+	const q = `
+INSERT INTO code_rooms (id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+RETURNING id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, created_at`
+
+	var out model.Room
+	var taskID *uuid.UUID
+	err := r.pg.QueryRow(ctx, q,
+		id, room.OwnerID, room.Type.String(), room.TaskID, room.Language.String(),
+		room.IsFrozen, room.Visibility, room.ExpiresAt,
+	).Scan(
+		&out.ID, &out.OwnerID, &out.Type, &taskID, &out.Language,
+		&out.IsFrozen, &out.Visibility, &out.ExpiresAt, &out.CreatedAt,
+	)
+	if err != nil {
+		return model.Room{}, fmt.Errorf("CreateRoomWithID: %w", err)
+	}
+	out.TaskID = taskID
+	return out, nil
+}
+
 func (r *Repository) GetRoom(ctx context.Context, id uuid.UUID) (model.Room, error) {
 	const q = `
 SELECT id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, created_at
