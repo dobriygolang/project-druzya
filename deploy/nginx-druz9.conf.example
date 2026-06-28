@@ -1,86 +1,63 @@
-# druz9 — add alongside your existing nginx (VPN/VLESS config untouched).
-# Caddy listens on 127.0.0.1:18080 only (see docker-compose.prod.yml).
+# druz9 behind xray REALITY on :443 (VPN keeps the port).
 #
-#   sudo cp deploy/nginx-druz9.conf.example /etc/nginx/sites-available/druz9
-#   sudo ln -sf /etc/nginx/sites-available/druz9 /etc/nginx/sites-enabled/druz9
-#   sudo nginx -t && sudo systemctl reload nginx
+# Flow: browser → xray:443 (REALITY) → nginx:8123 (TLS by SNI) → Caddy:18080
 #
-# TLS: certbot for druz9 domains, e.g.
-#   certbot certonly --nginx -d druz9.online -d app.druz9.online -d api.druz9.online \
-#     -d druz9.ru -d app.druz9.ru -d api.druz9.ru
+# 1. Caddy in Docker: 127.0.0.1:18080 only (see docker-compose.prod.yml)
+# 2. certbot for druz9.* domains (port 80, stop nginx briefly if needed)
+# 3. Enable this site + set xray realitySettings.target = 127.0.0.1:8123
+#    (was telemt:500 — keep dobriyy.mooo.com default_server for VPN camouflage)
+# 4. Do NOT bind Docker Caddy to host :80/:443
 
 map $http_upgrade $connection_upgrade {
 	default upgrade;
 	''      close;
 }
 
-upstream druzya_caddy {
-	server 127.0.0.1:18080;
-	keepalive 32;
+# REALITY fallback target — VPN camouflage (default)
+server {
+	listen 127.0.0.1:8123 ssl proxy_protocol default_server;
+	server_name dobriyy.mooo.com;
+
+	ssl_certificate     /etc/letsencrypt/live/dobriyy.mooo.com/fullchain.pem;
+	ssl_certificate_key /etc/letsencrypt/live/dobriyy.mooo.com/privkey.pem;
+	ssl_protocols TLSv1.2 TLSv1.3;
+
+	set_real_ip_from 127.0.0.0/8;
+	real_ip_header proxy_protocol;
+
+	root /var/www/dobriyy.mooo.com;
+	index index.php index.html;
+
+	location / {
+		try_files $uri $uri/ =404;
+	}
 }
 
-# --- API ---
+# druz9 sites → Caddy
 server {
-	listen 443 ssl http2;
-	listen [::]:443 ssl http2;
-	server_name api.druz9.online api.druz9.ru;
+	listen 127.0.0.1:8123 ssl proxy_protocol;
+	server_name druz9.online app.druz9.online api.druz9.online druz9.ru app.druz9.ru api.druz9.ru;
 
 	ssl_certificate     /etc/letsencrypt/live/druz9.online/fullchain.pem;
 	ssl_certificate_key /etc/letsencrypt/live/druz9.online/privkey.pem;
+	ssl_protocols TLSv1.2 TLSv1.3;
+
+	set_real_ip_from 127.0.0.0/8;
+	real_ip_header proxy_protocol;
 
 	location / {
-		proxy_pass http://druzya_caddy;
+		proxy_pass http://127.0.0.1:18080;
 		proxy_http_version 1.1;
 		proxy_set_header Host $host;
 		proxy_set_header X-Real-IP $remote_addr;
 		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-		proxy_set_header X-Forwarded-Proto $scheme;
+		proxy_set_header X-Forwarded-Proto https;
 		proxy_set_header Upgrade $http_upgrade;
 		proxy_set_header Connection $connection_upgrade;
 	}
 }
 
-# --- SPA (+ same-origin /v1, /ws) ---
-server {
-	listen 443 ssl http2;
-	listen [::]:443 ssl http2;
-	server_name druz9.online app.druz9.online;
-
-	ssl_certificate     /etc/letsencrypt/live/druz9.online/fullchain.pem;
-	ssl_certificate_key /etc/letsencrypt/live/druz9.online/privkey.pem;
-
-	location / {
-		proxy_pass http://druzya_caddy;
-		proxy_http_version 1.1;
-		proxy_set_header Host $host;
-		proxy_set_header X-Real-IP $remote_addr;
-		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-		proxy_set_header X-Forwarded-Proto $scheme;
-		proxy_set_header Upgrade $http_upgrade;
-		proxy_set_header Connection $connection_upgrade;
-	}
-}
-
-# --- RU → redirect handled by Caddy; still need TLS + proxy for Host header ---
-server {
-	listen 443 ssl http2;
-	listen [::]:443 ssl http2;
-	server_name druz9.ru app.druz9.ru;
-
-	ssl_certificate     /etc/letsencrypt/live/druz9.online/fullchain.pem;
-	ssl_certificate_key /etc/letsencrypt/live/druz9.online/privkey.pem;
-
-	location / {
-		proxy_pass http://druzya_caddy;
-		proxy_http_version 1.1;
-		proxy_set_header Host $host;
-		proxy_set_header X-Real-IP $remote_addr;
-		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-		proxy_set_header X-Forwarded-Proto $scheme;
-	}
-}
-
-# HTTP → HTTPS (only druz9 hosts; your VPN config on :80 stays separate)
+# HTTP → HTTPS (druz9 names only; does not affect xray :443)
 server {
 	listen 80;
 	listen [::]:80;

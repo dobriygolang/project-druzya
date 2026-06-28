@@ -132,7 +132,9 @@ jobs:
             cd "$REPO_DIR"
             git fetch origin "$BRANCH"
             git checkout "$BRANCH"
-            git pull --ff-only origin "$BRANCH"
+            # Server hotfixes must live in git — discard tracked drift; keep gitignored .env/secrets.
+            git reset --hard "origin/$BRANCH"
+            git clean -fd --exclude=deploy/.env --exclude=deploy/secrets
 
             if [ -f generated-api.tgz ]; then
               echo "Extracting pre-generated pkg/api from CI..."
