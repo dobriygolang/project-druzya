@@ -6,18 +6,13 @@ import { ChevronDown, LogOut, Menu, User, X } from 'lucide-react'
 import { Logo } from '@/components/brand/Logo'
 import { PAGE_MAX_WIDTH_CLASS } from '@/lib/brand/layout'
 import { MobileBottomNav } from '@/components/MobileBottomNav'
+import { UserAvatar } from '@/components/UserAvatar'
 import { getMe, logout } from '@/lib/api/auth'
 import { cn } from '@/lib/cn'
 import { PRIMARY_NAV } from '@/lib/migration/nav'
 import { useMotion } from '@/lib/motion-presets'
 
 const IMMERSIVE: RegExp[] = [/^\/interview\/session\//, /^\/live\//]
-
-function userInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean).slice(0, 2)
-  if (parts.length === 0) return '?'
-  return parts.map((p) => p[0]?.toUpperCase() ?? '').join('')
-}
 
 function NavItem({ to, label, onClick }: { to: string; label: string; onClick?: () => void }) {
   const { pathname } = useLocation()
@@ -134,8 +129,13 @@ function TopNav() {
               aria-expanded={userMenuOpen}
               aria-haspopup="menu"
             >
-              <span className="grid h-7 w-7 place-items-center rounded-full bg-surface-2 text-[11px] font-semibold text-text-secondary">
-                {userInitials(username)}
+              <span className="grid h-7 w-7 overflow-hidden rounded-full bg-surface-2">
+                <UserAvatar
+                  name={username}
+                  avatarUrl={meQ.data?.avatar_url}
+                  className="h-7 w-7"
+                  textClassName="text-[11px]"
+                />
               </span>
               <span className="max-w-[120px] truncate">{username}</span>
               <ChevronDown

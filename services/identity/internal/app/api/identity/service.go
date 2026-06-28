@@ -9,10 +9,11 @@ import (
 // on the domain service interface (no duplicate transport-side contract).
 type Implementation struct {
 	identityv1.UnimplementedIdentityServiceServer
-	service authservice.Service
+	service          authservice.Service
+	telegramBotToken string
 }
 
 // NewImplementation constructs the gRPC transport layer.
-func NewImplementation(service authservice.Service) *Implementation {
-	return &Implementation{service: service}
+func NewImplementation(service authservice.Service, telegramBotToken string) *Implementation {
+	return &Implementation{service: service, telegramBotToken: telegramBotToken}
 }

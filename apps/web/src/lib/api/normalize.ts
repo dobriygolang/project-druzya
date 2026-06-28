@@ -106,5 +106,17 @@ export function normalizeBillingMe(raw: BillingMe): BillingMe {
 
 export function normalizeUser(raw?: User | null): User {
   if (!raw) throw new Error('missing user in response')
-  return raw
+  const record = raw as User & { avatarUrl?: string; createdAt?: string; telegramId?: string }
+  return {
+    id: record.id,
+    username: record.username,
+    avatar_url: record.avatar_url || record.avatarUrl || undefined,
+    created_at: record.created_at || record.createdAt,
+    telegram_id:
+      record.telegram_id != null
+        ? String(record.telegram_id)
+        : record.telegramId != null
+          ? String(record.telegramId)
+          : undefined,
+  }
 }

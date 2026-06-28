@@ -12,8 +12,8 @@ func Register(s *grpc.Server, impl *Implementation) {
 }
 
 // NewRegisteredImplementation constructs handlers and registers them on the gRPC server.
-func NewRegisteredImplementation(s *grpc.Server, svc authservice.Service) *Implementation {
-	impl := NewImplementation(svc)
+func NewRegisteredImplementation(s *grpc.Server, svc authservice.Service, telegramBotToken string) *Implementation {
+	impl := NewImplementation(svc, telegramBotToken)
 	Register(s, impl)
 	return impl
 }

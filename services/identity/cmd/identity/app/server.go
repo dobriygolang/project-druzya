@@ -22,7 +22,7 @@ func RunAPI(ctx context.Context, a *App) error {
 		return fmt.Errorf("listen grpc %s: %w", listenAddr, err)
 	}
 
-	impl := identityapi.NewImplementation(a.Service)
+	impl := identityapi.NewImplementation(a.Service, a.Config.TelegramBotToken)
 	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		identityapi.InternalAuthInterceptor(a.Config.InternalAPIToken),
 		identityapi.AuthInterceptor(a.Service),
@@ -47,6 +47,7 @@ func RunAPI(ctx context.Context, a *App) error {
 	httpMux.Handle("/metrics", ops.MetricsHandler())
 	httpMux.HandleFunc("/v1/auth/yandex/callback", impl.YandexCallbackHTTP())
 	httpMux.HandleFunc("/v1/auth/config", identityapi.AuthConfigHTTP(a.Config.TelegramBotUsername))
+	httpMux.HandleFunc("GET /v1/users/{id}/avatar", impl.UserAvatarHTTP())
 	httpMux.HandleFunc("/v1/jwt/public.pem", impl.PublicKeyHTTP(a.PublicKeyPEM))
 
 	if err := identityapi.RegisterGateway(ctx, httpMux, dialAddr); err != nil {

@@ -10,6 +10,7 @@ import { PageContent } from '@/components/PageContent'
 import { getBillingMe } from '@/lib/api/billing'
 import { getMe } from '@/lib/api/auth'
 import { formatApiError } from '@/lib/apiClient'
+import { UserAvatar } from '@/components/UserAvatar'
 import {
   entitlementLabel,
   formatLimitUsage,
@@ -51,7 +52,6 @@ export default function ProfilePage() {
   if (!user) return null
 
   const username = user.username
-  const initial = username.slice(0, 1).toUpperCase()
   const memberSince = user.created_at ? formatMonthYear(user.created_at) : null
   const limitEntries = billingQ.data ? sortLimitEntries(Object.entries(billingQ.data.limits)) : []
 
@@ -60,11 +60,7 @@ export default function ProfilePage() {
       <header className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-5">
           <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-full border border-border bg-surface-1 text-xl font-semibold">
-            {user.avatar_url ? (
-              <img src={user.avatar_url} alt={username} className="h-full w-full object-cover" />
-            ) : (
-              initial
-            )}
+            <UserAvatar name={username} avatarUrl={user.avatar_url} className="h-16 w-16" textClassName="text-xl" />
           </div>
           <div>
             <Eyebrow>Профиль</Eyebrow>

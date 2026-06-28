@@ -2,8 +2,11 @@ package identityapi
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
+	"github.com/sedorofeevd/project-druzya/services/identity/internal/adapter/telegram"
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/user/model"
 	authservice "github.com/sedorofeevd/project-druzya/services/identity/internal/auth/service"
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/tools/humanerror"
@@ -20,13 +23,32 @@ func toProtoUser(user *model.User) *identityv1.User {
 	out := &identityv1.User{
 		Id:        user.ID,
 		Username:  user.Username,
-		AvatarUrl: user.AvatarURL,
+		AvatarUrl: publicAvatarURL(user),
 		CreatedAt: timestamppb.New(user.CreatedAt),
 	}
 	if user.TelegramID != nil {
 		out.TelegramId = *user.TelegramID
 	}
 	return out
+}
+
+func publicAvatarURL(user *model.User) string {
+	if user == nil {
+		return ""
+	}
+	if user.AvatarURL == "" {
+		return ""
+	}
+	if path, ok := telegram.ParseStoreRef(user.AvatarURL); ok && path != "" {
+		return fmt.Sprintf("/v1/users/%s/avatar", user.ID)
+	}
+	if telegram.IsLegacyFakeURL(user.AvatarURL) && user.TelegramID != nil {
+		return fmt.Sprintf("/v1/users/%s/avatar", user.ID)
+	}
+	if strings.HasPrefix(user.AvatarURL, "/v1/users/") {
+		return user.AvatarURL
+	}
+	return user.AvatarURL
 }
 
 func toAuthResponse(result *authservice.AuthResult) *identityv1.AuthResponse {

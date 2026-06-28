@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/sedorofeevd/project-druzya/services/identity/internal/adapter/telegram"
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/auth/logincode"
 	"github.com/sedorofeevd/project-druzya/services/identity/internal/auth/model"
 	authrepo "github.com/sedorofeevd/project-druzya/services/identity/internal/auth/repository"
@@ -82,7 +83,7 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) erro
 		FirstName:  message.From.FirstName,
 		LastName:   message.From.LastName,
 		Username:   message.From.UserName,
-		AvatarURL:  telegramAvatarURL(message.From.ID),
+		AvatarURL:  resolveTelegramAvatar(b.api, message.From.ID),
 		ExpiresAt:  expiresAt,
 	}
 
@@ -96,6 +97,10 @@ func (b *Bot) handleMessage(ctx context.Context, message *tgbotapi.Message) erro
 	return err
 }
 
-func telegramAvatarURL(userID int64) string {
-	return fmt.Sprintf("https://t.me/i/userpic/320/%d.jpg", userID)
+func resolveTelegramAvatar(api *tgbotapi.BotAPI, userID int64) string {
+	path, err := telegram.ProfilePhotoFilePath(api, userID)
+	if err != nil || path == "" {
+		return ""
+	}
+	return telegram.StoreRef(path)
 }
