@@ -19,13 +19,15 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     else \
       make gen-proto; \
     fi
+# Cross-service replace imports pull sibling pkg/api/google — duplicate proto registration at init.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     mkdir -p .bin && \
+    LDFLAGS="-s -w -X google.golang.org/protobuf/reflect/protoregistry.conflictPolicy=ignore" && \
     if [ -n "${CMD}" ]; then \
-      go build -ldflags="-s -w" -o .bin/${SERVICE} ./cmd/${CMD}; \
+      go build -ldflags="${LDFLAGS}" -o .bin/${SERVICE} ./cmd/${CMD}; \
     else \
-      go build -ldflags="-s -w" -o .bin/${SERVICE} ./cmd/${SERVICE}; \
+      go build -ldflags="${LDFLAGS}" -o .bin/${SERVICE} ./cmd/${SERVICE}; \
     fi
 
 FROM alpine:3.20
