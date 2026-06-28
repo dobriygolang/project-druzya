@@ -201,11 +201,13 @@ export const ru = {
       sysdesignHint: 'Architecture & scaling',
       behavioral: 'Behavioral',
       behavioralHint: 'STAR & culture fit',
+      sectionLabel: 'Секция',
       scopeLabel: 'Формат',
       scopeRandom: 'Random · 1 задача',
       scopeCompany: 'Под компанию · весь трек',
       companyLabel: 'Компания',
       randomHint: 'Одна случайная задача из каталога — порядок перемешивается каждый раз.',
+      open: 'Начать тренировку',
       start: 'Начать задачу',
     },
     live: {
@@ -214,6 +216,7 @@ export const ru = {
       description: 'Общий редактор в реальном времени — комната создаётся сразу.',
       displayName: 'Ваше имя в редакторе',
       language: 'Язык',
+      open: 'Создать комнату',
       createRoom: 'Создать комнату',
     },
     company: {

@@ -1,9 +1,11 @@
-import { useMemo, useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowRight, Building2, Users } from 'lucide-react'
 import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
 import { CompanyMockModal } from '@/components/mock/CompanyMockModal'
+import { LiveRoomModal } from '@/components/mock/LiveRoomModal'
+import { SoloPracticeModal } from '@/components/mock/SoloPracticeModal'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -22,11 +24,9 @@ import { formatApiError, readAccessToken } from '@/lib/apiClient'
 import { useBillingLabels } from '@/lib/billingLabels'
 import { isActiveSessionConflict, useInterviewLabels } from '@/lib/interviewLabels'
 import { useI18n } from '@/lib/i18n'
-import { LIVE_LANGS } from '@/lib/live/constants'
-import { readGuestDisplayName, persistGuestDisplayName } from '@/lib/live/guestDisplayName'
+import { persistGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
-import type { Progress, Session, SessionMode } from '@/lib/types'
-import { cn } from '@/lib/cn'
+import type { Progress, Session } from '@/lib/types'
 
 export default function MockHubPage() {
   const { t, locale, formatDate } = useI18n()
@@ -39,43 +39,9 @@ export default function MockHubPage() {
   const qc = useQueryClient()
   const toast = useToast()
   const authed = !!readAccessToken()
-  const [soloMode, setSoloMode] = useState<SessionMode>('SESSION_MODE_ALGORITHMS_TRAINING')
-  const [soloScope, setSoloScope] = useState<'random' | 'company'>('random')
-  const [soloCompanyId, setSoloCompanyId] = useState('')
+  const [soloModalOpen, setSoloModalOpen] = useState(false)
+  const [liveModalOpen, setLiveModalOpen] = useState(false)
   const [companyModalOpen, setCompanyModalOpen] = useState(false)
-  const [liveLanguage, setLiveLanguage] = useState('go')
-  const [guestName, setGuestName] = useState(() => readGuestDisplayName())
-
-  const soloSections = useMemo(
-    () =>
-      [
-        {
-          id: 'algo',
-          label: t('mock.solo.algo'),
-          hint: t('mock.solo.algoHint'),
-          mode: 'SESSION_MODE_ALGORITHMS_TRAINING' as SessionMode,
-        },
-        {
-          id: 'coding',
-          label: t('mock.solo.coding'),
-          hint: t('mock.solo.codingHint'),
-          mode: 'SESSION_MODE_LIVE_CODING_TRAINING' as SessionMode,
-        },
-        {
-          id: 'sysdesign',
-          label: t('mock.solo.sysdesign'),
-          hint: t('mock.solo.sysdesignHint'),
-          mode: 'SESSION_MODE_SYSTEM_DESIGN_TRAINING' as SessionMode,
-        },
-        {
-          id: 'behavioral',
-          label: t('mock.solo.behavioral'),
-          hint: t('mock.solo.behavioralHint'),
-          mode: 'SESSION_MODE_BEHAVIORAL_TRAINING' as SessionMode,
-        },
-      ] as const,
-    [t],
-  )
 
   const companiesQ = useQuery({ queryKey: ['companies'], queryFn: () => listCompanies() })
   const billingQ = useQuery({ queryKey: ['billing-me'], queryFn: getBillingMe })
@@ -111,15 +77,19 @@ export default function MockHubPage() {
   })
 
   const startSoloM = useMutation({
-    mutationFn: () =>
+    mutationFn: (params: {
+      mode: import('@/lib/types').SessionMode
+      practiceScope: 'PRACTICE_SCOPE_RANDOM_ONE' | 'PRACTICE_SCOPE_COMPANY_TRACK'
+      companyId?: string
+    }) =>
       startTrainingSession({
-        mode: soloMode,
-        practiceScope:
-          soloScope === 'company' ? 'PRACTICE_SCOPE_COMPANY_TRACK' : 'PRACTICE_SCOPE_RANDOM_ONE',
-        companyId: soloScope === 'company' ? soloCompanyId : undefined,
+        mode: params.mode,
+        practiceScope: params.practiceScope,
+        companyId: params.companyId,
       }),
     onSuccess: (data) => {
       void qc.invalidateQueries({ queryKey: ['active-session'] })
+      setSoloModalOpen(false)
       navigate(`/interview/session/${data.session.id}`)
     },
     onError: notifyError,
@@ -152,33 +122,25 @@ export default function MockHubPage() {
 
   const canStartCompanyMock =
     companyTemplatesEnabled && !mockQuotaExhausted && !startMockM.isPending
+  const canStartSolo = !mockQuotaExhausted && !startSoloM.isPending
 
-  function handleCreateLive() {
-    if (!authed) persistGuestDisplayName(guestName || t('common.guest'))
+  function handleCreateLive(params: { language: string; displayName?: string }) {
+    if (!authed && params.displayName) persistGuestDisplayName(params.displayName)
     createLiveM.mutate(
-      { language: liveLanguage, displayName: guestName || undefined },
-      { onError: (err) => toast.push(formatApiError(err), 'error') },
+      { language: params.language, displayName: params.displayName || undefined },
+      {
+        onSuccess: () => setLiveModalOpen(false),
+        onError: (err) => toast.push(formatApiError(err), 'error'),
+      },
     )
   }
 
   const timeLocale = locale === 'en' ? 'en-US' : 'ru-RU'
 
   useEffect(() => {
-    if (companies.length > 0 && !soloCompanyId) {
-      setSoloCompanyId(companies[0]!.id)
-    }
-  }, [companies, soloCompanyId])
-
-  const soloStartDisabled =
-    mockQuotaExhausted ||
-    startSoloM.isPending ||
-    (soloScope === 'company' && (!soloCompanyId || companies.length === 0))
-
-  useEffect(() => {
     if (!soloFocus) return
-    const section = soloSections.find((s) => s.id === soloFocus)
-    if (section) setSoloMode(section.mode)
-  }, [soloFocus, soloSections])
+    setSoloModalOpen(true)
+  }, [soloFocus])
 
   useEffect(() => {
     if (!soloFocus || !soloCardRef.current) return
@@ -231,77 +193,22 @@ export default function MockHubPage() {
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div ref={soloCardRef} className={soloFocus ? 'rounded-2xl ring-2 ring-brand-green/40' : undefined}>
-        <PracticeCard
-          eyebrow={t('mock.solo.eyebrow')}
-          title={t('mock.solo.title')}
-          description={t('mock.solo.description')}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap gap-2">
-              {soloSections.map((s) => (
-                <PillButton
-                  key={s.id}
-                  title={s.hint}
-                  active={soloMode === s.mode || soloFocus === s.id}
-                  onClick={() => setSoloMode(s.mode)}
-                >
-                  {s.label}
-                </PillButton>
-              ))}
-            </div>
-
-            <div>
-              <span className="text-[13px] text-text-secondary">{t('mock.solo.scopeLabel')}</span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <PillButton active={soloScope === 'random'} onClick={() => setSoloScope('random')}>
-                  {t('mock.solo.scopeRandom')}
-                </PillButton>
-                <PillButton
-                  active={soloScope === 'company'}
-                  onClick={() => setSoloScope('company')}
-                  disabled={companies.length === 0}
-                >
-                  {t('mock.solo.scopeCompany')}
-                </PillButton>
-              </div>
-            </div>
-
-            {soloScope === 'company' ? (
-              companiesQ.isLoading ? (
-                <div className="h-9 w-full animate-pulse rounded-lg bg-surface-2" />
-              ) : (
-                <label className="block">
-                  <span className="text-[13px] text-text-secondary">{t('mock.solo.companyLabel')}</span>
-                  <select
-                    value={soloCompanyId}
-                    onChange={(e) => setSoloCompanyId(e.target.value)}
-                    className="mt-1.5 w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
-                  >
-                    {companies.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )
-            ) : (
-              <p className="text-[13px] text-text-muted">{t('mock.solo.randomHint')}</p>
-            )}
-
+          <PracticeCard
+            eyebrow={t('mock.solo.eyebrow')}
+            title={t('mock.solo.title')}
+            description={t('mock.solo.description')}
+          >
             <Button
               variant="primary"
               size="sm"
               className="w-full sm:w-auto"
               iconRight={<ArrowRight className="h-4 w-4" />}
-              loading={startSoloM.isPending}
-              disabled={soloStartDisabled}
-              onClick={() => startSoloM.mutate()}
+              disabled={!canStartSolo}
+              onClick={() => setSoloModalOpen(true)}
             >
-              {t('mock.solo.start')}
+              {t('mock.solo.open')}
             </Button>
-          </div>
-        </PracticeCard>
+          </PracticeCard>
         </div>
 
         <PracticeCard
@@ -309,46 +216,16 @@ export default function MockHubPage() {
           title={t('mock.live.title')}
           description={t('mock.live.description')}
         >
-          <div className="flex flex-col gap-4">
-            {!authed ? (
-              <label className="block">
-                <span className="text-[13px] text-text-secondary">{t('mock.live.displayName')}</span>
-                <input
-                  value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
-                  placeholder={t('common.guest')}
-                  className="mt-1.5 w-full rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
-                />
-              </label>
-            ) : null}
-
-            <div>
-              <span className="text-[13px] text-text-secondary">{t('mock.live.language')}</span>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {LIVE_LANGS.map((lang) => (
-                  <PillButton
-                    key={lang.id}
-                    active={liveLanguage === lang.id}
-                    onClick={() => setLiveLanguage(lang.id)}
-                  >
-                    {lang.label}
-                  </PillButton>
-                ))}
-              </div>
-            </div>
-
-            <Button
-              variant="primary"
-              size="sm"
-              className="w-full sm:w-auto"
-              icon={<Users className="h-4 w-4" />}
-              iconRight={<ArrowRight className="h-4 w-4" />}
-              loading={createLiveM.isPending}
-              onClick={handleCreateLive}
-            >
-              {t('mock.live.createRoom')}
-            </Button>
-          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            className="w-full sm:w-auto"
+            icon={<Users className="h-4 w-4" />}
+            iconRight={<ArrowRight className="h-4 w-4" />}
+            onClick={() => setLiveModalOpen(true)}
+          >
+            {t('mock.live.open')}
+          </Button>
         </PracticeCard>
 
         <PracticeCard
@@ -382,6 +259,25 @@ export default function MockHubPage() {
           )}
         </PracticeCard>
       </div>
+
+      <SoloPracticeModal
+        open={soloModalOpen}
+        onClose={() => setSoloModalOpen(false)}
+        companies={companies}
+        companiesLoading={companiesQ.isLoading}
+        starting={startSoloM.isPending}
+        disabled={!canStartSolo}
+        initialSectionId={soloFocus}
+        onStart={(params) => startSoloM.mutate(params)}
+      />
+
+      <LiveRoomModal
+        open={liveModalOpen}
+        onClose={() => setLiveModalOpen(false)}
+        authed={authed}
+        starting={createLiveM.isPending}
+        onCreate={handleCreateLive}
+      />
 
       <CompanyMockModal
         open={companyModalOpen}
@@ -530,39 +426,6 @@ function PracticeCard({
     <SdvgCard eyebrow={eyebrow} title={title} description={description} className="flex h-full flex-col">
       <div className="mt-auto">{children}</div>
     </SdvgCard>
-  )
-}
-
-function PillButton({
-  children,
-  active,
-  loading,
-  disabled,
-  title,
-  onClick,
-}: {
-  children: React.ReactNode
-  active?: boolean
-  loading?: boolean
-  disabled?: boolean
-  title?: string
-  onClick?: () => void
-}) {
-  return (
-    <button
-      type="button"
-      title={title}
-      disabled={disabled || loading}
-      onClick={onClick}
-      className={cn(
-        'rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-        active
-          ? 'border-border-strong bg-surface-2 font-medium text-text-primary'
-          : 'border-border text-text-secondary hover:border-border-strong hover:text-text-primary',
-      )}
-    >
-      {loading ? '…' : children}
-    </button>
   )
 }
 

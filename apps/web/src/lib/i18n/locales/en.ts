@@ -201,11 +201,13 @@ export const en: Messages = {
       sysdesignHint: 'Architecture & scaling',
       behavioral: 'Behavioral',
       behavioralHint: 'STAR & culture fit',
+      sectionLabel: 'Section',
       scopeLabel: 'Format',
       scopeRandom: 'Random · 1 task',
       scopeCompany: 'By company · full track',
       companyLabel: 'Company',
       randomHint: 'One random task from the catalog — shuffled every time.',
+      open: 'Start practice',
       start: 'Start task',
     },
     live: {
@@ -214,6 +216,7 @@ export const en: Messages = {
       description: 'Shared real-time editor — room is created instantly.',
       displayName: 'Your name in the editor',
       language: 'Language',
+      open: 'Create room',
       createRoom: 'Create room',
     },
     company: {
