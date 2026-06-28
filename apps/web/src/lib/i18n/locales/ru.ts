@@ -65,6 +65,8 @@ export const ru = {
     usedOf: '{{used}} из {{limit}}{{period}}',
     usedOnly: '{{used}}{{period}}',
     quotaExhausted: '— лимит исчерпан.',
+    upgradeHint: 'Перейди на Pro — больше mock, AI-оценок и live-комнат.',
+    upgradeCta: 'Смотреть Pro',
     counters: {
       mock_interviews_per_month: 'Mock-интервью',
       ai_evaluations_per_day: 'AI-оценки ответов',
@@ -143,6 +145,12 @@ export const ru = {
       loading: 'Загрузка инсайтов…',
     },
     errorSection: 'Не удалось загрузить раздел «{{section}}»',
+    shell: {
+      quickNav: 'Быстрые ссылки',
+      mockHint: 'Mock под компанию и solo-тренировки',
+      learnHint: 'Статьи по слабым навыкам',
+      pricingHint: 'Лимиты Pro и оплата',
+    },
   },
   learn: {
     eyebrow: 'База знаний',
@@ -357,6 +365,18 @@ export const ru = {
     paymentNote:
       'Trial Pro бесплатный и одноразовый на аккаунт. Через 14 дней лимиты вернутся к Free, если не оформишь подписку в Tribute.',
     learnMorePro: 'Подробнее о Pro',
+  },
+  checkout: {
+    eyebrow: 'Оплата',
+    title: 'Подписка Pro',
+    subtitle: 'Оплата через Tribute. Перед оплатой привяжи Telegram.',
+    planNotFound: 'План не найден — все тарифы на странице pricing.',
+    backToPricing: '← Все тарифы',
+    returnHint: 'После оплаты открой {{url}}, чтобы подтвердить подписку.',
+    welcomeEyebrow: 'Добро пожаловать',
+    welcomePro: 'Pro активен — спасибо за подписку!',
+    welcomePending: 'Спасибо! Подтверждаем оплату…',
+    goToday: 'Перейти в Today',
   },
   welcome: {
     pill: 'Подготовка к техническим собесам',

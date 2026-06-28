@@ -19,6 +19,13 @@ var handledEventNames = []string{
 	TaskSkippedEvent,
 }
 
+// HandledEventNames returns event types owned by recommendation consumers.
+func HandledEventNames() []string {
+	out := make([]string, len(handledEventNames))
+	copy(out, handledEventNames)
+	return out
+}
+
 // Poll claims recommendation-relevant outbox events (one claim per event type).
 func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Client, h *Handler, limit int) error {
 	for _, eventName := range handledEventNames {

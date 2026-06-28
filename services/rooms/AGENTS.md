@@ -1,80 +1,35 @@
 # AGENTS.md — rooms service
 
-Monorepo index: [../../AGENTS.md](../../AGENTS.md).
+Monorepo: [../../AGENTS.md](../../AGENTS.md).
 
 Module: `github.com/sedorofeevd/project-druzya/services/rooms`
 
 ## Purpose
 
-Live coding collab: REST room lifecycle + WebSocket Yjs sync.
-
-| Layer | Path |
-|-------|------|
-| Domain | `internal/room/model/`, `internal/room/service/` |
-| Persistence | `internal/room/repository/` |
-| WS hub | `internal/ws/` — port from druzya `editor/ports/ws.go` |
-| Transport | `internal/app/api/rooms/` — one RPC per file |
-| Custom HTTP | `GET /ws/editor/{roomId}?token=JWT` in `cmd/rooms/app/server.go` |
-
-## API
-
-| RPC | HTTP |
-|-----|------|
-| CreateRoom | `POST /v1/rooms` |
-| GetRoom | `GET /v1/rooms/{room_id}` |
-| JoinRoom | `POST /v1/rooms/{room_id}/join` |
-| FreezeRoom | `POST /v1/rooms/{room_id}/freeze` |
-| CreateInvite | `POST /v1/rooms/{room_id}/invite` |
-| GetReplay | `GET /v1/rooms/{room_id}/replay` |
-| GuestJoin | `POST /v1/rooms/{room_id}/guest-join` (no auth; invite HMAC + scoped JWT) |
-| WS Yjs | `GET /ws/editor/{room_id}?token=JWT` |
-
-Roles: `owner`, `interviewer`, `participant`, `viewer`.
+Live coding collab: REST lifecycle + WebSocket Yjs sync.
 
 ## Ports
 
-| Protocol | Value |
-|----------|-------|
-| HTTP | 8087 |
-| gRPC | 9097 |
-| Postgres | 5440 / `druzya_rooms` |
+HTTP `8087` | gRPC `9097` | PG `5440` / `druzya_rooms`
+
+## API
+
+REST: `POST/GET /v1/rooms/*`, guest join, invite. WS: `GET /ws/editor/{room_id}?token=JWT`.
+
+Roles: `owner`, `interviewer`, `participant`, `viewer`.
+
+Frontend: `/live/:roomId` → `CollabRoomPage.tsx`.
+
+## Scale
+
+Yjs state is **in-process** per pod. Default: single replica. Multiple replicas need sticky sessions on `/ws/*` — see [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md).
 
 ## Commands
 
 ```bash
 cd services/rooms
-make start          # needs JWT_PUBLIC_KEY_FILE=../identity/scripts/dev/jwt/public.pem
-make gen-proto
-make build
+make start   # JWT_PUBLIC_KEY_FILE=../identity/scripts/dev/jwt/public.pem
+make gen-proto | build
 ```
 
-## Env
-
-| Variable | Required |
-|----------|----------|
-| `JWT_PUBLIC_KEY` or `JWT_PUBLIC_KEY_FILE` | yes (same as identity) |
-| `INTERNAL_API_TOKEN` | yes (identity + billing s2s) |
-| `IDENTITY_GRPC_ADDR` | default `127.0.0.1:9090` |
-| `BILLING_GRPC_ADDR` | optional; skips billing if empty |
-| `ROOM_INVITE_SECRET` | prod required |
-| `POSTGRES_DSN` | default localhost:5440 |
-| `PUBLIC_BASE_URL` | share links (default http://localhost:5173) |
-| `ROOM_TTL` | default 6h |
-
-## Frontend
-
-- Route: `/live/:roomId` — `apps/web/src/pages/CollabRoomPage.tsx`
-- Vite proxies `/v1/rooms` and `/ws` → `:8087`
-- Caddy: `handle /ws/*` + `/v1/rooms*` → `rooms:8087`
-
-## Scale posture (P2-3)
-
-Yjs document state lives **in-process** (`internal/ws/Hub` per room). Postgres stores room metadata only — not live CRDT ops.
-
-| Deployment | Guidance |
-|------------|----------|
-| **Default (MVP)** | Single `rooms` replica — no extra config |
-| **Multiple replicas** | **Required:** sticky sessions on `/ws/*` (same client → same pod). Example nginx: `ip_hash;` or HAProxy `balance source`. Caddy has no built-in sticky — terminate WS at nginx/HAProxy in front of Caddy, or run one rooms instance |
-| **Future** | Shared Yjs backend (Redis / dedicated collab service) if sticky LB is not acceptable |
-
-REST (`/v1/rooms`) can round-robin across replicas; WebSocket collab cannot without sticky affinity or shared state.
+Env: JWT, `INTERNAL_API_TOKEN`, `IDENTITY_GRPC_ADDR`, `BILLING_GRPC_ADDR`, `ROOM_INVITE_SECRET`, `ROOM_TTL` (6h).

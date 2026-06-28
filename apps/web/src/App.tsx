@@ -20,6 +20,8 @@ const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
 const FeatureStubPage = lazy(() => import('@/pages/FeatureStubPage'))
 const MigrationStatusPage = lazy(() => import('@/pages/MigrationStatusPage'))
 const PricingPage = lazy(() => import('@/pages/PricingPage'))
+const CheckoutPage = lazy(() => import('@/pages/CheckoutPage'))
+const BillingWelcomePage = lazy(() => import('@/pages/BillingWelcomePage'))
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'))
 const AdminHomePage = lazy(() => import('@/pages/admin/AdminHomePage'))
 const AdminCompaniesPage = lazy(() => import('@/pages/admin/AdminCompaniesPage'))
@@ -177,6 +179,9 @@ export default function App() {
 
         {/* Public pricing — plan catalog + billing/me when authed */}
         <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/checkout/:planSlug" element={<CheckoutPage />} />
+        <Route path="/billing/welcome" element={<BillingWelcomePage />} />
         <Route path="/legal/terms" element={<LegalTermsPage />} />
         <Route path="/legal/privacy" element={<LegalPrivacyPage />} />
         <Route path="/status" element={<FeatureStubPage />} />

@@ -66,6 +66,8 @@ export const en: Messages = {
     usedOf: '{{used}} of {{limit}}{{period}}',
     usedOnly: '{{used}}{{period}}',
     quotaExhausted: ' — limit reached.',
+    upgradeHint: 'Upgrade to Pro for higher limits on mocks, AI evaluations, and live rooms.',
+    upgradeCta: 'View Pro plans',
     counters: {
       mock_interviews_per_month: 'Mock interviews',
       ai_evaluations_per_day: 'AI answer evaluations',
@@ -143,6 +145,12 @@ export const en: Messages = {
       loading: 'Loading insights…',
     },
     errorSection: 'Failed to load section «{{section}}»',
+    shell: {
+      quickNav: 'Quick links',
+      mockHint: 'Company mocks and solo training',
+      learnHint: 'Articles for weak skills',
+      pricingHint: 'Pro limits and checkout',
+    },
   },
   learn: {
     eyebrow: 'Knowledge base',
@@ -356,6 +364,18 @@ export const en: Messages = {
     paymentNote:
       'Pro trial is free and one-time per account. After 14 days, limits revert to Free unless you subscribe via Tribute.',
     learnMorePro: 'Learn about Pro',
+  },
+  checkout: {
+    eyebrow: 'Checkout',
+    title: 'Subscribe to Pro',
+    subtitle: 'Payment is processed securely via Tribute. Link Telegram before paying.',
+    planNotFound: 'Plan not found — see all plans on the pricing page.',
+    backToPricing: '← All plans',
+    returnHint: 'After payment, open {{url}} to confirm your subscription.',
+    welcomeEyebrow: 'Welcome',
+    welcomePro: 'Pro is active — thanks for subscribing!',
+    welcomePending: 'Thanks! We are confirming your payment…',
+    goToday: 'Go to Today',
   },
   welcome: {
     pill: 'Technical interview prep',

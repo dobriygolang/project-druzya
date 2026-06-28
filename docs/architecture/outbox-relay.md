@@ -1,7 +1,6 @@
 # Outbox relay (P2-1 design)
 
-> Target architecture for replacing cross-service outbox polling with a message bus.
-> **Not implemented yet** — current production path stays transactional outbox + gRPC claim.
+> **Implemented (MVP):** interview relay worker publishes to NATS; ai + recommendation subscribe when `NATS_URL` is set and `OUTBOX_POLL_ENABLED=false`. Local dev without NATS keeps polling.
 
 ## Problem
 
@@ -65,4 +64,6 @@ Keep `processed_events(consumer, event_id)` in recommendation (and ai job table 
 
 ## Local dev
 
-When implemented, add optional NATS to `services/interview/scripts/dev/docker-compose.yml` and env `NATS_URL`. Polling remains default if unset.
+Optional NATS in `services/interview/scripts/dev/docker-compose.yml` (when added) and env `NATS_URL`. **Default:** polling when `NATS_URL` is unset.
+
+Prod (`deploy/docker-compose.prod.yml`): `nats` service + `OUTBOX_RELAY_ENABLED=true` on interview, `OUTBOX_POLL_ENABLED=false` on ai/recommendation.

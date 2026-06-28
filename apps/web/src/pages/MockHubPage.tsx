@@ -8,6 +8,7 @@ import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
 import { PageContent } from '@/components/PageContent'
+import { BillingUpsell } from '@/components/billing/BillingUpsell'
 import { getBillingMe } from '@/lib/api/billing'
 import { listCompanies } from '@/lib/api/content'
 import {
@@ -196,6 +197,9 @@ export default function MockHubPage() {
         <QuotaBanner>
           {formatLimitUsage('mock_interviews_per_month', mockQuota)}
           {t('billing.quotaExhausted')}
+          <div className="mt-3">
+            <BillingUpsell />
+          </div>
         </QuotaBanner>
       ) : null}
 

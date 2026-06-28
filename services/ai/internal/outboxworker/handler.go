@@ -16,19 +16,36 @@ const AttemptSubmittedEvent = "interview.attempt_submitted"
 type Handler struct {
 	Interview interviewadapter.Client
 	Service   evaluationservice.Service
+	FromBus   bool
+}
+
+// HandleBusEvent handles an event delivered via NATS (relay already acked outbox).
+func (h *Handler) HandleBusEvent(ctx context.Context, ev interviewadapter.OutboxEvent) error {
+	h.FromBus = true
+	defer func() { h.FromBus = false }()
+	return h.HandleEvent(ctx, ev)
 }
 
 // HandleEvent parses payload, runs evaluation, then acks or fails the outbox row.
 func (h *Handler) HandleEvent(ctx context.Context, ev interviewadapter.OutboxEvent) error {
 	event, err := ParseAttemptSubmittedEvent(ev.Payload)
 	if err != nil {
+		if h.FromBus {
+			return fmt.Errorf("parse payload: %w", err)
+		}
 		failErr := h.Interview.FailOutboxEvent(ctx, ev.ID, err.Error())
 		return fmt.Errorf("parse payload: %w; fail=%v", err, failErr)
 	}
 	ctx = correlation.WithAttemptID(ctx, event.AttemptID)
 	if err := h.Service.HandleAttemptSubmitted(ctx, event); err != nil {
+		if h.FromBus {
+			return fmt.Errorf("handle attempt submitted: %w", err)
+		}
 		failErr := h.Interview.FailOutboxEvent(ctx, ev.ID, err.Error())
 		return fmt.Errorf("handle attempt submitted: %w; fail=%v", err, failErr)
+	}
+	if h.FromBus {
+		return nil
 	}
 	return h.Interview.AckOutboxEvents(ctx, []string{ev.ID})
 }

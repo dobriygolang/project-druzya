@@ -46,6 +46,8 @@ type Config struct {
 	LLMPromptCacheTTL      time.Duration
 	RedisAddr              string
 	CORSAllowedOrigins     []string
+	NATSURL                string
+	OutboxPollEnabled      bool
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -139,6 +141,8 @@ func Load() (*Config, error) {
 		LLMPromptCacheTTL:        promptCacheTTL,
 		RedisAddr:                getEnv("REDIS_ADDR", ""),
 		CORSAllowedOrigins:       ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
+		NATSURL:                  os.Getenv("NATS_URL"),
+		OutboxPollEnabled:        outboxPollEnabled(os.Getenv("NATS_URL"), os.Getenv("OUTBOX_POLL_ENABLED")),
 	}, nil
 }
 
@@ -192,4 +196,18 @@ func grpcListenHost() string {
 		return "0.0.0.0"
 	}
 	return "127.0.0.1"
+}
+
+func outboxPollEnabled(natsURL, flag string) bool {
+	if strings.TrimSpace(natsURL) == "" {
+		return parseBoolEnv(getEnv("OUTBOX_POLL_ENABLED", "true"))
+	}
+	switch strings.ToLower(strings.TrimSpace(flag)) {
+	case "1", "true", "on", "yes":
+		return true
+	case "0", "false", "off", "no":
+		return false
+	default:
+		return false
+	}
 }

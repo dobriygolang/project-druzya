@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/ops"
@@ -24,6 +25,8 @@ type Config struct {
 	InternalAPIToken   string
 	WorkerPollInterval time.Duration
 	CORSAllowedOrigins []string
+	NATSURL            string
+	OutboxPollEnabled  bool
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -69,6 +72,8 @@ func Load() (*Config, error) {
 		InternalAPIToken:   internalToken,
 		WorkerPollInterval: workerPoll,
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
+		NATSURL:            os.Getenv("NATS_URL"),
+		OutboxPollEnabled:  outboxPollEnabled(os.Getenv("NATS_URL"), os.Getenv("OUTBOX_POLL_ENABLED")),
 	}, nil
 }
 
@@ -112,4 +117,21 @@ func loadPEM(envKey, fileKey string) ([]byte, error) {
 		return nil, fmt.Errorf("%s or %s is required", envKey, fileKey)
 	}
 	return []byte(value), nil
+}
+
+func outboxPollEnabled(natsURL, flag string) bool {
+	if strings.TrimSpace(natsURL) == "" {
+		switch strings.ToLower(strings.TrimSpace(getEnv("OUTBOX_POLL_ENABLED", "true"))) {
+		case "0", "false", "off", "no":
+			return false
+		default:
+			return true
+		}
+	}
+	switch strings.ToLower(strings.TrimSpace(flag)) {
+	case "1", "true", "on", "yes":
+		return true
+	default:
+		return false
+	}
 }

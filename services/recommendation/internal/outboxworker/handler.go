@@ -22,6 +22,14 @@ const (
 type Handler struct {
 	Interview interviewadapter.Client
 	Service   recommendationservice.Service
+	fromBus   bool
+}
+
+// HandleBusEvent handles an event delivered via NATS (relay already acked outbox).
+func (h *Handler) HandleBusEvent(ctx context.Context, ev interviewadapter.OutboxEvent) error {
+	h.fromBus = true
+	defer func() { h.fromBus = false }()
+	return h.HandleEvent(ctx, ev)
 }
 
 // HandleEvent routes a claimed outbox row to the appropriate domain handler.
@@ -62,10 +70,16 @@ func (h *Handler) HandleEvent(ctx context.Context, ev interviewadapter.OutboxEve
 	default:
 		return fmt.Errorf("unexpected event %q (not owned by recommendation)", ev.EventName)
 	}
+	if h.fromBus {
+		return nil
+	}
 	return h.Interview.AckOutboxEvents(ctx, []string{ev.ID})
 }
 
 func (h *Handler) fail(ctx context.Context, eventID string, err error) error {
+	if h.fromBus {
+		return err
+	}
 	failErr := h.Interview.FailOutboxEvent(ctx, eventID, err.Error())
 	return fmt.Errorf("%w; fail=%v", err, failErr)
 }

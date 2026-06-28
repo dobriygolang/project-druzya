@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/tools/ops"
@@ -27,6 +28,8 @@ type Config struct {
 	SessionCleanupEvery time.Duration
 	TrainingLimit    int
 	CORSAllowedOrigins []string
+	NATSURL              string
+	OutboxRelayEnabled   bool
 }
 
 // Load reads configuration from environment.
@@ -85,6 +88,8 @@ func Load() (*Config, error) {
 		SessionCleanupEvery: sessionCleanupEvery,
 		TrainingLimit:       trainingLimit,
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
+		NATSURL:              os.Getenv("NATS_URL"),
+		OutboxRelayEnabled:   outboxRelayEnabled(os.Getenv("NATS_URL"), os.Getenv("OUTBOX_RELAY_ENABLED")),
 	}, nil
 }
 
@@ -128,4 +133,18 @@ func loadPEM(envKey, fileKey string) ([]byte, error) {
 		return nil, fmt.Errorf("%s or %s is required", envKey, fileKey)
 	}
 	return []byte(value), nil
+}
+
+func outboxRelayEnabled(natsURL, flag string) bool {
+	if strings.TrimSpace(natsURL) == "" {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(flag)) {
+	case "0", "false", "off", "no":
+		return false
+	case "1", "true", "on", "yes":
+		return true
+	default:
+		return true
+	}
 }

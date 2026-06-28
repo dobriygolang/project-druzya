@@ -87,7 +87,28 @@ var (
 		Help:    "Outbox handler latency",
 		Buckets: prometheus.DefBuckets,
 	}, []string{"service", "event"})
+
+	outboxRelayPublishTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "outbox_relay_publish_total",
+		Help: "Outbox relay publish attempts",
+	}, []string{"event", "result"})
+
+	outboxLagSeconds = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "outbox_lag_seconds",
+		Help:    "Time from outbox created_at to handler start",
+		Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120},
+	}, []string{"service", "event"})
 )
+
+// IncRelayPublish records relay publish results.
+func IncRelayPublish(event, result string) {
+	outboxRelayPublishTotal.WithLabelValues(event, result).Inc()
+}
+
+// ObserveOutboxLag records queue wait time before handling.
+func ObserveOutboxLag(service, event string, d time.Duration) {
+	outboxLagSeconds.WithLabelValues(service, event).Observe(d.Seconds())
+}
 
 // IncLLMCall records LLM invocation results.
 func IncLLMCall(provider, result string) {

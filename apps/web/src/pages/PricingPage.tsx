@@ -305,6 +305,11 @@ function PlanCheckoutActions({
               </Button>
             </a>
           ) : null}
+          {(webUrl || tgUrl) && hasTelegram ? (
+            <Link to={`/checkout/${plan.slug}`} className="block text-center text-xs text-text-muted underline underline-offset-2">
+              {t('checkout.eyebrow')}
+            </Link>
+          ) : null}
           {!isTrialing ? (
             <p className="text-center text-[11px] text-text-muted">
               {t('pricing.returnAfterPay', { url: returnUrl })}

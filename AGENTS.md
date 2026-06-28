@@ -174,29 +174,12 @@ make migrate-new NAME=<snake> | migrate-up | migrate-down | stop
 
 ### New service checklist
 
-1. `cp -R services/template services/<name>` — follow [services/template/AGENTS.md](services/template/AGENTS.md#copy-as-new-service).
-2. Rename module, paths, ports, DB name.
-3. Replace `internal/example/` with your domain; update proto + handlers.
-4. `make migrate-new NAME=init` — write schema (or edit copied migration).
-5. `make gen-proto && make tidy && make lint && make build`.
-6. Document domain in `services/<name>/AGENTS.md`.
+Follow [services/template/AGENTS.md](services/template/AGENTS.md#copy-as-new-service): copy template, rename, pick ports, `make migrate-new NAME=init`, `make gen-proto && make lint && make build`, document in `AGENTS.md`.
 
 ### Go proxy
 
-```bash
-cd services/<name>
-GOPROXY=https://proxy.golang.org,direct go mod tidy
-```
+Corporate proxy stale cache: `GOPROXY=https://proxy.golang.org,direct go mod tidy`
 
-### Code policy
+### Documentation
 
-- English code, logs, comments; `%w` wrapped errors
-- Minimal diffs
-- User commits manually unless asked
-
-### Documentation (keep in sync)
-
-Each `services/<name>/AGENTS.md` documents **current** behavior (API, env, workers, adapters).
-Cross-service flows: [docs/onboarding/README.md](docs/onboarding/README.md).
-
-When changing routes, env, workers, outbox, billing, or adapters — update the relevant AGENTS.md in the **same change set**. See [.cursor/rules/agents-md.mdc](.cursor/rules/agents-md.mdc).
+Each `services/<name>/AGENTS.md` = source of truth for that service. Cross-service flows: [docs/onboarding/README.md](docs/onboarding/README.md). Update docs in the same PR as code — see [.cursor/rules/agents-md.mdc](.cursor/rules/agents-md.mdc).

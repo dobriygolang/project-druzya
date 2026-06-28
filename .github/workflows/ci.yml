@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [identity, content, interview, ai, recommendation, billing, sandbox, rooms]
+        service: [identity, content, interview, ai, recommendation, billing, sandbox, rooms, admin]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}

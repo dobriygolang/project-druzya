@@ -30,6 +30,7 @@ export function useMobileNav(): NavItem[] {
       [
         { to: '/today', label: t('nav.today') },
         { to: '/mock', label: t('nav.mock'), primary: true },
+        { to: '/learn', label: t('nav.learn') },
         { to: '/profile', label: t('nav.profile') },
       ].filter((item) => isRouteVisible(item.to)),
     [t],

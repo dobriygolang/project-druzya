@@ -1,109 +1,61 @@
 # AGENTS.md — billing service
 
-**Self-contained service.** Work from this directory only.
-
-Monorepo index: [../../AGENTS.md](../../AGENTS.md).
+Work from this directory only. Monorepo: [../../AGENTS.md](../../AGENTS.md).
 
 Module: `github.com/sedorofeevd/project-druzya/services/billing`
 
 ## Purpose
 
-Central **entitlements, quotas and subscriptions** service. Product services stay
-thin by calling billing before expensive work instead of duplicating limit logic.
+**Entitlements, quotas, subscriptions.** Product services call billing before expensive work.
 
-Owns:
+Owns: plans, entitlements, subscriptions, usage counters, Tribute webhooks.
 
-- **Plans** + **plan entitlements** (boolean feature gates and counter quotas)
-- **Subscriptions** (internal grants + external provider subscriptions)
-- **Usage counters** (per user, per entitlement key, per period window)
-- **Provider accounts / events** (Tribute webhook ingestion, deduped)
+Does not own: users (identity), tasks (content), attempts (interview).
 
-Does **not** own: users/auth (identity), tasks (content), attempts (interview),
-AI scoring (ai). It only resolves Telegram → user via the identity gRPC client.
+## Entitlements
 
-## Entitlement model
+`value_json`: `{"type":"bool","value":true}` or `{"type":"counter","limit":N,"period":"day"|"month"}`.
 
-`plan_entitlements.value_json` is one of:
+Seeded in `00001_init.sql`: `free`, `pro_monthly`.
 
-- `{"type":"bool","value":true}` — feature gate
-- `{"type":"counter","limit":100,"period":"day"|"month"}` — quota (omit `limit` for unlimited)
-
-Seeded plans (`scripts/migrations/00001_init.sql`): `free`, `pro_monthly`.
-
-Free plan defaults: `ai_evaluations_per_day` **25/day**, `mock_interviews_per_month` **3/month**, `code_runs_per_day` **50/day**. Pro: **100/day**, **30/month**, **500/day**. Hidden tests (`hidden_tests_enabled`) are Pro-only; sandbox still allows `submit` runs on Free against public tests.
+| Key | Free | Pro |
+|-----|------|-----|
+| ai_evaluations_per_day | 25 | 100 |
+| mock_interviews_per_month | 3 | 30 |
+| code_runs_per_day | 50 | 500 |
+| hidden_tests_enabled | false | true |
 
 ## API
 
-| Service | RPC | HTTP | Auth |
-|---------|-----|------|------|
-| `BillingService` | `GetMe` | `GET /v1/billing/me` | JWT |
-| `BillingInternalService` | `GetEntitlements` | — | `x-internal-token` |
-| | `CheckEntitlement` (bool only) | — | `x-internal-token` |
-| | `CheckAndConsumeUsage` (counters) | — | `x-internal-token` |
-| | `ReleaseUsage` (compensate counters) | — | `x-internal-token` |
-| `BillingAdminService` | `GrantSubscription` | `POST /v1/billing/admin/subscriptions/grant` | `x-internal-token` |
-| | `RevokeSubscription` | `POST /v1/billing/admin/subscriptions/revoke` | `x-internal-token` |
-| custom HTTP | Tribute webhook | `POST /v1/billing/webhooks/tribute` | shared secret header |
+| RPC | HTTP | Auth |
+|-----|------|------|
+| GetMe | `GET /v1/billing/me` | JWT |
+| GetEntitlements, CheckEntitlement, CheckAndConsumeUsage, ReleaseUsage | gRPC | `x-internal-token` |
+| Grant/Revoke subscription | admin HTTP | `x-internal-token` |
+| Tribute webhook | `POST /v1/billing/webhooks/tribute` | secret header |
 
-Consumers: **ai** (`ai_evaluations_per_day`), **interview** (`mock_interviews_per_month`,
-`company_templates_enabled`), **sandbox** (`code_runs_per_day`, `hidden_tests_enabled`).
+Consumers: **ai** (eval/day), **interview** (mock/month, company templates), **sandbox** (runs/day, hidden tests).
 
-## Correctness invariants
+## Invariants
 
-- **Usage consumption is atomic** — `ConsumeUsage` is a single
-  `INSERT ... ON CONFLICT ... WHERE used+amount<=limit RETURNING` (no first-insert race).
-- **Webhook is transactional** — `MarkProviderEventProcessed` and the subscription
-  change run in one `WithTx`; failure rolls back the dedup row so retries work.
-  Duplicate deliveries return HTTP 200 (idempotent).
-- **Grant/revoke are transactional** — cancel previous + upsert new in one tx.
-- **One active subscription per user** — enforced by partial unique index on `subscriptions`.
-- **Expired subscriptions are ignored** — `GetActiveSubscription` filters
-  `current_period_end > now()`.
-- In `production`, `INTERNAL_API_TOKEN` and `TRIBUTE_WEBHOOK_SECRET` are required.
-- **ReleaseUsage** is idempotent via `usage_release_dedup(idempotency_key)`; ai-service passes `attempt_id` when permanently failing an evaluation after quota was consumed.
+- Atomic consume (`INSERT … ON CONFLICT … WHERE used+amount<=limit`)
+- Webhook + subscription changes in one tx; duplicate webhooks idempotent
+- One active subscription per user (partial unique index)
+- `ReleaseUsage` idempotent via `usage_release_dedup`
 
-## Layout
+## Caches
 
-```
-cmd/billing/app/run.go              — DI
-internal/app/api/billing/           — transport, one RPC per file
-internal/billing/
-  model/                            — plans, subscriptions, entitlements, views
-  entitlement/                      — value_json parsing, period windows
-  repository/                       — Store port + Postgres (WithTx)
-  service/                          — Service interface + orchestration
-internal/adapter/
-  identity/                         — identity gRPC client
-  providers/tribute/                — webhook verify + parse
-  events/                           — Publisher (Noop until a bus exists)
-internal/config/  internal/tools/
-scripts/migrations/  scripts/dev/docker-compose.yml
-```
+Plans snapshot in RAM at startup. Optional Redis entitlements cache (`ENTITLEMENTS_CACHE_TTL`, 60s).
 
 ## Ports
 
-| Protocol | Value |
-|----------|-------|
-| HTTP | 8085 |
-| gRPC | 9095 |
-| Postgres | 5438 / `druzya_billing` |
-
-## In-memory / Redis caches
-
-- **Plans snapshot** — `plans` + `plan_entitlements` loaded at startup into RAM
-  (`internal/billing/cache/plans.go`); reloaded on service start. Metrics: `billing_plans_*`.
-- **Entitlements view (optional)** — when `REDIS_ADDR` is set, `GetEntitlements` responses are
-  cached in Redis (`billing:entitlements:{user_id}`, TTL `ENTITLEMENTS_CACHE_TTL`, default `60s`).
-  Invalidated on consume/release/subscription changes. Metrics: `billing_entitlements_redis_*`.
-- Usage counters remain in Postgres (atomic consume).
+HTTP `8085` | gRPC `9095` | PG `5438` / `druzya_billing`
 
 ## Commands
 
 ```bash
 cd services/billing
-make start
-make gen-proto
-make lint
-make test
-make build
+make start | gen-proto | lint | test | build
 ```
+
+Production requires `INTERNAL_API_TOKEN`, `TRIBUTE_WEBHOOK_SECRET`.

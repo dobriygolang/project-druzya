@@ -1,130 +1,64 @@
 # AGENTS.md — ai service
 
-Self-contained. Work from `services/ai/` only.
+Work from `services/ai/` only. Monorepo: [../../AGENTS.md](../../AGENTS.md).
 
 Module: `github.com/sedorofeevd/project-druzya/services/ai`
 
 ## Purpose
 
-AI eval for interview attempts. Consume `interview.attempt_submitted` outbox → content rubric bundle → LLM score → interview `CompleteEvaluation` or `FailEvaluation`.
+LLM evaluation for interview attempts. Consumes `interview.attempt_submitted` → content rubric → score → `CompleteEvaluation` / `FailEvaluation`.
 
-**Not own:** users/auth, catalog, sessions, billing (consumes quota only).
-
-| Q | Owner |
-|---|-------|
-| task/rubric | content `GetTaskBundle` |
-| user answer | interview `GetAttemptInternal` |
-| score | **ai** |
-| persist result | interview `CompleteEvaluation` |
-| permanent failure | interview `FailEvaluation` |
+Does not own: users, catalog, sessions (consumes billing quota only).
 
 ## Ports
 
-HTTP `8083` | gRPC `9093` | PG `5435` `druzya_ai` | interview gRPC `127.0.0.1:9092` | content `127.0.0.1:9091` | billing gRPC optional
-
-## Layout
-
-```
-cmd/ai/app/           DI + server + outbox worker + retry worker
-api/ai/v1/            proto
-internal/evaluation/
-  model/ repository/ service/
-  usecase/command/run_evaluation/   — eval pipeline + billing consume
-  evaluator/                        — 2-pass judge + llmchain
-internal/outboxworker/              — interview.attempt_submitted
-internal/retryworker/               — delayed retries + stuck running recovery
-internal/adapter/     interview, content, billing, llm/llmchain
-internal/app/api/ai/
-scripts/migrations/
-```
+HTTP `8083` | gRPC `9093` | PG `5435` / `druzya_ai`
 
 ## Tables
 
-`evaluation_jobs` (attempt_id UNIQUE) | `model_calls` (LLM audit)
-
-Job status: `pending` | `running` | `completed` | `failed`
-
-## API
-
-| RPC | HTTP | Auth |
-|-----|------|------|
-| RunEvaluation | gRPC only | `x-internal-token` |
-| GetEvaluationJob | `GET /v1/admin/evaluation-jobs/{id}` | internal |
-| ListEvaluationJobs | `GET /v1/admin/evaluation-jobs` | internal |
-| GetLLMConfig | `GET /v1/admin/llm/config` | internal |
-| UpdateLLMConfig | `PUT /v1/admin/llm/config` | internal |
+`evaluation_jobs` (unique `attempt_id`) | `model_calls` | `llm_runtime_config`
 
 ## Workers
 
-### Outbox worker (`internal/outboxworker`)
+- **Outbox** — claim `interview.attempt_submitted` only; poll `WORKER_POLL_INTERVAL` (2s)
+- **Retry** — jobs with `next_retry_at`; reset stuck `running` (10m)
 
-Poll `ClaimOutboxEvents(event=interview.attempt_submitted)` every `WORKER_POLL_INTERVAL` (default 2s).
-Ack on success / Fail on error. Logs: `outbox_processed`, `outbox_failed` (include `attempt_id`).
-
-Prometheus: `outbox_lag_seconds`, `outbox_handler_duration_seconds`. Interview internal calls propagate `x-attempt-id` (`internal/tools/correlation/`).
-
-### Retry worker (`internal/retryworker`)
-
-- Re-runs `RunEvaluation` for jobs with `next_retry_at <= now`
-- Resets jobs stuck in `running` longer than `StuckTimeout` (default 10m)
-- Interval default 30s
-
-Do **not** claim outbox events other than `attempt_submitted`.
+Metrics: `outbox_lag_seconds`, `outbox_handler_duration_seconds`, `llm_*`, `llm_prompt_cache_*`.
 
 ## Pipeline (`run_evaluation`)
 
-1. Idempotent job row (`evaluation_jobs`)
-2. `CheckAndConsumeUsage` (`ai_evaluations_per_day`) only when `RetryCount == 0`
+1. Idempotent job row
+2. `CheckAndConsumeUsage` on first attempt only (`ai_evaluations_per_day`)
 3. content `GetTaskBundle` + interview `GetAttemptInternal`
-4. 2-pass judge: pass1 water (skip code) → pass2 rubric + `criteria[]` in feedback
-5. **caveman** (`llmchain/caveman`) — `LLM_CAVEMAN=lite|full|off`
-6. **Exact prompt cache** (`llmcache`) — SHA-256 of messages/task/tier; LRU in RAM + optional Redis L2; skips upstream LLM on hit (`LLM_PROMPT_CACHE=on`). Metrics: `llm_prompt_cache_*`. Cache hits write `cache_hit` in `model_calls` with `cost_usd=0`.
-7. Persist `model_calls`
-8. Success → interview `CompleteEvaluation`
-9. Permanent failure (retries exhausted) → `ReleaseUsage` (idempotent by `attempt_id`) + interview `FailEvaluation`
+4. 2-pass judge + optional caveman compression (`LLM_CAVEMAN`)
+5. Prompt cache (`LLM_PROMPT_CACHE=on`) — SHA-256 LRU + optional Redis L2
+6. `CompleteEvaluation` or permanent fail → `ReleaseUsage` + `FailEvaluation`
 
-## Mocks
+## API
 
-`//go:generate mockery` on interfaces. `make gen-mocks`
+Internal only (`x-internal-token`): `RunEvaluation`, admin eval jobs, `GetLLMConfig` / `UpdateLLMConfig`.
+
+HTTP admin routes under `/v1/admin/ai/*` (via admin BFF).
 
 ## Commands
 
 ```bash
 cd services/ai
 export INTERNAL_API_TOKEN=dev-internal-token
-make start | gen-proto | test | lint | build
+make start | gen-proto | gen-mocks | test | lint | build
 ```
 
 ## Env
 
-| Variable | Default |
-|----------|---------|
-| HTTP_PORT | 8083 |
-| GRPC_PORT | 9093 |
-| POSTGRES_DSN | localhost:5435 / `druzya_ai` |
-| INTERVIEW_GRPC_ADDR | `127.0.0.1:9092` |
-| CONTENT_GRPC_ADDR | `127.0.0.1:9091` |
-| BILLING_GRPC_ADDR | optional |
+| Variable | Notes |
+|----------|-------|
 | INTERNAL_API_TOKEN | required |
-| LLM_CHAIN_ORDER | free chain fallback if `LLM_FREE_CHAIN_ORDER` empty |
-| LLM_FREE_CHAIN_ORDER | free users (`groq,cloudflare,openrouter`) |
-| LLM_PAID_CHAIN_ORDER | pro users (`deepseek,groq`) |
-| GROQ_API_KEY | free-tier Groq |
-| GROQ_PAID_API_KEY | paid Groq (Developer tier) |
-| DEEPSEEK_API_KEY | paid chain only |
-| OPENROUTER_PAID_API_KEY | optional paid fallback |
-| LLM_CAVEMAN | `lite` (`off` / `full`) |
-| LLM_PROMPT_CACHE | `on` — exact prompt hash cache (`off` to disable) |
-| LLM_PROMPT_CACHE_MAX_ENTRIES | `1000` in-memory LRU cap |
-| LLM_PROMPT_CACHE_TTL | `24h` memory + Redis TTL |
-| REDIS_ADDR | optional; shared Redis L2 for prompt cache (`redis:6379` in prod) |
-| EVAL_MAX_RETRIES | `3` |
-| EVAL_WORKER_CONCURRENCY | `1` (raise to 10–30 with paid API) |
-| WORKER_POLL_INTERVAL | `2s` |
-| DEEPSEEK_API_KEY | optional; paid judge primary — see `deploy/RUNBOOK.md` |
+| INTERVIEW_GRPC_ADDR / CONTENT_GRPC_ADDR | `127.0.0.1:9092` / `9091` |
+| BILLING_GRPC_ADDR | optional |
+| LLM_FREE_CHAIN_ORDER / LLM_PAID_CHAIN_ORDER | plan-based routing — see [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md) |
+| GROQ_API_KEY, DEEPSEEK_API_KEY, … | provider keys |
+| LLM_PROMPT_CACHE, REDIS_ADDR | cache |
+| EVAL_MAX_RETRIES, EVAL_WORKER_CONCURRENCY, WORKER_POLL_INTERVAL | worker tuning |
+| NATS_URL, OUTBOX_POLL_ENABLED | bus consumer when relay enabled (`false` in prod compose) |
 
 Build: `GOWORK=off`
-
-## Agent tokens (cavecrew)
-
-Read `.cursor/rules/cavecrew.mdc`. Broad locate → `cavecrew-investigator`. ≤2 file edit → `cavecrew-builder`. Diff review → `cavecrew-reviewer`.

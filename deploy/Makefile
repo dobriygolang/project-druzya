@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 COMPOSE := docker compose -f docker-compose.prod.yml --env-file .env
 
-.PHONY: help keys build web-build up down logs migrate ps monitoring backup prune deploy
+.PHONY: help keys build web-build up down logs migrate ps monitoring backup prune deploy smoke
 
 help: ## Show deploy commands
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -17,8 +17,8 @@ web-build: ## Build apps/web into deploy/static (local preview without Docker)
 build: ## Build all prod images (includes SPA in caddy image)
 	$(COMPOSE) build
 
-up: keys ## Start full prod stack (generates JWT keys if missing)
-	$(COMPOSE) up -d
+up: keys ## Start full prod stack (generates JWT keys if missing; includes monitoring)
+	$(COMPOSE) --profile monitoring up -d
 
 down: ## Stop prod stack
 	$(COMPOSE) down
@@ -47,5 +47,8 @@ prune: ## Remove dangling images and old build cache (safe after deploy)
 deploy: keys ## Pull-less prod update: build, migrate, up, prune (run from deploy/ on server)
 	$(COMPOSE) build
 	$(COMPOSE) run --rm migrate
-	$(COMPOSE) up -d --remove-orphans --wait --wait-timeout 300
+	$(COMPOSE) --profile monitoring up -d --remove-orphans --wait --wait-timeout 300
 	@./scripts/docker-prune.sh
+
+smoke: ## Run smoke checks against running stack (API_BASE, INTERNAL_API_TOKEN optional)
+	@./scripts/smoke-core-loop.sh

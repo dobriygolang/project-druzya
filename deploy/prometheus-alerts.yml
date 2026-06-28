@@ -1,0 +1,36 @@
+groups:
+  - name: druzya_platform
+    rules:
+      - alert: OutboxLagHigh
+        expr: histogram_quantile(0.95, sum by (service, le) (rate(outbox_lag_seconds_bucket[5m]))) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox p95 lag > 30s ({{ $labels.service }})"
+          description: "Eval → Today pipeline is backing up. Check ai/recommendation workers and LLM rate limits."
+
+      - alert: OutboxHandlerErrors
+        expr: sum by (service, event_name) (rate(outbox_events_total{result="error"}[5m])) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Outbox handler errors ({{ $labels.service }}/{{ $labels.event_name }})"
+
+      - alert: EvalQueueStuck
+        expr: sum(increase(outbox_events_total{service="ai",result="error"}[15m])) > 5
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AI outbox handler failing repeatedly"
+          description: "Check ai logs, LLM keys, and billing quota."
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus target down ({{ $labels.job }})"

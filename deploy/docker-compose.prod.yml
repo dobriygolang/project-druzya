@@ -49,6 +49,16 @@ services:
       timeout: 3s
       retries: 10
 
+  nats:
+    image: nats:2.10-alpine
+    restart: unless-stopped
+    command: ["-js", "-m", "8222"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   migrate:
     build:
       context: ..
@@ -151,6 +161,8 @@ services:
       BILLING_GRPC_ADDR: billing:9095
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
     volumes:
       - ./secrets/jwt:/run/secrets/jwt:ro
     healthcheck:
@@ -164,6 +176,8 @@ services:
       identity:
         condition: service_started
       billing:
+        condition: service_healthy
+      nats:
         condition: service_healthy
 
   ai:
@@ -203,8 +217,10 @@ services:
       LLM_PROMPT_CACHE_TTL: ${LLM_PROMPT_CACHE_TTL:-24h}
       REDIS_ADDR: redis:6379
       WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-2s}
-      EVAL_WORKER_CONCURRENCY: ${EVAL_WORKER_CONCURRENCY:-1}
+      EVAL_WORKER_CONCURRENCY: ${EVAL_WORKER_CONCURRENCY:-20}
       EVAL_MAX_RETRIES: ${EVAL_MAX_RETRIES:-3}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      OUTBOX_POLL_ENABLED: ${OUTBOX_POLL_ENABLED:-false}
     healthcheck:
       <<: *health-ready
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8083/readyz"]
@@ -218,6 +234,8 @@ services:
       content:
         condition: service_healthy
       billing:
+        condition: service_healthy
+      nats:
         condition: service_healthy
 
   recommendation:
@@ -238,12 +256,14 @@ services:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
       WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-2s}
+      NATS_URL: ${NATS_URL:-nats://nats:4222}
+      OUTBOX_POLL_ENABLED: ${OUTBOX_POLL_ENABLED:-false}
     volumes:
       - ./secrets/jwt:/run/secrets/jwt:ro
     healthcheck:
       <<: *health-ready
       timeout: 15s
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8084/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8084/readyz"]
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -252,6 +272,8 @@ services:
       content:
         condition: service_healthy
       ai:
+        condition: service_healthy
+      nats:
         condition: service_healthy
 
   billing:
@@ -443,6 +465,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-alerts.yml:/etc/prometheus/prometheus-alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9099:9090"
