@@ -1,6 +1,19 @@
 import { API_BASE, api, clearTokens, persistTokens } from '@/lib/apiClient'
 import type { AuthResponse, User } from '@/lib/types'
 
+export type AuthConfig = {
+  telegram_bot_username: string
+}
+
+export async function getAuthConfig(): Promise<AuthConfig> {
+  const res = await fetch(`${API_BASE}/auth/config`, { method: 'GET' })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`auth config ${res.status}: ${text}`)
+  }
+  return res.json() as Promise<AuthConfig>
+}
+
 export async function authTelegram(code: string): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE}/auth/telegram`, {
     method: 'POST',

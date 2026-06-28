@@ -64,11 +64,15 @@ http://api.druz9.online, http://api.druz9.ru {
 # SPA — canonical: druz9.online (same-origin /v1 for VITE_API_BASE=/v1)
 http://druz9.online, http://app.druz9.online {
 	encode gzip
-	import api_v1
-	import api_ws
-	root * /srv
-	try_files {path} /index.html
-	file_server
+	route {
+		import api_v1
+		import api_ws
+		handle {
+			root * /srv
+			try_files {path} /index.html
+			file_server
+		}
+	}
 }
 
 # RU apex + app → canonical .online

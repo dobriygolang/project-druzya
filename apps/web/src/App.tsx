@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell'
 import { RequireAuth } from '@/components/RequireAuth'
 import { RouteLoader } from '@/components/RouteLoader'
 
+const WelcomePage = lazy(() => import('@/pages/WelcomePage'))
 const LoginPage = lazy(() => import('@/pages/LoginPage'))
 const AuthCallbackPage = lazy(() => import('@/pages/AuthCallbackPage'))
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'))
@@ -15,7 +16,7 @@ const CollabRoomPage = lazy(() => import('@/pages/CollabRoomPage'))
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
 
 function RootRedirect() {
-  return <Navigate to={readAccessToken() ? '/dashboard' : '/login'} replace />
+  return <Navigate to={readAccessToken() ? '/dashboard' : '/welcome'} replace />
 }
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +28,7 @@ export default function App() {
     <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<RootRedirect />} />
+        <Route path="/welcome" element={<WelcomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
 

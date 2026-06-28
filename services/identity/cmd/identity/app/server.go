@@ -46,6 +46,7 @@ func RunAPI(ctx context.Context, a *App) error {
 	))
 	httpMux.Handle("/metrics", ops.MetricsHandler())
 	httpMux.HandleFunc("/v1/auth/yandex/callback", impl.YandexCallbackHTTP())
+	httpMux.HandleFunc("/v1/auth/config", identityapi.AuthConfigHTTP(a.Config.TelegramBotUsername))
 	httpMux.HandleFunc("/v1/jwt/public.pem", impl.PublicKeyHTTP(a.PublicKeyPEM))
 
 	if err := identityapi.RegisterGateway(ctx, httpMux, dialAddr); err != nil {

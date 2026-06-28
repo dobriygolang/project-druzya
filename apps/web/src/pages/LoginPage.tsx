@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { authTelegram, getYandexAuthURL } from '@/lib/api/auth'
+import { authTelegram, getAuthConfig, getYandexAuthURL } from '@/lib/api/auth'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
-const BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? 'your_bot'
+const DEFAULT_BOT = import.meta.env.VITE_TELEGRAM_BOT_USERNAME ?? ''
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -13,6 +13,21 @@ export default function LoginPage() {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [botUsername, setBotUsername] = useState(DEFAULT_BOT)
+
+  useEffect(() => {
+    getAuthConfig()
+      .then((cfg) => {
+        if (cfg.telegram_bot_username) {
+          setBotUsername(cfg.telegram_bot_username)
+        }
+      })
+      .catch(() => {
+        /* keep build-time / default username */
+      })
+  }, [])
+
+  const botLinkName = botUsername || 'your_bot'
 
   async function onTelegramSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -60,12 +75,12 @@ export default function LoginPage() {
             <p className="mt-1 text-xs text-text-muted">
               Открой{' '}
               <a
-                href={`https://t.me/${BOT_USERNAME}?start=login`}
+                href={`https://t.me/${botLinkName}?start=login`}
                 target="_blank"
                 rel="noreferrer"
                 className="underline"
               >
-                @{BOT_USERNAME}
+                @{botLinkName}
               </a>
               , отправь /start login и введи код из бота.
             </p>
@@ -103,7 +118,7 @@ export default function LoginPage() {
           Нет аккаунта? Регистрация происходит автоматически при первом входе.
         </p>
         <p className="mt-2 text-center text-xs">
-          <Link to="/dashboard" className="text-text-muted underline">
+          <Link to="/welcome" className="text-text-muted underline">
             На главную
           </Link>
         </p>
