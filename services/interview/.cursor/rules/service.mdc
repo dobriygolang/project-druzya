@@ -12,9 +12,10 @@ Module: `github.com/sedorofeevd/project-druzya/services/interview`. Work from se
 ```
 cmd/interview/app/run.go       → DI
 internal/app/api/interview/    → gRPC/HTTP (one RPC per file)
-internal/interview/            → model, repository, service
+internal/interview/            → model, repository, service, usecase/command/*
 internal/adapter/content/      → content-service gRPC client
-internal/adapter/events/       → EventPublisher
+internal/adapter/billing/      → quota + feature gates
+internal/adapter/events/       → EventPublisher (logger-only events)
 ```
 
 HTTP `:8082`, gRPC `:9092`. See `AGENTS.md`.

@@ -54,6 +54,7 @@ type Service interface {
 	HandleAttemptEvaluated(ctx context.Context, eventID string, event model.AttemptEvaluatedEvent) error
 	HandleSessionCompleted(ctx context.Context, eventID string, event model.SessionCompletedEvent) error
 	HandleRetryItemCreated(ctx context.Context, eventID string, event model.RetryItemCreatedEvent) error
+	HandleTaskSkipped(ctx context.Context, eventID string, event model.TaskSkippedEvent) error
 	GetDashboard(ctx context.Context, userID string) (*model.Dashboard, error)
 	DismissRecommendation(ctx context.Context, userID, id string) error
 	CompleteRecommendation(ctx context.Context, userID, id string) error
@@ -95,23 +96,34 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 		return nil
 	}
 
-	summary, err := s.interview.GetEvaluationSummary(ctx, event.AttemptID)
-	if err != nil {
-		return fmt.Errorf("get evaluation summary: %w", err)
+	taskType := event.TaskType
+	if taskType == "" {
+		if event.TaskID == "" {
+			return fmt.Errorf("task_id missing in event: %w", ErrInvalidInput)
+		}
+		task, err := s.content.GetTask(ctx, event.TaskID)
+		if err != nil {
+			return fmt.Errorf("get task: %w", err)
+		}
+		taskType = task.Type
 	}
 
-	if event.TaskID == "" {
-		return fmt.Errorf("task_id missing in event: %w", ErrInvalidInput)
-	}
-	task, err := s.content.GetTask(ctx, event.TaskID)
-	if err != nil {
-		return fmt.Errorf("get task: %w", err)
+	var criteria []model.CriterionScore
+	var summarySeenAt time.Time
+	if len(event.Criteria) > 0 {
+		criteria = parseCriteria(map[string]any{"criteria": event.Criteria}, taskType, event.Score)
+	} else {
+		summary, err := s.interview.GetEvaluationSummary(ctx, event.AttemptID)
+		if err != nil {
+			return fmt.Errorf("get evaluation summary: %w", err)
+		}
+		criteria = parseCriteria(summary.Feedback, taskType, event.Score)
+		summarySeenAt = summary.CreatedAt
 	}
 
-	criteria := parseCriteria(summary.Feedback, task.Type, event.Score)
 	seenAt := event.OccurredAt
 	if seenAt.IsZero() {
-		seenAt = summary.CreatedAt
+		seenAt = summarySeenAt
 	}
 
 	if err := s.repo.WithTx(ctx, func(txCtx context.Context) error {
@@ -174,8 +186,7 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 		return err
 	}
 
-	// Refresh the LLM profile summary out of band so the read path stays pure.
-	s.refreshProfileSummary(ctx, event.UserID)
+	go s.refreshProfileSummary(context.WithoutCancel(ctx), event.UserID)
 	return nil
 }
 

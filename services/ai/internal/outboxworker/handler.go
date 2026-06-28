@@ -7,6 +7,7 @@ import (
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
 	evaluationservice "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/service"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/correlation"
 )
 
 const AttemptSubmittedEvent = "interview.attempt_submitted"
@@ -24,6 +25,7 @@ func (h *Handler) HandleEvent(ctx context.Context, ev interviewadapter.OutboxEve
 		failErr := h.Interview.FailOutboxEvent(ctx, ev.ID, err.Error())
 		return fmt.Errorf("parse payload: %w; fail=%v", err, failErr)
 	}
+	ctx = correlation.WithAttemptID(ctx, event.AttemptID)
 	if err := h.Service.HandleAttemptSubmitted(ctx, event); err != nil {
 		failErr := h.Interview.FailOutboxEvent(ctx, ev.ID, err.Error())
 		return fmt.Errorf("handle attempt submitted: %w; fail=%v", err, failErr)

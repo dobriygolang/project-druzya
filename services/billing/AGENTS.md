@@ -38,6 +38,7 @@ Seeded plans (`scripts/migrations/00002_entitlements.sql`): `free`, `pro_monthly
 | `BillingInternalService` | `GetEntitlements` | — | `x-internal-token` |
 | | `CheckEntitlement` (bool only) | — | `x-internal-token` |
 | | `CheckAndConsumeUsage` (counters) | — | `x-internal-token` |
+| | `ReleaseUsage` (compensate counters) | — | `x-internal-token` |
 | `BillingAdminService` | `GrantSubscription` | `POST /v1/billing/admin/subscriptions/grant` | `x-internal-token` |
 | | `RevokeSubscription` | `POST /v1/billing/admin/subscriptions/revoke` | `x-internal-token` |
 | custom HTTP | Tribute webhook | `POST /v1/billing/webhooks/tribute` | shared secret header |
@@ -58,6 +59,7 @@ Consumers: **ai** (`ai_evaluations_per_day`), **interview** (`mock_interviews_pe
 - **Expired subscriptions are ignored** — `GetActiveSubscription` filters
   `current_period_end > now()`.
 - In `production`, `INTERNAL_API_TOKEN` and `TRIBUTE_WEBHOOK_SECRET` are required.
+- **ReleaseUsage** is idempotent via `usage_release_dedup(idempotency_key)`; ai-service passes `attempt_id` when permanently failing an evaluation after quota was consumed.
 
 ## Layout
 

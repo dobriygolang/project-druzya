@@ -3,6 +3,7 @@ package interview
 import (
 	"context"
 	"encoding/json"
+	"time"
 )
 
 // Attempt is attempt data from interview-service.
@@ -29,9 +30,10 @@ type CompleteEvaluationInput struct {
 
 // OutboxEvent is a claimed domain outbox row.
 type OutboxEvent struct {
-	ID        string
-	EventName string
-	Payload   map[string]any
+	ID         string
+	EventName  string
+	Payload    map[string]any
+	OccurredAt time.Time
 }
 
 // Client calls interview internal API.

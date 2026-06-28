@@ -151,7 +151,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*interviewmodel.Eval
 		}
 
 		if err := h.repo.InsertOutbox(txCtx, string(eventsadapter.AttemptEvaluated),
-			attemptEvaluatedPayload(attempt.ID, session.UserID, attempt.TaskID, session.ID, passed, score, now)); err != nil {
+			attemptEvaluatedPayload(attempt.ID, session.UserID, attempt.TaskID, session.ID, passed, score, cmd.Feedback, now)); err != nil {
 			return err
 		}
 		if retryItemCreated {
@@ -176,8 +176,8 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*interviewmodel.Eval
 	return summary, nil
 }
 
-func attemptEvaluatedPayload(attemptID, userID, taskID, sessionID string, passed bool, score decimal.Decimal, occurredAt time.Time) map[string]any {
-	return map[string]any{
+func attemptEvaluatedPayload(attemptID, userID, taskID, sessionID string, passed bool, score decimal.Decimal, feedback map[string]any, occurredAt time.Time) map[string]any {
+	payload := map[string]any{
 		"attempt_id":  attemptID,
 		"user_id":     userID,
 		"task_id":     taskID,
@@ -186,6 +186,16 @@ func attemptEvaluatedPayload(attemptID, userID, taskID, sessionID string, passed
 		"score":       score.String(),
 		"occurred_at": occurredAt.Format(time.RFC3339Nano),
 	}
+	if feedback == nil {
+		return payload
+	}
+	if taskType, ok := feedback["task_type"].(string); ok && taskType != "" {
+		payload["task_type"] = taskType
+	}
+	if criteria, ok := feedback["criteria"]; ok && criteria != nil {
+		payload["criteria"] = criteria
+	}
+	return payload
 }
 
 func retryItemCreatedPayload(retryItemID, userID, taskID, attemptID string, occurredAt time.Time) map[string]any {

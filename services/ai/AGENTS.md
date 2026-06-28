@@ -6,9 +6,9 @@ Module: `github.com/sedorofeevd/project-druzya/services/ai`
 
 ## Purpose
 
-AI eval for interview attempts. Consume `interview.attempt_submitted` outbox → content rubric bundle → LLM score → interview `CompleteEvaluation`.
+AI eval for interview attempts. Consume `interview.attempt_submitted` outbox → content rubric bundle → LLM score → interview `CompleteEvaluation` or `FailEvaluation`.
 
-**Not own:** users/auth, catalog, sessions, billing.
+**Not own:** users/auth, catalog, sessions, billing (consumes quota only).
 
 | Q | Owner |
 |---|-------|
@@ -16,19 +16,24 @@ AI eval for interview attempts. Consume `interview.attempt_submitted` outbox →
 | user answer | interview `GetAttemptInternal` |
 | score | **ai** |
 | persist result | interview `CompleteEvaluation` |
+| permanent failure | interview `FailEvaluation` |
 
 ## Ports
 
-HTTP `8083` | gRPC `9093` | PG `5435` `druzya_ai` | interview gRPC `127.0.0.1:9092` | content `127.0.0.1:9091`
+HTTP `8083` | gRPC `9093` | PG `5435` `druzya_ai` | interview gRPC `127.0.0.1:9092` | content `127.0.0.1:9091` | billing gRPC optional
 
 ## Layout
 
 ```
-cmd/ai/app/           DI + server + worker
+cmd/ai/app/           DI + server + outbox worker + retry worker
 api/ai/v1/            proto
-internal/evaluation/  model, repository, service, evaluator (2-pass judge + llmchain)
-internal/outboxworker/
-internal/adapter/     interview, content, llm/llmchain
+internal/evaluation/
+  model/ repository/ service/
+  usecase/command/run_evaluation/   — eval pipeline + billing consume
+  evaluator/                        — 2-pass judge + llmchain
+internal/outboxworker/              — interview.attempt_submitted
+internal/retryworker/               — delayed retries + stuck running recovery
+internal/adapter/     interview, content, billing, llm/llmchain
 internal/app/api/ai/
 scripts/migrations/
 ```
@@ -43,22 +48,38 @@ Job status: `pending` | `running` | `completed` | `failed`
 
 | RPC | HTTP | Auth |
 |-----|------|------|
-| RunEvaluation | gRPC | `x-internal-token` |
+| RunEvaluation | gRPC only | `x-internal-token` |
+| GenerateProfileSummary | gRPC only | `x-internal-token` (called by recommendation) |
 | GetEvaluationJob | `GET /v1/admin/evaluation-jobs/{id}` | internal |
 | ListEvaluationJobs | `GET /v1/admin/evaluation-jobs` | internal |
 
-## Worker
+## Workers
 
-Poll `ClaimOutboxEvents(event=interview.attempt_submitted)` every `WORKER_POLL_INTERVAL` (default 2s). Ack ok / Fail err. Structured logs: `outbox_processed`, `outbox_failed` + duration_ms.
+### Outbox worker (`internal/outboxworker`)
 
-## Pipeline
+Poll `ClaimOutboxEvents(event=interview.attempt_submitted)` every `WORKER_POLL_INTERVAL` (default 2s).
+Ack on success / Fail on error. Logs: `outbox_processed`, `outbox_failed` (include `attempt_id`).
 
-1. claim outbox
-2. `RunEvaluation` → content bundle + interview attempt
-3. 2-pass judge: pass1 water (skip code) → pass2 rubric + `criteria[]` in feedback
-4. **caveman** (`llmchain/caveman`) compress prompts before external LLM — `LLM_CAVEMAN=lite|full|off`
-5. `model_calls` rows
-6. `CompleteEvaluation`
+Prometheus: `outbox_lag_seconds`, `outbox_handler_duration_seconds`. Interview internal calls propagate `x-attempt-id` (`internal/tools/correlation/`).
+
+### Retry worker (`internal/retryworker`)
+
+- Re-runs `RunEvaluation` for jobs with `next_retry_at <= now`
+- Resets jobs stuck in `running` longer than `StuckTimeout` (default 10m)
+- Interval default 30s
+
+Do **not** claim outbox events other than `attempt_submitted`.
+
+## Pipeline (`run_evaluation`)
+
+1. Idempotent job row (`evaluation_jobs`)
+2. `CheckAndConsumeUsage` (`ai_evaluations_per_day`) only when `RetryCount == 0`
+3. content `GetTaskBundle` + interview `GetAttemptInternal`
+4. 2-pass judge: pass1 water (skip code) → pass2 rubric + `criteria[]` in feedback
+5. **caveman** (`llmchain/caveman`) — `LLM_CAVEMAN=lite|full|off`
+6. Persist `model_calls`
+7. Success → interview `CompleteEvaluation`
+8. Permanent failure (retries exhausted) → `ReleaseUsage` (idempotent by `attempt_id`) + interview `FailEvaluation`
 
 ## Mocks
 
@@ -74,7 +95,19 @@ make start | gen-proto | test | lint | build
 
 ## Env
 
-`HTTP_PORT` `8083` | `GRPC_PORT` `9093` | `POSTGRES_DSN` localhost:5435 | `INTERVIEW_GRPC_ADDR` | `CONTENT_GRPC_ADDR` | `INTERNAL_API_TOKEN` (req) | `LLM_CHAIN_ORDER` | API keys optional (fake LLM if none) | `LLM_CAVEMAN` `lite` (`off`/`full`) | `EVAL_MAX_RETRIES` `3` | `WORKER_POLL_INTERVAL` `2s`
+| Variable | Default |
+|----------|---------|
+| HTTP_PORT | 8083 |
+| GRPC_PORT | 9093 |
+| POSTGRES_DSN | localhost:5435 / `druzya_ai` |
+| INTERVIEW_GRPC_ADDR | `127.0.0.1:9092` |
+| CONTENT_GRPC_ADDR | `127.0.0.1:9091` |
+| BILLING_GRPC_ADDR | optional |
+| INTERNAL_API_TOKEN | required |
+| LLM_CHAIN_ORDER | provider fallback order |
+| LLM_CAVEMAN | `lite` (`off` / `full`) |
+| EVAL_MAX_RETRIES | `3` |
+| WORKER_POLL_INTERVAL | `2s` |
 
 Build: `GOWORK=off`
 

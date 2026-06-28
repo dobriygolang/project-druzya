@@ -80,6 +80,19 @@ func TestStartInterviewSession(t *testing.T) {
 		}, nil).
 		Once()
 
+	fx.content.EXPECT().
+		GetTask(mock.Anything, "task-1").
+		Return(&contentadapter.Task{ID: "task-1", Type: "algorithm", Title: "Two Sum"}, nil).
+		Once()
+	fx.content.EXPECT().
+		GetTask(mock.Anything, "task-2").
+		Return(&contentadapter.Task{ID: "task-2", Type: "algorithm", Title: "Merge Lists"}, nil).
+		Once()
+	fx.content.EXPECT().
+		GetTask(mock.Anything, "task-3").
+		Return(&contentadapter.Task{ID: "task-3", Type: "system_design", Title: "URL Shortener"}, nil).
+		Once()
+
 	fx.repo.EXPECT().
 		CreateSessionBundle(mock.Anything, mock.Anything).
 		Run(func(_ context.Context, bundle interviewrepo.SessionBundle) {
@@ -89,6 +102,10 @@ func TestStartInterviewSession(t *testing.T) {
 			require.Len(t, bundle.Tasks, 3)
 			require.Equal(t, interviewmodel.SectionStatusActive, bundle.Sections[0].Status)
 			require.Equal(t, interviewmodel.SectionStatusPending, bundle.Sections[1].Status)
+			require.NotNil(t, bundle.Tasks[0].TaskTitle)
+			require.Equal(t, "Two Sum", *bundle.Tasks[0].TaskTitle)
+			require.NotNil(t, bundle.Tasks[0].TaskType)
+			require.Equal(t, "algorithm", *bundle.Tasks[0].TaskType)
 		}).
 		Return(nil).
 		Once()

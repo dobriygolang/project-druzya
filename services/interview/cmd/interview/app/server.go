@@ -26,6 +26,7 @@ func RunAPI(ctx context.Context, a *App) error {
 	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		interviewapi.AuthInterceptor(a.JWT),
 		interviewapi.InternalAuthInterceptor(a.Config.InternalAPIToken),
+		interviewapi.CorrelationInterceptor(),
 	))
 	interviewapi.NewRegisteredImplementation(grpcSrv, a.Service)
 	reflection.Register(grpcSrv)

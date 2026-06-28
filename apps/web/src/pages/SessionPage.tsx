@@ -9,11 +9,11 @@ import { PageContent } from '@/components/PageContent'
 import { SectionCard } from '@/components/SectionCard'
 import { getTask } from '@/lib/api/content'
 import { createRoom } from '@/lib/api/rooms'
+import { submitAttemptFromCodeRun } from '@/lib/api/sandbox'
 import {
   cancelSession,
   getAttempt,
   getCurrentSessionState,
-  getSession,
   skipTask,
   submitAttempt,
 } from '@/lib/api/interview'
@@ -30,18 +30,13 @@ export default function SessionPage() {
   const [code, setCode] = useState('')
   const [language, setLanguage] = useState('go')
   const [attemptId, setAttemptId] = useState<string | null>(null)
+  const [verifiedSubmitRunId, setVerifiedSubmitRunId] = useState<string | null>(null)
 
   const stateQ = useQuery({
     queryKey: ['session-current', sessionId],
     queryFn: () => getCurrentSessionState(sessionId),
     enabled: !!sessionId,
     refetchInterval: attemptId ? 2000 : false,
-  })
-
-  const sessionQ = useQuery({
-    queryKey: ['session', sessionId],
-    queryFn: () => getSession(sessionId),
-    enabled: !!sessionId,
   })
 
   const taskId = stateQ.data?.current_task?.task_id
@@ -88,18 +83,35 @@ export default function SessionPage() {
     }
   }, [stateQ.data?.session.status, navigate, sessionId])
 
+  useEffect(() => {
+    setVerifiedSubmitRunId(null)
+  }, [sessionTaskId])
+
   const submitM = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!sessionTaskId) throw new Error('no current task')
-      const isCode = isCodeTask(taskQ.data?.task.type)
+      const isCode = isCodeTask(stateQ.data?.current_task?.task_type ?? taskQ.data?.task.type)
+      if (isCode) {
+        if (!verifiedSubmitRunId) {
+          throw new Error('Run FULL check before submitting')
+        }
+        const result = await submitAttemptFromCodeRun(verifiedSubmitRunId, sessionTaskId)
+        return {
+          attempt: {
+            id: result.attempt_id,
+            status: result.status,
+          },
+        }
+      }
       return submitAttempt({
         sessionTaskId,
-        answerText: isCode ? undefined : answer,
-        code: isCode ? code : undefined,
-        language: isCode ? language : undefined,
+        answerText: answer,
       })
     },
-    onSuccess: (data) => setAttemptId(data.attempt.id),
+    onSuccess: (data) => {
+      setAttemptId(data.attempt.id)
+      setVerifiedSubmitRunId(null)
+    },
   })
 
   const skipM = useMutation({
@@ -157,10 +169,10 @@ export default function SessionPage() {
   }
 
   const { session, current_section, current_task, progress } = state
-  const sections = sessionQ.data?.sections ?? []
+  const sections = stateQ.data?.sections ?? []
   const task = taskQ.data?.task
   const evaluating = !!attemptId
-  const codeTask = isCodeTask(task?.type)
+  const codeTask = isCodeTask(current_task.task_type ?? task?.type)
 
   if (!current_task) {
     return (
@@ -212,16 +224,22 @@ export default function SessionPage() {
 
       {taskQ.isLoading ? (
         <p className="text-sm text-text-muted">{t('session.loadingTask')}</p>
-      ) : task ? (
-        <SectionCard title={task.title}>
+      ) : task || current_task.task_title ? (
+        <SectionCard title={task?.title ?? current_task.task_title ?? t('session.taskFallback')}>
           <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-            <span className="mono rounded bg-surface-2 px-2 py-0.5">{task.type}</span>
-            <span>{task.difficulty}</span>
-            {task.estimated_minutes ? <span>{task.estimated_minutes} min</span> : null}
+            <span className="mono rounded bg-surface-2 px-2 py-0.5">
+              {task?.type ?? current_task.task_type}
+            </span>
+            {task?.difficulty ? <span>{task.difficulty}</span> : null}
+            {task?.estimated_minutes ? <span>{task.estimated_minutes} min</span> : null}
           </div>
-          <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-text-secondary">
-            {task.description}
-          </p>
+          {task?.description ? (
+            <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-text-secondary">
+              {task.description}
+            </p>
+          ) : taskQ.isLoading ? (
+            <p className="text-sm text-text-muted">{t('session.loadingTask')}</p>
+          ) : null}
         </SectionCard>
       ) : null}
 
@@ -259,6 +277,8 @@ export default function SessionPage() {
             onLanguageChange={setLanguage}
             code={code}
             onCodeChange={setCode}
+            verifiedSubmitRunId={verifiedSubmitRunId}
+            onVerifiedSubmitRunChange={setVerifiedSubmitRunId}
             onSubmit={() => submitM.mutate()}
             submitPending={submitM.isPending}
           />

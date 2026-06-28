@@ -107,6 +107,8 @@ export interface SessionTask {
   session_id: string
   section_id: string
   task_id: string
+  task_title?: string
+  task_type?: string
   position: number
   status: string
 }

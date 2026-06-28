@@ -59,6 +59,8 @@ must never be used outside local dev. Docker requires the host docker daemon.
 
 `SubmitAttemptFromCodeRun` only accepts a successful `submit`-type run.
 
+**Code task submit flow:** frontend runs FULL (`run_type=submit`) → on success calls `SubmitAttemptFromCodeRun` → interview persists attempt + outbox. Direct interview code submit from the session UI is not used.
+
 ## Commands
 
 ```bash

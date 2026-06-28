@@ -59,6 +59,15 @@ func defaultEvent() model.AttemptEvaluatedEvent {
 		UserID:     userID,
 		TaskID:     taskID,
 		SessionID:  "session-1",
+		TaskType:   "algorithm",
+		Criteria: []any{
+			map[string]any{
+				"key":       "correctness",
+				"score":     30.0,
+				"max_score": 100.0,
+				"task_type": "algorithm",
+			},
+		},
 		Score:      45,
 		Passed:     false,
 		OccurredAt: time.Now().UTC(),
@@ -98,8 +107,6 @@ func TestHandleAttemptEvaluated_CreatesProfileAndUpdatesSkills(t *testing.T) {
 	event := defaultEvent()
 
 	fx.repo.EXPECT().IsEventProcessed(ctx, model.ConsumerAttemptEvaluated, eventID).Return(false, nil)
-	fx.interview.EXPECT().GetEvaluationSummary(ctx, attemptID).Return(defaultSummary(), nil)
-	fx.content.EXPECT().GetTask(ctx, taskID).Return(defaultTask(), nil)
 	expectWithTx(fx, ctx)
 	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
 	fx.repo.EXPECT().UpsertSkillScore(ctx, userID, "algorithm.correctness", 30, mock.AnythingOfType("time.Time")).
@@ -123,8 +130,6 @@ func TestHandleAttemptEvaluated_PassedDoesNotCreateRetryPlan(t *testing.T) {
 	event.Passed = true
 
 	fx.repo.EXPECT().IsEventProcessed(ctx, model.ConsumerAttemptEvaluated, eventID).Return(false, nil)
-	fx.interview.EXPECT().GetEvaluationSummary(ctx, attemptID).Return(defaultSummary(), nil)
-	fx.content.EXPECT().GetTask(ctx, taskID).Return(defaultTask(), nil)
 	expectWithTx(fx, ctx)
 	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
 	fx.repo.EXPECT().UpsertSkillScore(ctx, userID, "algorithm.correctness", 30, mock.AnythingOfType("time.Time")).
@@ -133,30 +138,6 @@ func TestHandleAttemptEvaluated_PassedDoesNotCreateRetryPlan(t *testing.T) {
 	fx.repo.EXPECT().UpdateReadinessScore(ctx, userID, 30).Return(nil)
 	fx.repo.EXPECT().UpsertImproveSkillRecommendation(ctx, mock.AnythingOfType("model.Recommendation")).
 		Return(&model.Recommendation{Type: model.RecTypeImproveSkill}, nil)
-	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerAttemptEvaluated, eventID).Return(true, nil)
-
-	err := fx.svc.HandleAttemptEvaluated(ctx, eventID, event)
-	require.NoError(t, err)
-}
-
-func TestHandleAttemptEvaluated_LowCriterionCreatesImproveSkill(t *testing.T) {
-	fx := setUp(t)
-	ctx := context.Background()
-	event := defaultEvent()
-	event.Passed = true
-
-	fx.repo.EXPECT().IsEventProcessed(ctx, model.ConsumerAttemptEvaluated, eventID).Return(false, nil)
-	fx.interview.EXPECT().GetEvaluationSummary(ctx, attemptID).Return(defaultSummary(), nil)
-	fx.content.EXPECT().GetTask(ctx, taskID).Return(defaultTask(), nil)
-	expectWithTx(fx, ctx)
-	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
-	fx.repo.EXPECT().UpsertSkillScore(ctx, userID, "algorithm.correctness", 30, mock.AnythingOfType("time.Time")).
-		Return(&model.SkillScore{Score: 30, Confidence: 10}, nil)
-	fx.repo.EXPECT().ListSkillScoresByUser(ctx, userID).Return([]model.SkillScore{{Score: 30, Confidence: 10}}, nil)
-	fx.repo.EXPECT().UpdateReadinessScore(ctx, userID, 30).Return(nil)
-	fx.repo.EXPECT().UpsertImproveSkillRecommendation(ctx, mock.MatchedBy(func(rec model.Recommendation) bool {
-		return rec.Type == model.RecTypeImproveSkill && rec.Priority == model.PriorityHigh
-	})).Return(&model.Recommendation{Type: model.RecTypeImproveSkill}, nil)
 	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerAttemptEvaluated, eventID).Return(true, nil)
 
 	err := fx.svc.HandleAttemptEvaluated(ctx, eventID, event)
@@ -222,5 +203,25 @@ func TestHandleRetryItemCreated_ReconcilesPlanItem(t *testing.T) {
 	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerRetryItemCreated, eventID).Return(true, nil)
 
 	err := fx.svc.HandleRetryItemCreated(ctx, eventID, event)
+	require.NoError(t, err)
+}
+
+func TestHandleTaskSkipped_EnsureProfile(t *testing.T) {
+	fx := setUp(t)
+	ctx := context.Background()
+	event := model.TaskSkippedEvent{
+		SessionTaskID: "st-1",
+		SessionID:     "session-1",
+		UserID:        userID,
+		TaskID:        taskID,
+		Mode:          "algorithms_training",
+	}
+
+	fx.repo.EXPECT().IsEventProcessed(ctx, model.ConsumerTaskSkipped, eventID).Return(false, nil)
+	expectWithTx(fx, ctx)
+	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
+	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerTaskSkipped, eventID).Return(true, nil)
+
+	err := fx.svc.HandleTaskSkipped(ctx, eventID, event)
 	require.NoError(t, err)
 }

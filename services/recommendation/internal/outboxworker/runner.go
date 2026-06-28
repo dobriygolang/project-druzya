@@ -6,6 +6,7 @@ import (
 
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/ops"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/payload"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/logger"
 )
 
@@ -15,6 +16,7 @@ var handledEventNames = []string{
 	AttemptEvaluatedEvent,
 	SessionCompletedEvent,
 	RetryItemCreatedEvent,
+	TaskSkippedEvent,
 }
 
 // Poll claims recommendation-relevant outbox events (one claim per event type).
@@ -33,12 +35,17 @@ func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Cli
 
 func processOutboxEvent(ctx context.Context, log logger.Logger, h *Handler, ev interviewadapter.OutboxEvent) {
 	start := time.Now()
+	if !ev.OccurredAt.IsZero() {
+		ops.ObserveOutboxLag("recommendation", ev.EventName, start.Sub(ev.OccurredAt))
+	}
+	attemptID := payload.StringField(ev.Payload, "attempt_id")
 	if err := h.HandleEvent(ctx, ev); err != nil {
 		ops.IncOutboxEvent("recommendation", ev.EventName, "error")
 		ops.ObserveOutboxDuration("recommendation", ev.EventName, time.Since(start))
 		log.Error("outbox_failed",
 			"event_id", ev.ID,
 			"event_name", ev.EventName,
+			"attempt_id", attemptID,
 			"duration_ms", time.Since(start).Milliseconds(),
 			"err", err,
 		)
@@ -49,6 +56,7 @@ func processOutboxEvent(ctx context.Context, log logger.Logger, h *Handler, ev i
 	log.Info("outbox_processed",
 		"event_id", ev.ID,
 		"event_name", ev.EventName,
+		"attempt_id", attemptID,
 		"duration_ms", time.Since(start).Milliseconds(),
 	)
 }

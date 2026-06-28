@@ -84,9 +84,10 @@ func (c *Client) ClaimOutboxEvents(ctx context.Context, eventName string, limit 
 			payload = ev.GetPayload().AsMap()
 		}
 		out = append(out, interviewadapter.OutboxEvent{
-			ID:        ev.GetId(),
-			EventName: ev.GetEventName(),
-			Payload:   payload,
+			ID:         ev.GetId(),
+			EventName:  ev.GetEventName(),
+			Payload:    payload,
+			OccurredAt: ev.GetOccurredAt().AsTime(),
 		})
 	}
 	return out, nil

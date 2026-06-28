@@ -17,12 +17,17 @@ func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Cli
 	}
 	for _, ev := range events {
 		start := time.Now()
+		if !ev.OccurredAt.IsZero() {
+			ops.ObserveOutboxLag("ai", AttemptSubmittedEvent, start.Sub(ev.OccurredAt))
+		}
+		attemptID, _ := ev.Payload["attempt_id"].(string)
 		if err := h.HandleEvent(ctx, ev); err != nil {
 			ops.IncOutboxEvent("ai", AttemptSubmittedEvent, "error")
 			ops.ObserveOutboxDuration("ai", AttemptSubmittedEvent, time.Since(start))
 			log.Error("outbox_failed",
 				"event_id", ev.ID,
 				"event_name", AttemptSubmittedEvent,
+				"attempt_id", attemptID,
 				"duration_ms", time.Since(start).Milliseconds(),
 				"err", err,
 			)
@@ -33,6 +38,7 @@ func Poll(ctx context.Context, log logger.Logger, interview interviewadapter.Cli
 		log.Info("outbox_processed",
 			"event_id", ev.ID,
 			"event_name", AttemptSubmittedEvent,
+			"attempt_id", attemptID,
 			"duration_ms", time.Since(start).Milliseconds(),
 		)
 	}

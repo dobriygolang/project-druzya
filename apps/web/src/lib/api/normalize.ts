@@ -74,12 +74,14 @@ export function normalizeSessionResults(raw: {
 
 export function normalizeCurrentSessionState(raw: {
   session: Session
+  sections?: SessionSection[]
   current_section?: SessionSection
   current_task?: SessionTask
   progress?: Progress
 }) {
   return {
     ...raw,
+    sections: asArray(raw.sections),
     progress: normalizeProgress(raw.progress),
   }
 }

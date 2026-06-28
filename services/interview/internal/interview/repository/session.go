@@ -56,10 +56,11 @@ func (r *Repository) insertSessionBundle(ctx context.Context, bundle SessionBund
 	for _, task := range bundle.Tasks {
 		_, err = r.conn(ctx).Exec(ctx, `
 			INSERT INTO session_tasks (
-				id, session_id, section_id, task_id, position, status, created_at, updated_at
-			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-		`, task.ID, task.SessionID, task.SectionID, task.TaskID, task.Position, string(task.Status),
-			task.CreatedAt, task.UpdatedAt)
+				id, session_id, section_id, task_id, task_title, task_type,
+				position, status, created_at, updated_at
+			) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		`, task.ID, task.SessionID, task.SectionID, task.TaskID, task.TaskTitle, task.TaskType,
+			task.Position, string(task.Status), task.CreatedAt, task.UpdatedAt)
 		if err != nil {
 			return fmt.Errorf("insert session task: %w", err)
 		}
@@ -160,7 +161,7 @@ func (r *Repository) UpdateSection(ctx context.Context, section *interviewmodel.
 
 func (r *Repository) ListTasksBySession(ctx context.Context, sessionID string) ([]interviewmodel.SessionTask, error) {
 	rows, err := r.conn(ctx).Query(ctx, `
-		SELECT id, session_id, section_id, task_id, position, status, created_at, updated_at
+		SELECT id, session_id, section_id, task_id, task_title, task_type, position, status, created_at, updated_at
 		FROM session_tasks
 		WHERE session_id = $1
 		ORDER BY section_id, position
@@ -183,7 +184,7 @@ func (r *Repository) ListTasksBySession(ctx context.Context, sessionID string) (
 
 func (r *Repository) GetSessionTaskByID(ctx context.Context, id string) (*interviewmodel.SessionTask, error) {
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT id, session_id, section_id, task_id, position, status, created_at, updated_at
+		SELECT id, session_id, section_id, task_id, task_title, task_type, position, status, created_at, updated_at
 		FROM session_tasks WHERE id = $1
 	`, id)
 	return scanSessionTask(row)
@@ -191,8 +192,8 @@ func (r *Repository) GetSessionTaskByID(ctx context.Context, id string) (*interv
 
 func (r *Repository) GetSessionTaskForUser(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SessionTask, error) {
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT st.id, st.session_id, st.section_id, st.task_id, st.position, st.status,
-		       st.created_at, st.updated_at
+		SELECT st.id, st.session_id, st.section_id, st.task_id, st.task_title, st.task_type,
+		       st.position, st.status, st.created_at, st.updated_at
 		FROM session_tasks st
 		JOIN interview_sessions s ON s.id = st.session_id
 		WHERE st.id = $1 AND s.user_id = $2
@@ -253,8 +254,8 @@ func scanSessionTask(row pgx.Row) (*interviewmodel.SessionTask, error) {
 	var t interviewmodel.SessionTask
 	var status string
 	err := row.Scan(
-		&t.ID, &t.SessionID, &t.SectionID, &t.TaskID, &t.Position, &status,
-		&t.CreatedAt, &t.UpdatedAt,
+		&t.ID, &t.SessionID, &t.SectionID, &t.TaskID, &t.TaskTitle, &t.TaskType,
+		&t.Position, &status, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

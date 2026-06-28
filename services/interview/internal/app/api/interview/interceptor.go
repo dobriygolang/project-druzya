@@ -6,6 +6,7 @@ import (
 
 	interviewv1 "github.com/sedorofeevd/project-druzya/services/interview/pkg/api/interview/v1"
 	"github.com/sedorofeevd/project-druzya/services/identity/pkg/jwt"
+	"github.com/sedorofeevd/project-druzya/services/interview/internal/tools/correlation"
 	"google.golang.org/grpc"
 )
 
@@ -57,6 +58,21 @@ func InternalAuthInterceptor(token string) grpc.UnaryServerInterceptor {
 		}
 		if InternalTokenFromContext(ctx) != token {
 			return nil, unauthorized()
+		}
+		return handler(ctx, req)
+	}
+}
+
+// CorrelationInterceptor attaches attempt_id from metadata or request to context.
+func CorrelationInterceptor() grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		ctx = correlation.FromIncoming(ctx)
+		if correlation.AttemptIDFromContext(ctx) == "" {
+			if r, ok := req.(interface{ GetAttemptId() string }); ok {
+				if id := r.GetAttemptId(); id != "" {
+					ctx = correlation.WithAttemptID(ctx, id)
+				}
+			}
 		}
 		return handler(ctx, req)
 	}

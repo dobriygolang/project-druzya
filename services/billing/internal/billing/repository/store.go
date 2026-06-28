@@ -25,6 +25,8 @@ type Store interface {
 	GetUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time) (int, error)
 	ConsumeUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time, amount, limit int) (int, error)
 	ConsumeUsageUnlimited(ctx context.Context, userID, key string, periodStart, periodEnd time.Time, amount int) (int, error)
+	ReleaseUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time, amount int) (int, error)
+	MarkUsageReleaseProcessed(ctx context.Context, idempotencyKey, userID, key string, amount int) (bool, error)
 }
 
 var _ Store = (*Repository)(nil)

@@ -44,6 +44,7 @@ type ContentClient interface {
 // BillingClient consumes evaluation quota (optional; may be nil).
 type BillingClient interface {
 	CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) error
+	ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) error
 }
 
 // Deps wires the run-evaluation handler.
@@ -267,6 +268,9 @@ func (h *Handler) executeEvaluation(ctx context.Context, job *evaluationmodel.Ev
 		}
 		feedback["criteria"] = criteria
 	}
+	if taskType != "" {
+		feedback["task_type"] = taskType
+	}
 
 	passed := result.Passed != nil && *result.Passed
 	return h.interview.CompleteEvaluation(ctx, interviewadapter.CompleteEvaluationInput{
@@ -319,12 +323,24 @@ func (h *Handler) markJobFailed(ctx context.Context, job *evaluationmodel.Evalua
 		return err
 	}
 	if !job.Retryable {
+		if job.StartedAt != nil {
+			if err := h.releaseBillingUsage(ctx, job); err != nil {
+				return fmt.Errorf("release billing usage: %w (eval: %w)", err, runErr)
+			}
+		}
 		reason := msg
 		if failErr := h.interview.FailEvaluation(ctx, job.AttemptID, &reason); failErr != nil {
 			return fmt.Errorf("mark attempt failed: %w (eval: %w)", failErr, runErr)
 		}
 	}
 	return runErr
+}
+
+func (h *Handler) releaseBillingUsage(ctx context.Context, job *evaluationmodel.EvaluationJob) error {
+	if h.billing == nil || job.UserID == "" {
+		return nil
+	}
+	return h.billing.ReleaseUsage(ctx, job.UserID, billingadapter.EntitlementAIEvaluationsPerDay, job.AttemptID, 1)
 }
 
 func isNotFound(err error) bool { return errors.Is(err, evaluationrepo.ErrNotFound) }

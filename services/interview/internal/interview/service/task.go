@@ -51,8 +51,20 @@ func (s *interviewService) SkipTask(ctx context.Context, userID, sessionTaskID s
 			return err
 		}
 
-		if _, err := s.recalculateScores(txCtx, session); err != nil {
+		sessionCompleted, err := s.recalculateScores(txCtx, session)
+		if err != nil {
 			return err
+		}
+
+		if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.TaskSkipped),
+			outboxTaskSkippedPayload(task.ID, session.ID, task.TaskID, userID, string(session.Mode), now)); err != nil {
+			return err
+		}
+		if sessionCompleted {
+			if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.SessionCompleted),
+				outboxSessionCompletedPayload(session.ID, userID, string(session.Mode), session.TotalScore, now)); err != nil {
+				return err
+			}
 		}
 
 		sections, err := s.repo.ListSectionsBySession(txCtx, session.ID)

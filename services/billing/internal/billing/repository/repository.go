@@ -300,6 +300,51 @@ func (r *Repository) ConsumeUsageUnlimited(ctx context.Context, userID, key stri
 	return used, err
 }
 
+// ReleaseUsage atomically decrements a usage counter, floored at zero.
+func (r *Repository) ReleaseUsage(ctx context.Context, userID, key string, periodStart, periodEnd time.Time, amount int) (int, error) {
+	if amount <= 0 {
+		amount = 1
+	}
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return 0, fmt.Errorf("invalid user id: %w", err)
+	}
+	start := periodStart.UTC()
+	end := periodEnd.UTC()
+
+	var used int
+	err = r.conn(ctx).QueryRow(ctx, `
+		UPDATE usage_counters
+		SET used = GREATEST(used - $5, 0), updated_at = now()
+		WHERE user_id = $1 AND entitlement_key = $2 AND period_start = $3 AND period_end = $4
+		RETURNING used
+	`, uid, key, start, end, amount).Scan(&used)
+	if isNoRows(err) {
+		return 0, nil
+	}
+	return used, err
+}
+
+// MarkUsageReleaseProcessed records an idempotent release. Returns false when the key already exists.
+func (r *Repository) MarkUsageReleaseProcessed(ctx context.Context, idempotencyKey, userID, key string, amount int) (bool, error) {
+	if amount <= 0 {
+		amount = 1
+	}
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return false, fmt.Errorf("invalid user id: %w", err)
+	}
+	tag, err := r.conn(ctx).Exec(ctx, `
+		INSERT INTO usage_release_dedup (idempotency_key, user_id, entitlement_key, amount)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (idempotency_key) DO NOTHING
+	`, idempotencyKey, uid, key, amount)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
 type rowScanner interface {
 	Scan(dest ...any) error
 }

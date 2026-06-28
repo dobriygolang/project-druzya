@@ -66,3 +66,15 @@ make build
 - Route: `/live/:roomId` — `apps/web/src/pages/CollabRoomPage.tsx`
 - Vite proxies `/v1/rooms` and `/ws` → `:8087`
 - Caddy: `handle /ws/*` + `/v1/rooms*` → `rooms:8087`
+
+## Scale posture (P2-3)
+
+Yjs document state lives **in-process** (`internal/ws/Hub` per room). Postgres stores room metadata only — not live CRDT ops.
+
+| Deployment | Guidance |
+|------------|----------|
+| **Default (MVP)** | Single `rooms` replica — no extra config |
+| **Multiple replicas** | **Required:** sticky sessions on `/ws/*` (same client → same pod). Example nginx: `ip_hash;` or HAProxy `balance source`. Caddy has no built-in sticky — terminate WS at nginx/HAProxy in front of Caddy, or run one rooms instance |
+| **Future** | Shared Yjs backend (Redis / dedicated collab service) if sticky LB is not acceptable |
+
+REST (`/v1/rooms`) can round-robin across replicas; WebSocket collab cannot without sticky affinity or shared state.

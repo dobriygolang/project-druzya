@@ -132,3 +132,12 @@ type ConsumeUsageResult struct {
 	Limit     *int
 	Reason    string
 }
+
+// ReleaseUsageResult is the outcome of compensating consumed usage.
+type ReleaseUsageResult struct {
+	Released  bool
+	Used      int
+	Remaining *int
+	Limit     *int
+	Reason    string
+}

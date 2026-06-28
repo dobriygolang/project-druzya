@@ -111,6 +111,22 @@ docker compose -f docker-compose.prod.yml --profile monitoring up -d
 - Prometheus: http://server:9099
 - Grafana: http://server:3000 (default admin / see `GRAFANA_ADMIN_PASSWORD`)
 
+Useful eval-flow metrics (when monitoring profile enabled):
+
+- `outbox_lag_seconds{service="ai|recommendation"}` — queue wait before handler
+- `outbox_handler_duration_seconds` — handler latency
+- Filter logs by `attempt_id` across ai → interview internal RPCs (`x-attempt-id` metadata)
+
+## Rooms horizontal scale
+
+Live collab WebSocket state is in-memory per `rooms` pod. **Do not run multiple `rooms` replicas without sticky sessions on `/ws/*`.**
+
+If scaling out:
+
+1. Keep a single `rooms` instance (simplest), **or**
+2. Put nginx/HAProxy in front with source-ip sticky routing to `/ws/*`, **or**
+3. Plan shared Yjs backend (not implemented — see `services/rooms/AGENTS.md`).
+
 ## Secret rotation
 
 ### INTERNAL_API_TOKEN

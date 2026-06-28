@@ -1,0 +1,34 @@
+---
+description: Keep service AGENTS.md and onboarding docs in sync with code changes
+alwaysApply: true
+---
+
+# AGENTS.md maintenance
+
+`services/<name>/AGENTS.md` is the **source of truth** for that service (API, env, workers, adapters, data model).
+Root [AGENTS.md](../AGENTS.md) indexes services; [docs/onboarding/README.md](../docs/onboarding/README.md) describes cross-service flows.
+
+## When to update (same change set as code)
+
+Update the relevant docs when you change:
+
+- HTTP/gRPC routes or auth model
+- Env vars, ports, DB name
+- Background workers (poll interval, claimed events)
+- Outbox event names, producers, consumers
+- Billing entitlements or consume/release semantics
+- Adapter dependencies (service A → service B)
+- Directory layout or CQRS usecase packages
+
+## Which files
+
+| Change scope | Update |
+|--------------|--------|
+| Single service | `services/<name>/AGENTS.md` + `services/<name>/.cursor/rules/service.mdc` if it duplicates facts |
+| Cross-service flow | above + `docs/onboarding/README.md` |
+| Future scale design | `docs/architecture/outbox-relay.md` (relay only; not implemented) |
+
+## Rules
+
+- Do **not** document aspirational behavior — only what the code does today.
+- If code and doc disagree, **fix the doc** or **fix the code** in the same PR; never leave drift.

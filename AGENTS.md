@@ -20,6 +20,8 @@ When working on a service, **open only that service folder** and read its local 
 
 Prod deploy: [deploy/PRODUCTION_CHECKLIST.md](deploy/PRODUCTION_CHECKLIST.md), [deploy/RUNBOOK.md](deploy/RUNBOOK.md)
 
+Future outbox relay design: [docs/architecture/outbox-relay.md](docs/architecture/outbox-relay.md)
+
 Root `go.work` is optional. Services build with `GOWORK=off`.
 
 ---
@@ -189,3 +191,10 @@ GOPROXY=https://proxy.golang.org,direct go mod tidy
 - English code, logs, comments; `%w` wrapped errors
 - Minimal diffs
 - User commits manually unless asked
+
+### Documentation (keep in sync)
+
+Each `services/<name>/AGENTS.md` documents **current** behavior (API, env, workers, adapters).
+Cross-service flows: [docs/onboarding/README.md](docs/onboarding/README.md).
+
+When changing routes, env, workers, outbox, billing, or adapters — update the relevant AGENTS.md in the **same change set**. See [.cursor/rules/agents-md.mdc](.cursor/rules/agents-md.mdc).

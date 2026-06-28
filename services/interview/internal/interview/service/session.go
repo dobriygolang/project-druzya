@@ -70,6 +70,10 @@ func (s *interviewService) StartInterviewSession(
 		sections, tasks = buildTrainingSection(sessionID, taskType, catalogTasks, now)
 	}
 
+	if err := s.enrichSessionTaskSnapshots(ctx, tasks); err != nil {
+		return nil, err
+	}
+
 	session := interviewmodel.Session{
 		ID:           sessionID,
 		UserID:       userID,
@@ -167,11 +171,14 @@ func buildTrainingSection(sessionID, taskType string, catalogTasks []contentadap
 	}
 	tasks := make([]interviewmodel.SessionTask, 0, len(catalogTasks))
 	for i, t := range catalogTasks {
+		title, typ := t.Title, t.Type
 		tasks = append(tasks, interviewmodel.SessionTask{
 			ID:        uuid.NewString(),
 			SessionID: sessionID,
 			SectionID: secID,
 			TaskID:    t.ID,
+			TaskTitle: &title,
+			TaskType:  &typ,
 			Position:  i + 1,
 			Status:    interviewmodel.SessionTaskAssigned,
 			CreatedAt: now,
@@ -202,6 +209,7 @@ func (s *interviewService) GetCurrentSessionState(ctx context.Context, userID, s
 	currentSection := findCurrentSection(sections)
 	return &interviewmodel.SessionState{
 		Session:        session,
+		Sections:       sections,
 		CurrentSection: currentSection,
 		CurrentTask:    findCurrentTask(currentSection, tasks),
 		Progress:       computeProgress(sections, tasks),
@@ -304,4 +312,27 @@ func shuffleTasks(tasks []contentadapter.Task) {
 	rng.Shuffle(len(tasks), func(i, j int) {
 		tasks[i], tasks[j] = tasks[j], tasks[i]
 	})
+}
+
+func (s *interviewService) enrichSessionTaskSnapshots(ctx context.Context, tasks []interviewmodel.SessionTask) error {
+	for i := range tasks {
+		hasTitle := tasks[i].TaskTitle != nil && *tasks[i].TaskTitle != ""
+		hasType := tasks[i].TaskType != nil && *tasks[i].TaskType != ""
+		if hasTitle && hasType {
+			continue
+		}
+		task, err := s.content.GetTask(ctx, tasks[i].TaskID)
+		if err != nil {
+			return mapContentError(err)
+		}
+		if !hasTitle {
+			title := task.Title
+			tasks[i].TaskTitle = &title
+		}
+		if !hasType {
+			taskType := task.Type
+			tasks[i].TaskType = &taskType
+		}
+	}
+	return nil
 }

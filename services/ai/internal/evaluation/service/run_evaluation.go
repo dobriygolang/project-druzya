@@ -6,10 +6,12 @@ import (
 
 	evaluationmodel "github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/model"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/evaluation/usecase/command/run_evaluation"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/correlation"
 )
 
 // RunEvaluation delegates to the run_evaluation CQRS command handler.
 func (s *evaluationService) RunEvaluation(ctx context.Context, attemptID string) error {
+	ctx = correlation.WithAttemptID(ctx, attemptID)
 	return s.runEvaluation.Handle(ctx, run_evaluation.Command{AttemptID: attemptID})
 }
 

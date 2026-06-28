@@ -42,6 +42,8 @@ type SessionTask struct {
 	SessionID string
 	SectionID string
 	TaskID    string
+	TaskTitle *string
+	TaskType  *string
 	Position  int
 	Status    SessionTaskStatus
 	CreatedAt time.Time
@@ -109,6 +111,7 @@ type SessionDetail struct {
 // SessionState is the current pointer within a session.
 type SessionState struct {
 	Session        *Session
+	Sections       []SessionSection
 	CurrentSection *SessionSection
 	CurrentTask    *SessionTask
 	Progress       Progress

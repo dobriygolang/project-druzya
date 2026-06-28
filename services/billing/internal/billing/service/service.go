@@ -17,6 +17,7 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/repository"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/consume_usage"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/grant_subscription"
+	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/usecase/command/release_usage"
 )
 
 var (
@@ -34,6 +35,7 @@ type Service interface {
 	ListPlans(ctx context.Context) ([]catalog.PlanCatalogItem, error)
 	CheckEntitlement(ctx context.Context, userID, key string) (*model.CheckEntitlementResult, error)
 	CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) (*model.ConsumeUsageResult, error)
+	ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) (*model.ReleaseUsageResult, error)
 	GrantSubscription(ctx context.Context, userID, planSlug string, periodEnd *time.Time) (*model.Subscription, error)
 	RevokeSubscription(ctx context.Context, userID string) error
 	HandleProviderWebhook(ctx context.Context, providerName string, headers map[string]string, body []byte) error
@@ -50,6 +52,7 @@ type billingService struct {
 	// CQRS usecase handlers. Reads + webhook stay in the service; the two clear
 	// write commands delegate here.
 	consumeUsage      *consume_usage.Handler
+	releaseUsage      *release_usage.Handler
 	grantSubscription *grant_subscription.Handler
 }
 
@@ -83,8 +86,8 @@ func New(deps Deps) Service {
 		now:        time.Now,
 	}
 	svc.grantSubscription = grant_subscription.New(deps.Repo, pub)
-	// consume_usage borrows the service's shared plan resolution via PlanResolver.
 	svc.consumeUsage = consume_usage.New(deps.Repo, svc, pub)
+	svc.releaseUsage = release_usage.New(deps.Repo, svc)
 	return svc
 }
 
@@ -194,6 +197,16 @@ func (s *billingService) CheckEntitlement(ctx context.Context, userID, key strin
 // CheckAndConsumeUsage delegates to the consume_usage CQRS command handler.
 func (s *billingService) CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) (*model.ConsumeUsageResult, error) {
 	return s.consumeUsage.Handle(ctx, consume_usage.Command{UserID: userID, Key: key, Amount: amount})
+}
+
+// ReleaseUsage delegates to the release_usage CQRS command handler.
+func (s *billingService) ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) (*model.ReleaseUsageResult, error) {
+	return s.releaseUsage.Handle(ctx, release_usage.Command{
+		UserID:         userID,
+		Key:            key,
+		Amount:         amount,
+		IdempotencyKey: idempotencyKey,
+	})
 }
 
 // GrantSubscription delegates to the grant_subscription CQRS command handler.

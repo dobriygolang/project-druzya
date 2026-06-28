@@ -53,6 +53,7 @@ export function getSession(sessionId: string) {
 export function getCurrentSessionState(sessionId: string) {
   return api<{
     session: Session
+    sections?: SessionSection[]
     current_section?: SessionSection
     current_task?: SessionTask
     progress?: Progress

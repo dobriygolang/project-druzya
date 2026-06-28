@@ -76,6 +76,14 @@ func ObserveOutboxDuration(service, event string, d time.Duration) {
 	outboxDuration.WithLabelValues(service, event).Observe(d.Seconds())
 }
 
+// ObserveOutboxLag records queue wait time from event occurred_at to handler start.
+func ObserveOutboxLag(service, event string, d time.Duration) {
+	if d < 0 {
+		d = 0
+	}
+	outboxLag.WithLabelValues(service, event).Observe(d.Seconds())
+}
+
 var (
 	outboxEventsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "outbox_events_total",
@@ -86,6 +94,12 @@ var (
 		Name:    "outbox_handler_duration_seconds",
 		Help:    "Outbox handler latency",
 		Buckets: prometheus.DefBuckets,
+	}, []string{"service", "event"})
+
+	outboxLag = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "outbox_lag_seconds",
+		Help:    "Time from outbox occurred_at to consumer processing start",
+		Buckets: []float64{0.1, 0.5, 1, 2, 5, 10, 30, 60, 120, 300},
 	}, []string{"service", "event"})
 )
 

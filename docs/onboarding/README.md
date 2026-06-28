@@ -68,11 +68,12 @@ Caddy (prod) / Vite proxy (dev)
 |----|---|-------|
 | interview | content | шаблон интервью, задача |
 | interview | billing | лимит mock-интервью |
-| ai | interview | outbox, attempt, CompleteEvaluation |
+| ai | interview | outbox (`interview.attempt_submitted`), attempt, CompleteEvaluation, FailEvaluation |
 | ai | content | task + rubric bundle |
 | ai | billing | лимит LLM-оценок |
-| recommendation | interview | outbox, eval summary |
+| recommendation | interview | outbox (4 event types, not `*`), eval summary |
 | recommendation | content | метаданные задачи |
+| recommendation | ai | GenerateProfileSummary (dashboard copy) |
 | sandbox | content | тесты из metadata |
 | sandbox | interview | SubmitAttempt |
 | sandbox | billing | лимит запусков кода |
@@ -82,12 +83,17 @@ Caddy (prod) / Vite proxy (dev)
 
 ## Асинхронные события (outbox в interview)
 
+Один `domain_outbox`, несколько consumer'ов. **Каждый worker claim'ит только свои типы** (не `*` — иначе гонка ai ↔ recommendation).
+
 | Событие | Producer | Consumer | Когда |
 |---------|----------|----------|-------|
-| `attempt_submitted` | interview | ai | пользователь отправил ответ |
-| `attempt_evaluated` | interview | recommendation | ai вернул оценку |
-| `session_completed` | interview | recommendation | сессия полностью оценена |
-| `retry_item_created` | interview | recommendation | задача ушла в retry |
+| `interview.attempt_submitted` | interview | ai | пользователь отправил ответ |
+| `interview.attempt_evaluated` | interview | recommendation | ai вернул оценку |
+| `interview.session_completed` | interview | recommendation | сессия полностью оценена |
+| `interview.retry_item_created` | interview | recommendation | задача ушла в retry |
+| `interview.task_skipped` | interview | recommendation | пользователь пропустил задачу |
+
+Cross-service eval correlation: `x-attempt-id` gRPC metadata (ai → interview). Outbox lag: `outbox_lag_seconds` on ai/recommendation `/metrics`.
 
 ## Что храним (кратко)
 
@@ -145,7 +151,8 @@ python3 generate_excalidraw.py
 
 | Документ | Когда смотреть |
 |----------|----------------|
-| `services/*/AGENTS.md` | Домен, API, env конкретного сервиса |
+| `services/*/AGENTS.md` | Домен, API, env конкретного сервиса (обновлять вместе с кодом) |
+| `docs/architecture/outbox-relay.md` | Дизайн message-bus relay (не реализован) |
 | `deploy/Caddyfile` | Маршрутизация prod |
 | `apps/web/MIGRATION.md` | Статус frontend-фич |
 | `deploy/RUNBOOK.md` | Prod ops, restart order |

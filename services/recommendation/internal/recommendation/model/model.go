@@ -6,6 +6,7 @@ const (
 	ConsumerAttemptEvaluated  = "recommendation.attempt_evaluated"
 	ConsumerSessionCompleted  = "recommendation.session_completed"
 	ConsumerRetryItemCreated  = "recommendation.retry_item_created"
+	ConsumerTaskSkipped       = "recommendation.task_skipped"
 
 	RecTypeImproveSkill      = "improve_skill"
 	RecTypeRewriteAnswer     = "rewrite_answer"
@@ -105,15 +106,27 @@ type RetryItemCreatedEvent struct {
 	OccurredAt  time.Time
 }
 
+// TaskSkippedEvent is the interview task_skipped outbox payload.
+type TaskSkippedEvent struct {
+	SessionTaskID string
+	SessionID     string
+	TaskID        string
+	UserID        string
+	Mode          string
+	OccurredAt    time.Time
+}
+
 // AttemptEvaluatedEvent is the interview outbox payload.
 type AttemptEvaluatedEvent struct {
-	AttemptID  string
-	UserID     string
-	TaskID     string
-	SessionID  string
-	Score      float64
-	Passed     bool
-	OccurredAt time.Time
+	AttemptID    string
+	UserID       string
+	TaskID       string
+	SessionID    string
+	TaskType     string
+	Criteria     []any
+	Score        float64
+	Passed       bool
+	OccurredAt   time.Time
 }
 
 // CriterionScore is a parsed evaluation criterion.

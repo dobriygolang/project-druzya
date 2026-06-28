@@ -7,6 +7,7 @@ import (
 
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
 	interviewv1 "github.com/sedorofeevd/project-druzya/services/interview/pkg/api/interview/v1"
+	"github.com/sedorofeevd/project-druzya/services/ai/internal/tools/correlation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
@@ -49,7 +50,8 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) authCtx(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, internalTokenHeader, c.token)
+	ctx = metadata.AppendToOutgoingContext(ctx, internalTokenHeader, c.token)
+	return correlation.AppendOutgoing(ctx)
 }
 
 // Ping waits until the interview gRPC channel is ready.
@@ -69,6 +71,7 @@ func (c *Client) Ping(ctx context.Context) error {
 }
 
 func (c *Client) GetAttempt(ctx context.Context, attemptID string) (*interviewadapter.Attempt, error) {
+	ctx = correlation.WithAttemptID(ctx, attemptID)
 	resp, err := c.client.GetAttemptInternal(c.authCtx(ctx), &interviewv1.GetAttemptInternalRequest{
 		AttemptId: attemptID,
 	})
@@ -79,6 +82,7 @@ func (c *Client) GetAttempt(ctx context.Context, attemptID string) (*interviewad
 }
 
 func (c *Client) CompleteEvaluation(ctx context.Context, input interviewadapter.CompleteEvaluationInput) error {
+	ctx = correlation.WithAttemptID(ctx, input.AttemptID)
 	feedback, err := structpb.NewStruct(input.Feedback)
 	if err != nil {
 		feedback = &structpb.Struct{}
@@ -97,6 +101,7 @@ func (c *Client) CompleteEvaluation(ctx context.Context, input interviewadapter.
 }
 
 func (c *Client) FailEvaluation(ctx context.Context, attemptID string, reason *string) error {
+	ctx = correlation.WithAttemptID(ctx, attemptID)
 	_, err := c.client.FailEvaluation(c.authCtx(ctx), &interviewv1.FailEvaluationRequest{
 		AttemptId: attemptID,
 		Reason:    reason,
@@ -123,9 +128,10 @@ func (c *Client) ClaimOutboxEvents(ctx context.Context, eventName string, limit 
 			payload = ev.GetPayload().AsMap()
 		}
 		out = append(out, interviewadapter.OutboxEvent{
-			ID:        ev.GetId(),
-			EventName: ev.GetEventName(),
-			Payload:   payload,
+			ID:         ev.GetId(),
+			EventName:  ev.GetEventName(),
+			Payload:    payload,
+			OccurredAt: ev.GetOccurredAt().AsTime(),
 		})
 	}
 	return out, nil

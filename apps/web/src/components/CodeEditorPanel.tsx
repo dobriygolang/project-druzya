@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { LiveCodeRunButton, LiveCodeToolButton } from '@/components/live/LiveCodeChrome'
@@ -6,7 +6,18 @@ import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel
 import { SoloCodeEditor } from '@/components/SoloCodeEditor'
 import { useFormatCode } from '@/hooks/useFormatCode'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
+import { isTerminalRunStatus } from '@/lib/api/sandbox'
 import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
+import type { CodeRun } from '@/lib/types'
+
+function isSuccessfulSubmitRun(run: CodeRun | undefined): boolean {
+  return (
+    !!run &&
+    isTerminalRunStatus(run.status) &&
+    run.run_type === 'submit' &&
+    run.status === 'success'
+  )
+}
 
 interface CodeEditorPanelProps {
   taskId: string
@@ -15,9 +26,10 @@ interface CodeEditorPanelProps {
   onLanguageChange: (lang: string) => void
   code: string
   onCodeChange: (code: string) => void
+  verifiedSubmitRunId: string | null
+  onVerifiedSubmitRunChange: (runId: string | null) => void
   onSubmit: () => void
   submitPending: boolean
-  submitDisabled?: boolean
 }
 
 const LANG_OPTIONS = [
@@ -34,15 +46,26 @@ export function CodeEditorPanel({
   onLanguageChange,
   code,
   onCodeChange,
+  verifiedSubmitRunId,
+  onVerifiedSubmitRunChange,
   onSubmit,
   submitPending,
-  submitDisabled,
 }: CodeEditorPanelProps) {
   const run = useSandboxRun()
   const fmt = useFormatCode()
   const [fullCheckPending, setFullCheckPending] = useState(false)
   const panelBottom = runPanelHeight(run.panelOpen)
   const isGo = normalizeEditorLang(language) === 'go'
+
+  useEffect(() => {
+    onVerifiedSubmitRunChange(null)
+  }, [code, language, onVerifiedSubmitRunChange])
+
+  useEffect(() => {
+    if (isSuccessfulSubmitRun(run.activeRun)) {
+      onVerifiedSubmitRunChange(run.activeRun!.id)
+    }
+  }, [run.activeRun, onVerifiedSubmitRunChange])
 
   const handleFormat = async () => {
     if (!code.trim() || fmt.formatting) return
@@ -139,7 +162,7 @@ export function CodeEditorPanel({
           </div>
           <Button
             loading={submitPending}
-            disabled={submitDisabled || !code.trim() || run.running}
+            disabled={!code.trim() || run.running || !verifiedSubmitRunId}
             onClick={onSubmit}
             size="sm"
           >
@@ -147,6 +170,12 @@ export function CodeEditorPanel({
           </Button>
         </div>
       </div>
+
+      {!verifiedSubmitRunId ? (
+        <p className="text-sm text-text-muted">
+          Сначала пройдите полную проверку (FULL) — отправка доступна только после успешного submit-run.
+        </p>
+      ) : null}
 
       {fmt.formatError ? (
         <p className="text-sm text-danger">{fmt.formatError}</p>

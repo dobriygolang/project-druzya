@@ -71,4 +71,24 @@ func (c *Client) CheckAndConsumeUsage(ctx context.Context, userID, key string, a
 	return nil
 }
 
+// ReleaseUsage compensates previously consumed quota (idempotent by idempotencyKey).
+func (c *Client) ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) error {
+	if key == "" {
+		key = billingadapter.EntitlementAIEvaluationsPerDay
+	}
+	if amount <= 0 {
+		amount = 1
+	}
+	if idempotencyKey == "" {
+		return fmt.Errorf("idempotency_key required")
+	}
+	_, err := c.client.ReleaseUsage(c.authCtx(ctx), &billingv1.ReleaseUsageRequest{
+		UserId:         userID,
+		Key:            key,
+		Amount:         int32(amount),
+		IdempotencyKey: idempotencyKey,
+	})
+	return err
+}
+
 var _ billingadapter.Client = (*Client)(nil)

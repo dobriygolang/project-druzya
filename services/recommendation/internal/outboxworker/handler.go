@@ -15,6 +15,7 @@ const (
 	AttemptEvaluatedEvent = "interview.attempt_evaluated"
 	SessionCompletedEvent = "interview.session_completed"
 	RetryItemCreatedEvent = "interview.retry_item_created"
+	TaskSkippedEvent      = "interview.task_skipped"
 )
 
 // Handler processes claimed outbox rows.
@@ -50,6 +51,14 @@ func (h *Handler) HandleEvent(ctx context.Context, ev interviewadapter.OutboxEve
 		if err := h.Service.HandleRetryItemCreated(ctx, ev.ID, event); err != nil {
 			return h.fail(ctx, ev.ID, fmt.Errorf("handle retry item created: %w", err))
 		}
+	case TaskSkippedEvent:
+		event, err := ParseTaskSkippedEvent(ev.Payload)
+		if err != nil {
+			return h.fail(ctx, ev.ID, fmt.Errorf("parse task_skipped: %w", err))
+		}
+		if err := h.Service.HandleTaskSkipped(ctx, ev.ID, event); err != nil {
+			return h.fail(ctx, ev.ID, fmt.Errorf("handle task skipped: %w", err))
+		}
 	default:
 		return fmt.Errorf("unexpected event %q (not owned by recommendation)", ev.EventName)
 	}
@@ -68,9 +77,15 @@ func ParseAttemptEvaluatedEvent(p map[string]any) (model.AttemptEvaluatedEvent, 
 		UserID:     payload.StringField(p, "user_id"),
 		TaskID:     payload.StringField(p, "task_id"),
 		SessionID:  payload.StringField(p, "session_id"),
+		TaskType:   payload.StringField(p, "task_type"),
 		Passed:     payload.BoolField(p, "passed"),
 		Score:      payload.ParseScoreField(p),
 		OccurredAt: payload.ParseOccurredAt(p),
+	}
+	if raw, ok := p["criteria"]; ok {
+		if items, ok := raw.([]any); ok {
+			event.Criteria = items
+		}
 	}
 	if event.AttemptID == "" {
 		return event, fmt.Errorf("attempt_id missing in payload")
@@ -112,6 +127,25 @@ func ParseRetryItemCreatedEvent(p map[string]any) (model.RetryItemCreatedEvent, 
 		TaskID:      payload.StringField(p, "task_id"),
 		AttemptID:   payload.StringField(p, "attempt_id"),
 		OccurredAt:  payload.ParseOccurredAt(p),
+	}
+	if event.UserID == "" {
+		return event, fmt.Errorf("user_id missing in payload")
+	}
+	if event.TaskID == "" {
+		return event, fmt.Errorf("task_id missing in payload")
+	}
+	return event, nil
+}
+
+// ParseTaskSkippedEvent decodes task_skipped payload.
+func ParseTaskSkippedEvent(p map[string]any) (model.TaskSkippedEvent, error) {
+	event := model.TaskSkippedEvent{
+		SessionTaskID: payload.StringField(p, "session_task_id"),
+		SessionID:     payload.StringField(p, "session_id"),
+		UserID:        payload.StringField(p, "user_id"),
+		TaskID:        payload.StringField(p, "task_id"),
+		Mode:          payload.StringField(p, "mode"),
+		OccurredAt:    payload.ParseOccurredAt(p),
 	}
 	if event.UserID == "" {
 		return event, fmt.Errorf("user_id missing in payload")

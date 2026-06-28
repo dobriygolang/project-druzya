@@ -72,6 +72,8 @@ func toProtoSessionTask(t *interviewmodel.SessionTask) *interviewv1.SessionTask 
 		SessionId: t.SessionID,
 		SectionId: t.SectionID,
 		TaskId:    t.TaskID,
+		TaskTitle: t.TaskTitle,
+		TaskType:  t.TaskType,
 		Position:  int32(t.Position),
 		Status:    sessionTaskStatusToProto(t.Status),
 		CreatedAt: timestamppb.New(t.CreatedAt),

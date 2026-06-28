@@ -26,6 +26,7 @@ service BillingInternalService {
   rpc GetEntitlements(GetEntitlementsRequest) returns (GetEntitlementsResponse);
   rpc CheckEntitlement(CheckEntitlementRequest) returns (CheckEntitlementResponse);
   rpc CheckAndConsumeUsage(CheckAndConsumeUsageRequest) returns (CheckAndConsumeUsageResponse);
+  rpc ReleaseUsage(ReleaseUsageRequest) returns (ReleaseUsageResponse);
 }
 
 service BillingAdminService {
@@ -113,6 +114,22 @@ message CheckAndConsumeUsageRequest {
 
 message CheckAndConsumeUsageResponse {
   bool allowed = 1;
+  int32 used = 2;
+  optional int32 limit = 3;
+  optional int32 remaining = 4;
+  string reason = 5;
+}
+
+message ReleaseUsageRequest {
+  string user_id = 1;
+  string key = 2;
+  int32 amount = 3;
+  // Idempotency guard, e.g. evaluation attempt_id.
+  string idempotency_key = 4;
+}
+
+message ReleaseUsageResponse {
+  bool released = 1;
   int32 used = 2;
   optional int32 limit = 3;
   optional int32 remaining = 4;

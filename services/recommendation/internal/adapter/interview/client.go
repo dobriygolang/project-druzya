@@ -10,9 +10,10 @@ const OutboxClaimAll = "*"
 
 // OutboxEvent is a claimed domain outbox row.
 type OutboxEvent struct {
-	ID        string
-	EventName string
-	Payload   map[string]any
+	ID         string
+	EventName  string
+	Payload    map[string]any
+	OccurredAt time.Time
 }
 
 // EvaluationSummary is evaluation result from interview-service.

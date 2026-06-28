@@ -11,6 +11,6 @@ HTTP `:8083` | gRPC `:9093` | PG `:5435`
 
 Layers: `cmd/ai/app/run.go` → `internal/app/api/ai/` → `internal/evaluation/service/` → repository.
 
-Outbox worker: `internal/outboxworker` — poll `interview.attempt_submitted` only.
+Workers: `outboxworker` (attempt_submitted) + `retryworker` (job retries / stuck recovery).
 
 See `AGENTS.md`.

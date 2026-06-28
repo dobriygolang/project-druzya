@@ -26,6 +26,7 @@ func (i *Implementation) GetCurrentSessionState(
 
 	return &interviewv1.GetCurrentSessionStateResponse{
 		Session:        toProtoSession(state.Session),
+		Sections:       toProtoSessionSections(state.Sections),
 		CurrentSection: toProtoSessionSection(state.CurrentSection),
 		CurrentTask:    toProtoSessionTask(state.CurrentTask),
 		Progress:       toProtoProgress(state.Progress),

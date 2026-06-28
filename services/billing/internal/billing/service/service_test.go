@@ -20,6 +20,7 @@ type fakeRepo struct {
 	sub          *model.Subscription
 	entitlements []model.PlanEntitlement
 	usage        map[string]int
+	releaseDedup map[string]struct{}
 	cancelCalled bool
 	lastSub      *model.Subscription
 }
@@ -109,6 +110,28 @@ func (f *fakeRepo) ConsumeUsageUnlimited(_ context.Context, _, key string, _, _ 
 	return f.usage[key], nil
 }
 
+func (f *fakeRepo) ReleaseUsage(_ context.Context, _, key string, _, _ time.Time, amount int) (int, error) {
+	if f.usage == nil {
+		f.usage = map[string]int{}
+	}
+	f.usage[key] -= amount
+	if f.usage[key] < 0 {
+		f.usage[key] = 0
+	}
+	return f.usage[key], nil
+}
+
+func (f *fakeRepo) MarkUsageReleaseProcessed(_ context.Context, idempotencyKey, _, _ string, _ int) (bool, error) {
+	if f.releaseDedup == nil {
+		f.releaseDedup = map[string]struct{}{}
+	}
+	if _, ok := f.releaseDedup[idempotencyKey]; ok {
+		return false, nil
+	}
+	f.releaseDedup[idempotencyKey] = struct{}{}
+	return true, nil
+}
+
 func newTestService(repo *fakeRepo) Service {
 	return New(Deps{Repo: repo, Events: events.NoopPublisher{}, TierToPlan: map[string]string{"tribute_pro_monthly": model.PlanProMonthly}})
 }
@@ -193,6 +216,32 @@ func TestCheckAndConsumeUsageRejectsOverLimit(t *testing.T) {
 	}
 	if repo.usage[model.EntitlementAIEvaluationsPerDay] != 5 {
 		t.Fatal("must not increment on failure")
+	}
+}
+
+func TestReleaseUsageDecrementsConsumedQuota(t *testing.T) {
+	t.Parallel()
+	repo := &fakeRepo{
+		plan:  &model.Plan{ID: "free-id", Slug: model.PlanFree, Name: "Free"},
+		usage: map[string]int{model.EntitlementAIEvaluationsPerDay: 3},
+		entitlements: []model.PlanEntitlement{
+			{Key: model.EntitlementAIEvaluationsPerDay, ValueJSON: json.RawMessage(`{"type":"counter","limit":5,"period":"day"}`)},
+		},
+	}
+	svc := newTestService(repo)
+	res, err := svc.ReleaseUsage(context.Background(), "user-1", model.EntitlementAIEvaluationsPerDay, "attempt-1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.Released || res.Used != 2 {
+		t.Fatalf("unexpected: %+v", res)
+	}
+	res2, err := svc.ReleaseUsage(context.Background(), "user-1", model.EntitlementAIEvaluationsPerDay, "attempt-1", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res2.Released || res2.Reason != "already_released" || repo.usage[model.EntitlementAIEvaluationsPerDay] != 2 {
+		t.Fatalf("unexpected duplicate release: %+v usage=%d", res2, repo.usage[model.EntitlementAIEvaluationsPerDay])
 	}
 }
 

@@ -12,3 +12,5 @@ Services live in `services/<name>/`. Each is **independent**:
 - own `.cursor/rules/`
 
 When editing code, **cd into `services/<name>/`** and follow that service's `AGENTS.md`. New service: copy [services/template/](../services/template/). Canonical layout: root [AGENTS.md](../AGENTS.md#service-template-canonical).
+
+Keep `AGENTS.md` in sync with code — see [.cursor/rules/agents-md.mdc](agents-md.mdc).

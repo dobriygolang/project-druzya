@@ -39,6 +39,49 @@ func TestHandleEvent_RoutesSessionCompleted(t *testing.T) {
 	require.NoError(t, h.HandleEvent(ctx, ev))
 }
 
+func TestHandleEvent_RoutesTaskSkipped(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	interview := interviewmocks.NewClient(t)
+	svc := servicemocks.NewService(t)
+	h := &outboxworker.Handler{Interview: interview, Service: svc}
+
+	ev := interviewadapter.OutboxEvent{
+		ID:        "evt-skip",
+		EventName: outboxworker.TaskSkippedEvent,
+		Payload: map[string]any{
+			"session_task_id": "st-1",
+			"session_id":      "session-1",
+			"user_id":         "550e8400-e29b-41d4-a716-446655440000",
+			"task_id":         "660e8400-e29b-41d4-a716-446655440001",
+			"mode":            "algorithms_training",
+		},
+	}
+
+	svc.EXPECT().HandleTaskSkipped(ctx, ev.ID, mock.MatchedBy(func(e model.TaskSkippedEvent) bool {
+		return e.SessionTaskID == "st-1" && e.Mode == "algorithms_training"
+	})).Return(nil)
+	interview.EXPECT().AckOutboxEvents(ctx, []string{ev.ID}).Return(nil)
+
+	require.NoError(t, h.HandleEvent(ctx, ev))
+}
+
+func TestParseTaskSkippedEvent(t *testing.T) {
+	t.Parallel()
+
+	event, err := outboxworker.ParseTaskSkippedEvent(map[string]any{
+		"session_task_id": "st-1",
+		"session_id":      "session-1",
+		"user_id":         "550e8400-e29b-41d4-a716-446655440000",
+		"task_id":         "660e8400-e29b-41d4-a716-446655440001",
+		"mode":            "behavioral_training",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "st-1", event.SessionTaskID)
+	require.Equal(t, "behavioral_training", event.Mode)
+}
+
 func TestHandleEvent_RejectAttemptSubmitted(t *testing.T) {
 	t.Parallel()
 
