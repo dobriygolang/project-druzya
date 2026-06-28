@@ -30,23 +30,6 @@ const (
 	RecommendationStatusCompleted RecommendationStatus = "completed"
 )
 
-// LearningPlanItemType classifies a learning plan row.
-type LearningPlanItemType string
-
-const (
-	LearningPlanItemTypeRetryTask LearningPlanItemType = "retry_task"
-)
-
-// LearningPlanItemStatus is lifecycle state of a plan item.
-type LearningPlanItemStatus string
-
-const (
-	LearningPlanItemStatusPending    LearningPlanItemStatus = "pending"
-	LearningPlanItemStatusInProgress LearningPlanItemStatus = "in_progress"
-	LearningPlanItemStatusCompleted  LearningPlanItemStatus = "completed"
-	LearningPlanItemStatusDismissed  LearningPlanItemStatus = "dismissed"
-)
-
 // DailyBriefItemType classifies one actionable Today brief row.
 type DailyBriefItemType string
 
@@ -71,16 +54,5 @@ func ParseRecommendationType(v string) (RecommendationType, error) {
 		return t, nil
 	default:
 		return "", fmt.Errorf("invalid recommendation type %q", v)
-	}
-}
-
-// ParseLearningPlanItemType validates a plan item type string.
-func ParseLearningPlanItemType(v string) (LearningPlanItemType, error) {
-	t := LearningPlanItemType(v)
-	switch t {
-	case LearningPlanItemTypeRetryTask:
-		return t, nil
-	default:
-		return "", fmt.Errorf("invalid learning plan item type %q", v)
 	}
 }

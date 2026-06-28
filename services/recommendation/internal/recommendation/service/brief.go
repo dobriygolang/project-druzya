@@ -17,38 +17,24 @@ func buildDailyBrief(
 	readiness int,
 	weaknesses []model.SkillInsight,
 	recommendations []model.Recommendation,
-	learningPlan []model.LearningPlanItem,
 	pendingRetries []interviewadapter.RetryItem,
+	retryTaskTitles map[string]string,
 	articlesBySkill map[string]contentadapter.Article,
 	readSlugs map[string]struct{},
 	staleModes []model.StalePracticeMode,
 ) model.DailyBrief {
-	retryByTask := make(map[string]interviewadapter.RetryItem, len(pendingRetries))
-	for _, r := range pendingRetries {
-		retryByTask[r.TaskID] = r
-	}
-
 	items := make([]model.DailyBriefItem, 0, maxBriefItems)
 	coveredSkills := map[string]struct{}{}
 
-	for _, plan := range learningPlan {
+	for _, retry := range pendingRetries {
 		if len(items) >= maxBriefItems {
 			break
 		}
-		if plan.Status == model.LearningPlanItemStatusCompleted || plan.Status == model.LearningPlanItemStatusDismissed {
-			continue
-		}
-		if plan.Type != model.LearningPlanItemTypeRetryTask || plan.TaskID == nil {
-			continue
-		}
-		retry, ok := retryByTask[*plan.TaskID]
-		if !ok {
-			continue
-		}
 		retryID := retry.ID
+		taskTitle := retryTaskTitles[retry.TaskID]
 		items = append(items, model.DailyBriefItem{
 			Type:        model.DailyBriefItemTypeRetryTask,
-			Title:       plan.Title,
+			Title:       copy.RetryTaskTitle(lang, taskTitle),
 			ActionLabel: strPtr(copy.BriefRetryAction(lang)),
 			RetryItemID: &retryID,
 		})

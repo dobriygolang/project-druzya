@@ -156,6 +156,26 @@ func (c *Client) ListPendingRetryItems(ctx context.Context, userID string) ([]in
 	return out, nil
 }
 
+func (c *Client) CompleteRetryItem(ctx context.Context, userID, retryItemID string) (*interviewadapter.RetryItem, error) {
+	resp, err := c.client.CompleteRetryItemInternal(c.authCtx(ctx), &interviewv1.CompleteRetryItemInternalRequest{
+		UserId:      userID,
+		RetryItemId: retryItemID,
+	})
+	if err != nil {
+		return nil, interviewadapter.MapGRPCError(err)
+	}
+	item := resp.GetItem()
+	if item == nil {
+		return nil, interviewadapter.ErrNotFound
+	}
+	return &interviewadapter.RetryItem{
+		ID:     item.GetId(),
+		UserID: item.GetUserId(),
+		TaskID: item.GetTaskId(),
+		Status: item.GetStatus().String(),
+	}, nil
+}
+
 func parseScore(raw string) (float64, error) {
 	if raw == "" {
 		return 0, nil

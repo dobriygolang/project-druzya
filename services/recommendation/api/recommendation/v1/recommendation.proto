@@ -29,19 +29,6 @@ enum RecommendationStatus {
   RECOMMENDATION_STATUS_COMPLETED = 3;
 }
 
-enum LearningPlanItemType {
-  LEARNING_PLAN_ITEM_TYPE_UNSPECIFIED = 0;
-  LEARNING_PLAN_ITEM_TYPE_RETRY_TASK = 1;
-}
-
-enum LearningPlanItemStatus {
-  LEARNING_PLAN_ITEM_STATUS_UNSPECIFIED = 0;
-  LEARNING_PLAN_ITEM_STATUS_PENDING = 1;
-  LEARNING_PLAN_ITEM_STATUS_IN_PROGRESS = 2;
-  LEARNING_PLAN_ITEM_STATUS_COMPLETED = 3;
-  LEARNING_PLAN_ITEM_STATUS_DISMISSED = 4;
-}
-
 enum DailyBriefItemType {
   DAILY_BRIEF_ITEM_TYPE_UNSPECIFIED = 0;
   DAILY_BRIEF_ITEM_TYPE_RETRY_TASK = 1;
@@ -76,20 +63,6 @@ service RecommendationService {
     };
   }
 
-  rpc CompleteLearningPlanItem(CompleteLearningPlanItemRequest) returns (CompleteLearningPlanItemResponse) {
-    option (google.api.http) = {
-      post: "/v1/recommendations/learning-plan/{id}/complete"
-      body: "*"
-    };
-  }
-
-  rpc DismissLearningPlanItem(DismissLearningPlanItemRequest) returns (DismissLearningPlanItemResponse) {
-    option (google.api.http) = {
-      post: "/v1/recommendations/learning-plan/{id}/dismiss"
-      body: "*"
-    };
-  }
-
   rpc MarkArticleRead(MarkArticleReadRequest) returns (MarkArticleReadResponse) {
     option (google.api.http) = {
       post: "/v1/recommendations/articles/{slug}/read"
@@ -109,7 +82,8 @@ message GetDashboardResponse {
   repeated SkillInsight strengths = 2;
   repeated SkillInsight weaknesses = 3;
   repeated Recommendation recommendations = 4;
-  repeated LearningPlanItem learning_plan = 5;
+  reserved 5;
+  reserved "learning_plan";
   int32 pending_retry_count = 6;
   reserved 7;
   reserved "profile_summary";
@@ -151,18 +125,6 @@ message Recommendation {
   google.protobuf.Timestamp created_at = 8;
 }
 
-message LearningPlanItem {
-  string id = 1;
-  LearningPlanItemType type = 2;
-  optional string task_id = 3;
-  optional string skill_key = 4;
-  string title = 5;
-  optional string description = 6;
-  LearningPlanItemStatus status = 7;
-  int32 position = 8;
-  google.protobuf.Timestamp created_at = 9;
-}
-
 message DismissRecommendationRequest {
   string id = 1;
 }
@@ -174,18 +136,6 @@ message CompleteRecommendationRequest {
 }
 
 message CompleteRecommendationResponse {}
-
-message CompleteLearningPlanItemRequest {
-  string id = 1;
-}
-
-message CompleteLearningPlanItemResponse {}
-
-message DismissLearningPlanItemRequest {
-  string id = 1;
-}
-
-message DismissLearningPlanItemResponse {}
 
 message MarkArticleReadRequest {
   string slug = 1;

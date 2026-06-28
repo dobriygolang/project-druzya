@@ -1,6 +1,7 @@
-go 1.25.0
+go 1.25.8
 
 use (
+	./services/admin
 	./services/ai
 	./services/billing
 	./services/content
@@ -10,4 +11,5 @@ use (
 	./services/rooms
 	./services/sandbox
 	./services/template
+	./services/tracker
 )

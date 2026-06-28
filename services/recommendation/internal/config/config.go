@@ -27,6 +27,8 @@ type Config struct {
 	CORSAllowedOrigins []string
 	NATSURL            string
 	OutboxPollEnabled  bool
+	TrackerGRPCAddr    string
+	AIGRPCAddr         string
 }
 
 // Load reads configuration from environment variables with sensible defaults.
@@ -74,6 +76,8 @@ func Load() (*Config, error) {
 		CORSAllowedOrigins: ops.ParseOrigins(getEnv("CORS_ALLOWED_ORIGINS", "")),
 		NATSURL:            os.Getenv("NATS_URL"),
 		OutboxPollEnabled:  outboxPollEnabled(os.Getenv("NATS_URL"), os.Getenv("OUTBOX_POLL_ENABLED")),
+		TrackerGRPCAddr:    getEnv("TRACKER_GRPC_ADDR", "127.0.0.1:9099"),
+		AIGRPCAddr:         getEnv("AI_GRPC_ADDR", "127.0.0.1:9093"),
 	}, nil
 }
 

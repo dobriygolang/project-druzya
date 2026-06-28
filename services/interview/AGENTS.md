@@ -61,7 +61,7 @@ Code tasks: frontend submits via sandbox `SubmitAttemptFromCodeRun` after succes
 
 **System design** tasks use `/interview/session/:id/design` (not textarea `SubmitAttempt`). Workspace autosave + AI turns via ai-service (`sd_ai_turns_per_month` per chat/checkpoint). Final submit packs JSON dossier + optional diagram PNG → `attempt_submitted` → ai SD evaluator. Spec: [docs/architecture/system-design-room.md](../../docs/architecture/system-design-room.md).
 
-Internal RPCs (`x-internal-token`): `GetAttemptInternal`, `CompleteEvaluation`, `FailEvaluation`, outbox claim/ack — used by ai and recommendation.
+Internal RPCs (`x-internal-token`): `GetAttemptInternal`, `CompleteEvaluation`, `FailEvaluation`, `CompleteRetryItemInternal`, outbox claim/ack — used by ai and recommendation.
 
 ## Billing
 

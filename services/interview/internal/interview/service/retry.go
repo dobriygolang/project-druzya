@@ -142,3 +142,24 @@ func (s *interviewService) DismissRetryItem(ctx context.Context, userID, retryIt
 	}
 	return item, nil
 }
+
+func (s *interviewService) CompleteRetryItemInternal(ctx context.Context, userID, retryItemID string) (*interviewmodel.RetryItem, error) {
+	if userID == "" || retryItemID == "" {
+		return nil, fmt.Errorf("user_id and retry_item_id required: %w", ErrInvalidInput)
+	}
+	item, err := s.repo.GetRetryItemForUser(ctx, userID, retryItemID)
+	if err != nil {
+		return nil, err
+	}
+	if item.Status == interviewmodel.RetryStatusCompleted || item.Status == interviewmodel.RetryStatusDismissed {
+		return item, nil
+	}
+	now := time.Now().UTC()
+	item.Status = interviewmodel.RetryStatusCompleted
+	item.ResolvedAt = &now
+	item.UpdatedAt = now
+	if err := s.repo.UpdateRetryItem(ctx, item); err != nil {
+		return nil, err
+	}
+	return item, nil
+}

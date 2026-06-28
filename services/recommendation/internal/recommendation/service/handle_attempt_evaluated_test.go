@@ -188,7 +188,7 @@ func TestHandleSessionCompleted_HighReadinessCreatesMockInterview(t *testing.T) 
 	require.NoError(t, err)
 }
 
-func TestHandleRetryItemCreated_ReconcilesPlanItem(t *testing.T) {
+func TestHandleRetryItemCreated_PushesTrackerOnly(t *testing.T) {
 	fx := setUp(t)
 	ctx := context.Background()
 	event := model.RetryItemCreatedEvent{
@@ -202,10 +202,6 @@ func TestHandleRetryItemCreated_ReconcilesPlanItem(t *testing.T) {
 	fx.content.EXPECT().GetTask(ctx, taskID).Return(defaultTask(), nil)
 	expectWithTx(fx, ctx)
 	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
-	fx.repo.EXPECT().NextLearningPlanPosition(ctx, userID).Return(1, nil)
-	fx.repo.EXPECT().CreateRetryTaskPlanItem(ctx, mock.MatchedBy(func(item model.LearningPlanItem) bool {
-		return item.Metadata["retry_item_id"] == "retry-1"
-	})).Return(&model.LearningPlanItem{Type: model.LearningPlanItemTypeRetryTask}, nil)
 	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerRetryItemCreated, eventID).Return(true, nil)
 
 	err := fx.svc.HandleRetryItemCreated(ctx, eventID, event)

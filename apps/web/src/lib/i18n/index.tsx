@@ -86,12 +86,6 @@ export function skillLabel(t: I18nContextValue['t'], skillKey: string): string {
   return skillKeyLabel(t, skillKey)
 }
 
-export function pluralTasks(t: I18nContextValue['t'], count: number): string {
-  if (count === 1) return t('today.plan.tasks_one', { count })
-  if (count >= 2 && count <= 4) return t('today.plan.tasks_few', { count })
-  return t('today.plan.tasks_many', { count })
-}
-
 export function liveWsStatusLabel(
   t: I18nContextValue['t'],
   status: string,

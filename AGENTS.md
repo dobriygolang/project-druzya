@@ -17,6 +17,7 @@ When working on a service, **open only that service folder** and read its local 
 | billing | [services/billing/AGENTS.md](services/billing/AGENTS.md) | usage quotas, plan limits |
 | sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | code execution runs (MVP) |
 | **rooms** | [services/rooms/AGENTS.md](services/rooms/AGENTS.md) | live coding collab, WS + Yjs |
+| **tracker** | [services/tracker/AGENTS.md](services/tracker/AGENTS.md) | text-file task board, sprint/epic/task |
 | **admin** | [services/admin/AGENTS.md](services/admin/AGENTS.md) | operator BFF, JWT allowlist, content proxy |
 
 Prod deploy: [deploy/PRODUCTION_CHECKLIST.md](deploy/PRODUCTION_CHECKLIST.md), [deploy/RUNBOOK.md](deploy/RUNBOOK.md)
@@ -141,6 +142,7 @@ func NewRegisteredImplementation(s *grpc.Server, svc exampleservice.Service) *Im
 | billing | 8085 | 9095 | 5438 | druzya_billing |
 | sandbox | 8086 | 9096 | 5439 | druzya_sandbox |
 | **rooms** | **8087** | **9097** | **5440** | **druzya_rooms** |
+| **tracker** | **8089** | **9099** | **5441** | **druzya_tracker** |
 | **admin** | **8088** | **9098** | — | — (stateless BFF) |
 | template | 8099 | 9199 | 5439 | druzya_template |
 

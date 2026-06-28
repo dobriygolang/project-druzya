@@ -472,7 +472,6 @@ recommendations {
   user_id, type, title
   status, metadata
 }
-learning_plan_items { … }
 processed_events { … }""")
 
     els += ellipse_db(1240, 590, 100, 45, "PG\nbilling", sketch=sk)

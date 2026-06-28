@@ -367,6 +367,12 @@ var DefaultTaskModelMap = TaskModelMap{
 		ProviderMistral:    "mistral-small-latest",
 		ProviderOpenRouter: "openai/gpt-oss-120b:free",
 	},
+	TaskTrackerClassify: {
+		ProviderGroq:       "llama-3.1-8b-instant",
+		ProviderCerebras:   "zai-glm-4.7",
+		ProviderMistral:    "mistral-small-latest",
+		ProviderOpenRouter: "openai/gpt-oss-120b:free",
+	},
 	TaskAITutorML: {
 		// ml-coach chat — 4-layer memory injection, ML reasoning depth.
 		// 70B-class — те же модели что TaskAITutorChat.

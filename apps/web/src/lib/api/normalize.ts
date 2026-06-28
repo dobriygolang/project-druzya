@@ -38,7 +38,6 @@ export function normalizeDashboard(raw: Dashboard & { dailyBrief?: DailyBrief })
     strengths: asArray(raw.strengths),
     weaknesses: asArray(raw.weaknesses),
     recommendations: asArray(raw.recommendations),
-    learning_plan: asArray(raw.learning_plan),
     daily_brief: briefRaw ? normalizeDailyBrief(briefRaw) : undefined,
     read_article_slugs: asArray(
       raw.read_article_slugs ??

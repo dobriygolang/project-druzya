@@ -217,6 +217,7 @@ service InterviewInternalService {
   rpc GetAttemptInternal(GetAttemptInternalRequest) returns (GetAttemptResponse);
   rpc GetEvaluationSummaryInternal(GetEvaluationSummaryInternalRequest) returns (GetEvaluationSummaryInternalResponse);
   rpc ListRetryItemsInternal(ListRetryItemsInternalRequest) returns (ListRetryItemsInternalResponse);
+  rpc CompleteRetryItemInternal(CompleteRetryItemInternalRequest) returns (CompleteRetryItemInternalResponse);
   rpc ClaimOutboxEvents(ClaimOutboxEventsRequest) returns (ClaimOutboxEventsResponse);
   rpc AckOutboxEvents(AckOutboxEventsRequest) returns (AckOutboxEventsResponse);
   rpc FailOutboxEvent(FailOutboxEventRequest) returns (FailOutboxEventResponse);
@@ -498,6 +499,15 @@ message ListRetryItemsInternalRequest {
 
 message ListRetryItemsInternalResponse {
   repeated RetryItem items = 1;
+}
+
+message CompleteRetryItemInternalRequest {
+  string user_id = 1;
+  string retry_item_id = 2;
+}
+
+message CompleteRetryItemInternalResponse {
+  RetryItem item = 1;
 }
 
 message OutboxEvent {

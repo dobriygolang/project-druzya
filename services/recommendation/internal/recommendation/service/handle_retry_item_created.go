@@ -38,31 +38,9 @@ func (s *recommendationService) HandleRetryItemCreated(ctx context.Context, even
 			return fmt.Errorf("ensure user profile: %w", err)
 		}
 		lang := locale.From(ctx)
-
 		title := copy.RetryTaskTitle(lang, taskTitle)
 
-		position, err := s.repo.NextLearningPlanPosition(txCtx, event.UserID)
-		if err != nil {
-			return fmt.Errorf("next plan position: %w", err)
-		}
-
-		taskID := event.TaskID
-		_, err = s.repo.CreateRetryTaskPlanItem(txCtx, model.LearningPlanItem{
-			UserID:   event.UserID,
-			Type:     model.LearningPlanItemTypeRetryTask,
-			TaskID:   &taskID,
-			Title:    title,
-			Status:   model.LearningPlanItemStatusPending,
-			Position: position,
-			Metadata: map[string]any{
-				"task_id":       event.TaskID,
-				"attempt_id":    event.AttemptID,
-				"retry_item_id": event.RetryItemID,
-			},
-		})
-		if err != nil {
-			return fmt.Errorf("create retry plan item: %w", err)
-		}
+		s.pushRetryTrackerTask(txCtx, event.UserID, title, event.RetryItemID, event.TaskID)
 
 		return nil
 	})

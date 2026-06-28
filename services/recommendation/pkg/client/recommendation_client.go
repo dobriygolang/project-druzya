@@ -11,6 +11,4 @@ type Service interface {
 	GetDashboard(ctx context.Context, userID string) (*model.Dashboard, error)
 	DismissRecommendation(ctx context.Context, userID, id string) error
 	CompleteRecommendation(ctx context.Context, userID, id string) error
-	CompleteLearningPlanItem(ctx context.Context, userID, id string) error
-	DismissLearningPlanItem(ctx context.Context, userID, id string) error
 }

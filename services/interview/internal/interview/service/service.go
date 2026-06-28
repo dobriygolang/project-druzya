@@ -45,6 +45,7 @@ type Service interface {
 	StartRetrySession(ctx context.Context, userID string, retryItemIDs []string) (*interviewmodel.SessionDetail, error)
 	SkipTask(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SessionTask, interviewmodel.Progress, error)
 	DismissRetryItem(ctx context.Context, userID, retryItemID string) (*interviewmodel.RetryItem, error)
+	CompleteRetryItemInternal(ctx context.Context, userID, retryItemID string) (*interviewmodel.RetryItem, error)
 	ExpireStaleActiveSessions(ctx context.Context) (int64, error)
 	GetSystemDesignWorkspace(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SystemDesignWorkspaceBundle, error)
 	PatchSystemDesignWorkspace(ctx context.Context, in interviewmodel.PatchSystemDesignWorkspaceInput) (*interviewmodel.SystemDesignWorkspace, error)

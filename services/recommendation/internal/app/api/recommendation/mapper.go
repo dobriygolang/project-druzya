@@ -16,7 +16,6 @@ func toProtoDashboard(d *model.Dashboard) *recommendationv1.GetDashboardResponse
 		Strengths:         toProtoInsights(d.Strengths),
 		Weaknesses:        toProtoInsights(d.Weaknesses),
 		Recommendations:   toProtoRecommendations(d.Recommendations),
-		LearningPlan:      toProtoLearningPlan(d.LearningPlan),
 		PendingRetryCount: int32(d.PendingRetryCount),
 		ReadArticleSlugs:  append([]string(nil), d.ReadArticleSlugs...),
 	}
@@ -86,31 +85,6 @@ func toProtoRecommendations(items []model.Recommendation) []*recommendationv1.Re
 			rec.SkillKey = item.SkillKey
 		}
 		out = append(out, rec)
-	}
-	return out
-}
-
-func toProtoLearningPlan(items []model.LearningPlanItem) []*recommendationv1.LearningPlanItem {
-	out := make([]*recommendationv1.LearningPlanItem, 0, len(items))
-	for _, item := range items {
-		plan := &recommendationv1.LearningPlanItem{
-			Id:        item.ID,
-			Type:      learningPlanItemTypeToProto(item.Type),
-			Title:     item.Title,
-			Status:    learningPlanItemStatusToProto(item.Status),
-			Position:  int32(item.Position),
-			CreatedAt: timestamppb.New(item.CreatedAt),
-		}
-		if item.TaskID != nil {
-			plan.TaskId = item.TaskID
-		}
-		if item.SkillKey != nil {
-			plan.SkillKey = item.SkillKey
-		}
-		if item.Description != nil {
-			plan.Description = item.Description
-		}
-		out = append(out, plan)
 	}
 	return out
 }

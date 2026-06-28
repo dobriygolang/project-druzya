@@ -18,6 +18,7 @@ const SystemDesignRoomPage = lazy(() => import('@/pages/SystemDesignRoomPage'))
 const SessionResultsPage = lazy(() => import('@/pages/SessionResultsPage'))
 const CollabRoomPage = lazy(() => import('@/pages/CollabRoomPage'))
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'))
+const TasksPage = lazy(() => import('@/pages/TasksPage'))
 const FeatureStubPage = lazy(() => import('@/pages/FeatureStubPage'))
 const MigrationStatusPage = lazy(() => import('@/pages/MigrationStatusPage'))
 const PricingPage = lazy(() => import('@/pages/PricingPage'))
@@ -151,7 +152,14 @@ export default function App() {
           <Route path="/atlas" element={<AuthedStub />} />
           <Route path="/atlas/explore" element={<AuthedStub />} />
           <Route path="/insights" element={<AuthedStub />} />
-          <Route path="/tasks" element={<AuthedStub />} />
+          <Route
+            path="/tasks"
+            element={
+              <AuthedLayout>
+                <TasksPage />
+              </AuthedLayout>
+            }
+          />
           <Route path="/codex" element={<AuthedStub />} />
           <Route path="/lingua/*" element={<AuthedStub />} />
           <Route path="/tutor/:tab" element={<AuthedStub />} />

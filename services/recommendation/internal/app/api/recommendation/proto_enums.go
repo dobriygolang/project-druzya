@@ -46,30 +46,6 @@ func recommendationStatusToProto(s recommendationmodel.RecommendationStatus) rec
 	}
 }
 
-func learningPlanItemTypeToProto(t recommendationmodel.LearningPlanItemType) recommendationv1.LearningPlanItemType {
-	switch t {
-	case recommendationmodel.LearningPlanItemTypeRetryTask:
-		return recommendationv1.LearningPlanItemType_LEARNING_PLAN_ITEM_TYPE_RETRY_TASK
-	default:
-		return recommendationv1.LearningPlanItemType_LEARNING_PLAN_ITEM_TYPE_UNSPECIFIED
-	}
-}
-
-func learningPlanItemStatusToProto(s recommendationmodel.LearningPlanItemStatus) recommendationv1.LearningPlanItemStatus {
-	switch s {
-	case recommendationmodel.LearningPlanItemStatusPending:
-		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_PENDING
-	case recommendationmodel.LearningPlanItemStatusInProgress:
-		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_IN_PROGRESS
-	case recommendationmodel.LearningPlanItemStatusCompleted:
-		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_COMPLETED
-	case recommendationmodel.LearningPlanItemStatusDismissed:
-		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_DISMISSED
-	default:
-		return recommendationv1.LearningPlanItemStatus_LEARNING_PLAN_ITEM_STATUS_UNSPECIFIED
-	}
-}
-
 func dailyBriefItemTypeToProto(t recommendationmodel.DailyBriefItemType) recommendationv1.DailyBriefItemType {
 	switch t {
 	case recommendationmodel.DailyBriefItemTypeRetryTask:

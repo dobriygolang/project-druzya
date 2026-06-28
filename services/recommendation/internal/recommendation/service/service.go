@@ -10,6 +10,8 @@ import (
 
 	contentadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/content"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
+	aiadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/ai"
+	trackeradapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/tracker"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
@@ -28,21 +30,17 @@ type Repository interface {
 	ClaimEvent(ctx context.Context, consumer, eventID string) (bool, error)
 	EnsureUserProfile(ctx context.Context, userID string) error
 	UpsertSkillScore(ctx context.Context, userID, skillKey string, normalized int, seenAt time.Time) (*model.SkillScore, error)
+	GetSkillScore(ctx context.Context, userID, skillKey string) (*model.SkillScore, error)
 	ListSkillScoresByUser(ctx context.Context, userID string) ([]model.SkillScore, error)
 	UpdateReadinessScore(ctx context.Context, userID string, readiness int) error
 	GetUserProfile(ctx context.Context, userID string) (*model.UserSkillProfile, error)
 	UpsertImproveSkillRecommendation(ctx context.Context, rec model.Recommendation) (*model.Recommendation, error)
 	InsertSpecialRecommendation(ctx context.Context, rec model.Recommendation) (*model.Recommendation, error)
 	InsertTakeMockRecommendation(ctx context.Context, rec model.Recommendation) (*model.Recommendation, error)
-	CreateRetryTaskPlanItem(ctx context.Context, item model.LearningPlanItem) (*model.LearningPlanItem, error)
-	NextLearningPlanPosition(ctx context.Context, userID string) (int, error)
 	FetchDashboardSnapshot(ctx context.Context, userID string) (*model.DashboardSnapshot, error)
 	ListActiveRecommendations(ctx context.Context, userID string) ([]model.Recommendation, error)
-	ListActiveLearningPlanItems(ctx context.Context, userID string) ([]model.LearningPlanItem, error)
 	GetRecommendation(ctx context.Context, userID, id string) (*model.Recommendation, error)
 	UpdateRecommendationStatus(ctx context.Context, userID, id string, status model.RecommendationStatus) error
-	GetLearningPlanItem(ctx context.Context, userID, id string) (*model.LearningPlanItem, error)
-	UpdateLearningPlanItemStatus(ctx context.Context, userID, id string, status model.LearningPlanItemStatus) error
 	ListArticleReadSlugs(ctx context.Context, userID string) ([]string, error)
 	UpsertArticleRead(ctx context.Context, userID, slug string) (*model.ArticleRead, error)
 	UpsertUserTaskProgress(ctx context.Context, userID, taskID, taskType string, score int, passed bool, seenAt time.Time) error
@@ -63,11 +61,11 @@ type Service interface {
 	HandleSessionCompleted(ctx context.Context, eventID string, event model.SessionCompletedEvent) error
 	HandleRetryItemCreated(ctx context.Context, eventID string, event model.RetryItemCreatedEvent) error
 	HandleTaskSkipped(ctx context.Context, eventID string, event model.TaskSkippedEvent) error
+	HandleTrackerTaskCreated(ctx context.Context, eventID string, payload map[string]any) error
+	HandleTrackerTaskCompleted(ctx context.Context, eventID string, payload map[string]any) error
 	GetDashboard(ctx context.Context, userID string) (*model.Dashboard, error)
 	DismissRecommendation(ctx context.Context, userID, id string) error
 	CompleteRecommendation(ctx context.Context, userID, id string) error
-	CompleteLearningPlanItem(ctx context.Context, userID, id string) error
-	DismissLearningPlanItem(ctx context.Context, userID, id string) error
 	MarkArticleRead(ctx context.Context, userID, slug string) (*model.ArticleRead, error)
 	GetTaskPickerHints(ctx context.Context, userID, taskType string) (*model.TaskPickerHints, error)
 	GetMockHubContext(ctx context.Context, userID string) (*model.MockHubContext, error)
@@ -77,6 +75,8 @@ type recommendationService struct {
 	repo      Repository
 	interview interviewadapter.Client
 	content   contentadapter.Client
+	tracker   trackeradapter.Client
+	ai        aiadapter.Client
 }
 
 // Deps wires recommendation service dependencies.
@@ -84,6 +84,8 @@ type Deps struct {
 	Repo      Repository
 	Interview interviewadapter.Client
 	Content   contentadapter.Client
+	Tracker   trackeradapter.Client
+	AI        aiadapter.Client
 }
 
 // New constructs the recommendation service.
@@ -92,6 +94,8 @@ func New(deps Deps) Service {
 		repo:      deps.Repo,
 		interview: deps.Interview,
 		content:   deps.Content,
+		tracker:   deps.Tracker,
+		ai:        deps.AI,
 	}
 }
 
@@ -191,8 +195,23 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 						"score":      c.Normalized,
 					},
 				}
-				if _, err := s.repo.UpsertImproveSkillRecommendation(txCtx, rec); err != nil {
+				inserted, err := s.repo.UpsertImproveSkillRecommendation(txCtx, rec)
+				if err != nil {
 					return fmt.Errorf("upsert improve skill recommendation: %w", err)
+				}
+				if inserted != nil {
+					dedup := "improve:" + skillKey
+					s.pushTrackerTask(txCtx, trackeradapter.CreateTaskParams{
+						UserID: event.UserID,
+						Title:  rec.Title,
+						Source: "recommendation",
+						Metadata: map[string]any{
+							"recommendation_id": inserted.ID,
+							"skill_key":         skillKey,
+							"action_path":       practicePathForSkill(skillKey),
+						},
+						DedupKey: &dedup,
+					})
 				}
 			}
 			if err := s.applySpecialRules(txCtx, event, c, lang); err != nil {
@@ -287,14 +306,29 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 	}
 	staleModes := computeStalePracticeModes(practiceActivity, time.Now().UTC())
 
+	retryTaskTitles := make(map[string]string, len(pendingRetries))
+	for _, retry := range pendingRetries {
+		if retry.TaskID == "" {
+			continue
+		}
+		if _, ok := retryTaskTitles[retry.TaskID]; ok {
+			continue
+		}
+		task, err := s.content.GetTask(ctx, retry.TaskID)
+		if err != nil || task == nil {
+			continue
+		}
+		retryTaskTitles[retry.TaskID] = task.Title
+	}
+
 	lang := locale.From(ctx)
 	brief := buildDailyBrief(
 		lang,
 		snap.Profile.ReadinessScore,
 		weaknesses,
 		snap.Recommendations,
-		snap.LearningPlan,
 		pendingRetries,
+		retryTaskTitles,
 		indexArticlesBySkill(articles),
 		indexReadSlugs(readSlugs),
 		staleModes,
@@ -306,7 +340,6 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 		Strengths:         computeStrengths(snap.SkillScores),
 		Weaknesses:        weaknesses,
 		Recommendations:   snap.Recommendations,
-		LearningPlan:      snap.LearningPlan,
 		PendingRetryCount: len(pendingRetries),
 		ReadArticleSlugs:  readSlugs,
 	}, nil
@@ -318,14 +351,6 @@ func (s *recommendationService) DismissRecommendation(ctx context.Context, userI
 
 func (s *recommendationService) CompleteRecommendation(ctx context.Context, userID, id string) error {
 	return s.repo.UpdateRecommendationStatus(ctx, userID, id, model.RecommendationStatusCompleted)
-}
-
-func (s *recommendationService) CompleteLearningPlanItem(ctx context.Context, userID, id string) error {
-	return s.repo.UpdateLearningPlanItemStatus(ctx, userID, id, model.LearningPlanItemStatusCompleted)
-}
-
-func (s *recommendationService) DismissLearningPlanItem(ctx context.Context, userID, id string) error {
-	return s.repo.UpdateLearningPlanItemStatus(ctx, userID, id, model.LearningPlanItemStatusDismissed)
 }
 
 func parseCriteria(feedback map[string]any, taskType string, overallScore float64) []model.CriterionScore {

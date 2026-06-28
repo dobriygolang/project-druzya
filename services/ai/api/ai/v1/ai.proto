@@ -42,6 +42,8 @@ service AiInternalService {
 
   rpc RunSystemDesignInterviewerTurn(RunSystemDesignInterviewerTurnRequest) returns (RunSystemDesignInterviewerTurnResponse);
   rpc RunSystemDesignCheckpoint(RunSystemDesignCheckpointRequest) returns (RunSystemDesignCheckpointResponse);
+
+  rpc ClassifyTrackerTask(ClassifyTrackerTaskRequest) returns (ClassifyTrackerTaskResponse);
 }
 
 enum EvaluationJobStatus {
@@ -175,4 +177,14 @@ message RunSystemDesignCheckpointRequest {
 message RunSystemDesignCheckpointResponse {
   string critique = 1;
   google.protobuf.Struct metadata = 2;
+}
+
+message ClassifyTrackerTaskRequest {
+  string title = 1;
+}
+
+message ClassifyTrackerTaskResponse {
+  string kind = 1;
+  google.protobuf.Struct metadata = 2;
+  optional string epic_hint = 3;
 }

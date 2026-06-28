@@ -18,8 +18,6 @@ var protectedMethods = map[string]struct{}{
 	recommendationv1.RecommendationService_GetMockHubContext_FullMethodName:        {},
 	recommendationv1.RecommendationService_DismissRecommendation_FullMethodName:    {},
 	recommendationv1.RecommendationService_CompleteRecommendation_FullMethodName:   {},
-	recommendationv1.RecommendationService_CompleteLearningPlanItem_FullMethodName: {},
-	recommendationv1.RecommendationService_DismissLearningPlanItem_FullMethodName:  {},
 	recommendationv1.RecommendationService_MarkArticleRead_FullMethodName:          {},
 }
 

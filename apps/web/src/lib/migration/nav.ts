@@ -15,6 +15,7 @@ export function usePrimaryNav(): NavItem[] {
     () =>
       [
         { to: '/today', label: t('nav.today') },
+        { to: '/tasks', label: t('nav.tasks') },
         { to: '/mock', label: t('nav.mock') },
         { to: '/learn', label: t('nav.learn') },
         { to: '/profile', label: t('nav.profile') },

@@ -285,62 +285,6 @@ func (r *Repository) upsertActiveRecommendation(ctx context.Context, rec model.R
 	return scanRecommendation(row)
 }
 
-// CreateRetryTaskPlanItem inserts a retry learning plan item when not duplicate.
-func (r *Repository) CreateRetryTaskPlanItem(ctx context.Context, item model.LearningPlanItem) (*model.LearningPlanItem, error) {
-	uid, err := uuid.Parse(item.UserID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user_id: %w", err)
-	}
-	meta, err := json.Marshal(item.Metadata)
-	if err != nil {
-		return nil, err
-	}
-	if meta == nil {
-		meta = []byte("{}")
-	}
-
-	var taskID *uuid.UUID
-	if item.TaskID != nil && *item.TaskID != "" {
-		parsed, parseErr := uuid.Parse(*item.TaskID)
-		if parseErr != nil {
-			return nil, fmt.Errorf("invalid task_id: %w", parseErr)
-		}
-		taskID = &parsed
-	}
-
-	var recID *uuid.UUID
-	if item.RecommendationID != nil && *item.RecommendationID != "" {
-		parsed, parseErr := uuid.Parse(*item.RecommendationID)
-		if parseErr != nil {
-			return nil, fmt.Errorf("invalid recommendation_id: %w", parseErr)
-		}
-		recID = &parsed
-	}
-
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, err
-	}
-
-	row := r.conn(ctx).QueryRow(ctx, `
-		INSERT INTO learning_plan_items (id, user_id, recommendation_id, type, task_id, skill_key, title, description, status, position, metadata)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		ON CONFLICT (user_id, type, (metadata ->> 'task_id'))
-			WHERE status IN ('pending', 'in_progress') AND type = 'retry_task'
-		DO NOTHING
-		RETURNING id, user_id, recommendation_id, type, task_id, skill_key, title, description, status, position, metadata, created_at, updated_at, completed_at
-	`, id, uid, recID, item.Type, taskID, item.SkillKey, item.Title, item.Description, item.Status, item.Position, meta)
-
-	planItem, err := scanLearningPlanItem(row)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return planItem, nil
-}
-
 // ListActiveRecommendations returns active recommendations for a user.
 func (r *Repository) ListActiveRecommendations(ctx context.Context, userID string) ([]model.Recommendation, error) {
 	uid, err := uuid.Parse(userID)
@@ -367,34 +311,6 @@ func (r *Repository) ListActiveRecommendations(ctx context.Context, userID strin
 			return nil, scanErr
 		}
 		out = append(out, *rec)
-	}
-	return out, rows.Err()
-}
-
-// ListActiveLearningPlanItems returns pending/in_progress plan items.
-func (r *Repository) ListActiveLearningPlanItems(ctx context.Context, userID string) ([]model.LearningPlanItem, error) {
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user_id: %w", err)
-	}
-	rows, err := r.conn(ctx).Query(ctx, `
-		SELECT id, user_id, recommendation_id, type, task_id, skill_key, title, description, status, position, metadata, created_at, updated_at, completed_at
-		FROM learning_plan_items
-		WHERE user_id = $1 AND status IN ('pending', 'in_progress')
-		ORDER BY position, created_at
-	`, uid)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []model.LearningPlanItem
-	for rows.Next() {
-		item, scanErr := scanLearningPlanItemRow(rows)
-		if scanErr != nil {
-			return nil, scanErr
-		}
-		out = append(out, *item)
 	}
 	return out, rows.Err()
 }
@@ -451,55 +367,6 @@ func (r *Repository) UpdateRecommendationStatus(ctx context.Context, userID, id 
 	return nil
 }
 
-// GetLearningPlanItem loads a plan item by id scoped to user.
-func (r *Repository) GetLearningPlanItem(ctx context.Context, userID, id string) (*model.LearningPlanItem, error) {
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user_id: %w", err)
-	}
-	pid, err := uuid.Parse(id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid id: %w", err)
-	}
-	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT id, user_id, recommendation_id, type, task_id, skill_key, title, description, status, position, metadata, created_at, updated_at, completed_at
-		FROM learning_plan_items
-		WHERE id = $1 AND user_id = $2
-	`, pid, uid)
-	return scanLearningPlanItem(row)
-}
-
-// UpdateLearningPlanItemStatus updates plan item status.
-func (r *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID, id string, status model.LearningPlanItemStatus) error {
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return fmt.Errorf("invalid user_id: %w", err)
-	}
-	pid, err := uuid.Parse(id)
-	if err != nil {
-		return fmt.Errorf("invalid id: %w", err)
-	}
-
-	var completedAt *time.Time
-	if status == model.LearningPlanItemStatusCompleted {
-		now := time.Now().UTC()
-		completedAt = &now
-	}
-
-	tag, err := r.conn(ctx).Exec(ctx, `
-		UPDATE learning_plan_items
-		SET status = $3, completed_at = COALESCE($4, completed_at), updated_at = now()
-		WHERE id = $1 AND user_id = $2 AND status IN ('pending', 'in_progress')
-	`, pid, uid, status, completedAt)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
 func scanRecommendation(row pgx.Row) (*model.Recommendation, error) {
 	var rec model.Recommendation
 	var id, userID uuid.UUID
@@ -539,64 +406,7 @@ func scanRecommendationRow(rows pgx.Rows) (*model.Recommendation, error) {
 	return &rec, nil
 }
 
-func scanLearningPlanItem(row pgx.Row) (*model.LearningPlanItem, error) {
-	var item model.LearningPlanItem
-	var id, userID uuid.UUID
-	var recID, taskID *uuid.UUID
-	var meta []byte
-	if err := row.Scan(&id, &userID, &recID, &item.Type, &taskID, &item.SkillKey, &item.Title, &item.Description, &item.Status, &item.Position, &meta, &item.CreatedAt, &item.UpdatedAt, &item.CompletedAt); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	item.ID = id.String()
-	item.UserID = userID.String()
-	if recID != nil {
-		s := recID.String()
-		item.RecommendationID = &s
-	}
-	if taskID != nil {
-		s := taskID.String()
-		item.TaskID = &s
-	}
-	if len(meta) > 0 {
-		_ = json.Unmarshal(meta, &item.Metadata)
-	}
-	if item.Metadata == nil {
-		item.Metadata = map[string]any{}
-	}
-	return &item, nil
-}
-
-func scanLearningPlanItemRow(rows pgx.Rows) (*model.LearningPlanItem, error) {
-	var item model.LearningPlanItem
-	var id, userID uuid.UUID
-	var recID, taskID *uuid.UUID
-	var meta []byte
-	if err := rows.Scan(&id, &userID, &recID, &item.Type, &taskID, &item.SkillKey, &item.Title, &item.Description, &item.Status, &item.Position, &meta, &item.CreatedAt, &item.UpdatedAt, &item.CompletedAt); err != nil {
-		return nil, err
-	}
-	item.ID = id.String()
-	item.UserID = userID.String()
-	if recID != nil {
-		s := recID.String()
-		item.RecommendationID = &s
-	}
-	if taskID != nil {
-		s := taskID.String()
-		item.TaskID = &s
-	}
-	if len(meta) > 0 {
-		_ = json.Unmarshal(meta, &item.Metadata)
-	}
-	if item.Metadata == nil {
-		item.Metadata = map[string]any{}
-	}
-	return &item, nil
-}
-
-// FetchDashboardSnapshot loads profile, skills, recommendations, and plan in one repository call.
+// FetchDashboardSnapshot loads profile, skills, and recommendations.
 func (r *Repository) FetchDashboardSnapshot(ctx context.Context, userID string) (*model.DashboardSnapshot, error) {
 	if err := r.EnsureUserProfile(ctx, userID); err != nil {
 		return nil, err
@@ -613,15 +423,10 @@ func (r *Repository) FetchDashboardSnapshot(ctx context.Context, userID string) 
 	if err != nil {
 		return nil, err
 	}
-	plan, err := r.ListActiveLearningPlanItems(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
 	return &model.DashboardSnapshot{
 		Profile:         profile,
 		SkillScores:     scores,
 		Recommendations: recs,
-		LearningPlan:    plan,
 	}, nil
 }
 
@@ -660,23 +465,4 @@ func (r *Repository) InsertTakeMockRecommendation(ctx context.Context, rec model
 		return nil, err
 	}
 	return planRec, nil
-}
-
-// NextLearningPlanPosition returns the next position for a user's plan queue.
-func (r *Repository) NextLearningPlanPosition(ctx context.Context, userID string) (int, error) {
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return 0, fmt.Errorf("invalid user_id: %w", err)
-	}
-	var maxPos *int
-	err = r.conn(ctx).QueryRow(ctx, `
-		SELECT MAX(position) FROM learning_plan_items WHERE user_id = $1
-	`, uid).Scan(&maxPos)
-	if err != nil {
-		return 0, err
-	}
-	if maxPos == nil {
-		return 0, nil
-	}
-	return *maxPos + 1, nil
 }

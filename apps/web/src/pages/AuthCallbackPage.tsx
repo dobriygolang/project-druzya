@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Logo } from '@/components/brand/Logo'
 import { exchangeYandexCode } from '@/lib/api/auth'
 
 export default function AuthCallbackPage() {
@@ -42,10 +43,7 @@ export default function AuthCallbackPage() {
   return (
     <div className="flex min-h-screen flex-col bg-bg text-text-primary">
       <header className="flex items-center justify-between border-b border-border px-6 py-5 sm:px-8">
-        <Link to="/welcome" className="inline-flex items-center gap-2 no-underline">
-          <span className="h-[7px] w-[7px] rounded-full bg-danger" />
-          <span className="text-sm font-medium">druz9.online</span>
-        </Link>
+        <Logo to="/welcome" size="sm" />
       </header>
       <main className="flex flex-1 items-center justify-center px-6">
         <div className="max-w-md text-center">

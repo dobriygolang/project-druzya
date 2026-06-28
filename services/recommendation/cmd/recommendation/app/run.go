@@ -7,6 +7,10 @@ import (
 	contentadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/content"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview"
 	interviewgrpc "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/interview/grpc"
+	aiadapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/ai"
+	aigrpc "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/ai/grpc"
+	trackeradapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/tracker"
+	trackergrpc "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/tracker/grpc"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/config"
 	recommendationrepo "github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/repository"
 	recommendationservice "github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/service"
@@ -22,8 +26,12 @@ type App struct {
 	JWT             *jwt.Validator
 	InterviewClient interviewadapter.Client
 	ContentClient   contentadapter.Client
+	TrackerClient   trackeradapter.Client
+	AIClient        aiadapter.Client
 	interviewConn   *interviewgrpc.Client
 	contentConn     *contentadapter.GRPCClient
+	trackerConn     *trackergrpc.Client
+	aiConn          *aigrpc.Client
 	Service         recommendationservice.Service
 }
 
@@ -62,11 +70,42 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init content client: %w", err)
 	}
 
+	var trackerClient trackeradapter.Client
+	var trackerConn *trackergrpc.Client
+	if cfg.TrackerGRPCAddr != "" {
+		trackerConn, err = trackergrpc.NewClient(ctx, cfg.TrackerGRPCAddr, cfg.InternalAPIToken)
+		if err != nil {
+			_ = contentClient.Close()
+			_ = interviewClient.Close()
+			pg.Close()
+			return nil, fmt.Errorf("init tracker client: %w", err)
+		}
+		trackerClient = trackerConn
+	}
+
+	var aiClient aiadapter.Client
+	var aiConn *aigrpc.Client
+	if cfg.AIGRPCAddr != "" {
+		aiConn, err = aigrpc.NewClient(ctx, cfg.AIGRPCAddr, cfg.InternalAPIToken)
+		if err != nil {
+			if trackerConn != nil {
+				_ = trackerConn.Close()
+			}
+			_ = contentClient.Close()
+			_ = interviewClient.Close()
+			pg.Close()
+			return nil, fmt.Errorf("init ai client: %w", err)
+		}
+		aiClient = aiConn
+	}
+
 	repo := recommendationrepo.New(pg)
 	svc := recommendationservice.New(recommendationservice.Deps{
 		Repo:      repo,
 		Interview: interviewClient,
 		Content:   contentClient,
+		Tracker:   trackerClient,
+		AI:        aiClient,
 	})
 
 	return &App{
@@ -76,8 +115,12 @@ func New(ctx context.Context) (*App, error) {
 		JWT:             jwtValidator,
 		InterviewClient: interviewClient,
 		ContentClient:   contentClient,
+		TrackerClient:   trackerClient,
+		AIClient:        aiClient,
 		interviewConn:   interviewClient,
 		contentConn:     contentClient,
+		trackerConn:     trackerConn,
+		aiConn:          aiConn,
 		Service:         svc,
 	}, nil
 }
@@ -86,6 +129,12 @@ func New(ctx context.Context) (*App, error) {
 func (a *App) Close() {
 	if a.contentConn != nil {
 		_ = a.contentConn.Close()
+	}
+	if a.trackerConn != nil {
+		_ = a.trackerConn.Close()
+	}
+	if a.aiConn != nil {
+		_ = a.aiConn.Close()
 	}
 	if a.interviewConn != nil {
 		_ = a.interviewConn.Close()

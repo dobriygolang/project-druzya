@@ -4,14 +4,13 @@ import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/brand/SdvgCard'
 import { BackendReadinessCard } from '@/components/today/BackendReadinessCard'
 import { ErrorBoundary } from '@/components/today/ErrorBoundary'
-import { LearningPlanCard } from '@/components/today/LearningPlanCard'
+import { SprintPreviewCard } from '@/components/today/SprintPreviewCard'
 import { TodayActionGrid } from '@/components/today/TodayActionGrid'
 import { TodayPageShell } from '@/components/today/TodayPageShell'
 import { BillingUpsell } from '@/components/billing/BillingUpsell'
 import { getMe } from '@/lib/api/auth'
 import { getBillingMe } from '@/lib/api/billing'
 import { getDashboard } from '@/lib/api/recommendation'
-import { listRetryItems } from '@/lib/api/interview'
 import { useI18n } from '@/lib/i18n'
 
 export default function DashboardPage() {
@@ -20,7 +19,6 @@ export default function DashboardPage() {
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
   const billingQ = useQuery({ queryKey: ['billing-me'], queryFn: getBillingMe })
   const dashboardQ = useQuery({ queryKey: ['dashboard'], queryFn: getDashboard })
-  const retryQ = useQuery({ queryKey: ['retry-items'], queryFn: listRetryItems })
 
   const today = useMemo(
     () =>
@@ -66,11 +64,7 @@ export default function DashboardPage() {
         error={dashboardQ.isError}
       />
 
-      <LearningPlanCard
-        items={dashboardQ.data?.learning_plan ?? []}
-        retryItems={retryQ.data?.items ?? []}
-        loading={dashboardQ.isLoading || retryQ.isLoading}
-      />
+      <SprintPreviewCard />
 
       <ErrorBoundary message={t('today.errorSection', { section: t('today.insights.title') })}>
         <section className="flex flex-col gap-5">
@@ -81,7 +75,6 @@ export default function DashboardPage() {
           />
           <TodayActionGrid
             dashboard={dashboardQ.data}
-            retryItems={retryQ.data?.items ?? []}
             loading={dashboardQ.isLoading}
           />
         </section>

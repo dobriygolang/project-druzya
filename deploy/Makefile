@@ -52,7 +52,7 @@ ensure-pkg-api: ## Fail fast when pkg/api is missing (manual deploy: run gen-all
 deploy: keys ensure-pkg-api ## Pull-less prod update: build changed images, migrate if needed, up, prune
 	@CUR=$$(git rev-parse HEAD); \
 	PREV=$$(cat .last-deploy-sha 2>/dev/null || true); \
-	export DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 COMPOSE_PARALLEL_LIMIT=$${COMPOSE_PARALLEL_LIMIT:-6}; \
+	  export DOCKER_BUILDKIT=1 COMPOSE_DOCKER_CLI_BUILD=1 BUILDX_NO_DEFAULT_ATTESTATIONS=1 COMPOSE_PARALLEL_LIMIT=$${COMPOSE_PARALLEL_LIMIT:-4}; \
 	if [ -z "$$PREV" ]; then \
 	  $(COMPOSE) build; \
 	elif [ "$$PREV" = "$$CUR" ]; then \

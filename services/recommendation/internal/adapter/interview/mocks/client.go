@@ -129,6 +129,66 @@ func (_c *Client_ClaimOutboxEvents_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
+// CompleteRetryItem provides a mock function with given fields: ctx, userID, retryItemID
+func (_m *Client) CompleteRetryItem(ctx context.Context, userID string, retryItemID string) (*interview.RetryItem, error) {
+	ret := _m.Called(ctx, userID, retryItemID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CompleteRetryItem")
+	}
+
+	var r0 *interview.RetryItem
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*interview.RetryItem, error)); ok {
+		return rf(ctx, userID, retryItemID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *interview.RetryItem); ok {
+		r0 = rf(ctx, userID, retryItemID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*interview.RetryItem)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, userID, retryItemID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Client_CompleteRetryItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CompleteRetryItem'
+type Client_CompleteRetryItem_Call struct {
+	*mock.Call
+}
+
+// CompleteRetryItem is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - retryItemID string
+func (_e *Client_Expecter) CompleteRetryItem(ctx interface{}, userID interface{}, retryItemID interface{}) *Client_CompleteRetryItem_Call {
+	return &Client_CompleteRetryItem_Call{Call: _e.mock.On("CompleteRetryItem", ctx, userID, retryItemID)}
+}
+
+func (_c *Client_CompleteRetryItem_Call) Run(run func(ctx context.Context, userID string, retryItemID string)) *Client_CompleteRetryItem_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Client_CompleteRetryItem_Call) Return(_a0 *interview.RetryItem, _a1 error) *Client_CompleteRetryItem_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Client_CompleteRetryItem_Call) RunAndReturn(run func(context.Context, string, string) (*interview.RetryItem, error)) *Client_CompleteRetryItem_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FailOutboxEvent provides a mock function with given fields: ctx, id, errMsg
 func (_m *Client) FailOutboxEvent(ctx context.Context, id string, errMsg string) error {
 	ret := _m.Called(ctx, id, errMsg)

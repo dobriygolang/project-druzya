@@ -10,6 +10,7 @@ const billing = process.env.VITE_BILLING_URL ?? 'http://localhost:8085'
 const sandbox = process.env.VITE_SANDBOX_URL ?? 'http://localhost:8086'
 const rooms = process.env.VITE_ROOMS_URL ?? 'http://localhost:8087'
 const admin = process.env.VITE_ADMIN_URL ?? 'http://localhost:8088'
+const tracker = process.env.VITE_TRACKER_URL ?? 'http://localhost:8089'
 
 export default defineConfig({
   plugins: [react()],
@@ -32,6 +33,7 @@ export default defineConfig({
       '/v1/billing': { target: billing, changeOrigin: true },
       '/v1/sandbox': { target: sandbox, changeOrigin: true },
       '/v1/rooms': { target: rooms, changeOrigin: true },
+      '/v1/tracker': { target: tracker, changeOrigin: true },
       '/v1/admin': { target: admin, changeOrigin: true },
       '/ws/lsp': { target: sandbox, changeOrigin: true, ws: true },
       '/ws': { target: rooms, changeOrigin: true, ws: true },

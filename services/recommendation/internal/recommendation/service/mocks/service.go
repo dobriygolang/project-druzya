@@ -22,54 +22,6 @@ func (_m *Service) EXPECT() *Service_Expecter {
 	return &Service_Expecter{mock: &_m.Mock}
 }
 
-// CompleteLearningPlanItem provides a mock function with given fields: ctx, userID, id
-func (_m *Service) CompleteLearningPlanItem(ctx context.Context, userID string, id string) error {
-	ret := _m.Called(ctx, userID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CompleteLearningPlanItem")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, userID, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Service_CompleteLearningPlanItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CompleteLearningPlanItem'
-type Service_CompleteLearningPlanItem_Call struct {
-	*mock.Call
-}
-
-// CompleteLearningPlanItem is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-//   - id string
-func (_e *Service_Expecter) CompleteLearningPlanItem(ctx interface{}, userID interface{}, id interface{}) *Service_CompleteLearningPlanItem_Call {
-	return &Service_CompleteLearningPlanItem_Call{Call: _e.mock.On("CompleteLearningPlanItem", ctx, userID, id)}
-}
-
-func (_c *Service_CompleteLearningPlanItem_Call) Run(run func(ctx context.Context, userID string, id string)) *Service_CompleteLearningPlanItem_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *Service_CompleteLearningPlanItem_Call) Return(_a0 error) *Service_CompleteLearningPlanItem_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Service_CompleteLearningPlanItem_Call) RunAndReturn(run func(context.Context, string, string) error) *Service_CompleteLearningPlanItem_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // CompleteRecommendation provides a mock function with given fields: ctx, userID, id
 func (_m *Service) CompleteRecommendation(ctx context.Context, userID string, id string) error {
 	ret := _m.Called(ctx, userID, id)
@@ -114,54 +66,6 @@ func (_c *Service_CompleteRecommendation_Call) Return(_a0 error) *Service_Comple
 }
 
 func (_c *Service_CompleteRecommendation_Call) RunAndReturn(run func(context.Context, string, string) error) *Service_CompleteRecommendation_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// DismissLearningPlanItem provides a mock function with given fields: ctx, userID, id
-func (_m *Service) DismissLearningPlanItem(ctx context.Context, userID string, id string) error {
-	ret := _m.Called(ctx, userID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DismissLearningPlanItem")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) error); ok {
-		r0 = rf(ctx, userID, id)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Service_DismissLearningPlanItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DismissLearningPlanItem'
-type Service_DismissLearningPlanItem_Call struct {
-	*mock.Call
-}
-
-// DismissLearningPlanItem is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-//   - id string
-func (_e *Service_Expecter) DismissLearningPlanItem(ctx interface{}, userID interface{}, id interface{}) *Service_DismissLearningPlanItem_Call {
-	return &Service_DismissLearningPlanItem_Call{Call: _e.mock.On("DismissLearningPlanItem", ctx, userID, id)}
-}
-
-func (_c *Service_DismissLearningPlanItem_Call) Run(run func(ctx context.Context, userID string, id string)) *Service_DismissLearningPlanItem_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *Service_DismissLearningPlanItem_Call) Return(_a0 error) *Service_DismissLearningPlanItem_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Service_DismissLearningPlanItem_Call) RunAndReturn(run func(context.Context, string, string) error) *Service_DismissLearningPlanItem_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -580,6 +484,102 @@ func (_c *Service_HandleTaskSkipped_Call) Return(_a0 error) *Service_HandleTaskS
 }
 
 func (_c *Service_HandleTaskSkipped_Call) RunAndReturn(run func(context.Context, string, model.TaskSkippedEvent) error) *Service_HandleTaskSkipped_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// HandleTrackerTaskCompleted provides a mock function with given fields: ctx, eventID, payload
+func (_m *Service) HandleTrackerTaskCompleted(ctx context.Context, eventID string, payload map[string]interface{}) error {
+	ret := _m.Called(ctx, eventID, payload)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleTrackerTaskCompleted")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, map[string]interface{}) error); ok {
+		r0 = rf(ctx, eventID, payload)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Service_HandleTrackerTaskCompleted_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleTrackerTaskCompleted'
+type Service_HandleTrackerTaskCompleted_Call struct {
+	*mock.Call
+}
+
+// HandleTrackerTaskCompleted is a helper method to define mock.On call
+//   - ctx context.Context
+//   - eventID string
+//   - payload map[string]interface{}
+func (_e *Service_Expecter) HandleTrackerTaskCompleted(ctx interface{}, eventID interface{}, payload interface{}) *Service_HandleTrackerTaskCompleted_Call {
+	return &Service_HandleTrackerTaskCompleted_Call{Call: _e.mock.On("HandleTrackerTaskCompleted", ctx, eventID, payload)}
+}
+
+func (_c *Service_HandleTrackerTaskCompleted_Call) Run(run func(ctx context.Context, eventID string, payload map[string]interface{})) *Service_HandleTrackerTaskCompleted_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(map[string]interface{}))
+	})
+	return _c
+}
+
+func (_c *Service_HandleTrackerTaskCompleted_Call) Return(_a0 error) *Service_HandleTrackerTaskCompleted_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Service_HandleTrackerTaskCompleted_Call) RunAndReturn(run func(context.Context, string, map[string]interface{}) error) *Service_HandleTrackerTaskCompleted_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// HandleTrackerTaskCreated provides a mock function with given fields: ctx, eventID, payload
+func (_m *Service) HandleTrackerTaskCreated(ctx context.Context, eventID string, payload map[string]interface{}) error {
+	ret := _m.Called(ctx, eventID, payload)
+
+	if len(ret) == 0 {
+		panic("no return value specified for HandleTrackerTaskCreated")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, map[string]interface{}) error); ok {
+		r0 = rf(ctx, eventID, payload)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Service_HandleTrackerTaskCreated_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'HandleTrackerTaskCreated'
+type Service_HandleTrackerTaskCreated_Call struct {
+	*mock.Call
+}
+
+// HandleTrackerTaskCreated is a helper method to define mock.On call
+//   - ctx context.Context
+//   - eventID string
+//   - payload map[string]interface{}
+func (_e *Service_Expecter) HandleTrackerTaskCreated(ctx interface{}, eventID interface{}, payload interface{}) *Service_HandleTrackerTaskCreated_Call {
+	return &Service_HandleTrackerTaskCreated_Call{Call: _e.mock.On("HandleTrackerTaskCreated", ctx, eventID, payload)}
+}
+
+func (_c *Service_HandleTrackerTaskCreated_Call) Run(run func(ctx context.Context, eventID string, payload map[string]interface{})) *Service_HandleTrackerTaskCreated_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(map[string]interface{}))
+	})
+	return _c
+}
+
+func (_c *Service_HandleTrackerTaskCreated_Call) Return(_a0 error) *Service_HandleTrackerTaskCreated_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Service_HandleTrackerTaskCreated_Call) RunAndReturn(run func(context.Context, string, map[string]interface{}) error) *Service_HandleTrackerTaskCreated_Call {
 	_c.Call.Return(run)
 	return _c
 }

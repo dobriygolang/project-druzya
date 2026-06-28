@@ -42,4 +42,5 @@ type Client interface {
 	FailOutboxEvent(ctx context.Context, id, errMsg string) error
 	GetEvaluationSummary(ctx context.Context, attemptID string) (*EvaluationSummary, error)
 	ListPendingRetryItems(ctx context.Context, userID string) ([]RetryItem, error)
+	CompleteRetryItem(ctx context.Context, userID, retryItemID string) (*RetryItem, error)
 }

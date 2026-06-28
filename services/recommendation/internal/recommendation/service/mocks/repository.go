@@ -82,65 +82,6 @@ func (_c *Repository_ClaimEvent_Call) RunAndReturn(run func(context.Context, str
 	return _c
 }
 
-// CreateRetryTaskPlanItem provides a mock function with given fields: ctx, item
-func (_m *Repository) CreateRetryTaskPlanItem(ctx context.Context, item model.LearningPlanItem) (*model.LearningPlanItem, error) {
-	ret := _m.Called(ctx, item)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateRetryTaskPlanItem")
-	}
-
-	var r0 *model.LearningPlanItem
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, model.LearningPlanItem) (*model.LearningPlanItem, error)); ok {
-		return rf(ctx, item)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, model.LearningPlanItem) *model.LearningPlanItem); ok {
-		r0 = rf(ctx, item)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.LearningPlanItem)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, model.LearningPlanItem) error); ok {
-		r1 = rf(ctx, item)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Repository_CreateRetryTaskPlanItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateRetryTaskPlanItem'
-type Repository_CreateRetryTaskPlanItem_Call struct {
-	*mock.Call
-}
-
-// CreateRetryTaskPlanItem is a helper method to define mock.On call
-//   - ctx context.Context
-//   - item model.LearningPlanItem
-func (_e *Repository_Expecter) CreateRetryTaskPlanItem(ctx interface{}, item interface{}) *Repository_CreateRetryTaskPlanItem_Call {
-	return &Repository_CreateRetryTaskPlanItem_Call{Call: _e.mock.On("CreateRetryTaskPlanItem", ctx, item)}
-}
-
-func (_c *Repository_CreateRetryTaskPlanItem_Call) Run(run func(ctx context.Context, item model.LearningPlanItem)) *Repository_CreateRetryTaskPlanItem_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(model.LearningPlanItem))
-	})
-	return _c
-}
-
-func (_c *Repository_CreateRetryTaskPlanItem_Call) Return(_a0 *model.LearningPlanItem, _a1 error) *Repository_CreateRetryTaskPlanItem_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *Repository_CreateRetryTaskPlanItem_Call) RunAndReturn(run func(context.Context, model.LearningPlanItem) (*model.LearningPlanItem, error)) *Repository_CreateRetryTaskPlanItem_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // EnsureUserProfile provides a mock function with given fields: ctx, userID
 func (_m *Repository) EnsureUserProfile(ctx context.Context, userID string) error {
 	ret := _m.Called(ctx, userID)
@@ -247,66 +188,6 @@ func (_c *Repository_FetchDashboardSnapshot_Call) RunAndReturn(run func(context.
 	return _c
 }
 
-// GetLearningPlanItem provides a mock function with given fields: ctx, userID, id
-func (_m *Repository) GetLearningPlanItem(ctx context.Context, userID string, id string) (*model.LearningPlanItem, error) {
-	ret := _m.Called(ctx, userID, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetLearningPlanItem")
-	}
-
-	var r0 *model.LearningPlanItem
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*model.LearningPlanItem, error)); ok {
-		return rf(ctx, userID, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, string) *model.LearningPlanItem); ok {
-		r0 = rf(ctx, userID, id)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.LearningPlanItem)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
-		r1 = rf(ctx, userID, id)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Repository_GetLearningPlanItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetLearningPlanItem'
-type Repository_GetLearningPlanItem_Call struct {
-	*mock.Call
-}
-
-// GetLearningPlanItem is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-//   - id string
-func (_e *Repository_Expecter) GetLearningPlanItem(ctx interface{}, userID interface{}, id interface{}) *Repository_GetLearningPlanItem_Call {
-	return &Repository_GetLearningPlanItem_Call{Call: _e.mock.On("GetLearningPlanItem", ctx, userID, id)}
-}
-
-func (_c *Repository_GetLearningPlanItem_Call) Run(run func(ctx context.Context, userID string, id string)) *Repository_GetLearningPlanItem_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string))
-	})
-	return _c
-}
-
-func (_c *Repository_GetLearningPlanItem_Call) Return(_a0 *model.LearningPlanItem, _a1 error) *Repository_GetLearningPlanItem_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *Repository_GetLearningPlanItem_Call) RunAndReturn(run func(context.Context, string, string) (*model.LearningPlanItem, error)) *Repository_GetLearningPlanItem_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetRecommendation provides a mock function with given fields: ctx, userID, id
 func (_m *Repository) GetRecommendation(ctx context.Context, userID string, id string) (*model.Recommendation, error) {
 	ret := _m.Called(ctx, userID, id)
@@ -363,6 +244,66 @@ func (_c *Repository_GetRecommendation_Call) Return(_a0 *model.Recommendation, _
 }
 
 func (_c *Repository_GetRecommendation_Call) RunAndReturn(run func(context.Context, string, string) (*model.Recommendation, error)) *Repository_GetRecommendation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetSkillScore provides a mock function with given fields: ctx, userID, skillKey
+func (_m *Repository) GetSkillScore(ctx context.Context, userID string, skillKey string) (*model.SkillScore, error) {
+	ret := _m.Called(ctx, userID, skillKey)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSkillScore")
+	}
+
+	var r0 *model.SkillScore
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*model.SkillScore, error)); ok {
+		return rf(ctx, userID, skillKey)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *model.SkillScore); ok {
+		r0 = rf(ctx, userID, skillKey)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.SkillScore)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, userID, skillKey)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_GetSkillScore_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSkillScore'
+type Repository_GetSkillScore_Call struct {
+	*mock.Call
+}
+
+// GetSkillScore is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - skillKey string
+func (_e *Repository_Expecter) GetSkillScore(ctx interface{}, userID interface{}, skillKey interface{}) *Repository_GetSkillScore_Call {
+	return &Repository_GetSkillScore_Call{Call: _e.mock.On("GetSkillScore", ctx, userID, skillKey)}
+}
+
+func (_c *Repository_GetSkillScore_Call) Run(run func(ctx context.Context, userID string, skillKey string)) *Repository_GetSkillScore_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_GetSkillScore_Call) Return(_a0 *model.SkillScore, _a1 error) *Repository_GetSkillScore_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_GetSkillScore_Call) RunAndReturn(run func(context.Context, string, string) (*model.SkillScore, error)) *Repository_GetSkillScore_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -598,65 +539,6 @@ func (_c *Repository_IsEventProcessed_Call) Return(_a0 bool, _a1 error) *Reposit
 }
 
 func (_c *Repository_IsEventProcessed_Call) RunAndReturn(run func(context.Context, string, string) (bool, error)) *Repository_IsEventProcessed_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ListActiveLearningPlanItems provides a mock function with given fields: ctx, userID
-func (_m *Repository) ListActiveLearningPlanItems(ctx context.Context, userID string) ([]model.LearningPlanItem, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListActiveLearningPlanItems")
-	}
-
-	var r0 []model.LearningPlanItem
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) ([]model.LearningPlanItem, error)); ok {
-		return rf(ctx, userID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) []model.LearningPlanItem); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]model.LearningPlanItem)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Repository_ListActiveLearningPlanItems_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListActiveLearningPlanItems'
-type Repository_ListActiveLearningPlanItems_Call struct {
-	*mock.Call
-}
-
-// ListActiveLearningPlanItems is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-func (_e *Repository_Expecter) ListActiveLearningPlanItems(ctx interface{}, userID interface{}) *Repository_ListActiveLearningPlanItems_Call {
-	return &Repository_ListActiveLearningPlanItems_Call{Call: _e.mock.On("ListActiveLearningPlanItems", ctx, userID)}
-}
-
-func (_c *Repository_ListActiveLearningPlanItems_Call) Run(run func(ctx context.Context, userID string)) *Repository_ListActiveLearningPlanItems_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
-	})
-	return _c
-}
-
-func (_c *Repository_ListActiveLearningPlanItems_Call) Return(_a0 []model.LearningPlanItem, _a1 error) *Repository_ListActiveLearningPlanItems_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *Repository_ListActiveLearningPlanItems_Call) RunAndReturn(run func(context.Context, string) ([]model.LearningPlanItem, error)) *Repository_ListActiveLearningPlanItems_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1133,112 +1015,6 @@ func (_c *Repository_ListUserTemplateProgress_Call) Return(_a0 []model.UserTempl
 }
 
 func (_c *Repository_ListUserTemplateProgress_Call) RunAndReturn(run func(context.Context, string) ([]model.UserTemplateProgress, error)) *Repository_ListUserTemplateProgress_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// NextLearningPlanPosition provides a mock function with given fields: ctx, userID
-func (_m *Repository) NextLearningPlanPosition(ctx context.Context, userID string) (int, error) {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for NextLearningPlanPosition")
-	}
-
-	var r0 int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (int, error)); ok {
-		return rf(ctx, userID)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) int); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// Repository_NextLearningPlanPosition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'NextLearningPlanPosition'
-type Repository_NextLearningPlanPosition_Call struct {
-	*mock.Call
-}
-
-// NextLearningPlanPosition is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-func (_e *Repository_Expecter) NextLearningPlanPosition(ctx interface{}, userID interface{}) *Repository_NextLearningPlanPosition_Call {
-	return &Repository_NextLearningPlanPosition_Call{Call: _e.mock.On("NextLearningPlanPosition", ctx, userID)}
-}
-
-func (_c *Repository_NextLearningPlanPosition_Call) Run(run func(ctx context.Context, userID string)) *Repository_NextLearningPlanPosition_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
-	})
-	return _c
-}
-
-func (_c *Repository_NextLearningPlanPosition_Call) Return(_a0 int, _a1 error) *Repository_NextLearningPlanPosition_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *Repository_NextLearningPlanPosition_Call) RunAndReturn(run func(context.Context, string) (int, error)) *Repository_NextLearningPlanPosition_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// UpdateLearningPlanItemStatus provides a mock function with given fields: ctx, userID, id, status
-func (_m *Repository) UpdateLearningPlanItemStatus(ctx context.Context, userID string, id string, status model.LearningPlanItemStatus) error {
-	ret := _m.Called(ctx, userID, id, status)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateLearningPlanItemStatus")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, model.LearningPlanItemStatus) error); ok {
-		r0 = rf(ctx, userID, id, status)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// Repository_UpdateLearningPlanItemStatus_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateLearningPlanItemStatus'
-type Repository_UpdateLearningPlanItemStatus_Call struct {
-	*mock.Call
-}
-
-// UpdateLearningPlanItemStatus is a helper method to define mock.On call
-//   - ctx context.Context
-//   - userID string
-//   - id string
-//   - status model.LearningPlanItemStatus
-func (_e *Repository_Expecter) UpdateLearningPlanItemStatus(ctx interface{}, userID interface{}, id interface{}, status interface{}) *Repository_UpdateLearningPlanItemStatus_Call {
-	return &Repository_UpdateLearningPlanItemStatus_Call{Call: _e.mock.On("UpdateLearningPlanItemStatus", ctx, userID, id, status)}
-}
-
-func (_c *Repository_UpdateLearningPlanItemStatus_Call) Run(run func(ctx context.Context, userID string, id string, status model.LearningPlanItemStatus)) *Repository_UpdateLearningPlanItemStatus_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(model.LearningPlanItemStatus))
-	})
-	return _c
-}
-
-func (_c *Repository_UpdateLearningPlanItemStatus_Call) Return(_a0 error) *Repository_UpdateLearningPlanItemStatus_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *Repository_UpdateLearningPlanItemStatus_Call) RunAndReturn(run func(context.Context, string, string, model.LearningPlanItemStatus) error) *Repository_UpdateLearningPlanItemStatus_Call {
 	_c.Call.Return(run)
 	return _c
 }

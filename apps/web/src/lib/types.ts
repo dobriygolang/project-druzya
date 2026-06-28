@@ -195,17 +195,6 @@ export type RecommendationStatus =
   | 'RECOMMENDATION_STATUS_DISMISSED'
   | 'RECOMMENDATION_STATUS_COMPLETED'
 
-export type LearningPlanItemType =
-  | 'LEARNING_PLAN_ITEM_TYPE_UNSPECIFIED'
-  | 'LEARNING_PLAN_ITEM_TYPE_RETRY_TASK'
-
-export type LearningPlanItemStatus =
-  | 'LEARNING_PLAN_ITEM_STATUS_UNSPECIFIED'
-  | 'LEARNING_PLAN_ITEM_STATUS_PENDING'
-  | 'LEARNING_PLAN_ITEM_STATUS_IN_PROGRESS'
-  | 'LEARNING_PLAN_ITEM_STATUS_COMPLETED'
-  | 'LEARNING_PLAN_ITEM_STATUS_DISMISSED'
-
 export type DailyBriefItemType =
   | 'DAILY_BRIEF_ITEM_TYPE_UNSPECIFIED'
   | 'DAILY_BRIEF_ITEM_TYPE_RETRY_TASK'
@@ -308,16 +297,6 @@ export interface Recommendation {
   created_at?: string
 }
 
-export interface LearningPlanItem {
-  id: string
-  type: LearningPlanItemType
-  task_id?: string
-  skill_key?: string
-  title: string
-  description?: string
-  status: LearningPlanItemStatus
-}
-
 export interface DailyBriefItem {
   type: DailyBriefItemType
   title: string
@@ -340,7 +319,6 @@ export interface Dashboard {
   strengths: SkillInsight[]
   weaknesses: SkillInsight[]
   recommendations: Recommendation[]
-  learning_plan: LearningPlanItem[]
   pending_retry_count: number
   daily_brief?: DailyBrief
   read_article_slugs?: string[]

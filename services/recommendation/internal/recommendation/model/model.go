@@ -50,24 +50,6 @@ type Recommendation struct {
 	CompletedAt *time.Time
 }
 
-// LearningPlanItem is an actionable learning task.
-type LearningPlanItem struct {
-	ID               string
-	UserID           string
-	RecommendationID *string
-	Type             LearningPlanItemType
-	TaskID           *string
-	SkillKey         *string
-	Title            string
-	Description      *string
-	Status           LearningPlanItemStatus
-	Position         int
-	Metadata         map[string]any
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-	CompletedAt      *time.Time
-}
-
 // SessionCompletedEvent is the interview session_completed outbox payload.
 type SessionCompletedEvent struct {
 	SessionID    string
@@ -232,7 +214,6 @@ type Dashboard struct {
 	Strengths         []SkillInsight
 	Weaknesses        []SkillInsight
 	Recommendations   []Recommendation
-	LearningPlan      []LearningPlanItem
 	PendingRetryCount int
 	ReadArticleSlugs  []string
 }
@@ -248,5 +229,4 @@ type DashboardSnapshot struct {
 	Profile         *UserSkillProfile
 	SkillScores     []SkillScore
 	Recommendations []Recommendation
-	LearningPlan    []LearningPlanItem
 }

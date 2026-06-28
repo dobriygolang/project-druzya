@@ -5,8 +5,7 @@ import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { DailyBriefCard } from '@/components/today/DailyBriefCard'
 import { skillLabel, useI18n } from '@/lib/i18n'
-import { hasActiveLearningPlanRetries } from '@/components/today/LearningPlanCard'
-import type { Dashboard, RetryItem } from '@/lib/types'
+import type { Dashboard } from '@/lib/types'
 
 function ActionCard({
   eyebrow,
@@ -26,11 +25,9 @@ function ActionCard({
 
 export function TodayActionGrid({
   dashboard,
-  retryItems = [],
   loading,
 }: {
   dashboard?: Dashboard | null
-  retryItems?: RetryItem[]
   loading?: boolean
 }) {
   const { t } = useI18n()
@@ -47,10 +44,6 @@ export function TodayActionGrid({
 
   const recommendations = dashboard?.recommendations ?? []
   const weaknesses = dashboard?.weaknesses ?? []
-  const hideBriefRetries = hasActiveLearningPlanRetries(
-    dashboard?.learning_plan ?? [],
-    retryItems,
-  )
 
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -87,7 +80,7 @@ export function TodayActionGrid({
       </ActionCard>
 
       <ActionCard eyebrow={t('today.actions.briefEyebrow')} title={t('today.actions.briefTitle')}>
-        <DailyBriefCard brief={dashboard?.daily_brief} hideRetryItems={hideBriefRetries} />
+        <DailyBriefCard brief={dashboard?.daily_brief} />
       </ActionCard>
 
       <ActionCard eyebrow={t('today.actions.focusEyebrow')} title={t('today.actions.focusTitle')}>

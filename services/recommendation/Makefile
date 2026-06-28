@@ -105,3 +105,7 @@ bin-protoc-gen-grpc-gateway:
 .PHONY: gen-proto
 gen-proto: bin-buf bin-protoc-gen-go bin-protoc-gen-go-grpc bin-protoc-gen-grpc-gateway ## Generate pkg/api
 	@GOWORK=off PATH="$(CURDIR)/$(BIN_DIR):$$PATH" $(BIN_DIR)/buf generate
+
+.PHONY: migrate-learning-plan-to-tracker
+migrate-learning-plan-to-tracker: ## Copy pending learning_plan_items to tracker tasks
+	GOWORK=off go run ./cmd/migrate-learning-plan

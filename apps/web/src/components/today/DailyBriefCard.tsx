@@ -4,17 +4,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { startRetrySession } from '@/lib/api/interview'
+import { AddToSprintButton } from '@/components/today/SprintPreviewCard'
 import { useI18n } from '@/lib/i18n'
 import type { DailyBrief } from '@/lib/types'
 
-export function DailyBriefCard({
-  brief,
-  hideRetryItems = false,
-}: {
-  brief?: DailyBrief | null
-  /** When the learning plan block lists pending retries, skip duplicate retry rows here. */
-  hideRetryItems?: boolean
-}) {
+export function DailyBriefCard({ brief }: { brief?: DailyBrief | null }) {
   const { t } = useI18n()
   const navigate = useNavigate()
 
@@ -23,11 +17,7 @@ export function DailyBriefCard({
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })
 
-  const items = (brief?.items ?? []).filter(
-    (item) =>
-      !hideRetryItems ||
-      (item.type !== 'DAILY_BRIEF_ITEM_TYPE_RETRY_TASK' && !item.retry_item_id),
-  )
+  const items = brief?.items ?? []
   if (items.length === 0) {
     return <p className="text-[13px] text-text-muted">{t('today.actions.briefEmpty')}</p>
   }
@@ -68,6 +58,16 @@ export function DailyBriefCard({
                     {secondaryLabel}
                   </Button>
                 </Link>
+              ) : null}
+              {!item.retry_item_id ? (
+                <AddToSprintButton
+                  title={item.title}
+                  metadata={{
+                    action_path: item.action_path,
+                    skill_key: item.skill_key,
+                    brief_type: item.type,
+                  }}
+                />
               ) : null}
             </div>
           )

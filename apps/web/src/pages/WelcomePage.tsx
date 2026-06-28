@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
+import { Logo } from '@/components/brand/Logo'
 import { brand } from '@/lib/brand/tokens'
 import { getBillingPlans } from '@/lib/api/billing'
 import { useI18n } from '@/lib/i18n'
@@ -239,12 +240,7 @@ export default function WelcomePage() {
       <footer className="border-t" style={{ borderColor: brand.hair }}>
         <div className="mx-auto flex max-w-[1200px] flex-wrap items-end justify-between gap-6 px-8 py-10 pb-14">
           <div className="max-w-[420px]">
-            <Link to="/welcome" className="no-underline">
-              <span className="inline-flex items-center gap-2">
-                <span className="h-[7px] w-[7px] rounded-full bg-danger" />
-                <span className="text-sm font-medium">druz9.online</span>
-              </span>
-            </Link>
+            <Logo to="/welcome" size="sm" />
             <p className="mt-3.5 text-[13.5px] leading-relaxed text-text-secondary">
               {t('welcome.footerTagline')}
             </p>

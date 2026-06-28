@@ -294,6 +294,10 @@ const (
 	// Latency-sensitive, 8B-class.
 	TaskTaskboardCategorise Task = "taskboard_categorise"
 
+	// TaskTrackerClassify — tracker smart-parse: classify free-text task title
+	// into kind + metadata + optional epic hint. Strict JSON, 8B-class.
+	TaskTrackerClassify Task = "tracker_classify"
+
 	// TaskAITutorML — chat с ml-coach persona. 4-layer memory
 	// injection (snapshot/facts/summary/user_message). 70B для качества
 	// рассуждений на ML-математике.
