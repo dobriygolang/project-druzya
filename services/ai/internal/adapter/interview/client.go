@@ -40,6 +40,7 @@ type OutboxEvent struct {
 type Client interface {
 	GetAttempt(ctx context.Context, attemptID string) (*Attempt, error)
 	CompleteEvaluation(ctx context.Context, input CompleteEvaluationInput) error
+	FailEvaluation(ctx context.Context, attemptID string, reason *string) error
 	ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]OutboxEvent, error)
 	AckOutboxEvents(ctx context.Context, ids []string) error
 	FailOutboxEvent(ctx context.Context, id, errMsg string) error

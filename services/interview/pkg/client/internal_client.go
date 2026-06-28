@@ -10,4 +10,5 @@ import (
 // InternalClient is the service-to-service port for ai-service and workers.
 type InternalClient interface {
 	CompleteEvaluation(ctx context.Context, input interviewservice.CompleteEvaluationInput) (*interviewmodel.EvaluationSummary, error)
+	FailEvaluation(ctx context.Context, input interviewservice.FailEvaluationInput) error
 }

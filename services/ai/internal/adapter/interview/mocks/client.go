@@ -176,6 +176,54 @@ func (_c *Client_CompleteEvaluation_Call) RunAndReturn(run func(context.Context,
 	return _c
 }
 
+// FailEvaluation provides a mock function with given fields: ctx, attemptID, reason
+func (_m *Client) FailEvaluation(ctx context.Context, attemptID string, reason *string) error {
+	ret := _m.Called(ctx, attemptID, reason)
+
+	if len(ret) == 0 {
+		panic("no return value specified for FailEvaluation")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, *string) error); ok {
+		r0 = rf(ctx, attemptID, reason)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Client_FailEvaluation_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'FailEvaluation'
+type Client_FailEvaluation_Call struct {
+	*mock.Call
+}
+
+// FailEvaluation is a helper method to define mock.On call
+//   - ctx context.Context
+//   - attemptID string
+//   - reason *string
+func (_e *Client_Expecter) FailEvaluation(ctx interface{}, attemptID interface{}, reason interface{}) *Client_FailEvaluation_Call {
+	return &Client_FailEvaluation_Call{Call: _e.mock.On("FailEvaluation", ctx, attemptID, reason)}
+}
+
+func (_c *Client_FailEvaluation_Call) Run(run func(ctx context.Context, attemptID string, reason *string)) *Client_FailEvaluation_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(*string))
+	})
+	return _c
+}
+
+func (_c *Client_FailEvaluation_Call) Return(_a0 error) *Client_FailEvaluation_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Client_FailEvaluation_Call) RunAndReturn(run func(context.Context, string, *string) error) *Client_FailEvaluation_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // FailOutboxEvent provides a mock function with given fields: ctx, id, errMsg
 func (_m *Client) FailOutboxEvent(ctx context.Context, id string, errMsg string) error {
 	ret := _m.Called(ctx, id, errMsg)

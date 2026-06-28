@@ -96,6 +96,17 @@ func (c *Client) CompleteEvaluation(ctx context.Context, input interviewadapter.
 	return nil
 }
 
+func (c *Client) FailEvaluation(ctx context.Context, attemptID string, reason *string) error {
+	_, err := c.client.FailEvaluation(c.authCtx(ctx), &interviewv1.FailEvaluationRequest{
+		AttemptId: attemptID,
+		Reason:    reason,
+	})
+	if err != nil {
+		return interviewadapter.MapGRPCError(err)
+	}
+	return nil
+}
+
 func (c *Client) ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]interviewadapter.OutboxEvent, error) {
 	req := &interviewv1.ClaimOutboxEventsRequest{Limit: int32(limit)}
 	if eventName != "" {

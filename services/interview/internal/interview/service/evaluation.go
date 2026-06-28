@@ -9,11 +9,20 @@ import (
 	"github.com/shopspring/decimal"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
 	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
+	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/fail_evaluation"
 )
 
 // CompleteEvaluation delegates to the complete_evaluation CQRS command handler.
 func (s *interviewService) CompleteEvaluation(ctx context.Context, input CompleteEvaluationInput) (*interviewmodel.EvaluationSummary, error) {
 	return s.completeEvaluation.Handle(ctx, completeEvaluationCommand(input))
+}
+
+// FailEvaluation delegates to the fail_evaluation CQRS command handler.
+func (s *interviewService) FailEvaluation(ctx context.Context, input FailEvaluationInput) error {
+	return s.failEvaluation.Handle(ctx, fail_evaluation.Command{
+		AttemptID: input.AttemptID,
+		Reason:    input.Reason,
+	})
 }
 
 // RecalculateScores satisfies the complete_evaluation.SessionScorer port; the

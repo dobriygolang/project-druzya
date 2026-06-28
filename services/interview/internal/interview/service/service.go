@@ -11,6 +11,7 @@ import (
 	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
 	interviewrepo "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/repository"
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/complete_evaluation"
+	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/fail_evaluation"
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/interview/usecase/command/submit_attempt"
 )
 
@@ -27,6 +28,7 @@ type Service interface {
 	SubmitAttempt(ctx context.Context, input SubmitAttemptInput) (*interviewmodel.Attempt, error)
 	GetAttempt(ctx context.Context, userID, attemptID string) (*interviewmodel.Attempt, error)
 	CompleteEvaluation(ctx context.Context, input CompleteEvaluationInput) (*interviewmodel.EvaluationSummary, error)
+	FailEvaluation(ctx context.Context, input FailEvaluationInput) error
 	ListRetryItems(ctx context.Context, userID string, status *interviewmodel.RetryItemStatus) ([]interviewmodel.RetryItem, error)
 	StartRetrySession(ctx context.Context, userID string, retryItemIDs []string) (*interviewmodel.SessionDetail, error)
 	SkipTask(ctx context.Context, userID, sessionTaskID string) (*interviewmodel.SessionTask, interviewmodel.Progress, error)
@@ -59,6 +61,12 @@ type CompleteEvaluationInput struct {
 	Feedback  map[string]any
 }
 
+// FailEvaluationInput marks a permanently failed ai evaluation (internal).
+type FailEvaluationInput struct {
+	AttemptID string
+	Reason    *string
+}
+
 func completeEvaluationCommand(in CompleteEvaluationInput) complete_evaluation.Command {
 	return complete_evaluation.Command{
 		AttemptID: in.AttemptID,
@@ -82,6 +90,7 @@ type interviewService struct {
 	// own package; the service is a thin orchestrator that delegates to them.
 	submitAttempt      *submit_attempt.Handler
 	completeEvaluation *complete_evaluation.Handler
+	failEvaluation     *fail_evaluation.Handler
 }
 
 // Deps holds service dependencies.
@@ -122,6 +131,7 @@ func New(deps Deps) Service {
 	// complete_evaluation borrows the service's shared scoring rules (also used
 	// by SkipTask) via the SessionScorer port.
 	svc.completeEvaluation = complete_evaluation.New(deps.Repo, svc)
+	svc.failEvaluation = fail_evaluation.New(deps.Repo)
 	return svc
 }
 

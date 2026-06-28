@@ -24,9 +24,9 @@ func (_m *Service) EXPECT() *Service_Expecter {
 	return &Service_Expecter{mock: &_m.Mock}
 }
 
-// GenerateProfileSummary provides a mock function with given fields: ctx, userID, readiness, skills
-func (_m *Service) GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []summary.SkillScore) (string, error) {
-	ret := _m.Called(ctx, userID, readiness, skills)
+// GenerateProfileSummary provides a mock function with given fields: ctx, userID, readiness, skills, locale
+func (_m *Service) GenerateProfileSummary(ctx context.Context, userID string, readiness int, skills []summary.SkillScore, locale string) (string, error) {
+	ret := _m.Called(ctx, userID, readiness, skills, locale)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GenerateProfileSummary")
@@ -34,17 +34,17 @@ func (_m *Service) GenerateProfileSummary(ctx context.Context, userID string, re
 
 	var r0 string
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, int, []summary.SkillScore) (string, error)); ok {
-		return rf(ctx, userID, readiness, skills)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, []summary.SkillScore, string) (string, error)); ok {
+		return rf(ctx, userID, readiness, skills, locale)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, int, []summary.SkillScore) string); ok {
-		r0 = rf(ctx, userID, readiness, skills)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int, []summary.SkillScore, string) string); ok {
+		r0 = rf(ctx, userID, readiness, skills, locale)
 	} else {
 		r0 = ret.Get(0).(string)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, int, []summary.SkillScore) error); ok {
-		r1 = rf(ctx, userID, readiness, skills)
+	if rf, ok := ret.Get(1).(func(context.Context, string, int, []summary.SkillScore, string) error); ok {
+		r1 = rf(ctx, userID, readiness, skills, locale)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -62,13 +62,14 @@ type Service_GenerateProfileSummary_Call struct {
 //   - userID string
 //   - readiness int
 //   - skills []summary.SkillScore
-func (_e *Service_Expecter) GenerateProfileSummary(ctx interface{}, userID interface{}, readiness interface{}, skills interface{}) *Service_GenerateProfileSummary_Call {
-	return &Service_GenerateProfileSummary_Call{Call: _e.mock.On("GenerateProfileSummary", ctx, userID, readiness, skills)}
+//   - locale string
+func (_e *Service_Expecter) GenerateProfileSummary(ctx interface{}, userID interface{}, readiness interface{}, skills interface{}, locale interface{}) *Service_GenerateProfileSummary_Call {
+	return &Service_GenerateProfileSummary_Call{Call: _e.mock.On("GenerateProfileSummary", ctx, userID, readiness, skills, locale)}
 }
 
-func (_c *Service_GenerateProfileSummary_Call) Run(run func(ctx context.Context, userID string, readiness int, skills []summary.SkillScore)) *Service_GenerateProfileSummary_Call {
+func (_c *Service_GenerateProfileSummary_Call) Run(run func(ctx context.Context, userID string, readiness int, skills []summary.SkillScore, locale string)) *Service_GenerateProfileSummary_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string), args[2].(int), args[3].([]summary.SkillScore))
+		run(args[0].(context.Context), args[1].(string), args[2].(int), args[3].([]summary.SkillScore), args[4].(string))
 	})
 	return _c
 }
@@ -78,7 +79,7 @@ func (_c *Service_GenerateProfileSummary_Call) Return(_a0 string, _a1 error) *Se
 	return _c
 }
 
-func (_c *Service_GenerateProfileSummary_Call) RunAndReturn(run func(context.Context, string, int, []summary.SkillScore) (string, error)) *Service_GenerateProfileSummary_Call {
+func (_c *Service_GenerateProfileSummary_Call) RunAndReturn(run func(context.Context, string, int, []summary.SkillScore, string) (string, error)) *Service_GenerateProfileSummary_Call {
 	_c.Call.Return(run)
 	return _c
 }

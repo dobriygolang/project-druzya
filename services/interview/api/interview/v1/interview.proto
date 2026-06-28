@@ -141,6 +141,7 @@ service InterviewService {
 
 service InterviewInternalService {
   rpc CompleteEvaluation(CompleteEvaluationRequest) returns (CompleteEvaluationResponse);
+  rpc FailEvaluation(FailEvaluationRequest) returns (FailEvaluationResponse);
   rpc GetAttemptInternal(GetAttemptInternalRequest) returns (GetAttemptResponse);
   rpc GetEvaluationSummaryInternal(GetEvaluationSummaryInternalRequest) returns (GetEvaluationSummaryInternalResponse);
   rpc ListRetryItemsInternal(ListRetryItemsInternalRequest) returns (ListRetryItemsInternalResponse);
@@ -348,6 +349,13 @@ message CompleteEvaluationRequest {
 message CompleteEvaluationResponse {
   EvaluationSummary summary = 1;
 }
+
+message FailEvaluationRequest {
+  string attempt_id = 1;
+  optional string reason = 2;
+}
+
+message FailEvaluationResponse {}
 
 message ListRetryItemsRequest {
   optional RetryItemStatus status = 1;

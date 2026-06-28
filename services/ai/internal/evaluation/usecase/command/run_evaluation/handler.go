@@ -33,6 +33,7 @@ type Repository interface {
 type InterviewClient interface {
 	GetAttempt(ctx context.Context, attemptID string) (*interviewadapter.Attempt, error)
 	CompleteEvaluation(ctx context.Context, input interviewadapter.CompleteEvaluationInput) error
+	FailEvaluation(ctx context.Context, attemptID string, reason *string) error
 }
 
 // ContentClient provides the task bundle (rubric + reference solutions).
@@ -316,6 +317,12 @@ func (h *Handler) markJobFailed(ctx context.Context, job *evaluationmodel.Evalua
 	}
 	if err := h.repo.UpdateJob(ctx, job); err != nil {
 		return err
+	}
+	if !job.Retryable {
+		reason := msg
+		if failErr := h.interview.FailEvaluation(ctx, job.AttemptID, &reason); failErr != nil {
+			return fmt.Errorf("mark attempt failed: %w (eval: %w)", failErr, runErr)
+		}
 	}
 	return runErr
 }
