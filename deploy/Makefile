@@ -46,7 +46,7 @@ prune: ## Remove dangling images and old build cache (safe after deploy)
 
 ensure-pkg-api: ## Fail fast when pkg/api is missing (manual deploy: run gen-all-proto from repo root)
 	@root=$$(cd .. && pwd); \
-	source scripts/pkg-api-helpers.sh; \
+	source scripts/services.conf.sh; \
 	verify_pkg_api "$$root"
 
 deploy: keys ensure-pkg-api ## Pull-less prod update: build changed images, migrate if needed, up, prune
@@ -66,7 +66,7 @@ deploy: keys ensure-pkg-api ## Pull-less prod update: build changed images, migr
 	    echo "No image rebuild needed (no service changes)."; \
 	  fi; \
 	fi; \
-	if [ -z "$$PREV" ] || [ "$$PREV" = "$$CUR" ] || bash scripts/migrations-changed.sh "$$PREV" "$$CUR"; then \
+	if [ -z "$$PREV" ] || [ "$$PREV" = "$$CUR" ] || (source scripts/services.conf.sh && migrations_changed "$$PREV" "$$CUR"); then \
 	  $(COMPOSE) run --rm migrate; \
 	else \
 	  echo "Skipping migrate (no migration changes)."; \

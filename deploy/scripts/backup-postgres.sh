@@ -2,6 +2,9 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=services.conf.sh
+source "$ROOT/scripts/services.conf.sh"
+
 BACKUP_DIR="${BACKUP_DIR:-$ROOT/backups}"
 STAMP="$(date +%Y%m%d_%H%M%S)"
 OUT="$BACKUP_DIR/$STAMP"
@@ -13,8 +16,7 @@ mkdir -p "$OUT"
 
 export PGPASSWORD="$POSTGRES_PASSWORD"
 
-dbs=(druzya druzya_content druzya_interview druzya_ai druzya_recommendation)
-for db in "${dbs[@]}"; do
+for db in "${DB_DATABASES[@]}"; do
   echo "==> dump $db"
   pg_dump -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -Fc "$db" > "$OUT/${db}.dump"
 done

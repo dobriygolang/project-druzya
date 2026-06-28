@@ -3,6 +3,10 @@
 # Usage: changed-services.sh <from_sha> <to_sha>
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+# shellcheck source=services.conf.sh
+source "$ROOT/deploy/scripts/services.conf.sh"
+
 FROM="${1:?from sha required}"
 TO="${2:?to sha required}"
 
@@ -17,7 +21,7 @@ fi
 
 # Shared build inputs — rebuild the whole stack.
 if echo "$files" | grep -qE '^(deploy/Dockerfile($|\.)|go\.work)'; then
-  echo "identity identity-bot content interview ai recommendation billing sandbox rooms admin caddy migrate"
+  echo "${PROD_APP_SERVICES[*]} identity-bot caddy migrate"
   exit 0
 fi
 
@@ -48,7 +52,7 @@ expand() {
 }
 
 direct=""
-for svc in identity content interview ai recommendation billing sandbox rooms admin; do
+for svc in "${PROD_APP_SERVICES[@]}"; do
   if echo "$files" | grep -q "^services/${svc}/"; then
     direct="$direct $svc"
   fi

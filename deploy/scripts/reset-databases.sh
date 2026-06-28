@@ -2,6 +2,10 @@
 # Drop and recreate all application databases (empty schema; run migrate after).
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=services.conf.sh
+source "$ROOT/scripts/services.conf.sh"
+
 : "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}"
 
 PGHOST="${POSTGRES_HOST:-postgres}"
@@ -20,18 +24,7 @@ psql_admin() {
   fi
 }
 
-DATABASES=(
-  druzya
-  druzya_content
-  druzya_interview
-  druzya_ai
-  druzya_recommendation
-  druzya_billing
-  druzya_sandbox
-  druzya_rooms
-)
-
-for db in "${DATABASES[@]}"; do
+for db in "${DB_DATABASES[@]}"; do
   echo "==> reset database ${db}"
   psql_admin -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '${db}' AND pid <> pg_backend_pid();"
   psql_admin -c "DROP DATABASE IF EXISTS \"${db}\";"

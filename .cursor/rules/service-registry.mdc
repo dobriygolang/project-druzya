@@ -1,0 +1,53 @@
+---
+description: New service or proto — sync deploy/scripts/services.conf.sh and dependents (CI drift check)
+alwaysApply: true
+---
+
+# Service registry (do not forget)
+
+**Single source of truth:** [deploy/scripts/services.conf.sh](../deploy/scripts/services.conf.sh)
+
+When you add a Go service or touch `api/**/*.proto`, update the registry **in the same PR** and run:
+
+```bash
+bash deploy/scripts/verify-service-registry.sh
+```
+
+CI runs this before the service matrix (`.github/workflows/ci.yml` job `registry-check`).
+
+## Always (same PR)
+
+| Step | File |
+|------|------|
+| 1 | `deploy/scripts/services.conf.sh` — add to `CI_SERVICES` (and `PROTO_SERVICES` follows automatically) |
+| 2 | `.github/workflows/ci.yml` — `matrix.service` must match `CI_SERVICES` exactly |
+| 3 | `go.work` — `use ( ./services/<name> )` |
+| 4 | Root `AGENTS.md` — table row + port row in template section if new ports |
+| 5 | `services/<name>/AGENTS.md` — create from template |
+
+**Proto / lint:** `pkg/api/` is gitignored. CI runs `deploy/scripts/gen-all-proto.sh`, which reads `PROTO_SERVICES` from the registry. Local lint: `cd services/<name> && make gen-proto && make lint-go`.
+
+## When the service has Postgres
+
+Add to `DB_SERVICES` in `services.conf.sh`, then same PR:
+
+- `deploy/scripts/init-databases.sql` — `CREATE DATABASE` for each entry in `DB_DATABASES` except `druzya` (created via `POSTGRES_DB`)
+- `deploy/Dockerfile.migrate` — `COPY services/<name>/scripts/migrations`
+- `deploy/scripts/migrate-all.sh` — `run_migrate` line + env DSN in compose
+
+## When the service ships to prod
+
+Add to `PROD_APP_SERVICES`, then same PR:
+
+- `deploy/docker-compose.prod.yml` — service block, env, `depends_on`
+- `deploy/Caddyfile` — route if public HTTP
+- `deploy/scripts/changed-services.sh` — `expand()` dependency edges if other services call it
+- `deploy/RUNBOOK.md` — restart/stop one-liners only if ops-relevant
+
+## Do not duplicate lists elsewhere
+
+Scripts must `source deploy/scripts/services.conf.sh`. **Never** hardcode `identity content interview …` in a new script.
+
+## New service bootstrap
+
+Copy `services/template/` → `services/<name>/`, set ports in `Makefile` + `config.go`, `make gen-proto migrate-new NAME=init`.

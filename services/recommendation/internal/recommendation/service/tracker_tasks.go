@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 
 	trackeradapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/tracker"
 	"github.com/sedorofeevd/project-druzya/services/tracker/pkg/classify"
@@ -23,10 +22,6 @@ func retryTrackerDedup(retryItemID string) string {
 
 func recommendationTrackerDedup(id string) string {
 	return "rec:" + id
-}
-
-func articleTrackerDedup(slug string) string {
-	return "article:" + slug
 }
 
 func (s *recommendationService) pushRetryTrackerTask(ctx context.Context, userID, title, retryItemID, taskID string) {
@@ -53,22 +48,5 @@ func (s *recommendationService) pushRecommendationTrackerTask(ctx context.Contex
 	dedup := recommendationTrackerDedup(recID)
 	s.pushTrackerTask(ctx, trackeradapter.CreateTaskParams{
 		UserID: userID, Title: title, Source: "recommendation", Metadata: meta, DedupKey: &dedup,
-	})
-}
-
-func (s *recommendationService) pushArticleTrackerTask(ctx context.Context, userID, title, slug, skillKey string) {
-	dedup := articleTrackerDedup(slug)
-	path := fmt.Sprintf("/learn/%s", slug)
-	s.pushTrackerTask(ctx, trackeradapter.CreateTaskParams{
-		UserID: userID,
-		Title:  title,
-		Source: "recommendation",
-		Metadata: map[string]any{
-			"task_kind":    classify.KindSystem,
-			"article_slug": slug,
-			"skill_key":    skillKey,
-			"action_path":  path,
-		},
-		DedupKey: &dedup,
 	})
 }

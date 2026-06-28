@@ -44,7 +44,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: deploy/.proto-bin
-          key: proto-plugins-v1-${{ runner.os }}-${{ hashFiles('deploy/scripts/install-proto-tools.sh') }}
+          key: proto-plugins-v1-${{ runner.os }}-${{ hashFiles('deploy/scripts/gen-all-proto.sh') }}
 
       - name: Generate protobuf (CI runner — not on VPS)
         working-directory: ${{ github.workspace }}
@@ -55,8 +55,8 @@ jobs:
       - name: Pack generated API + SPA inputs
         run: |
           cd "$GITHUB_WORKSPACE"
-          # shellcheck source=deploy/scripts/pkg-api-helpers.sh
-          source deploy/scripts/pkg-api-helpers.sh
+          # shellcheck source=deploy/scripts/services.conf.sh
+          source deploy/scripts/services.conf.sh
           verify_pkg_api "$GITHUB_WORKSPACE"
           tar czf generated-api.tgz $(pack_pkg_api_paths | tr '\n' ' ')
 
@@ -154,8 +154,8 @@ jobs:
 
             if [ -f generated-api.tgz ]; then
               echo "Clearing stale pkg/api (gitignored on server)..."
-              # shellcheck source=deploy/scripts/pkg-api-helpers.sh
-              source "$REPO_DIR/deploy/scripts/pkg-api-helpers.sh"
+              # shellcheck source=deploy/scripts/services.conf.sh
+              source "$REPO_DIR/deploy/scripts/services.conf.sh"
               clear_pkg_api "$REPO_DIR"
               echo "Extracting pre-generated pkg/api from CI..."
               tar xzf generated-api.tgz
@@ -212,7 +212,7 @@ jobs:
             RUN_MIGRATE=0
             if [ -z "$PREV_SHA" ] || [ "$PREV_SHA" = "$CUR_SHA" ]; then
               RUN_MIGRATE=1
-            elif bash scripts/migrations-changed.sh "$PREV_SHA" "$CUR_SHA"; then
+            elif (source scripts/services.conf.sh && migrations_changed "$PREV_SHA" "$CUR_SHA"); then
               RUN_MIGRATE=1
             fi
             if [ "$RUN_MIGRATE" = 1 ]; then

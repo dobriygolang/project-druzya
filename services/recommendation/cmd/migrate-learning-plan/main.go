@@ -60,7 +60,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("tracker client: %v", err)
 	}
-	defer tracker.Close()
+	defer func() { _ = tracker.Close() }()
 
 	var migrated, skipped int
 	for _, item := range items {

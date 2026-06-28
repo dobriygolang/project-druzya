@@ -38,9 +38,13 @@ Yandex app: `https://api.druz9.ru/v1/auth/yandex/callback` (+ `.online` mirror).
 
 Secrets: `DEPLOY_SSH_HOST`, `DEPLOY_SSH_USER`, `DEPLOY_SSH_KEY`, optional `DEPLOY_GIT_TOKEN`.
 
-First time on VPS:
+First time on VPS (manual or scripted):
 
 ```bash
+# Option A — bootstrap script (Docker + clone + .env + JWT keys):
+./deploy/scripts/bootstrap-server.sh git@github.com:YOUR_ORG/project-druzya.git
+
+# Option B — manual:
 git clone git@github.com:YOUR_ORG/project-druzya.git /opt/project-druzya
 cd /opt/project-druzya/deploy
 cp .env.example .env && nano .env && make keys && make up

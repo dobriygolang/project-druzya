@@ -178,6 +178,8 @@ make migrate-new NAME=<snake> | migrate-up | migrate-down | stop
 
 Follow [services/template/AGENTS.md](services/template/AGENTS.md#copy-as-new-service): copy template, rename, pick ports, `make migrate-new NAME=init`, `make gen-proto && make lint && make build`, document in `AGENTS.md`.
 
+**Registry (CI/deploy):** edit [deploy/scripts/services.conf.sh](deploy/scripts/services.conf.sh), sync `.github/workflows/ci.yml` matrix + `go.work`, run `bash deploy/scripts/verify-service-registry.sh`. Full list: [.cursor/rules/service-registry.mdc](.cursor/rules/service-registry.mdc).
+
 ### Go proxy
 
 Corporate proxy stale cache: `GOPROXY=https://proxy.golang.org,direct go mod tidy`
