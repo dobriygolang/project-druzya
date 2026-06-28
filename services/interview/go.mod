@@ -19,6 +19,7 @@ require (
 	github.com/sedorofeevd/project-druzya/services/billing v0.0.0-00010101000000-000000000000
 	github.com/sedorofeevd/project-druzya/services/content v0.0.0
 	github.com/sedorofeevd/project-druzya/services/identity v0.0.0
+	github.com/sedorofeevd/project-druzya/services/recommendation v0.0.0
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -56,4 +57,5 @@ replace (
 	github.com/sedorofeevd/project-druzya/services/billing => ../billing
 	github.com/sedorofeevd/project-druzya/services/content => ../content
 	github.com/sedorofeevd/project-druzya/services/identity => ../identity
+	github.com/sedorofeevd/project-druzya/services/recommendation => ../recommendation
 )

@@ -10,6 +10,19 @@ import type { LearningPlanItem, RetryItem } from '@/lib/types'
 
 const PENDING_RETRY = 'RETRY_ITEM_STATUS_PENDING'
 
+export function hasActiveLearningPlanRetries(
+  items: LearningPlanItem[],
+  retryItems: RetryItem[],
+): boolean {
+  return items
+    .filter(
+      (i) =>
+        i.status !== 'LEARNING_PLAN_ITEM_STATUS_COMPLETED' &&
+        i.status !== 'LEARNING_PLAN_ITEM_STATUS_DISMISSED',
+    )
+    .some((i) => !!pendingRetryForTask(i.task_id, retryItems))
+}
+
 function pendingRetryForTask(
   taskId: string | undefined,
   retryItems: RetryItem[],
@@ -46,7 +59,7 @@ export function LearningPlanCard({
         i.status !== 'LEARNING_PLAN_ITEM_STATUS_DISMISSED',
     )
     .filter((i) => !!pendingRetryForTask(i.task_id, retryItems))
-  if (active.length === 0) return null
+  if (!hasActiveLearningPlanRetries(items, retryItems)) return null
 
   const startable = active
     .map((item) => ({ item, retry: pendingRetryForTask(item.task_id, retryItems) }))

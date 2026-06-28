@@ -50,11 +50,16 @@ enum DailyBriefItemType {
   DAILY_BRIEF_ITEM_TYPE_TAKE_MOCK = 4;
   DAILY_BRIEF_ITEM_TYPE_START_MOCK = 5;
   DAILY_BRIEF_ITEM_TYPE_READ_ARTICLE = 6;
+  DAILY_BRIEF_ITEM_TYPE_PRACTICE_STALE_MODE = 7;
 }
 
 service RecommendationService {
   rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse) {
     option (google.api.http) = {get: "/v1/recommendations/dashboard"};
+  }
+
+  rpc GetMockHubContext(GetMockHubContextRequest) returns (GetMockHubContextResponse) {
+    option (google.api.http) = {get: "/v1/recommendations/mock-hub"};
   }
 
   rpc DismissRecommendation(DismissRecommendationRequest) returns (DismissRecommendationResponse) {
@@ -91,6 +96,10 @@ service RecommendationService {
       body: "*"
     };
   }
+}
+
+service RecommendationInternalService {
+  rpc GetTaskPickerHints(GetTaskPickerHintsRequest) returns (GetTaskPickerHintsResponse);
 }
 
 message GetDashboardRequest {}
@@ -185,4 +194,52 @@ message MarkArticleReadRequest {
 message MarkArticleReadResponse {
   string slug = 1;
   google.protobuf.Timestamp read_at = 2;
+}
+
+message GetMockHubContextRequest {}
+
+message GetMockHubContextResponse {
+  repeated StalePracticeMode stale_modes = 1;
+  repeated TemplateProgress template_progress = 2;
+  repeated TaskTypeCoverage task_type_coverage = 3;
+}
+
+message StalePracticeMode {
+  string session_mode = 1;
+  string task_type = 2;
+  optional google.protobuf.Timestamp last_practiced_at = 3;
+  int32 days_since = 4;
+}
+
+message TemplateProgress {
+  string template_id = 1;
+  int32 best_total_score = 2;
+  bool passed = 3;
+  int32 attempts_count = 4;
+  optional google.protobuf.Timestamp last_passed_at = 5;
+  optional string last_session_id = 6;
+  google.protobuf.Timestamp last_attempt_at = 7;
+}
+
+message TaskTypeCoverage {
+  string task_type = 1;
+  int32 passed_count = 2;
+  int32 attempts_count = 3;
+}
+
+message GetTaskPickerHintsRequest {
+  string user_id = 1;
+  string task_type = 2;
+}
+
+message GetTaskPickerHintsResponse {
+  repeated string passed_task_ids = 1;
+  repeated ReviewTaskCandidate review_candidates = 2;
+}
+
+message ReviewTaskCandidate {
+  string task_id = 1;
+  string task_type = 2;
+  int32 best_score = 3;
+  google.protobuf.Timestamp last_passed_at = 4;
 }

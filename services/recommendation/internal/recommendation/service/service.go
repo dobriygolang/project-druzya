@@ -45,6 +45,14 @@ type Repository interface {
 	UpdateLearningPlanItemStatus(ctx context.Context, userID, id string, status model.LearningPlanItemStatus) error
 	ListArticleReadSlugs(ctx context.Context, userID string) ([]string, error)
 	UpsertArticleRead(ctx context.Context, userID, slug string) (*model.ArticleRead, error)
+	UpsertUserTaskProgress(ctx context.Context, userID, taskID, taskType string, score int, passed bool, seenAt time.Time) error
+	ListPassedTaskIDsByType(ctx context.Context, userID, taskType string) ([]string, error)
+	ListReviewTaskCandidates(ctx context.Context, userID, taskType string, staleAfter time.Time, limit int) ([]model.ReviewTaskCandidate, error)
+	UpsertUserTemplateProgress(ctx context.Context, userID, templateID, sessionID string, totalScore, passingScore int, seenAt time.Time) error
+	ListUserTemplateProgress(ctx context.Context, userID string) ([]model.UserTemplateProgress, error)
+	UpsertPracticeModeActivity(ctx context.Context, userID, sessionMode, taskType string, passed bool, seenAt time.Time) error
+	ListPracticeModeActivity(ctx context.Context, userID string) ([]model.UserPracticeModeActivity, error)
+	ListTaskTypeCoverage(ctx context.Context, userID string) ([]model.TaskTypeCoverage, error)
 }
 
 // Service is the recommendation domain API.
@@ -61,6 +69,8 @@ type Service interface {
 	CompleteLearningPlanItem(ctx context.Context, userID, id string) error
 	DismissLearningPlanItem(ctx context.Context, userID, id string) error
 	MarkArticleRead(ctx context.Context, userID, slug string) (*model.ArticleRead, error)
+	GetTaskPickerHints(ctx context.Context, userID, taskType string) (*model.TaskPickerHints, error)
+	GetMockHubContext(ctx context.Context, userID string) (*model.MockHubContext, error)
 }
 
 type recommendationService struct {
@@ -138,6 +148,17 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 		if err := s.repo.EnsureUserProfile(txCtx, event.UserID); err != nil {
 			return fmt.Errorf("ensure user profile: %w", err)
 		}
+
+		scoreInt := normalizeScore(event.Score, 100)
+		if err := s.repo.UpsertUserTaskProgress(txCtx, event.UserID, event.TaskID, taskType, scoreInt, event.Passed, seenAt); err != nil {
+			return fmt.Errorf("upsert user task progress: %w", err)
+		}
+		if event.Mode != "" {
+			if err := s.repo.UpsertPracticeModeActivity(txCtx, event.UserID, event.Mode, taskType, event.Passed, seenAt); err != nil {
+				return fmt.Errorf("upsert practice mode activity: %w", err)
+			}
+		}
+
 		lang := locale.From(ctx)
 
 		for _, c := range criteria {
@@ -260,6 +281,12 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 		return nil, fmt.Errorf("list article reads: %w", err)
 	}
 
+	practiceActivity, err := s.repo.ListPracticeModeActivity(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list practice mode activity: %w", err)
+	}
+	staleModes := computeStalePracticeModes(practiceActivity, time.Now().UTC())
+
 	lang := locale.From(ctx)
 	brief := buildDailyBrief(
 		lang,
@@ -270,6 +297,7 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 		pendingRetries,
 		indexArticlesBySkill(articles),
 		indexReadSlugs(readSlugs),
+		staleModes,
 	)
 
 	return &model.Dashboard{

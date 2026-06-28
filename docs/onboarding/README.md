@@ -27,9 +27,9 @@ Service details: `services/<name>/AGENTS.md`. Ports: [AGENTS.md](../../AGENTS.md
 
 | From | To | Why |
 |------|-----|-----|
-| interview | content, billing | templates, quota |
+| interview | content, billing, **recommendation** | templates, quota, **task picker hints** |
 | ai | interview, content, billing | outbox, bundle, eval quota |
-| recommendation | interview, content | outbox, articles |
+| recommendation | interview, content | outbox, articles, **mock progress** |
 | sandbox | content, interview, billing | tests, submit, runs |
 | rooms | identity, billing | guest JWT, room quota |
 | billing | identity | telegram → user |
@@ -39,7 +39,9 @@ Service details: `services/<name>/AGENTS.md`. Ports: [AGENTS.md](../../AGENTS.md
 | Event | Consumer |
 |-------|----------|
 | `attempt_submitted` | ai |
-| `attempt_evaluated`, `session_completed`, `retry_item_created`, `task_skipped` | recommendation |
+| `attempt_evaluated`, `session_completed`, `retry_item_created`, `task_skipped` | recommendation (skills + **mock progress**) |
+
+Mock progress & picking: [docs/architecture/mock-progress.md](../architecture/mock-progress.md).
 
 Each worker claims only its events (not `*`).
 
@@ -56,5 +58,5 @@ Prod ops: [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md).
 
 - [ ] Excalidraw diagrams + this doc
 - [ ] [AGENTS.md](../../AGENTS.md) + [.cursor/rules/architecture-standard.mdc](../../.cursor/rules/architecture-standard.mdc)
-- [ ] Login → mock session → sandbox run → submit attempt
-- [ ] Read `services/interview/AGENTS.md` (outbox)
+- [ ] Login → mock session → sandbox run → submit attempt → **results outcome badge**
+- [ ] Read `docs/architecture/mock-progress.md` + `services/interview/AGENTS.md` (outbox, picking)

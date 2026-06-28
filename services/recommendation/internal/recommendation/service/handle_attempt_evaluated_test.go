@@ -89,6 +89,7 @@ func TestHandleAttemptEvaluated_CreatesProfileAndUpdatesSkills(t *testing.T) {
 	fx.repo.EXPECT().IsEventProcessed(ctx, model.ConsumerAttemptEvaluated, eventID).Return(false, nil)
 	expectWithTx(fx, ctx)
 	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
+	fx.repo.EXPECT().UpsertUserTaskProgress(ctx, userID, taskID, "algorithm", 45, false, mock.AnythingOfType("time.Time")).Return(nil)
 	fx.repo.EXPECT().UpsertSkillScore(ctx, userID, "algorithm.correctness", 30, mock.AnythingOfType("time.Time")).
 		Return(&model.SkillScore{SkillKey: "algorithm.correctness", Score: 30, Confidence: 10}, nil)
 	fx.repo.EXPECT().ListSkillScoresByUser(ctx, userID).Return([]model.SkillScore{
@@ -103,6 +104,30 @@ func TestHandleAttemptEvaluated_CreatesProfileAndUpdatesSkills(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestHandleAttemptEvaluated_UpsertsTaskProgressWithMode(t *testing.T) {
+	fx := setUp(t)
+	ctx := context.Background()
+	event := defaultEvent()
+	event.Mode = "algorithms_training"
+	event.Passed = true
+
+	fx.repo.EXPECT().IsEventProcessed(ctx, model.ConsumerAttemptEvaluated, eventID).Return(false, nil)
+	expectWithTx(fx, ctx)
+	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerAttemptEvaluated, eventID).Return(true, nil)
+	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
+	fx.repo.EXPECT().UpsertUserTaskProgress(ctx, userID, taskID, "algorithm", 45, true, mock.AnythingOfType("time.Time")).Return(nil)
+	fx.repo.EXPECT().UpsertPracticeModeActivity(ctx, userID, "algorithms_training", "algorithm", true, mock.AnythingOfType("time.Time")).Return(nil)
+	fx.repo.EXPECT().UpsertSkillScore(ctx, userID, "algorithm.correctness", 30, mock.AnythingOfType("time.Time")).
+		Return(&model.SkillScore{Score: 30, Confidence: 10}, nil)
+	fx.repo.EXPECT().ListSkillScoresByUser(ctx, userID).Return([]model.SkillScore{{Score: 30, Confidence: 10}}, nil)
+	fx.repo.EXPECT().UpdateReadinessScore(ctx, userID, 30).Return(nil)
+	fx.repo.EXPECT().UpsertImproveSkillRecommendation(ctx, mock.AnythingOfType("model.Recommendation")).
+		Return(&model.Recommendation{Type: model.RecommendationTypeImproveSkill}, nil)
+
+	err := fx.svc.HandleAttemptEvaluated(ctx, eventID, event)
+	require.NoError(t, err)
+}
+
 func TestHandleAttemptEvaluated_PassedDoesNotCreateRetryPlan(t *testing.T) {
 	fx := setUp(t)
 	ctx := context.Background()
@@ -111,14 +136,15 @@ func TestHandleAttemptEvaluated_PassedDoesNotCreateRetryPlan(t *testing.T) {
 
 	fx.repo.EXPECT().IsEventProcessed(ctx, model.ConsumerAttemptEvaluated, eventID).Return(false, nil)
 	expectWithTx(fx, ctx)
+	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerAttemptEvaluated, eventID).Return(true, nil)
 	fx.repo.EXPECT().EnsureUserProfile(ctx, userID).Return(nil)
+	fx.repo.EXPECT().UpsertUserTaskProgress(ctx, userID, taskID, "algorithm", 45, true, mock.AnythingOfType("time.Time")).Return(nil)
 	fx.repo.EXPECT().UpsertSkillScore(ctx, userID, "algorithm.correctness", 30, mock.AnythingOfType("time.Time")).
 		Return(&model.SkillScore{Score: 30, Confidence: 10}, nil)
 	fx.repo.EXPECT().ListSkillScoresByUser(ctx, userID).Return([]model.SkillScore{{Score: 30, Confidence: 10}}, nil)
 	fx.repo.EXPECT().UpdateReadinessScore(ctx, userID, 30).Return(nil)
 	fx.repo.EXPECT().UpsertImproveSkillRecommendation(ctx, mock.AnythingOfType("model.Recommendation")).
 		Return(&model.Recommendation{Type: model.RecommendationTypeImproveSkill}, nil)
-	fx.repo.EXPECT().ClaimEvent(ctx, model.ConsumerAttemptEvaluated, eventID).Return(true, nil)
 
 	err := fx.svc.HandleAttemptEvaluated(ctx, eventID, event)
 	require.NoError(t, err)

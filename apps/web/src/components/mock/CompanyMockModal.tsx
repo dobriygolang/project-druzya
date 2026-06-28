@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Loader2 } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { listInterviewTemplates } from '@/lib/api/content'
-import type { Company, InterviewTemplate } from '@/lib/types'
+import type { Company, InterviewTemplate, TemplateProgress } from '@/lib/types'
 import { cn } from '@/lib/cn'
 import { useI18n } from '@/lib/i18n'
 
@@ -11,6 +11,7 @@ type Props = {
   open: boolean
   onClose: () => void
   companies: Company[]
+  templateProgress?: TemplateProgress[]
   starting: boolean
   disabled: boolean
   onStart: (templateId: string) => void
@@ -20,12 +21,21 @@ export function CompanyMockModal({
   open,
   onClose,
   companies,
+  templateProgress = [],
   starting,
   disabled,
   onStart,
 }: Props) {
   const { t } = useI18n()
   const [companyId, setCompanyId] = useState<string | null>(null)
+
+  const progressByTemplate = useMemo(() => {
+    const map = new Map<string, TemplateProgress>()
+    for (const row of templateProgress) {
+      map.set(row.template_id, row)
+    }
+    return map
+  }, [templateProgress])
 
   useEffect(() => {
     if (!open) return
@@ -96,8 +106,10 @@ export function CompanyMockModal({
                   <TemplateRow
                     key={tpl.id}
                     template={tpl}
+                    progress={progressByTemplate.get(tpl.id)}
                     disabled={disabled || starting}
                     onPick={() => onStart(tpl.id)}
+                    t={t}
                   />
                 ))}
               </ul>
@@ -111,12 +123,16 @@ export function CompanyMockModal({
 
 function TemplateRow({
   template,
+  progress,
   disabled,
   onPick,
+  t,
 }: {
   template: InterviewTemplate
+  progress?: TemplateProgress
   disabled: boolean
   onPick: () => void
+  t: (key: string, vars?: Record<string, string | number>) => string
 }) {
   return (
     <li>
@@ -127,7 +143,18 @@ function TemplateRow({
         className="group flex w-full items-center gap-3 rounded-xl border border-border bg-surface-1 px-4 py-3 text-left transition-colors hover:border-border-strong hover:bg-surface-2 disabled:opacity-50"
       >
         <span className="min-w-0 flex-1">
-          <span className="block font-medium text-text-primary">{template.title}</span>
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-text-primary">{template.title}</span>
+            {progress?.passed ? (
+              <span className="rounded-full bg-brand-green/15 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-brand-green">
+                {t('mock.modal.templatePassed', { score: progress.best_total_score })}
+              </span>
+            ) : progress && progress.attempts_count > 0 ? (
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
+                {t('mock.modal.templateBest', { score: progress.best_total_score })}
+              </span>
+            ) : null}
+          </span>
           {template.description ? (
             <span className="mt-0.5 block line-clamp-2 text-[13px] text-text-secondary">
               {template.description}

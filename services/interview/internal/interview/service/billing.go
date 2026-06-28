@@ -39,3 +39,25 @@ func (s *interviewService) consumeSessionQuota(ctx context.Context, userID strin
 	}
 	return nil
 }
+
+func sessionConsumesMockQuota(mode interviewmodel.SessionMode) bool {
+	return mode != interviewmodel.ModeRetryMistakes
+}
+
+func sessionQuotaReleaseKey(sessionID string) string {
+	return "session-pause:" + sessionID
+}
+
+// releaseSessionQuota returns mock quota debited at session start (idempotent per session).
+func (s *interviewService) releaseSessionQuota(ctx context.Context, userID, sessionID string) error {
+	if s.billing == nil {
+		return nil
+	}
+	return s.billing.ReleaseUsage(
+		ctx,
+		userID,
+		billingadapter.EntitlementMockInterviewsPerMonth,
+		sessionQuotaReleaseKey(sessionID),
+		1,
+	)
+}

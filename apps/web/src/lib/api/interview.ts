@@ -9,6 +9,7 @@ import type {
   Attempt,
   Progress,
   RetryItem,
+  PracticeScope,
   Session,
   SessionMode,
   SessionSection,
@@ -31,7 +32,7 @@ export function startSession(templateId: string, mode: SessionMode = 'SESSION_MO
 /** Start a single-section training session (no company template). */
 export function startTrainingSession(input: {
   mode: SessionMode
-  practiceScope?: 'PRACTICE_SCOPE_RANDOM_ONE' | 'PRACTICE_SCOPE_COMPANY_TRACK'
+  practiceScope?: PracticeScope
   companyId?: string
 }) {
   return api<{
@@ -80,6 +81,20 @@ export function getSessionResults(sessionId: string) {
 
 export function cancelSession(sessionId: string) {
   return api<{ session: Session }>(`/interview/sessions/${sessionId}/cancel`, {
+    method: 'POST',
+    body: '{}',
+  })
+}
+
+export function pauseSession(sessionId: string) {
+  return api<{ session: Session }>(`/interview/sessions/${sessionId}/pause`, {
+    method: 'POST',
+    body: '{}',
+  })
+}
+
+export function resumeSession(sessionId: string) {
+  return api<{ session: Session; progress?: Progress }>(`/interview/sessions/${sessionId}/resume`, {
     method: 'POST',
     body: '{}',
   })

@@ -39,6 +39,18 @@ func BearerTokenFromContext(ctx context.Context) string {
 	return strings.TrimSpace(value[7:])
 }
 
+// InternalTokenFromContext reads service-to-service token from metadata.
+func InternalTokenFromContext(ctx context.Context) string {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return ""
+	}
+	if values := md.Get("x-internal-token"); len(values) > 0 {
+		return strings.TrimSpace(values[0])
+	}
+	return ""
+}
+
 // requireUserID returns authenticated user ID from context.
 func requireUserID(ctx context.Context) (string, error) {
 	userID, ok := UserIDFromContext(ctx)

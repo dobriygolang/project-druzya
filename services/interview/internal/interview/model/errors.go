@@ -10,4 +10,6 @@ var (
 	ErrInvalidInput = errors.New("invalid input")
 	// ErrSessionClosed marks operations on a non-active session.
 	ErrSessionClosed = errors.New("session closed")
+	// ErrSessionPaused marks mutations while the session is paused.
+	ErrSessionPaused = errors.New("session paused")
 )

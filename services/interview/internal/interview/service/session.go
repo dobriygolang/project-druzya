@@ -65,7 +65,7 @@ func (s *interviewService) StartInterviewSession(
 		if !ok {
 			return nil, fmt.Errorf("unsupported training mode: %w", ErrInvalidInput)
 		}
-		catalogTasks, err := s.resolveTrainingTasks(ctx, mode, input.Scope, input.CompanyID)
+		catalogTasks, err := s.resolveTrainingTasks(ctx, userID, mode, input.Scope, input.CompanyID)
 		if err != nil {
 			return nil, err
 		}
@@ -241,8 +241,9 @@ func (s *interviewService) CancelSession(ctx context.Context, userID, sessionID 
 	if err != nil {
 		return nil, err
 	}
-	if session.Status != interviewmodel.SessionStatusActive {
-		return nil, fmt.Errorf("session not active: %w", ErrInvalidInput)
+	if session.Status != interviewmodel.SessionStatusActive &&
+		session.Status != interviewmodel.SessionStatusPaused {
+		return nil, fmt.Errorf("session not cancellable: %w", ErrInvalidInput)
 	}
 	now := time.Now().UTC()
 	session.Status = interviewmodel.SessionStatusCancelled
@@ -251,6 +252,63 @@ func (s *interviewService) CancelSession(ctx context.Context, userID, sessionID 
 		return nil, err
 	}
 	return session, nil
+}
+
+func (s *interviewService) PauseSession(ctx context.Context, userID, sessionID string) (*interviewmodel.Session, error) {
+	session, err := s.repo.GetSessionForUser(ctx, userID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if session.Status != interviewmodel.SessionStatusActive {
+		return nil, fmt.Errorf("session not active: %w", ErrInvalidInput)
+	}
+	if sessionConsumesMockQuota(session.Mode) {
+		if err := s.releaseSessionQuota(ctx, userID, session.ID); err != nil {
+			return nil, err
+		}
+	}
+	now := time.Now().UTC()
+	session.Status = interviewmodel.SessionStatusPaused
+	session.UpdatedAt = now
+	if err := s.repo.UpdateSession(ctx, session); err != nil {
+		return nil, err
+	}
+	return session, nil
+}
+
+func (s *interviewService) ResumeSession(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionDetail, error) {
+	session, err := s.repo.GetSessionForUser(ctx, userID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if session.Status != interviewmodel.SessionStatusPaused {
+		return nil, fmt.Errorf("session not paused: %w", ErrInvalidInput)
+	}
+	if sessionConsumesMockQuota(session.Mode) {
+		if err := s.consumeSessionQuota(ctx, userID); err != nil {
+			return nil, err
+		}
+	}
+	now := time.Now().UTC()
+	session.Status = interviewmodel.SessionStatusActive
+	session.UpdatedAt = now
+	if err := s.repo.UpdateSession(ctx, session); err != nil {
+		return nil, err
+	}
+	sections, err := s.repo.ListSectionsBySession(ctx, session.ID)
+	if err != nil {
+		return nil, err
+	}
+	tasks, err := s.repo.ListTasksBySession(ctx, session.ID)
+	if err != nil {
+		return nil, err
+	}
+	return &interviewmodel.SessionDetail{
+		Session:  session,
+		Sections: sections,
+		Tasks:    tasks,
+		Progress: computeProgress(sections, tasks),
+	}, nil
 }
 
 func (s *interviewService) GetActiveSession(ctx context.Context, userID string) (*interviewmodel.SessionDetail, error) {

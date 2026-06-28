@@ -92,9 +92,13 @@ func ParseAttemptEvaluatedEvent(p map[string]any) (model.AttemptEvaluatedEvent, 
 		TaskID:     payload.StringField(p, "task_id"),
 		SessionID:  payload.StringField(p, "session_id"),
 		TaskType:   payload.StringField(p, "task_type"),
+		Mode:       payload.StringField(p, "mode"),
 		Passed:     payload.BoolField(p, "passed"),
 		Score:      payload.ParseScoreField(p),
 		OccurredAt: payload.ParseOccurredAt(p),
+	}
+	if templateID := payload.StringField(p, "template_id"); templateID != "" {
+		event.TemplateID = &templateID
 	}
 	if raw, ok := p["criteria"]; ok {
 		if items, ok := raw.([]any); ok {
@@ -116,8 +120,22 @@ func ParseSessionCompletedEvent(p map[string]any) (model.SessionCompletedEvent, 
 		SessionID:  payload.StringField(p, "session_id"),
 		UserID:     payload.StringField(p, "user_id"),
 		Mode:       payload.StringField(p, "mode"),
+		Outcome:    payload.StringField(p, "outcome"),
 		TotalScore: payload.ParseScoreField(p),
 		OccurredAt: payload.ParseOccurredAt(p),
+	}
+	if templateID := payload.StringField(p, "template_id"); templateID != "" {
+		event.TemplateID = &templateID
+	}
+	if passingRaw := payload.StringField(p, "passing_score"); passingRaw != "" {
+		if v, err := strconv.Atoi(passingRaw); err == nil {
+			event.PassingScore = v
+		}
+	}
+	if event.PassingScore == 0 {
+		if v, ok := p["passing_score"].(float64); ok {
+			event.PassingScore = int(v)
+		}
 	}
 	if event.SessionID == "" {
 		return event, fmt.Errorf("session_id missing in payload")

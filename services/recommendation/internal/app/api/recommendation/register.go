@@ -6,9 +6,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Register mounts RecommendationService on the gRPC server.
+// Register mounts Recommendation services on the gRPC server.
 func Register(s *grpc.Server, impl *Implementation) {
 	recommendationv1.RegisterRecommendationServiceServer(s, impl)
+	recommendationv1.RegisterRecommendationInternalServiceServer(s, impl)
 }
 
 // NewRegisteredImplementation constructs handlers and registers them on the gRPC server.

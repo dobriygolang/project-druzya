@@ -35,6 +35,7 @@ func toProtoSession(s *interviewmodel.Session) *interviewv1.Session {
 		score := s.TotalScore.String()
 		out.TotalScore = &score
 	}
+	out.Outcome = sessionOutcomeToProto(s.Outcome)
 	return out
 }
 
@@ -285,6 +286,9 @@ func mapServiceError(err error) error {
 	}
 	if errors.Is(err, interviewservice.ErrSessionClosed) {
 		return failedPrecondition("session closed")
+	}
+	if errors.Is(err, interviewservice.ErrSessionPaused) {
+		return failedPrecondition("session paused")
 	}
 	if errors.Is(err, interviewservice.ErrQuotaExceeded) {
 		return failedPrecondition("quota exceeded")

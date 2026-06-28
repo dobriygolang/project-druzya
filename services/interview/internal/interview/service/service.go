@@ -7,6 +7,7 @@ import (
 
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
 	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
+	recommendationadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/recommendation"
 	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
 	interviewmodel "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/model"
 	interviewrepo "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/repository"
@@ -32,6 +33,8 @@ type Service interface {
 	GetCurrentSessionState(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionState, error)
 	GetSessionResults(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionResults, error)
 	CancelSession(ctx context.Context, userID, sessionID string) (*interviewmodel.Session, error)
+	PauseSession(ctx context.Context, userID, sessionID string) (*interviewmodel.Session, error)
+	ResumeSession(ctx context.Context, userID, sessionID string) (*interviewmodel.SessionDetail, error)
 	GetActiveSession(ctx context.Context, userID string) (*interviewmodel.SessionDetail, error)
 	SubmitAttempt(ctx context.Context, input SubmitAttemptInput) (*interviewmodel.Attempt, error)
 	GetAttempt(ctx context.Context, userID, attemptID string) (*interviewmodel.Attempt, error)
@@ -89,6 +92,7 @@ type interviewService struct {
 	repo           Repository
 	content        contentadapter.Client
 	billing        billingadapter.Client
+	recommendation recommendationadapter.Client
 	events         eventsadapter.Publisher
 	sessionTTL     time.Duration
 	staleAfter     time.Duration
@@ -103,13 +107,14 @@ type interviewService struct {
 
 // Deps holds service dependencies.
 type Deps struct {
-	Repo          Repository
-	Content       contentadapter.Client
-	Billing       billingadapter.Client
-	Events        eventsadapter.Publisher
-	SessionTTL    time.Duration
-	StaleAfter    time.Duration
-	TrainingLimit int
+	Repo            Repository
+	Content         contentadapter.Client
+	Billing         billingadapter.Client
+	Recommendation  recommendationadapter.Client
+	Events          eventsadapter.Publisher
+	SessionTTL      time.Duration
+	StaleAfter      time.Duration
+	TrainingLimit   int
 }
 
 // New constructs interview service.
@@ -127,10 +132,11 @@ func New(deps Deps) Service {
 		stale = 45 * time.Minute
 	}
 	svc := &interviewService{
-		repo:          deps.Repo,
-		content:       deps.Content,
-		billing:       deps.Billing,
-		events:        deps.Events,
+		repo:           deps.Repo,
+		content:        deps.Content,
+		billing:        deps.Billing,
+		recommendation: deps.Recommendation,
+		events:         deps.Events,
 		sessionTTL:    ttl,
 		staleAfter:    stale,
 		trainingLimit: limit,
@@ -144,6 +150,9 @@ func New(deps Deps) Service {
 }
 
 func (s *interviewService) ensureSessionActive(session *interviewmodel.Session) error {
+	if session.Status == interviewmodel.SessionStatusPaused {
+		return ErrSessionPaused
+	}
 	if session.Status == interviewmodel.SessionStatusCancelled ||
 		session.Status == interviewmodel.SessionStatusCompleted ||
 		session.Status == interviewmodel.SessionStatusExpired {
@@ -198,6 +207,9 @@ func (s *interviewService) expireStaleForUser(ctx context.Context, userID string
 		return err
 	}
 	if !s.isSessionStale(session) {
+		return nil
+	}
+	if session.Status != interviewmodel.SessionStatusActive {
 		return nil
 	}
 	_ = s.markSessionExpired(ctx, session)

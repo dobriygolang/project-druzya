@@ -112,6 +112,29 @@ func (r *Repository) ListRetryItemsBySession(ctx context.Context, sessionID stri
 	return items, rows.Err()
 }
 
+func (r *Repository) ListPendingRetryTaskIDsForUser(ctx context.Context, userID string) ([]string, error) {
+	rows, err := r.conn(ctx).Query(ctx, `
+		SELECT task_id
+		FROM retry_items
+		WHERE user_id = $1 AND status = 'pending'
+		ORDER BY created_at
+	`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("list pending retry task ids: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var taskID string
+		if err := rows.Scan(&taskID); err != nil {
+			return nil, fmt.Errorf("scan pending retry task id: %w", err)
+		}
+		ids = append(ids, taskID)
+	}
+	return ids, rows.Err()
+}
+
 func (r *Repository) UpdateRetryItem(ctx context.Context, item *interviewmodel.RetryItem) error {
 	_, err := r.conn(ctx).Exec(ctx, `
 		UPDATE retry_items

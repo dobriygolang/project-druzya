@@ -20,7 +20,8 @@ type Config struct {
 	PostgresDSN string
 
 	JWTPublicKeyPEM  []byte
-	ContentGRPCAddr  string
+	ContentGRPCAddr         string
+	RecommendationGRPCAddr  string
 	InternalAPIToken string
 	BillingGRPCAddr  string
 	SessionTTL         time.Duration
@@ -80,8 +81,9 @@ func Load() (*Config, error) {
 		GRPCHost:         grpcListenHost(),
 		PostgresDSN:      getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5434/druzya_interview?sslmode=disable"),
 		JWTPublicKeyPEM:  publicKey,
-		ContentGRPCAddr:  getEnv("CONTENT_GRPC_ADDR", "127.0.0.1:9091"),
-		InternalAPIToken: internalToken,
+		ContentGRPCAddr:        getEnv("CONTENT_GRPC_ADDR", "127.0.0.1:9091"),
+		RecommendationGRPCAddr: getEnv("RECOMMENDATION_GRPC_ADDR", "127.0.0.1:9094"),
+		InternalAPIToken:       internalToken,
 		BillingGRPCAddr:  getEnv("BILLING_GRPC_ADDR", ""),
 		SessionTTL:          sessionTTL,
 		SessionStaleAfter:   sessionStaleAfter,

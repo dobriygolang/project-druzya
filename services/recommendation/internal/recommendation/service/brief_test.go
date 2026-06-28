@@ -27,6 +27,7 @@ func TestBuildDailyBrief_RetryAndWeakness(t *testing.T) {
 		[]interviewadapter.RetryItem{{ID: retryID, TaskID: taskID}},
 		nil,
 		nil,
+		nil,
 	)
 
 	if len(brief.Items) < 2 {
@@ -61,6 +62,7 @@ func TestBuildDailyBrief_WeaknessUsesArticle(t *testing.T) {
 			},
 		},
 		nil,
+		nil,
 	)
 
 	if len(brief.Items) != 1 {
@@ -91,6 +93,7 @@ func TestBuildDailyBrief_WeaknessUsesPracticeAfterRead(t *testing.T) {
 			skillKey: {Slug: slug, Title: "Arrays & two pointers", Summary: "Pattern guide"},
 		},
 		map[string]struct{}{slug: {}},
+		nil,
 	)
 
 	if len(brief.Items) != 1 {
@@ -105,7 +108,7 @@ func TestBuildDailyBrief_WeaknessUsesPracticeAfterRead(t *testing.T) {
 }
 
 func TestBuildDailyBrief_EmptyProfileStartMock(t *testing.T) {
-	brief := buildDailyBrief("ru", 0, nil, nil, nil, nil, nil, nil)
+	brief := buildDailyBrief("ru", 0, nil, nil, nil, nil, nil, nil, nil)
 	if len(brief.Items) != 1 {
 		t.Fatalf("expected onboarding item, got %d", len(brief.Items))
 	}

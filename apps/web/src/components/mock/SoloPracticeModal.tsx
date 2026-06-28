@@ -3,12 +3,12 @@ import { ArrowRight } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { PillButton } from '@/components/mock/PillButton'
-import type { Company, SessionMode } from '@/lib/types'
+import type { PracticeScope, SessionMode, TaskTypeCoverage } from '@/lib/types'
 import { useI18n } from '@/lib/i18n'
 
 export type SoloStartParams = {
   mode: SessionMode
-  practiceScope: 'PRACTICE_SCOPE_RANDOM_ONE' | 'PRACTICE_SCOPE_COMPANY_TRACK'
+  practiceScope: PracticeScope
   companyId?: string
 }
 
@@ -17,17 +17,24 @@ type SoloSection = {
   label: string
   hint: string
   mode: SessionMode
+  taskType: string
 }
 
 type Props = {
   open: boolean
   onClose: () => void
-  companies: Company[]
+  companies: { id: string; name: string }[]
   companiesLoading: boolean
   starting: boolean
   disabled: boolean
   initialSectionId?: string | null
+  initialScope?: 'random' | 'company' | 'review' | null
+  taskTypeCoverage?: TaskTypeCoverage[]
   onStart: (params: SoloStartParams) => void
+}
+
+function coverageForTaskType(coverage: TaskTypeCoverage[] | undefined, taskType: string) {
+  return coverage?.find((c) => c.task_type === taskType)
 }
 
 export function SoloPracticeModal({
@@ -38,6 +45,8 @@ export function SoloPracticeModal({
   starting,
   disabled,
   initialSectionId,
+  initialScope,
+  taskTypeCoverage,
   onStart,
 }: Props) {
   const { t } = useI18n()
@@ -49,31 +58,35 @@ export function SoloPracticeModal({
           label: t('mock.solo.algo'),
           hint: t('mock.solo.algoHint'),
           mode: 'SESSION_MODE_ALGORITHMS_TRAINING' as SessionMode,
+          taskType: 'algorithm',
         },
         {
           id: 'coding',
           label: t('mock.solo.coding'),
           hint: t('mock.solo.codingHint'),
           mode: 'SESSION_MODE_LIVE_CODING_TRAINING' as SessionMode,
+          taskType: 'live_coding',
         },
         {
           id: 'sysdesign',
           label: t('mock.solo.sysdesign'),
           hint: t('mock.solo.sysdesignHint'),
           mode: 'SESSION_MODE_SYSTEM_DESIGN_TRAINING' as SessionMode,
+          taskType: 'system_design',
         },
         {
           id: 'behavioral',
           label: t('mock.solo.behavioral'),
           hint: t('mock.solo.behavioralHint'),
           mode: 'SESSION_MODE_BEHAVIORAL_TRAINING' as SessionMode,
+          taskType: 'behavioral',
         },
       ] satisfies SoloSection[],
     [t],
   )
 
   const [mode, setMode] = useState<SessionMode>('SESSION_MODE_ALGORITHMS_TRAINING')
-  const [scope, setScope] = useState<'random' | 'company'>('random')
+  const [scope, setScope] = useState<'random' | 'company' | 'review'>('random')
   const [companyId, setCompanyId] = useState('')
 
   useEffect(() => {
@@ -82,9 +95,14 @@ export function SoloPracticeModal({
       ? sections.find((s) => s.id === initialSectionId)
       : sections[0]
     setMode(section?.mode ?? 'SESSION_MODE_ALGORITHMS_TRAINING')
-    setScope('random')
+    setScope(initialScope ?? 'random')
     setCompanyId(companies[0]?.id ?? '')
-  }, [open, initialSectionId, sections, companies])
+  }, [open, initialSectionId, initialScope, sections, companies])
+
+  const activeSection = sections.find((s) => s.mode === mode)
+  const coverage = activeSection
+    ? coverageForTaskType(taskTypeCoverage, activeSection.taskType)
+    : undefined
 
   const startDisabled =
     disabled ||
@@ -92,10 +110,15 @@ export function SoloPracticeModal({
     (scope === 'company' && (!companyId || companies.length === 0))
 
   function handleStart() {
+    const practiceScope: PracticeScope =
+      scope === 'company'
+        ? 'PRACTICE_SCOPE_COMPANY_TRACK'
+        : scope === 'review'
+          ? 'PRACTICE_SCOPE_REVIEW'
+          : 'PRACTICE_SCOPE_RANDOM_ONE'
     onStart({
       mode,
-      practiceScope:
-        scope === 'company' ? 'PRACTICE_SCOPE_COMPANY_TRACK' : 'PRACTICE_SCOPE_RANDOM_ONE',
+      practiceScope,
       companyId: scope === 'company' ? companyId : undefined,
     })
   }
@@ -136,6 +159,13 @@ export function SoloPracticeModal({
               {t('mock.solo.scopeRandom')}
             </PillButton>
             <PillButton
+              active={scope === 'review'}
+              onClick={() => setScope('review')}
+              title={t('mock.solo.scopeReviewHint')}
+            >
+              {t('mock.solo.scopeReview')}
+            </PillButton>
+            <PillButton
               active={scope === 'company'}
               onClick={() => setScope('company')}
               disabled={companies.length === 0}
@@ -164,8 +194,14 @@ export function SoloPracticeModal({
               </select>
             </label>
           )
+        ) : scope === 'review' ? (
+          <p className="text-[13px] text-text-muted">{t('mock.solo.reviewHint')}</p>
         ) : (
-          <p className="text-[13px] text-text-muted">{t('mock.solo.randomHint')}</p>
+          <p className="text-[13px] text-text-muted">
+            {coverage && coverage.passed_count > 0
+              ? t('mock.solo.randomHintWithCoverage', { passed: coverage.passed_count })
+              : t('mock.solo.randomHint')}
+          </p>
         )}
 
         <Button

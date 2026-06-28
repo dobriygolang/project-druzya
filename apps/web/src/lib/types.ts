@@ -70,6 +70,18 @@ export type SessionStatus =
   | 'SESSION_STATUS_COMPLETED'
   | 'SESSION_STATUS_CANCELLED'
   | 'SESSION_STATUS_EXPIRED'
+  | 'SESSION_STATUS_PAUSED'
+
+export type SessionOutcome =
+  | 'SESSION_OUTCOME_UNSPECIFIED'
+  | 'SESSION_OUTCOME_PASSED'
+  | 'SESSION_OUTCOME_FAILED'
+
+export type PracticeScope =
+  | 'PRACTICE_SCOPE_UNSPECIFIED'
+  | 'PRACTICE_SCOPE_RANDOM_ONE'
+  | 'PRACTICE_SCOPE_COMPANY_TRACK'
+  | 'PRACTICE_SCOPE_REVIEW'
 
 export type AttemptStatus =
   | 'ATTEMPT_STATUS_UNSPECIFIED'
@@ -89,6 +101,7 @@ export interface Session {
   completed_at?: string
   passing_score: number
   total_score?: string
+  outcome?: SessionOutcome
 }
 
 export interface SessionSection {
@@ -201,6 +214,36 @@ export type DailyBriefItemType =
   | 'DAILY_BRIEF_ITEM_TYPE_TAKE_MOCK'
   | 'DAILY_BRIEF_ITEM_TYPE_START_MOCK'
   | 'DAILY_BRIEF_ITEM_TYPE_READ_ARTICLE'
+  | 'DAILY_BRIEF_ITEM_TYPE_PRACTICE_STALE_MODE'
+
+export interface StalePracticeMode {
+  session_mode: string
+  task_type: string
+  last_practiced_at?: string
+  days_since: number
+}
+
+export interface TemplateProgress {
+  template_id: string
+  best_total_score: number
+  passed: boolean
+  attempts_count: number
+  last_passed_at?: string
+  last_session_id?: string
+  last_attempt_at?: string
+}
+
+export interface TaskTypeCoverage {
+  task_type: string
+  passed_count: number
+  attempts_count: number
+}
+
+export interface MockHubContext {
+  stale_modes: StalePracticeMode[]
+  template_progress: TemplateProgress[]
+  task_type_coverage: TaskTypeCoverage[]
+}
 
 export type ArticleStatus =
   | 'ARTICLE_STATUS_UNSPECIFIED'

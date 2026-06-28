@@ -2,6 +2,7 @@ package recommendationapi
 
 import (
 	"context"
+	"strings"
 
 	recommendationv1 "github.com/sedorofeevd/project-druzya/services/recommendation/pkg/api/recommendation/v1"
 	"github.com/sedorofeevd/project-druzya/services/identity/pkg/jwt"
@@ -10,8 +11,11 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const internalServicePrefix = "/recommendation.v1.RecommendationInternalService/"
+
 var protectedMethods = map[string]struct{}{
 	recommendationv1.RecommendationService_GetDashboard_FullMethodName:             {},
+	recommendationv1.RecommendationService_GetMockHubContext_FullMethodName:        {},
 	recommendationv1.RecommendationService_DismissRecommendation_FullMethodName:    {},
 	recommendationv1.RecommendationService_CompleteRecommendation_FullMethodName:   {},
 	recommendationv1.RecommendationService_CompleteLearningPlanItem_FullMethodName: {},
@@ -24,6 +28,9 @@ func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		ctx = localeFromMetadata(ctx)
 
+		if strings.HasPrefix(info.FullMethod, internalServicePrefix) {
+			return handler(ctx, req)
+		}
 		if _, ok := protectedMethods[info.FullMethod]; !ok {
 			return handler(ctx, req)
 		}

@@ -29,10 +29,10 @@ func (r *Repository) insertSessionBundle(ctx context.Context, bundle SessionBund
 	_, err := r.conn(ctx).Exec(ctx, `
 		INSERT INTO interview_sessions (
 			id, user_id, template_id, mode, status, started_at, completed_at,
-			passing_score, total_score, created_at, updated_at
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+			passing_score, total_score, outcome, created_at, updated_at
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 	`, s.ID, s.UserID, s.TemplateID, string(s.Mode), string(s.Status), s.StartedAt, s.CompletedAt,
-		s.PassingScore, decimalPtrToNumeric(s.TotalScore), s.CreatedAt, s.UpdatedAt)
+		s.PassingScore, decimalPtrToNumeric(s.TotalScore), sessionOutcomePtrToString(s.Outcome), s.CreatedAt, s.UpdatedAt)
 	if err != nil {
 		if isUniqueViolation(err) {
 			return ErrActiveSessionExists
@@ -72,7 +72,7 @@ func (r *Repository) insertSessionBundle(ctx context.Context, bundle SessionBund
 func (r *Repository) GetSessionByID(ctx context.Context, id string) (*interviewmodel.Session, error) {
 	row := r.conn(ctx).QueryRow(ctx, `
 		SELECT id, user_id, template_id, mode, status, started_at, completed_at,
-		       passing_score, total_score, created_at, updated_at
+		       passing_score, total_score, outcome, created_at, updated_at
 		FROM interview_sessions WHERE id = $1
 	`, id)
 	return scanSession(row)
@@ -81,7 +81,7 @@ func (r *Repository) GetSessionByID(ctx context.Context, id string) (*interviewm
 func (r *Repository) GetSessionForUser(ctx context.Context, userID, sessionID string) (*interviewmodel.Session, error) {
 	row := r.conn(ctx).QueryRow(ctx, `
 		SELECT id, user_id, template_id, mode, status, started_at, completed_at,
-		       passing_score, total_score, created_at, updated_at
+		       passing_score, total_score, outcome, created_at, updated_at
 		FROM interview_sessions WHERE id = $1 AND user_id = $2
 	`, sessionID, userID)
 	return scanSession(row)
@@ -90,9 +90,10 @@ func (r *Repository) GetSessionForUser(ctx context.Context, userID, sessionID st
 func (r *Repository) GetActiveSessionForUser(ctx context.Context, userID string) (*interviewmodel.Session, error) {
 	row := r.conn(ctx).QueryRow(ctx, `
 		SELECT id, user_id, template_id, mode, status, started_at, completed_at,
-		       passing_score, total_score, created_at, updated_at
+		       passing_score, total_score, outcome, created_at, updated_at
 		FROM interview_sessions
-		WHERE user_id = $1 AND status = 'active'
+		WHERE user_id = $1 AND status IN ('active', 'paused')
+		ORDER BY CASE status WHEN 'active' THEN 0 ELSE 1 END, updated_at DESC
 		LIMIT 1
 	`, userID)
 	return scanSession(row)
@@ -114,9 +115,10 @@ func (r *Repository) ExpireStaleActiveSessions(ctx context.Context, idleBefore, 
 func (r *Repository) UpdateSession(ctx context.Context, session *interviewmodel.Session) error {
 	_, err := r.conn(ctx).Exec(ctx, `
 		UPDATE interview_sessions
-		SET status = $2, completed_at = $3, total_score = $4, updated_at = $5
+		SET status = $2, completed_at = $3, total_score = $4, outcome = $5, updated_at = $6
 		WHERE id = $1
-	`, session.ID, string(session.Status), session.CompletedAt, decimalPtrToNumeric(session.TotalScore), session.UpdatedAt)
+	`, session.ID, string(session.Status), session.CompletedAt, decimalPtrToNumeric(session.TotalScore),
+		sessionOutcomePtrToString(session.Outcome), session.UpdatedAt)
 	if err != nil {
 		return fmt.Errorf("update session: %w", err)
 	}
@@ -215,9 +217,10 @@ func scanSession(row pgx.Row) (*interviewmodel.Session, error) {
 	var s interviewmodel.Session
 	var mode, status string
 	var totalScore *decimal.Decimal
+	var outcome *string
 	err := row.Scan(
 		&s.ID, &s.UserID, &s.TemplateID, &mode, &status, &s.StartedAt, &s.CompletedAt,
-		&s.PassingScore, &totalScore, &s.CreatedAt, &s.UpdatedAt,
+		&s.PassingScore, &totalScore, &outcome, &s.CreatedAt, &s.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -228,6 +231,7 @@ func scanSession(row pgx.Row) (*interviewmodel.Session, error) {
 	s.Mode = interviewmodel.SessionMode(mode)
 	s.Status = interviewmodel.SessionStatus(status)
 	s.TotalScore = totalScore
+	s.Outcome = sessionOutcomeFromString(outcome)
 	return &s, nil
 }
 
@@ -272,4 +276,20 @@ func decimalPtrToNumeric(v *decimal.Decimal) any {
 		return nil
 	}
 	return v.String()
+}
+
+func sessionOutcomePtrToString(v *interviewmodel.SessionOutcome) *string {
+	if v == nil {
+		return nil
+	}
+	s := string(*v)
+	return &s
+}
+
+func sessionOutcomeFromString(v *string) *interviewmodel.SessionOutcome {
+	if v == nil || *v == "" {
+		return nil
+	}
+	outcome := interviewmodel.SessionOutcome(*v)
+	return &outcome
 }

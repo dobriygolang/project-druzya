@@ -79,7 +79,11 @@ export default function DashboardPage() {
             title={t('today.insights.title')}
             description={t('today.insights.description')}
           />
-          <TodayActionGrid dashboard={dashboardQ.data} loading={dashboardQ.isLoading} />
+          <TodayActionGrid
+            dashboard={dashboardQ.data}
+            retryItems={retryQ.data?.items ?? []}
+            loading={dashboardQ.isLoading}
+          />
         </section>
       </ErrorBoundary>
     </TodayPageShell>

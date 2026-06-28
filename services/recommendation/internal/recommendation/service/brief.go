@@ -10,6 +10,7 @@ import (
 )
 
 const maxBriefItems = 5
+const maxStaleModeBriefItems = 2
 
 func buildDailyBrief(
 	lang string,
@@ -20,6 +21,7 @@ func buildDailyBrief(
 	pendingRetries []interviewadapter.RetryItem,
 	articlesBySkill map[string]contentadapter.Article,
 	readSlugs map[string]struct{},
+	staleModes []model.StalePracticeMode,
 ) model.DailyBrief {
 	retryByTask := make(map[string]interviewadapter.RetryItem, len(pendingRetries))
 	for _, r := range pendingRetries {
@@ -49,6 +51,26 @@ func buildDailyBrief(
 			Title:       plan.Title,
 			ActionLabel: strPtr(copy.BriefRetryAction(lang)),
 			RetryItemID: &retryID,
+		})
+	}
+
+	for i, stale := range staleModes {
+		if i >= maxStaleModeBriefItems || len(items) >= maxBriefItems {
+			break
+		}
+		soloID := soloIDFromSessionMode(stale.SessionMode)
+		if soloID == "" {
+			continue
+		}
+		path := fmt.Sprintf("/mock?solo=%s", soloID)
+		desc := copy.BriefStaleModeDescription(lang, sectionLabelFromMode(stale.SessionMode), stale.DaysSince)
+		action := copy.BriefPracticeAction(lang)
+		items = append(items, model.DailyBriefItem{
+			Type:        model.DailyBriefItemTypePracticeStaleMode,
+			Title:       copy.BriefStaleModeTitle(lang, sectionLabelFromMode(stale.SessionMode)),
+			Description: &desc,
+			ActionLabel: &action,
+			ActionPath:  &path,
 		})
 	}
 

@@ -85,23 +85,20 @@ export function RunOutputPanel({
         : run.status.toUpperCase()
     : null
 
+  // Dark panel uses fixed VS Code-like colors — not page --ink-* vars (light theme = dark ink on dark panel).
   const shellClass = light
     ? 'border-t border-border bg-surface-1 text-text-primary'
-    : 'border-t border-[var(--hair-2)] bg-[rgba(15,15,17,0.96)] font-mono backdrop-blur-[20px]'
-
-  const tabActive = light ? 'text-text-primary' : 'rgb(var(--ink))'
-  const tabIdle = light ? 'text-text-muted' : 'var(--ink-40)'
+    : 'border-t border-white/10 bg-[#1a1a1a] font-mono text-[#d4d4d4] backdrop-blur-[20px]'
 
   return (
     <div className={`${positionClass} flex flex-col ${shellClass}`} style={{ height: PANEL_HEIGHT }}>
       <div
-        className={`flex items-center justify-between border-b px-4 py-2.5 ${light ? 'border-border' : 'border-[var(--hair)]'}`}
+        className={`flex items-center justify-between border-b px-4 py-2.5 ${light ? 'border-border' : 'border-white/10'}`}
       >
         <div className="flex items-center gap-3.5">
           {panelLabel ? (
             <span
-              className={`text-[10px] uppercase tracking-[0.08em] ${light ? 'font-medium text-text-muted' : ''}`}
-              style={light ? undefined : { color: 'var(--ink-40)' }}
+              className={`text-[10px] uppercase tracking-[0.08em] ${light ? 'font-medium text-text-muted' : 'text-[#858585]'}`}
             >
               {panelLabel}
             </span>
@@ -111,40 +108,56 @@ export function RunOutputPanel({
               key={t}
               type="button"
               onClick={() => onTabChange(t)}
-              className={`border-none bg-transparent p-0 text-[10px] uppercase tracking-[0.08em] transition-colors ${light ? 'font-medium' : ''}`}
-              style={{ color: tab === t ? tabActive : tabIdle }}
+              className={`border-none bg-transparent p-0 text-[10px] uppercase tracking-[0.08em] transition-colors ${
+                light
+                  ? tab === t
+                    ? 'font-medium text-text-primary'
+                    : 'font-medium text-text-muted'
+                  : tab === t
+                    ? 'text-[#d4d4d4]'
+                    : 'text-[#858585] hover:text-[#d4d4d4]'
+              }`}
             >
               {t}
             </button>
           ))}
           {statusLabel ? (
             <span
-              className="font-mono text-[10px] tracking-[0.08em]"
-              style={{
-                color:
-                  run && isRunnerError(run.status)
-                    ? 'var(--red)'
-                    : light
-                      ? undefined
-                      : 'var(--ink-40)',
-              }}
+              className={`font-mono text-[10px] tracking-[0.08em] ${
+                run && isRunnerError(run.status)
+                  ? 'text-[#f48771]'
+                  : light
+                    ? 'text-text-muted'
+                    : 'text-[#858585]'
+              }`}
             >
-              <span className={light ? 'text-text-muted' : undefined}>{statusLabel}</span>
+              {statusLabel}
             </span>
           ) : null}
         </div>
         <button
           type="button"
           onClick={onClose}
-          className={`border-none bg-transparent text-sm leading-none transition-colors hover:text-text-primary ${light ? 'text-text-muted' : 'text-[var(--ink-40)] hover:text-[rgb(var(--ink))]'}`}
+          className={`border-none bg-transparent text-sm leading-none transition-colors ${
+            light
+              ? 'text-text-muted hover:text-text-primary'
+              : 'text-[#858585] hover:text-[#d4d4d4]'
+          }`}
           title={closeTitle ?? 'Close output'}
         >
           ×
         </button>
       </div>
       <pre
-        className={`m-0 flex-1 overflow-auto px-4 py-3 text-xs whitespace-pre-wrap ${light ? 'font-mono text-text-primary' : ''}`}
-        style={{ color: tab === 'stderr' ? 'var(--red)' : light ? undefined : 'rgb(var(--ink))' }}
+        className={`m-0 flex-1 overflow-auto px-4 py-3 text-xs whitespace-pre-wrap ${
+          tab === 'stderr'
+            ? light
+              ? 'font-mono text-danger'
+              : 'text-[#f48771]'
+            : light
+              ? 'font-mono text-text-primary'
+              : 'text-[#d4d4d4]'
+        }`}
       >
         {panelBody({ tab, run, running, error })}
       </pre>

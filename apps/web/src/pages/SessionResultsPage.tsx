@@ -90,6 +90,8 @@ export default function SessionResultsPage() {
   const { session, sections, progress } = results
   const passed = evaluations.filter((e) => e.summary.passed).length
   const failed = evaluations.length - passed
+  const sessionPassed = session.outcome === 'SESSION_OUTCOME_PASSED'
+  const sessionFailed = session.outcome === 'SESSION_OUTCOME_FAILED'
   const pendingEvaluations =
     progress.evaluated_tasks > evaluations.length &&
     session.status === 'SESSION_STATUS_COMPLETED'
@@ -106,6 +108,15 @@ export default function SessionResultsPage() {
           {labels.sessionMode(session.mode)}
         </p>
         <h1 className="font-display text-3xl font-bold leading-tight">{t('results.title')}</h1>
+        {sessionPassed ? (
+          <p className="inline-flex w-fit items-center rounded-full bg-brand-green/15 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-brand-green">
+            {t('results.outcomePassed', { score: session.total_score ?? '—', threshold: session.passing_score })}
+          </p>
+        ) : sessionFailed ? (
+          <p className="inline-flex w-fit items-center rounded-full bg-danger/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-danger">
+            {t('results.outcomeFailed', { score: session.total_score ?? '—', threshold: session.passing_score })}
+          </p>
+        ) : null}
         <p className="text-[14px] text-text-secondary">
           {labels.sessionStatus(session.status)}
           {session.total_score ? t('results.totalScore', { score: session.total_score }) : ''}

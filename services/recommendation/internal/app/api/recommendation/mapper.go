@@ -114,3 +114,73 @@ func toProtoLearningPlan(items []model.LearningPlanItem) []*recommendationv1.Lea
 	}
 	return out
 }
+
+func toProtoMockHubContext(h *model.MockHubContext) *recommendationv1.GetMockHubContextResponse {
+	if h == nil {
+		return &recommendationv1.GetMockHubContextResponse{}
+	}
+	staleModes := make([]*recommendationv1.StalePracticeMode, 0, len(h.StaleModes))
+	for _, m := range h.StaleModes {
+		item := &recommendationv1.StalePracticeMode{
+			SessionMode: m.SessionMode,
+			TaskType:    m.TaskType,
+			DaysSince:   int32(m.DaysSince),
+		}
+		if m.LastPracticedAt != nil {
+			item.LastPracticedAt = timestamppb.New(*m.LastPracticedAt)
+		}
+		staleModes = append(staleModes, item)
+	}
+
+	templateProgress := make([]*recommendationv1.TemplateProgress, 0, len(h.TemplateProgress))
+	for _, p := range h.TemplateProgress {
+		item := &recommendationv1.TemplateProgress{
+			TemplateId:     p.TemplateID,
+			BestTotalScore: int32(p.BestTotalScore),
+			Passed:         p.Passed,
+			AttemptsCount:  int32(p.AttemptsCount),
+			LastAttemptAt:  timestamppb.New(p.LastAttemptAt),
+		}
+		if p.LastPassedAt != nil {
+			item.LastPassedAt = timestamppb.New(*p.LastPassedAt)
+		}
+		if p.LastSessionID != nil {
+			item.LastSessionId = p.LastSessionID
+		}
+		templateProgress = append(templateProgress, item)
+	}
+
+	coverage := make([]*recommendationv1.TaskTypeCoverage, 0, len(h.TaskTypeCoverage))
+	for _, c := range h.TaskTypeCoverage {
+		coverage = append(coverage, &recommendationv1.TaskTypeCoverage{
+			TaskType:      c.TaskType,
+			PassedCount:   int32(c.PassedCount),
+			AttemptsCount: int32(c.AttemptsCount),
+		})
+	}
+
+	return &recommendationv1.GetMockHubContextResponse{
+		StaleModes:       staleModes,
+		TemplateProgress: templateProgress,
+		TaskTypeCoverage: coverage,
+	}
+}
+
+func toProtoTaskPickerHints(h *model.TaskPickerHints) *recommendationv1.GetTaskPickerHintsResponse {
+	if h == nil {
+		return &recommendationv1.GetTaskPickerHintsResponse{}
+	}
+	review := make([]*recommendationv1.ReviewTaskCandidate, 0, len(h.ReviewCandidates))
+	for _, c := range h.ReviewCandidates {
+		review = append(review, &recommendationv1.ReviewTaskCandidate{
+			TaskId:       c.TaskID,
+			TaskType:     c.TaskType,
+			BestScore:    int32(c.BestScore),
+			LastPassedAt: timestamppb.New(c.LastPassedAt),
+		})
+	}
+	return &recommendationv1.GetTaskPickerHintsResponse{
+		PassedTaskIds:    append([]string(nil), h.PassedTaskIDs...),
+		ReviewCandidates: review,
+	}
+}

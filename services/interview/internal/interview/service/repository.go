@@ -39,6 +39,7 @@ type Repository interface {
 	GetRetryItemForUser(ctx context.Context, userID, retryItemID string) (*interviewmodel.RetryItem, error)
 	ListPendingRetryItems(ctx context.Context, userID string) ([]interviewmodel.RetryItem, error)
 	ListRetryItemsBySession(ctx context.Context, sessionID string) ([]interviewmodel.RetryItem, error)
+	ListPendingRetryTaskIDsForUser(ctx context.Context, userID string) ([]string, error)
 	UpdateRetryItem(ctx context.Context, item *interviewmodel.RetryItem) error
 	InsertOutbox(ctx context.Context, eventName string, payload map[string]any) error
 	ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]interviewmodel.OutboxMessage, error)

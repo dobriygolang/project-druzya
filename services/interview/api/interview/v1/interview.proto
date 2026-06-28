@@ -25,6 +25,7 @@ enum SessionStatus {
   SESSION_STATUS_COMPLETED = 2;
   SESSION_STATUS_CANCELLED = 3;
   SESSION_STATUS_EXPIRED = 4;
+  SESSION_STATUS_PAUSED = 5;
 }
 
 enum SectionStatus {
@@ -60,12 +61,20 @@ enum RetryItemStatus {
 }
 
 // PracticeScope controls solo/training task selection (not company_interview templates).
+enum SessionOutcome {
+  SESSION_OUTCOME_UNSPECIFIED = 0;
+  SESSION_OUTCOME_PASSED = 1;
+  SESSION_OUTCOME_FAILED = 2;
+}
+
 enum PracticeScope {
   PRACTICE_SCOPE_UNSPECIFIED = 0;
   // One random published task of the training mode type (default for solo).
   PRACTICE_SCOPE_RANDOM_ONE = 1;
   // All tasks from the company's interview template section for this mode, shuffled.
   PRACTICE_SCOPE_COMPANY_TRACK = 2;
+  // Prefer tasks the user should review (weak skills / recent mistakes).
+  PRACTICE_SCOPE_REVIEW = 3;
 }
 
 service InterviewService {
@@ -97,6 +106,20 @@ service InterviewService {
   rpc CancelSession(CancelSessionRequest) returns (CancelSessionResponse) {
     option (google.api.http) = {
       post: "/v1/interview/sessions/{session_id}/cancel"
+      body: "*"
+    };
+  }
+
+  rpc PauseSession(PauseSessionRequest) returns (PauseSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/sessions/{session_id}/pause"
+      body: "*"
+    };
+  }
+
+  rpc ResumeSession(ResumeSessionRequest) returns (ResumeSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/interview/sessions/{session_id}/resume"
       body: "*"
     };
   }
@@ -171,6 +194,7 @@ message Session {
   optional string total_score = 9;
   google.protobuf.Timestamp created_at = 10;
   google.protobuf.Timestamp updated_at = 11;
+  optional SessionOutcome outcome = 12;
 }
 
 message SessionSection {
@@ -308,6 +332,23 @@ message CancelSessionRequest {
 
 message CancelSessionResponse {
   Session session = 1;
+}
+
+message PauseSessionRequest {
+  string session_id = 1;
+}
+
+message PauseSessionResponse {
+  Session session = 1;
+}
+
+message ResumeSessionRequest {
+  string session_id = 1;
+}
+
+message ResumeSessionResponse {
+  Session session = 1;
+  optional Progress progress = 2;
 }
 
 message GetActiveSessionRequest {}

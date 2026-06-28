@@ -84,6 +84,8 @@ func dailyBriefItemTypeToProto(t recommendationmodel.DailyBriefItemType) recomme
 		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_START_MOCK
 	case recommendationmodel.DailyBriefItemTypeReadArticle:
 		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_READ_ARTICLE
+	case recommendationmodel.DailyBriefItemTypePracticeStaleMode:
+		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_PRACTICE_STALE_MODE
 	default:
 		return recommendationv1.DailyBriefItemType_DAILY_BRIEF_ITEM_TYPE_UNSPECIFIED
 	}

@@ -273,6 +273,125 @@ func (_c *Service_GetDashboard_Call) RunAndReturn(run func(context.Context, stri
 	return _c
 }
 
+// GetMockHubContext provides a mock function with given fields: ctx, userID
+func (_m *Service) GetMockHubContext(ctx context.Context, userID string) (*model.MockHubContext, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMockHubContext")
+	}
+
+	var r0 *model.MockHubContext
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*model.MockHubContext, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.MockHubContext); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.MockHubContext)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Service_GetMockHubContext_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMockHubContext'
+type Service_GetMockHubContext_Call struct {
+	*mock.Call
+}
+
+// GetMockHubContext is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+func (_e *Service_Expecter) GetMockHubContext(ctx interface{}, userID interface{}) *Service_GetMockHubContext_Call {
+	return &Service_GetMockHubContext_Call{Call: _e.mock.On("GetMockHubContext", ctx, userID)}
+}
+
+func (_c *Service_GetMockHubContext_Call) Run(run func(ctx context.Context, userID string)) *Service_GetMockHubContext_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Service_GetMockHubContext_Call) Return(_a0 *model.MockHubContext, _a1 error) *Service_GetMockHubContext_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Service_GetMockHubContext_Call) RunAndReturn(run func(context.Context, string) (*model.MockHubContext, error)) *Service_GetMockHubContext_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetTaskPickerHints provides a mock function with given fields: ctx, userID, taskType
+func (_m *Service) GetTaskPickerHints(ctx context.Context, userID string, taskType string) (*model.TaskPickerHints, error) {
+	ret := _m.Called(ctx, userID, taskType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTaskPickerHints")
+	}
+
+	var r0 *model.TaskPickerHints
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) (*model.TaskPickerHints, error)); ok {
+		return rf(ctx, userID, taskType)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) *model.TaskPickerHints); ok {
+		r0 = rf(ctx, userID, taskType)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.TaskPickerHints)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, userID, taskType)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Service_GetTaskPickerHints_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTaskPickerHints'
+type Service_GetTaskPickerHints_Call struct {
+	*mock.Call
+}
+
+// GetTaskPickerHints is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - taskType string
+func (_e *Service_Expecter) GetTaskPickerHints(ctx interface{}, userID interface{}, taskType interface{}) *Service_GetTaskPickerHints_Call {
+	return &Service_GetTaskPickerHints_Call{Call: _e.mock.On("GetTaskPickerHints", ctx, userID, taskType)}
+}
+
+func (_c *Service_GetTaskPickerHints_Call) Run(run func(ctx context.Context, userID string, taskType string)) *Service_GetTaskPickerHints_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Service_GetTaskPickerHints_Call) Return(_a0 *model.TaskPickerHints, _a1 error) *Service_GetTaskPickerHints_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Service_GetTaskPickerHints_Call) RunAndReturn(run func(context.Context, string, string) (*model.TaskPickerHints, error)) *Service_GetTaskPickerHints_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // HandleAttemptEvaluated provides a mock function with given fields: ctx, eventID, event
 func (_m *Service) HandleAttemptEvaluated(ctx context.Context, eventID string, event model.AttemptEvaluatedEvent) error {
 	ret := _m.Called(ctx, eventID, event)

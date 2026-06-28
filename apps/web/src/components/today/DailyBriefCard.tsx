@@ -7,7 +7,14 @@ import { startRetrySession } from '@/lib/api/interview'
 import { useI18n } from '@/lib/i18n'
 import type { DailyBrief } from '@/lib/types'
 
-export function DailyBriefCard({ brief }: { brief?: DailyBrief | null }) {
+export function DailyBriefCard({
+  brief,
+  hideRetryItems = false,
+}: {
+  brief?: DailyBrief | null
+  /** When the learning plan block lists pending retries, skip duplicate retry rows here. */
+  hideRetryItems?: boolean
+}) {
   const { t } = useI18n()
   const navigate = useNavigate()
 
@@ -16,18 +23,17 @@ export function DailyBriefCard({ brief }: { brief?: DailyBrief | null }) {
     onSuccess: (data) => navigate(`/interview/session/${data.session.id}`),
   })
 
-  const items = brief?.items ?? []
+  const items = (brief?.items ?? []).filter(
+    (item) =>
+      !hideRetryItems ||
+      (item.type !== 'DAILY_BRIEF_ITEM_TYPE_RETRY_TASK' && !item.retry_item_id),
+  )
   if (items.length === 0) {
     return <p className="text-[13px] text-text-muted">{t('today.actions.briefEmpty')}</p>
   }
 
-  const readiness = brief?.readiness_score ?? 0
-
   return (
     <div className="space-y-3">
-      <p className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
-        {t('today.actions.briefReadiness', { score: readiness })}
-      </p>
       <ul className="flex flex-col gap-2.5">
         {items.map((item, index) => {
           const actionLabel = item.action_label ?? t('today.actions.briefDefaultAction')

@@ -7,6 +7,8 @@ import (
 	billingadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing"
 	billinggrpc "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/billing/grpc"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/content"
+	recommendationadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/recommendation"
+	recommendationgrpc "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/recommendation/grpc"
 	eventsadapter "github.com/sedorofeevd/project-druzya/services/interview/internal/adapter/events"
 	"github.com/sedorofeevd/project-druzya/services/interview/internal/config"
 	interviewrepo "github.com/sedorofeevd/project-druzya/services/interview/internal/interview/repository"
@@ -20,9 +22,11 @@ type App struct {
 	Config        *config.Config
 	Logger        logger.Logger
 	Postgres      *interviewrepo.Pool
-	ContentClient *contentadapter.GRPCClient
-	BillingClient billingadapter.Client
-	billingConn   *billinggrpc.Client
+	ContentClient       *contentadapter.GRPCClient
+	BillingClient       billingadapter.Client
+	RecommendationClient recommendationadapter.Client
+	billingConn         *billinggrpc.Client
+	recommendationConn  *recommendationgrpc.Client
 	JWT           *jwt.Validator
 	Service       interviewservice.Service
 }
@@ -69,31 +73,52 @@ func New(ctx context.Context) (*App, error) {
 		billingClient = billingConn
 	}
 
+	var recommendationClient recommendationadapter.Client
+	var recommendationConn *recommendationgrpc.Client
+	if cfg.RecommendationGRPCAddr != "" {
+		recommendationConn, err = recommendationgrpc.NewClient(ctx, cfg.RecommendationGRPCAddr, cfg.InternalAPIToken)
+		if err != nil {
+			if billingConn != nil {
+				_ = billingConn.Close()
+			}
+			_ = contentClient.Close()
+			pg.Close()
+			return nil, fmt.Errorf("init recommendation client: %w", err)
+		}
+		recommendationClient = recommendationConn
+	}
+
 	repo := interviewrepo.New(pg)
 	svc := interviewservice.New(interviewservice.Deps{
-		Repo:          repo,
-		Content:       contentClient,
-		Billing:       billingClient,
-		Events:        events,
-		SessionTTL:    cfg.SessionTTL,
-		StaleAfter:    cfg.SessionStaleAfter,
-		TrainingLimit: cfg.TrainingLimit,
+		Repo:           repo,
+		Content:        contentClient,
+		Billing:        billingClient,
+		Recommendation: recommendationClient,
+		Events:         events,
+		SessionTTL:     cfg.SessionTTL,
+		StaleAfter:     cfg.SessionStaleAfter,
+		TrainingLimit:  cfg.TrainingLimit,
 	})
 
 	return &App{
-		Config:        cfg,
-		Logger:        log,
-		Postgres:      pg,
-		ContentClient: contentClient,
-		BillingClient: billingClient,
-		billingConn:   billingConn,
-		JWT:           jwtValidator,
-		Service:       svc,
+		Config:               cfg,
+		Logger:               log,
+		Postgres:             pg,
+		ContentClient:        contentClient,
+		BillingClient:        billingClient,
+		RecommendationClient: recommendationClient,
+		billingConn:          billingConn,
+		recommendationConn:   recommendationConn,
+		JWT:                  jwtValidator,
+		Service:              svc,
 	}, nil
 }
 
 // Close releases adapter resources.
 func (a *App) Close() {
+	if a.recommendationConn != nil {
+		_ = a.recommendationConn.Close()
+	}
 	if a.billingConn != nil {
 		_ = a.billingConn.Close()
 	}

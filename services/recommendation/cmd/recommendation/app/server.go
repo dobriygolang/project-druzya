@@ -24,6 +24,7 @@ func RunAPI(ctx context.Context, a *App) error {
 
 	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(
 		recommendationapi.AuthInterceptor(a.JWT),
+		recommendationapi.InternalAuthInterceptor(a.Config.InternalAPIToken),
 	))
 	recommendationapi.NewRegisteredImplementation(grpcSrv, a.Service)
 	reflection.Register(grpcSrv)

@@ -18,6 +18,7 @@ type Session struct {
 	CompletedAt  *time.Time
 	PassingScore int
 	TotalScore   *decimal.Decimal
+	Outcome      *SessionOutcome
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

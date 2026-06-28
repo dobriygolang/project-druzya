@@ -70,11 +70,14 @@ type LearningPlanItem struct {
 
 // SessionCompletedEvent is the interview session_completed outbox payload.
 type SessionCompletedEvent struct {
-	SessionID  string
-	UserID     string
-	Mode       string
-	TotalScore float64
-	OccurredAt time.Time
+	SessionID    string
+	UserID       string
+	Mode         string
+	TemplateID   *string
+	TotalScore   float64
+	Outcome      string
+	PassingScore int
+	OccurredAt   time.Time
 }
 
 // RetryItemCreatedEvent is the interview retry_item_created outbox payload.
@@ -98,15 +101,92 @@ type TaskSkippedEvent struct {
 
 // AttemptEvaluatedEvent is the interview outbox payload.
 type AttemptEvaluatedEvent struct {
-	AttemptID    string
-	UserID       string
+	AttemptID  string
+	UserID     string
+	TaskID     string
+	SessionID  string
+	TaskType   string
+	Mode       string
+	TemplateID *string
+	Criteria   []any
+	Score      float64
+	Passed     bool
+	OccurredAt time.Time
+}
+
+// UserTaskProgress tracks per-task mock practice outcomes for a user.
+type UserTaskProgress struct {
+	UserID        string
+	TaskID        string
+	TaskType      string
+	BestScore     int
+	Passed        bool
+	AttemptsCount int
+	FirstPassedAt *time.Time
+	LastPassedAt  *time.Time
+	LastAttemptAt time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+// UserTemplateProgress tracks company mock template outcomes for a user.
+type UserTemplateProgress struct {
+	UserID         string
+	TemplateID     string
+	BestTotalScore int
+	Passed         bool
+	AttemptsCount  int
+	LastPassedAt   *time.Time
+	LastSessionID  *string
+	LastAttemptAt  time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// UserPracticeModeActivity tracks last solo/training mode practice for a user.
+type UserPracticeModeActivity struct {
+	UserID           string
+	SessionMode      string
+	TaskType         string
+	LastPracticedAt  time.Time
+	PassedTasksCount int
+	UpdatedAt        time.Time
+}
+
+// StalePracticeMode is a training mode the user has not practiced recently.
+type StalePracticeMode struct {
+	SessionMode     string
+	TaskType        string
+	LastPracticedAt *time.Time
+	DaysSince       int
+}
+
+// ReviewTaskCandidate is a previously passed task due for spaced review.
+type ReviewTaskCandidate struct {
 	TaskID       string
-	SessionID    string
 	TaskType     string
-	Criteria     []any
-	Score        float64
-	Passed       bool
-	OccurredAt   time.Time
+	BestScore    int
+	LastPassedAt time.Time
+}
+
+// TaskTypeCoverage summarizes task progress for one task type.
+type TaskTypeCoverage struct {
+	TaskType      string
+	PassedCount   int
+	AttemptsCount int
+}
+
+// TaskPickerHints supports interview task selection UI.
+type TaskPickerHints struct {
+	PassedTaskIDs    []string
+	ReviewCandidates []ReviewTaskCandidate
+}
+
+// MockHubContext aggregates mock hub progress for the web client.
+type MockHubContext struct {
+	StaleModes         []StalePracticeMode
+	TemplateProgress   []UserTemplateProgress
+	TaskTypeCoverage   []TaskTypeCoverage
 }
 
 // CriterionScore is a parsed evaluation criterion.

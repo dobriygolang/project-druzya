@@ -12,6 +12,8 @@ func practiceScopeFromProto(scope interviewv1.PracticeScope) (interviewmodel.Pra
 		return interviewmodel.PracticeScopeRandomOne, nil
 	case interviewv1.PracticeScope_PRACTICE_SCOPE_COMPANY_TRACK:
 		return interviewmodel.PracticeScopeCompanyTrack, nil
+	case interviewv1.PracticeScope_PRACTICE_SCOPE_REVIEW:
+		return interviewmodel.PracticeScopeReview, nil
 	default:
 		return "", invalidArgument("invalid practice scope")
 	}
@@ -69,6 +71,8 @@ func sessionStatusToProto(status interviewmodel.SessionStatus) interviewv1.Sessi
 		return interviewv1.SessionStatus_SESSION_STATUS_CANCELLED
 	case interviewmodel.SessionStatusExpired:
 		return interviewv1.SessionStatus_SESSION_STATUS_EXPIRED
+	case interviewmodel.SessionStatusPaused:
+		return interviewv1.SessionStatus_SESSION_STATUS_PAUSED
 	default:
 		return interviewv1.SessionStatus_SESSION_STATUS_UNSPECIFIED
 	}
@@ -131,6 +135,22 @@ func retryItemStatusToProto(status interviewmodel.RetryItemStatus) interviewv1.R
 		return interviewv1.RetryItemStatus_RETRY_ITEM_STATUS_DISMISSED
 	default:
 		return interviewv1.RetryItemStatus_RETRY_ITEM_STATUS_UNSPECIFIED
+	}
+}
+
+func sessionOutcomeToProto(outcome *interviewmodel.SessionOutcome) *interviewv1.SessionOutcome {
+	if outcome == nil {
+		return nil
+	}
+	switch *outcome {
+	case interviewmodel.SessionOutcomePassed:
+		val := interviewv1.SessionOutcome_SESSION_OUTCOME_PASSED
+		return &val
+	case interviewmodel.SessionOutcomeFailed:
+		val := interviewv1.SessionOutcome_SESSION_OUTCOME_FAILED
+		return &val
+	default:
+		return nil
 	}
 }
 

@@ -172,6 +172,20 @@ func BriefStartMockDescription(lang string) string {
 	return "Пройди mock-интервью — появятся readiness, слабые зоны и план обучения."
 }
 
+func BriefStaleModeTitle(lang, section string) string {
+	if locale.Normalize(lang) == locale.EN {
+		return fmt.Sprintf("Refresh %s practice", section)
+	}
+	return fmt.Sprintf("Освежить практику: %s", section)
+}
+
+func BriefStaleModeDescription(lang, section string, daysSince int) string {
+	if locale.Normalize(lang) == locale.EN {
+		return fmt.Sprintf("You have not practiced %s in %d+ days — a short solo session keeps skills sharp.", section, daysSince)
+	}
+	return fmt.Sprintf("Вы не практиковали %s уже %d+ дней — короткая solo-сессия поможет не потерять навык.", section, daysSince)
+}
+
 func RetryTaskTitle(lang, taskTitle string) string {
 	if taskTitle == "" {
 		if locale.Normalize(lang) == locale.EN {

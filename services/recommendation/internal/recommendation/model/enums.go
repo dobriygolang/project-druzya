@@ -56,7 +56,8 @@ const (
 	DailyBriefItemTypeRecommendation DailyBriefItemType = "recommendation"
 	DailyBriefItemTypeTakeMock       DailyBriefItemType = "take_mock"
 	DailyBriefItemTypeStartMock      DailyBriefItemType = "start_mock"
-	DailyBriefItemTypeReadArticle    DailyBriefItemType = "read_article"
+	DailyBriefItemTypeReadArticle       DailyBriefItemType = "read_article"
+	DailyBriefItemTypePracticeStaleMode DailyBriefItemType = "practice_stale_mode"
 )
 
 // ParseRecommendationType validates a DB/API recommendation type string.

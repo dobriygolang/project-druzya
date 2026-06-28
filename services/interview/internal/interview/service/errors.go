@@ -15,6 +15,7 @@ var (
 	ErrForbidden               = errors.New("forbidden")
 	ErrInvalidInput            = interviewmodel.ErrInvalidInput
 	ErrSessionClosed           = interviewmodel.ErrSessionClosed
+	ErrSessionPaused           = interviewmodel.ErrSessionPaused
 	ErrQuotaExceeded           = errors.New("quota exceeded")
 	ErrFeatureDisabled         = errors.New("feature disabled")
 )

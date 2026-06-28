@@ -81,4 +81,20 @@ func (c *Client) CheckAndConsumeUsage(ctx context.Context, userID, key string, a
 	return nil
 }
 
+func (c *Client) ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) error {
+	if amount <= 0 {
+		amount = 1
+	}
+	if idempotencyKey == "" {
+		return fmt.Errorf("idempotency key required")
+	}
+	_, err := c.client.ReleaseUsage(c.authCtx(ctx), &billingv1.ReleaseUsageRequest{
+		UserId:         userID,
+		Key:            key,
+		IdempotencyKey: idempotencyKey,
+		Amount:         int32(amount),
+	})
+	return err
+}
+
 var _ billingadapter.Client = (*Client)(nil)

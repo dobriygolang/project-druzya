@@ -16,22 +16,26 @@ import { listCompanies } from '@/lib/api/content'
 import {
   cancelSession,
   getActiveSession,
+  resumeSession,
   startSession,
   startTrainingSession,
 } from '@/lib/api/interview'
-import { listMyActiveRooms } from '@/lib/api/rooms'
+import { getMockHubContext } from '@/lib/api/recommendation'
+import { soloSectionIdFromSessionMode, sessionModeLabelKey } from '@/lib/mock/mockProgress'
 import { formatApiError, readAccessToken } from '@/lib/apiClient'
 import { useBillingLabels } from '@/lib/billingLabels'
 import { isActiveSessionConflict, useInterviewLabels } from '@/lib/interviewLabels'
 import { useI18n } from '@/lib/i18n'
 import { persistGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
-import type { Progress, Session } from '@/lib/types'
+import { listMyActiveRooms } from '@/lib/api/rooms'
+import type { PracticeScope, Progress, Session, StalePracticeMode } from '@/lib/types'
 
 export default function MockHubPage() {
   const { t, locale, formatDate } = useI18n()
   const [searchParams] = useSearchParams()
   const soloFocus = searchParams.get('solo')
+  const soloScope = searchParams.get('scope')
   const soloCardRef = useRef<HTMLDivElement>(null)
   const { formatLimitUsage } = useBillingLabels()
   const { sessionModeLabel, formatInterviewError } = useInterviewLabels()
@@ -57,6 +61,11 @@ export default function MockHubPage() {
     enabled: authed,
     refetchInterval: 30_000,
   })
+  const mockHubQ = useQuery({
+    queryKey: ['mock-hub-context'],
+    queryFn: getMockHubContext,
+    enabled: authed,
+  })
 
   function notifyError(err: unknown) {
     const raw = formatApiError(err)
@@ -79,7 +88,7 @@ export default function MockHubPage() {
   const startSoloM = useMutation({
     mutationFn: (params: {
       mode: import('@/lib/types').SessionMode
-      practiceScope: 'PRACTICE_SCOPE_RANDOM_ONE' | 'PRACTICE_SCOPE_COMPANY_TRACK'
+      practiceScope: PracticeScope
       companyId?: string
     }) =>
       startTrainingSession({
@@ -101,7 +110,18 @@ export default function MockHubPage() {
     mutationFn: (sessionId: string) => cancelSession(sessionId),
     onSuccess: () => {
       void activeQ.refetch()
+      void qc.invalidateQueries({ queryKey: ['billing-me'] })
       toast.push(t('interview.sessionCancelled'), 'success')
+    },
+    onError: (err) => toast.push(formatInterviewError(err), 'error'),
+  })
+
+  const resumeActiveM = useMutation({
+    mutationFn: (sessionId: string) => resumeSession(sessionId),
+    onSuccess: (data) => {
+      void activeQ.refetch()
+      void qc.invalidateQueries({ queryKey: ['billing-me'] })
+      navigate(`/interview/session/${data.session.id}`)
     },
     onError: (err) => toast.push(formatInterviewError(err), 'error'),
   })
@@ -147,6 +167,10 @@ export default function MockHubPage() {
     soloCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [soloFocus])
 
+  const staleModes = mockHubQ.data?.stale_modes ?? []
+  const initialSoloScope =
+    soloScope === 'review' ? ('review' as const) : soloScope === 'company' ? ('company' as const) : null
+
   return (
     <PageContent className="gap-8">
       <PageHeader
@@ -165,13 +189,32 @@ export default function MockHubPage() {
         </QuotaBanner>
       ) : null}
 
+      {authed && staleModes.length > 0 ? (
+        <StalePracticeModesCard
+          modes={staleModes}
+          t={t}
+          sessionModeLabel={sessionModeLabel}
+          onPractice={(soloId) => {
+            setSoloModalOpen(true)
+            navigate(`/mock?solo=${soloId}&scope=review`, { replace: true })
+          }}
+        />
+      ) : null}
+
       {activeSession ? (
         <ActiveSessionCard
           session={activeSession}
           progress={activeProgress}
-          loading={cancelActiveM.isPending}
+          cancelLoading={cancelActiveM.isPending}
+          continueLoading={resumeActiveM.isPending}
           modeLabel={sessionModeLabel(activeSession.mode)}
-          onContinue={() => navigate(`/interview/session/${activeSession.id}`)}
+          onContinue={() => {
+            if (activeSession.status === 'SESSION_STATUS_PAUSED') {
+              resumeActiveM.mutate(activeSession.id)
+              return
+            }
+            navigate(`/interview/session/${activeSession.id}`)
+          }}
           onCancel={() => cancelActiveM.mutate(activeSession.id)}
           t={t}
           formatDate={formatDate}
@@ -268,6 +311,8 @@ export default function MockHubPage() {
         starting={startSoloM.isPending}
         disabled={!canStartSolo}
         initialSectionId={soloFocus}
+        initialScope={initialSoloScope}
+        taskTypeCoverage={mockHubQ.data?.task_type_coverage}
         onStart={(params) => startSoloM.mutate(params)}
       />
 
@@ -283,11 +328,55 @@ export default function MockHubPage() {
         open={companyModalOpen}
         onClose={() => setCompanyModalOpen(false)}
         companies={companies}
+        templateProgress={mockHubQ.data?.template_progress}
         starting={startMockM.isPending}
         disabled={!canStartCompanyMock || mockQuotaExhausted}
         onStart={(templateId) => startMockM.mutate(templateId)}
       />
     </PageContent>
+  )
+}
+
+function StalePracticeModesCard({
+  modes,
+  t,
+  sessionModeLabel,
+  onPractice,
+}: {
+  modes: StalePracticeMode[]
+  t: (key: string, vars?: Record<string, string | number>) => string
+  sessionModeLabel: (mode: string) => string
+  onPractice: (soloSectionId: string) => void
+}) {
+  return (
+    <SdvgCard eyebrow={t('mock.stale.eyebrow')} title={t('mock.stale.title')}>
+      <p className="mb-4 text-[13px] text-text-secondary">{t('mock.stale.description')}</p>
+      <ul className="flex flex-col gap-2">
+        {modes.slice(0, 4).map((mode) => {
+          const soloId = soloSectionIdFromSessionMode(mode.session_mode)
+          const label = sessionModeLabel(sessionModeLabelKey(mode.session_mode))
+          const daysLabel = !mode.last_practiced_at
+            ? t('mock.stale.never')
+            : t('mock.stale.daysAgo', { days: mode.days_since })
+          return (
+            <li
+              key={`${mode.session_mode}-${mode.task_type}`}
+              className="flex flex-col gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div>
+                <p className="text-sm font-medium">{label}</p>
+                <p className="mt-0.5 text-[13px] text-text-muted">{daysLabel}</p>
+              </div>
+              {soloId ? (
+                <Button variant="ghost" size="sm" onClick={() => onPractice(soloId)}>
+                  {t('mock.stale.cta')}
+                </Button>
+              ) : null}
+            </li>
+          )
+        })}
+      </ul>
+    </SdvgCard>
   )
 }
 
@@ -359,7 +448,8 @@ function ActiveRoomsCard({
 function ActiveSessionCard({
   session,
   progress,
-  loading,
+  cancelLoading,
+  continueLoading,
   modeLabel,
   onContinue,
   onCancel,
@@ -368,7 +458,8 @@ function ActiveSessionCard({
 }: {
   session: Session
   progress: Progress | null
-  loading: boolean
+  cancelLoading: boolean
+  continueLoading: boolean
   modeLabel: string
   onContinue: () => void
   onCancel: () => void
@@ -378,6 +469,7 @@ function ActiveSessionCard({
   const progressText = progress
     ? `${progress.evaluated_tasks + progress.skipped_tasks}/${progress.total_tasks} ${t('common.tasks')}`
     : null
+  const isPaused = session.status === 'SESSION_STATUS_PAUSED'
 
   const startedAt = session.started_at
     ? formatDate(new Date(session.started_at), {
@@ -394,16 +486,24 @@ function ActiveSessionCard({
         <div>
           <p className="text-sm font-medium text-text-primary">{modeLabel}</p>
           <p className="mt-1 text-[13px] text-text-secondary">
+            {isPaused ? (
+              <span className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted">
+                {t('mock.activeSession.paused')} ·{' '}
+              </span>
+            ) : null}
             {progressText ? `${progressText} · ` : null}
             {t('common.started')} {startedAt}
           </p>
+          {isPaused ? (
+            <p className="mt-2 text-[13px] text-text-secondary">{t('mock.activeSession.pausedHint')}</p>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
-          <Button size="sm" onClick={onContinue}>
+          <Button size="sm" loading={continueLoading} onClick={onContinue}>
             {t('mock.activeSession.continue')}
           </Button>
-          <Button variant="ghost" size="sm" loading={loading} onClick={onCancel}>
-            {t('mock.activeSession.finish')}
+          <Button variant="ghost" size="sm" loading={cancelLoading} onClick={onCancel}>
+            {t('mock.activeSession.cancel')}
           </Button>
         </div>
       </div>

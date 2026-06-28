@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
@@ -29,6 +30,17 @@ func (s *recommendationService) HandleSessionCompleted(ctx context.Context, even
 
 		if err := s.repo.EnsureUserProfile(txCtx, event.UserID); err != nil {
 			return fmt.Errorf("ensure user profile: %w", err)
+		}
+
+		if event.TemplateID != nil && *event.TemplateID != "" && event.Mode == "company_interview" {
+			seenAt := event.OccurredAt
+			if seenAt.IsZero() {
+				seenAt = time.Now().UTC()
+			}
+			totalScore := normalizeScore(event.TotalScore, 100)
+			if err := s.repo.UpsertUserTemplateProgress(txCtx, event.UserID, *event.TemplateID, event.SessionID, totalScore, event.PassingScore, seenAt); err != nil {
+				return fmt.Errorf("upsert user template progress: %w", err)
+			}
 		}
 
 		profile, err := s.repo.GetUserProfile(txCtx, event.UserID)

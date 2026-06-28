@@ -21,6 +21,10 @@ func (s *stubBilling) CheckAndConsumeUsage(context.Context, string, string, int)
 	return s.usageErr
 }
 
+func (s *stubBilling) ReleaseUsage(context.Context, string, string, string, int) error {
+	return s.usageErr
+}
+
 func TestCheckSessionEntitlementCompanyRequiresEntitlement(t *testing.T) {
 	t.Parallel()
 	svc := New(Deps{

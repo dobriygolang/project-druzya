@@ -151,7 +151,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*interviewmodel.Eval
 		}
 
 		if err := h.repo.InsertOutbox(txCtx, string(eventsadapter.AttemptEvaluated),
-			attemptEvaluatedPayload(attempt.ID, session.UserID, attempt.TaskID, session.ID, passed, score, cmd.Feedback, now)); err != nil {
+			attemptEvaluatedPayload(session, attempt.ID, attempt.TaskID, passed, score, cmd.Feedback, now)); err != nil {
 			return err
 		}
 		if retryItemCreated {
@@ -162,7 +162,7 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*interviewmodel.Eval
 		}
 		if sessionCompleted {
 			if err := h.repo.InsertOutbox(txCtx, string(eventsadapter.SessionCompleted),
-				sessionCompletedPayload(session.ID, session.UserID, string(session.Mode), session.TotalScore, now)); err != nil {
+				sessionCompletedPayload(session, now)); err != nil {
 				return err
 			}
 		}
@@ -176,15 +176,26 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*interviewmodel.Eval
 	return summary, nil
 }
 
-func attemptEvaluatedPayload(attemptID, userID, taskID, sessionID string, passed bool, score decimal.Decimal, feedback map[string]any, occurredAt time.Time) map[string]any {
+func attemptEvaluatedPayload(
+	session *interviewmodel.Session,
+	attemptID, taskID string,
+	passed bool,
+	score decimal.Decimal,
+	feedback map[string]any,
+	occurredAt time.Time,
+) map[string]any {
 	payload := map[string]any{
 		"attempt_id":  attemptID,
-		"user_id":     userID,
+		"user_id":     session.UserID,
 		"task_id":     taskID,
-		"session_id":  sessionID,
+		"session_id":  session.ID,
+		"mode":        string(session.Mode),
 		"passed":      passed,
 		"score":       score.String(),
 		"occurred_at": occurredAt.Format(time.RFC3339Nano),
+	}
+	if session.TemplateID != nil && *session.TemplateID != "" {
+		payload["template_id"] = *session.TemplateID
 	}
 	if feedback == nil {
 		return payload
@@ -208,15 +219,22 @@ func retryItemCreatedPayload(retryItemID, userID, taskID, attemptID string, occu
 	}
 }
 
-func sessionCompletedPayload(sessionID, userID, mode string, totalScore *decimal.Decimal, occurredAt time.Time) map[string]any {
+func sessionCompletedPayload(session *interviewmodel.Session, occurredAt time.Time) map[string]any {
 	payload := map[string]any{
-		"session_id":  sessionID,
-		"user_id":     userID,
-		"mode":        mode,
-		"occurred_at": occurredAt.Format(time.RFC3339Nano),
+		"session_id":    session.ID,
+		"user_id":       session.UserID,
+		"mode":          string(session.Mode),
+		"passing_score": session.PassingScore,
+		"occurred_at":   occurredAt.Format(time.RFC3339Nano),
 	}
-	if totalScore != nil {
-		payload["total_score"] = totalScore.String()
+	if session.TemplateID != nil && *session.TemplateID != "" {
+		payload["template_id"] = *session.TemplateID
+	}
+	if session.TotalScore != nil {
+		payload["total_score"] = session.TotalScore.String()
+	}
+	if session.Outcome != nil {
+		payload["outcome"] = string(*session.Outcome)
 	}
 	return payload
 }

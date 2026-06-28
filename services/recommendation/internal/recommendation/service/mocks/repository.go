@@ -779,6 +779,187 @@ func (_c *Repository_ListArticleReadSlugs_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// ListPassedTaskIDsByType provides a mock function with given fields: ctx, userID, taskType
+func (_m *Repository) ListPassedTaskIDsByType(ctx context.Context, userID string, taskType string) ([]string, error) {
+	ret := _m.Called(ctx, userID, taskType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPassedTaskIDsByType")
+	}
+
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) ([]string, error)); ok {
+		return rf(ctx, userID, taskType)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string) []string); ok {
+		r0 = rf(ctx, userID, taskType)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, userID, taskType)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ListPassedTaskIDsByType_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPassedTaskIDsByType'
+type Repository_ListPassedTaskIDsByType_Call struct {
+	*mock.Call
+}
+
+// ListPassedTaskIDsByType is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - taskType string
+func (_e *Repository_Expecter) ListPassedTaskIDsByType(ctx interface{}, userID interface{}, taskType interface{}) *Repository_ListPassedTaskIDsByType_Call {
+	return &Repository_ListPassedTaskIDsByType_Call{Call: _e.mock.On("ListPassedTaskIDsByType", ctx, userID, taskType)}
+}
+
+func (_c *Repository_ListPassedTaskIDsByType_Call) Run(run func(ctx context.Context, userID string, taskType string)) *Repository_ListPassedTaskIDsByType_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_ListPassedTaskIDsByType_Call) Return(_a0 []string, _a1 error) *Repository_ListPassedTaskIDsByType_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ListPassedTaskIDsByType_Call) RunAndReturn(run func(context.Context, string, string) ([]string, error)) *Repository_ListPassedTaskIDsByType_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListPracticeModeActivity provides a mock function with given fields: ctx, userID
+func (_m *Repository) ListPracticeModeActivity(ctx context.Context, userID string) ([]model.UserPracticeModeActivity, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListPracticeModeActivity")
+	}
+
+	var r0 []model.UserPracticeModeActivity
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]model.UserPracticeModeActivity, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []model.UserPracticeModeActivity); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.UserPracticeModeActivity)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ListPracticeModeActivity_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListPracticeModeActivity'
+type Repository_ListPracticeModeActivity_Call struct {
+	*mock.Call
+}
+
+// ListPracticeModeActivity is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+func (_e *Repository_Expecter) ListPracticeModeActivity(ctx interface{}, userID interface{}) *Repository_ListPracticeModeActivity_Call {
+	return &Repository_ListPracticeModeActivity_Call{Call: _e.mock.On("ListPracticeModeActivity", ctx, userID)}
+}
+
+func (_c *Repository_ListPracticeModeActivity_Call) Run(run func(ctx context.Context, userID string)) *Repository_ListPracticeModeActivity_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_ListPracticeModeActivity_Call) Return(_a0 []model.UserPracticeModeActivity, _a1 error) *Repository_ListPracticeModeActivity_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ListPracticeModeActivity_Call) RunAndReturn(run func(context.Context, string) ([]model.UserPracticeModeActivity, error)) *Repository_ListPracticeModeActivity_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListReviewTaskCandidates provides a mock function with given fields: ctx, userID, taskType, staleAfter, limit
+func (_m *Repository) ListReviewTaskCandidates(ctx context.Context, userID string, taskType string, staleAfter time.Time, limit int) ([]model.ReviewTaskCandidate, error) {
+	ret := _m.Called(ctx, userID, taskType, staleAfter, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListReviewTaskCandidates")
+	}
+
+	var r0 []model.ReviewTaskCandidate
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, time.Time, int) ([]model.ReviewTaskCandidate, error)); ok {
+		return rf(ctx, userID, taskType, staleAfter, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, time.Time, int) []model.ReviewTaskCandidate); ok {
+		r0 = rf(ctx, userID, taskType, staleAfter, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.ReviewTaskCandidate)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, time.Time, int) error); ok {
+		r1 = rf(ctx, userID, taskType, staleAfter, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ListReviewTaskCandidates_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListReviewTaskCandidates'
+type Repository_ListReviewTaskCandidates_Call struct {
+	*mock.Call
+}
+
+// ListReviewTaskCandidates is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - taskType string
+//   - staleAfter time.Time
+//   - limit int
+func (_e *Repository_Expecter) ListReviewTaskCandidates(ctx interface{}, userID interface{}, taskType interface{}, staleAfter interface{}, limit interface{}) *Repository_ListReviewTaskCandidates_Call {
+	return &Repository_ListReviewTaskCandidates_Call{Call: _e.mock.On("ListReviewTaskCandidates", ctx, userID, taskType, staleAfter, limit)}
+}
+
+func (_c *Repository_ListReviewTaskCandidates_Call) Run(run func(ctx context.Context, userID string, taskType string, staleAfter time.Time, limit int)) *Repository_ListReviewTaskCandidates_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(time.Time), args[4].(int))
+	})
+	return _c
+}
+
+func (_c *Repository_ListReviewTaskCandidates_Call) Return(_a0 []model.ReviewTaskCandidate, _a1 error) *Repository_ListReviewTaskCandidates_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ListReviewTaskCandidates_Call) RunAndReturn(run func(context.Context, string, string, time.Time, int) ([]model.ReviewTaskCandidate, error)) *Repository_ListReviewTaskCandidates_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListSkillScoresByUser provides a mock function with given fields: ctx, userID
 func (_m *Repository) ListSkillScoresByUser(ctx context.Context, userID string) ([]model.SkillScore, error) {
 	ret := _m.Called(ctx, userID)
@@ -834,6 +1015,124 @@ func (_c *Repository_ListSkillScoresByUser_Call) Return(_a0 []model.SkillScore, 
 }
 
 func (_c *Repository_ListSkillScoresByUser_Call) RunAndReturn(run func(context.Context, string) ([]model.SkillScore, error)) *Repository_ListSkillScoresByUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListTaskTypeCoverage provides a mock function with given fields: ctx, userID
+func (_m *Repository) ListTaskTypeCoverage(ctx context.Context, userID string) ([]model.TaskTypeCoverage, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTaskTypeCoverage")
+	}
+
+	var r0 []model.TaskTypeCoverage
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]model.TaskTypeCoverage, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []model.TaskTypeCoverage); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.TaskTypeCoverage)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ListTaskTypeCoverage_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTaskTypeCoverage'
+type Repository_ListTaskTypeCoverage_Call struct {
+	*mock.Call
+}
+
+// ListTaskTypeCoverage is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+func (_e *Repository_Expecter) ListTaskTypeCoverage(ctx interface{}, userID interface{}) *Repository_ListTaskTypeCoverage_Call {
+	return &Repository_ListTaskTypeCoverage_Call{Call: _e.mock.On("ListTaskTypeCoverage", ctx, userID)}
+}
+
+func (_c *Repository_ListTaskTypeCoverage_Call) Run(run func(ctx context.Context, userID string)) *Repository_ListTaskTypeCoverage_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_ListTaskTypeCoverage_Call) Return(_a0 []model.TaskTypeCoverage, _a1 error) *Repository_ListTaskTypeCoverage_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ListTaskTypeCoverage_Call) RunAndReturn(run func(context.Context, string) ([]model.TaskTypeCoverage, error)) *Repository_ListTaskTypeCoverage_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListUserTemplateProgress provides a mock function with given fields: ctx, userID
+func (_m *Repository) ListUserTemplateProgress(ctx context.Context, userID string) ([]model.UserTemplateProgress, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListUserTemplateProgress")
+	}
+
+	var r0 []model.UserTemplateProgress
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]model.UserTemplateProgress, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) []model.UserTemplateProgress); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.UserTemplateProgress)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// Repository_ListUserTemplateProgress_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListUserTemplateProgress'
+type Repository_ListUserTemplateProgress_Call struct {
+	*mock.Call
+}
+
+// ListUserTemplateProgress is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+func (_e *Repository_Expecter) ListUserTemplateProgress(ctx interface{}, userID interface{}) *Repository_ListUserTemplateProgress_Call {
+	return &Repository_ListUserTemplateProgress_Call{Call: _e.mock.On("ListUserTemplateProgress", ctx, userID)}
+}
+
+func (_c *Repository_ListUserTemplateProgress_Call) Run(run func(ctx context.Context, userID string)) *Repository_ListUserTemplateProgress_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *Repository_ListUserTemplateProgress_Call) Return(_a0 []model.UserTemplateProgress, _a1 error) *Repository_ListUserTemplateProgress_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *Repository_ListUserTemplateProgress_Call) RunAndReturn(run func(context.Context, string) ([]model.UserTemplateProgress, error)) *Repository_ListUserTemplateProgress_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1160,6 +1459,57 @@ func (_c *Repository_UpsertImproveSkillRecommendation_Call) RunAndReturn(run fun
 	return _c
 }
 
+// UpsertPracticeModeActivity provides a mock function with given fields: ctx, userID, sessionMode, taskType, passed, seenAt
+func (_m *Repository) UpsertPracticeModeActivity(ctx context.Context, userID string, sessionMode string, taskType string, passed bool, seenAt time.Time) error {
+	ret := _m.Called(ctx, userID, sessionMode, taskType, passed, seenAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertPracticeModeActivity")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, bool, time.Time) error); ok {
+		r0 = rf(ctx, userID, sessionMode, taskType, passed, seenAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Repository_UpsertPracticeModeActivity_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertPracticeModeActivity'
+type Repository_UpsertPracticeModeActivity_Call struct {
+	*mock.Call
+}
+
+// UpsertPracticeModeActivity is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - sessionMode string
+//   - taskType string
+//   - passed bool
+//   - seenAt time.Time
+func (_e *Repository_Expecter) UpsertPracticeModeActivity(ctx interface{}, userID interface{}, sessionMode interface{}, taskType interface{}, passed interface{}, seenAt interface{}) *Repository_UpsertPracticeModeActivity_Call {
+	return &Repository_UpsertPracticeModeActivity_Call{Call: _e.mock.On("UpsertPracticeModeActivity", ctx, userID, sessionMode, taskType, passed, seenAt)}
+}
+
+func (_c *Repository_UpsertPracticeModeActivity_Call) Run(run func(ctx context.Context, userID string, sessionMode string, taskType string, passed bool, seenAt time.Time)) *Repository_UpsertPracticeModeActivity_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(bool), args[5].(time.Time))
+	})
+	return _c
+}
+
+func (_c *Repository_UpsertPracticeModeActivity_Call) Return(_a0 error) *Repository_UpsertPracticeModeActivity_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Repository_UpsertPracticeModeActivity_Call) RunAndReturn(run func(context.Context, string, string, string, bool, time.Time) error) *Repository_UpsertPracticeModeActivity_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpsertSkillScore provides a mock function with given fields: ctx, userID, skillKey, normalized, seenAt
 func (_m *Repository) UpsertSkillScore(ctx context.Context, userID string, skillKey string, normalized int, seenAt time.Time) (*model.SkillScore, error) {
 	ret := _m.Called(ctx, userID, skillKey, normalized, seenAt)
@@ -1218,6 +1568,110 @@ func (_c *Repository_UpsertSkillScore_Call) Return(_a0 *model.SkillScore, _a1 er
 }
 
 func (_c *Repository_UpsertSkillScore_Call) RunAndReturn(run func(context.Context, string, string, int, time.Time) (*model.SkillScore, error)) *Repository_UpsertSkillScore_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertUserTaskProgress provides a mock function with given fields: ctx, userID, taskID, taskType, score, passed, seenAt
+func (_m *Repository) UpsertUserTaskProgress(ctx context.Context, userID string, taskID string, taskType string, score int, passed bool, seenAt time.Time) error {
+	ret := _m.Called(ctx, userID, taskID, taskType, score, passed, seenAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertUserTaskProgress")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, int, bool, time.Time) error); ok {
+		r0 = rf(ctx, userID, taskID, taskType, score, passed, seenAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Repository_UpsertUserTaskProgress_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertUserTaskProgress'
+type Repository_UpsertUserTaskProgress_Call struct {
+	*mock.Call
+}
+
+// UpsertUserTaskProgress is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - taskID string
+//   - taskType string
+//   - score int
+//   - passed bool
+//   - seenAt time.Time
+func (_e *Repository_Expecter) UpsertUserTaskProgress(ctx interface{}, userID interface{}, taskID interface{}, taskType interface{}, score interface{}, passed interface{}, seenAt interface{}) *Repository_UpsertUserTaskProgress_Call {
+	return &Repository_UpsertUserTaskProgress_Call{Call: _e.mock.On("UpsertUserTaskProgress", ctx, userID, taskID, taskType, score, passed, seenAt)}
+}
+
+func (_c *Repository_UpsertUserTaskProgress_Call) Run(run func(ctx context.Context, userID string, taskID string, taskType string, score int, passed bool, seenAt time.Time)) *Repository_UpsertUserTaskProgress_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(int), args[5].(bool), args[6].(time.Time))
+	})
+	return _c
+}
+
+func (_c *Repository_UpsertUserTaskProgress_Call) Return(_a0 error) *Repository_UpsertUserTaskProgress_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Repository_UpsertUserTaskProgress_Call) RunAndReturn(run func(context.Context, string, string, string, int, bool, time.Time) error) *Repository_UpsertUserTaskProgress_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// UpsertUserTemplateProgress provides a mock function with given fields: ctx, userID, templateID, sessionID, totalScore, passingScore, seenAt
+func (_m *Repository) UpsertUserTemplateProgress(ctx context.Context, userID string, templateID string, sessionID string, totalScore int, passingScore int, seenAt time.Time) error {
+	ret := _m.Called(ctx, userID, templateID, sessionID, totalScore, passingScore, seenAt)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertUserTemplateProgress")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, int, int, time.Time) error); ok {
+		r0 = rf(ctx, userID, templateID, sessionID, totalScore, passingScore, seenAt)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Repository_UpsertUserTemplateProgress_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpsertUserTemplateProgress'
+type Repository_UpsertUserTemplateProgress_Call struct {
+	*mock.Call
+}
+
+// UpsertUserTemplateProgress is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - templateID string
+//   - sessionID string
+//   - totalScore int
+//   - passingScore int
+//   - seenAt time.Time
+func (_e *Repository_Expecter) UpsertUserTemplateProgress(ctx interface{}, userID interface{}, templateID interface{}, sessionID interface{}, totalScore interface{}, passingScore interface{}, seenAt interface{}) *Repository_UpsertUserTemplateProgress_Call {
+	return &Repository_UpsertUserTemplateProgress_Call{Call: _e.mock.On("UpsertUserTemplateProgress", ctx, userID, templateID, sessionID, totalScore, passingScore, seenAt)}
+}
+
+func (_c *Repository_UpsertUserTemplateProgress_Call) Run(run func(ctx context.Context, userID string, templateID string, sessionID string, totalScore int, passingScore int, seenAt time.Time)) *Repository_UpsertUserTemplateProgress_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].(int), args[5].(int), args[6].(time.Time))
+	})
+	return _c
+}
+
+func (_c *Repository_UpsertUserTemplateProgress_Call) Return(_a0 error) *Repository_UpsertUserTemplateProgress_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Repository_UpsertUserTemplateProgress_Call) RunAndReturn(run func(context.Context, string, string, string, int, int, time.Time) error) *Repository_UpsertUserTemplateProgress_Call {
 	_c.Call.Return(run)
 	return _c
 }

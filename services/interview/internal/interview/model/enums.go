@@ -21,6 +21,15 @@ type PracticeScope string
 const (
 	PracticeScopeRandomOne    PracticeScope = "random_one"
 	PracticeScopeCompanyTrack PracticeScope = "company_track"
+	PracticeScopeReview       PracticeScope = "review"
+)
+
+// SessionOutcome is the pass/fail result of a completed session.
+type SessionOutcome string
+
+const (
+	SessionOutcomePassed SessionOutcome = "passed"
+	SessionOutcomeFailed SessionOutcome = "failed"
 )
 
 // TaskTypeForMode maps training modes to content task types.
@@ -37,6 +46,7 @@ type SessionStatus string
 
 const (
 	SessionStatusActive    SessionStatus = "active"
+	SessionStatusPaused    SessionStatus = "paused"
 	SessionStatusCompleted SessionStatus = "completed"
 	SessionStatusCancelled SessionStatus = "cancelled"
 	SessionStatusExpired   SessionStatus = "expired"

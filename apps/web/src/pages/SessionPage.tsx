@@ -11,9 +11,10 @@ import { getTask } from '@/lib/api/content'
 import { createRoom } from '@/lib/api/rooms'
 import { submitAttemptFromCodeRun } from '@/lib/api/sandbox'
 import {
-  cancelSession,
+  pauseSession,
   getAttempt,
   getCurrentSessionState,
+  resumeSession,
   skipTask,
   submitAttempt,
 } from '@/lib/api/interview'
@@ -146,9 +147,21 @@ export default function SessionPage() {
     onSuccess: () => void qc.invalidateQueries({ queryKey: ['session-current', sessionId] }),
   })
 
-  const cancelM = useMutation({
-    mutationFn: () => cancelSession(sessionId),
-    onSuccess: () => navigate(`/interview/session/${sessionId}/results`, { replace: true }),
+  const pauseM = useMutation({
+    mutationFn: () => pauseSession(sessionId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['active-session'] })
+      void qc.invalidateQueries({ queryKey: ['billing-me'] })
+      navigate('/mock')
+    },
+  })
+
+  const resumeM = useMutation({
+    mutationFn: () => resumeSession(sessionId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['session-current', sessionId] })
+      void qc.invalidateQueries({ queryKey: ['billing-me'] })
+    },
   })
 
   const collabM = useMutation({
@@ -194,6 +207,26 @@ export default function SessionPage() {
 
   const { session, current_section, current_task, progress } = state
   const sections = stateQ.data?.sections ?? []
+  const isPaused = session.status === 'SESSION_STATUS_PAUSED'
+
+  if (isPaused) {
+    return (
+      <PageContent>
+        <Card elevation="e2" padding="lg" className="max-w-lg">
+          <p className="text-sm font-medium">{t('session.pausedTitle')}</p>
+          <p className="mt-2 text-sm text-text-secondary">{t('session.pausedBody')}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Button loading={resumeM.isPending} onClick={() => resumeM.mutate()}>
+              {t('session.resume')}
+            </Button>
+            <Button variant="ghost" onClick={() => navigate('/mock')}>
+              {t('session.pausedBack')}
+            </Button>
+          </div>
+        </Card>
+      </PageContent>
+    )
+  }
 
   if (!current_task) {
     return (
@@ -234,10 +267,11 @@ export default function SessionPage() {
         </div>
         <button
           type="button"
-          onClick={() => cancelM.mutate()}
-          className="text-sm text-text-muted underline transition-colors hover:text-text-primary"
+          onClick={() => pauseM.mutate()}
+          disabled={pauseM.isPending}
+          className="text-sm text-text-muted underline transition-colors hover:text-text-primary disabled:opacity-50"
         >
-          {t('session.cancel')}
+          {t('session.pause')}
         </button>
       </header>
 

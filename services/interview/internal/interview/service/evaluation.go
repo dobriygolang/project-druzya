@@ -90,6 +90,8 @@ func (s *interviewService) recalculateScores(ctx context.Context, session *inter
 		session.Status = interviewmodel.SessionStatusCompleted
 		completedAt := now
 		session.CompletedAt = &completedAt
+		outcome := resolveSessionOutcome(session)
+		session.Outcome = &outcome
 		if session.Mode == interviewmodel.ModeRetryMistakes {
 			if err := s.resolveRetryItemsForSession(ctx, session.ID, now); err != nil {
 				return false, err
@@ -101,6 +103,14 @@ func (s *interviewService) recalculateScores(ctx context.Context, session *inter
 		return false, err
 	}
 	return sessionCompleted, nil
+}
+
+func resolveSessionOutcome(session *interviewmodel.Session) interviewmodel.SessionOutcome {
+	if session.TotalScore != nil &&
+		session.TotalScore.GreaterThanOrEqual(decimal.NewFromInt(int64(session.PassingScore))) {
+		return interviewmodel.SessionOutcomePassed
+	}
+	return interviewmodel.SessionOutcomeFailed
 }
 
 func sectionTasksDone(tasks []interviewmodel.SessionTask, sectionID string) bool {

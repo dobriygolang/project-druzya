@@ -19,4 +19,5 @@ var (
 type Client interface {
 	CheckEntitlement(ctx context.Context, userID, key string) error
 	CheckAndConsumeUsage(ctx context.Context, userID, key string, amount int) error
+	ReleaseUsage(ctx context.Context, userID, key, idempotencyKey string, amount int) error
 }

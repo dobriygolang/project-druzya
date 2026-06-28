@@ -62,7 +62,7 @@ func (s *interviewService) SkipTask(ctx context.Context, userID, sessionTaskID s
 		}
 		if sessionCompleted {
 			if err := s.repo.InsertOutbox(txCtx, string(eventsadapter.SessionCompleted),
-				outboxSessionCompletedPayload(session.ID, userID, string(session.Mode), session.TotalScore, now)); err != nil {
+				outboxSessionCompletedPayload(session, now)); err != nil {
 				return err
 			}
 		}
