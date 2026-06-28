@@ -10,7 +10,7 @@ export function getBillingMe() {
 export function getBillingPlans() {
   return api<{ plans: PlanCatalogEntry[] }>('/billing/plans').then((res) => ({
     plans: asArray(res.plans).map(normalizePlanCatalog),
-  })
+  }))
 }
 
 function normalizePlanCatalog(raw: PlanCatalogEntry): PlanCatalogEntry {
