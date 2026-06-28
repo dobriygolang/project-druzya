@@ -58,13 +58,13 @@ var defaultPolicy = cooldownPolicy{
 // is wrong, move on. OpenRouter includes paid Claude which can take
 // significantly longer on long prompts.
 var defaultTimeouts = map[Provider]time.Duration{
-	ProviderGroq:       10 * time.Second,
-	ProviderCerebras:   20 * time.Second,
+	ProviderGroq:       25 * time.Second,
+	ProviderCerebras:   30 * time.Second,
 	ProviderMistral:    30 * time.Second,
 	ProviderOpenRouter: 45 * time.Second,
-	// DeepSeek — платный, API быстрый (sub-second first byte), но reasoner
-	// (R1) при extended-thinking может thinking'ать 15-30s. 30s — компромисс.
-	ProviderDeepSeek: 30 * time.Second,
+	ProviderDeepSeek:   30 * time.Second,
+	Provider("openai"): 30 * time.Second,
+	ProviderGoogle:     30 * time.Second,
 }
 
 // Options configures a new Chain.

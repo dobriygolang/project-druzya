@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Code2, Plus, Settings, X } from 'lucide-react'
+import { Code2, Settings, X } from 'lucide-react'
 import { brand } from '@/lib/brand/tokens'
 import { cn } from '@/lib/cn'
 
@@ -46,9 +46,6 @@ export function LiveRoomTopBar({
         <div className="hidden items-center gap-2 sm:flex">
           <TopBarButton to={closeTo} variant="outline" icon={<X className="h-3.5 w-3.5" />}>
             Close room
-          </TopBarButton>
-          <TopBarButton to="/mock" variant="solid" icon={<Plus className="h-3.5 w-3.5" />}>
-            Create room
           </TopBarButton>
         </div>
       </div>

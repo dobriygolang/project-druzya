@@ -87,15 +87,9 @@ var DefaultTaskModelMap = TaskModelMap{
 		// where that matters most.
 	},
 	TaskCodeReview: {
-		// Reasoning-heavy submit review — юзер только что закончил mock,
-		// готов подождать несколько секунд ради глубокого анализа. Primary
-		// слот вынесен на reasoning-специализированную gpt-oss-120b
-		// (Groq, native chain-of-thought) — раньше тут была llama-3.3-70b
-		// но false-pass дорог (юзер видит «good submit» при пропущенных
-		// багах). OpenRouter deepseek-r1:free — top free reasoning
-		// fallback. Cerebras/Mistral 70B оставлены как latency-safe
-		// fallback при просадке reasoning-провайдеров.
-		ProviderGroq:       "openai/gpt-oss-120b",
+		// Mock submit review — balance depth and latency (beta: prefer fast
+		// feedback; gpt-oss-120b reasoning often exceeds 30s on prod).
+		ProviderGroq:       "llama-3.3-70b-versatile",
 		ProviderCerebras:   "llama3.3-70b",
 		ProviderMistral:    "mistral-large-latest",
 		ProviderOpenRouter: "deepseek/deepseek-r1:free",

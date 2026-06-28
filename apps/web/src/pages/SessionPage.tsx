@@ -223,7 +223,8 @@ export default function SessionPage() {
         <Card elevation="e2">
           <p className="text-sm font-medium">Оцениваем ответ…</p>
           <p className="mt-1 text-sm text-text-muted">
-            Статус: {attemptQ.data?.attempt.status ?? 'ATTEMPT_STATUS_SUBMITTED'}
+            Статус: {attemptQ.data?.attempt.status ?? 'ATTEMPT_STATUS_SUBMITTED'}. Обычно 10–30
+            секунд.
           </p>
         </Card>
       ) : codeTask && taskId && sessionTaskId ? (

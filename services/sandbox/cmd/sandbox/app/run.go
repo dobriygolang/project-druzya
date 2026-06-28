@@ -70,6 +70,13 @@ func New(ctx context.Context) (*App, error) {
 		pg.Close()
 		return nil, fmt.Errorf("init runner: %w", err)
 	}
+	if cfg.RunnerMode == "docker" {
+		runner.WarmDockerImages(ctx, log,
+			cfg.DockerGoImage,
+			cfg.DockerPythonImage,
+			cfg.DockerNodeImage,
+		)
+	}
 
 	var billingClient billingadapter.Client
 	var billingConn *billinggrpc.Client
