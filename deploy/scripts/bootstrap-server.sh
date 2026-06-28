@@ -62,6 +62,10 @@ Next on the server:
 
 GitHub Actions deploy expects:
   DEPLOY_REPO_DIR=$REPO_DIR  (optional secret, this is the default)
-  SSH user must be able to: cd $REPO_DIR && git pull && docker compose ...
+  SSH user must be able to: cd $REPO_DIR && git fetch && docker compose ...
+
+If deploy fails with "dubious ownership", run once as the deploy user:
+  git config --global --add safe.directory $REPO_DIR
+  sudo chown -R \$(whoami):\$(id -gn) $REPO_DIR
 
 EOF

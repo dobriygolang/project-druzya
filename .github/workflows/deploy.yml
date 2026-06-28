@@ -112,6 +112,12 @@ jobs:
             if [ -n "${{ secrets.DEPLOY_REPO_DIR }}" ]; then REPO_DIR="${{ secrets.DEPLOY_REPO_DIR }}"; fi
             if [ -n "${{ secrets.DEPLOY_BRANCH }}" ]; then BRANCH="${{ secrets.DEPLOY_BRANCH }}"; fi
 
+            if [ -d "$REPO_DIR/.git" ]; then
+              # Rsync/scp from dev machines can leave uid 501; git refuses as root/deploy user.
+              git config --global --add safe.directory "$REPO_DIR"
+              chown -R "$(whoami):$(id -gn)" "$REPO_DIR"
+            fi
+
             if [ ! -d "$REPO_DIR/.git" ]; then
               echo "Bootstrapping $REPO_DIR ..."
               PARENT="$(dirname "$REPO_DIR")"
