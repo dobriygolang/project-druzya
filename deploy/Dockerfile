@@ -12,13 +12,10 @@ WORKDIR /src
 COPY services/ ./services/
 WORKDIR /src/services/${SERVICE}
 ENV GOWORK=off
+# Always regenerate — pre-extracted pkg/api from tarball can be stale after proto RPC changes.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    if find pkg/api -name '*.go' -print -quit 2>/dev/null | grep -q .; then \
-      echo "Using pre-generated pkg/api (skip make gen-proto)"; \
-    else \
-      make gen-proto; \
-    fi
+    make gen-proto
 # Cross-service replace imports pull sibling pkg/api/google — duplicate proto registration at init.
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
