@@ -143,7 +143,13 @@ jobs:
             git checkout "$BRANCH"
             # Server hotfixes must live in git — discard tracked drift; keep gitignored .env/secrets.
             git reset --hard "origin/$BRANCH"
-            git clean -fd --exclude=deploy/.env --exclude=deploy/secrets --exclude=deploy/.last-deploy-sha
+            # Keep CI-uploaded artifacts (untracked): proto tarball + SPA dist.
+            git clean -fd \
+              --exclude=generated-api.tgz \
+              --exclude=apps/web/dist \
+              --exclude=deploy/.env \
+              --exclude=deploy/secrets \
+              --exclude=deploy/.last-deploy-sha
 
             if [ -f generated-api.tgz ]; then
               echo "Clearing stale pkg/api (gitignored on server)..."

@@ -6,6 +6,7 @@ ARG CMD=
 FROM golang:1.25-alpine AS gopls
 ARG SERVICE
 RUN if [ "$SERVICE" = "sandbox" ]; then \
+      mkdir -p /out && \
       go install golang.org/x/tools/gopls@v0.19.1 && cp /go/bin/gopls /out/gopls; \
     else \
       mkdir -p /out; \
