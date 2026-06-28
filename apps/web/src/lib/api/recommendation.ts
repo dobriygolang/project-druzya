@@ -1,8 +1,20 @@
 import { api } from '@/lib/apiClient'
 import type { Dashboard } from '@/lib/types'
 
+function normalizeDashboard(raw: Dashboard): Dashboard {
+  return {
+    readiness_score: raw.readiness_score ?? 0,
+    pending_retry_count: raw.pending_retry_count ?? 0,
+    profile_summary: raw.profile_summary,
+    strengths: raw.strengths ?? [],
+    weaknesses: raw.weaknesses ?? [],
+    recommendations: raw.recommendations ?? [],
+    learning_plan: raw.learning_plan ?? [],
+  }
+}
+
 export function getDashboard() {
-  return api<Dashboard>('/recommendations/dashboard')
+  return api<Dashboard>('/recommendations/dashboard').then(normalizeDashboard)
 }
 
 export function dismissRecommendation(id: string) {

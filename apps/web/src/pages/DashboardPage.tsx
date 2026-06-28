@@ -55,8 +55,14 @@ export default function DashboardPage() {
   const d = dashboardQ.data
   if (!d) return <p className="text-sm text-text-muted">Нет данных.</p>
 
-  const pendingRetries =
-    retryQ.data?.items.filter((i) => i.status === 'RETRY_ITEM_STATUS_PENDING') ?? []
+  const recommendations = d.recommendations ?? []
+  const learningPlan = d.learning_plan ?? []
+  const strengths = d.strengths ?? []
+  const weaknesses = d.weaknesses ?? []
+
+  const pendingRetries = (retryQ.data?.items ?? []).filter(
+    (i) => i.status === 'RETRY_ITEM_STATUS_PENDING',
+  )
 
   return (
     <div className="space-y-8">
@@ -66,9 +72,9 @@ export default function DashboardPage() {
       </div>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Readiness" value={`${d.readiness_score}%`} />
-        <StatCard label="Задач на повтор" value={String(d.pending_retry_count)} />
-        <StatCard label="Рекомендаций" value={String(d.recommendations.length)} />
+        <StatCard label="Readiness" value={`${d.readiness_score ?? 0}%`} />
+        <StatCard label="Задач на повтор" value={String(d.pending_retry_count ?? 0)} />
+        <StatCard label="Рекомендаций" value={String(recommendations.length)} />
       </section>
 
       {d.profile_summary ? (
@@ -79,8 +85,8 @@ export default function DashboardPage() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <InsightList title="Сильные стороны" items={d.strengths} />
-        <InsightList title="Зоны роста" items={d.weaknesses} />
+        <InsightList title="Сильные стороны" items={strengths} />
+        <InsightList title="Зоны роста" items={weaknesses} />
       </div>
 
       {pendingRetries.length > 0 ? (
@@ -101,7 +107,7 @@ export default function DashboardPage() {
 
       <section className="space-y-3">
         <h2 className="font-medium">Рекомендации</h2>
-        {d.recommendations.length === 0 ? (
+        {recommendations.length === 0 ? (
           <p className="text-sm text-text-muted">
             Пока нет рекомендаций.{' '}
             <Link to="/interview" className="underline">
@@ -110,7 +116,7 @@ export default function DashboardPage() {
             , чтобы получить персональный план.
           </p>
         ) : (
-          d.recommendations.map((rec) => (
+          recommendations.map((rec) => (
             <Card key={rec.id} elevation="e1">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -134,10 +140,10 @@ export default function DashboardPage() {
 
       <section className="space-y-3">
         <h2 className="font-medium">План обучения</h2>
-        {d.learning_plan.length === 0 ? (
+        {learningPlan.length === 0 ? (
           <p className="text-sm text-text-muted">План появится после первых интервью.</p>
         ) : (
-          d.learning_plan.map((item) => (
+          learningPlan.map((item) => (
             <Card key={item.id} elevation="e1">
               <div className="flex items-start justify-between gap-3">
                 <div>

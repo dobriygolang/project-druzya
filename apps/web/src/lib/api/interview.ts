@@ -86,7 +86,9 @@ export function getAttempt(attemptId: string) {
 }
 
 export function listRetryItems() {
-  return api<{ items: RetryItem[] }>('/interview/retry-items')
+  return api<{ items?: RetryItem[] }>('/interview/retry-items').then((res) => ({
+    items: res.items ?? [],
+  }))
 }
 
 export function dismissRetryItem(retryItemId: string) {

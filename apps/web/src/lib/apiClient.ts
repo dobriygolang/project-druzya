@@ -1,3 +1,5 @@
+import { normalizeProtoJson } from '@/lib/protoJson'
+
 export const API_BASE: string = import.meta.env.VITE_API_BASE ?? '/v1'
 
 const ACCESS_TOKEN_KEY = 'druzya_access_token'
@@ -147,5 +149,6 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
   }
 
   if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
+  const body = await res.json()
+  return normalizeProtoJson(body) as T
 }
