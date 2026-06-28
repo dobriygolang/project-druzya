@@ -54,7 +54,10 @@ jobs:
 
       - name: Pack generated API + SPA inputs
         run: |
-          tar czf generated-api.tgz $(find services -type d -path 'services/*/pkg/api' 2>/dev/null | sort -u)
+          # shellcheck source=deploy/scripts/pkg-api-helpers.sh
+          source deploy/scripts/pkg-api-helpers.sh
+          verify_pkg_api "$GITHUB_WORKSPACE"
+          tar czf generated-api.tgz $(pack_pkg_api_paths "$GITHUB_WORKSPACE" | tr '\n' ' ')
 
       - uses: actions/setup-node@v4
         with:
@@ -143,9 +146,21 @@ jobs:
             git clean -fd --exclude=deploy/.env --exclude=deploy/secrets --exclude=deploy/.last-deploy-sha
 
             if [ -f generated-api.tgz ]; then
+              echo "Clearing stale pkg/api (gitignored on server)..."
+              # shellcheck source=deploy/scripts/pkg-api-helpers.sh
+              source "$REPO_DIR/deploy/scripts/pkg-api-helpers.sh"
+              clear_pkg_api "$REPO_DIR"
               echo "Extracting pre-generated pkg/api from CI..."
               tar xzf generated-api.tgz
               rm -f generated-api.tgz
+              if ! verify_pkg_api "$REPO_DIR"; then
+                echo "pkg/api incomplete after extract — regenerating on server..."
+                bash "$REPO_DIR/deploy/scripts/gen-all-proto.sh"
+                verify_pkg_api "$REPO_DIR"
+              fi
+            else
+              echo "ERROR: missing generated-api.tgz — CI upload step failed"
+              exit 1
             fi
 
             if [ ! -f deploy/.env ]; then

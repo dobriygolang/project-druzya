@@ -4,7 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BIN_DIR="$ROOT/deploy/.proto-bin"
-SERVICES=(identity content interview ai recommendation billing sandbox rooms admin)
+# shellcheck source=pkg-api-helpers.sh
+source "$ROOT/deploy/scripts/pkg-api-helpers.sh"
 
 # shellcheck source=/dev/null
 source "$ROOT/deploy/scripts/install-proto-tools.sh"
@@ -17,7 +18,7 @@ gen_one() {
 }
 
 pids=()
-for svc in "${SERVICES[@]}"; do
+for svc in "${PROTO_SERVICES[@]}"; do
   gen_one "$svc" &
   pids+=($!)
 done

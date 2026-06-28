@@ -19,7 +19,7 @@ RUN apk add --no-cache git bash make
 WORKDIR /src
 COPY services/ ./services/
 ENV GOWORK=off
-# CI uploads pre-generated pkg/api — skip buf when present.
+# CI uploads pre-generated pkg/api — regenerate only when missing (server clears stale dirs before build).
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
     for d in /src/services/*/; do \
