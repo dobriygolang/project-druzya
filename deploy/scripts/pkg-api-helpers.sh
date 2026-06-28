@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared list of services that publish pkg/api from buf.
-PROTO_SERVICES=(identity content interview ai recommendation billing sandbox rooms admin)
+PROTO_SERVICES=(identity content interview ai recommendation billing sandbox rooms admin tracker)
 
 clear_pkg_api() {
   local root="${1:?repo root}"
