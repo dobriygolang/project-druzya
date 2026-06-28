@@ -30,7 +30,7 @@ export function MobileBottomNav() {
       aria-label="Mobile bottom navigation"
       className={cn(
         'fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/95 backdrop-blur sm:hidden',
-        'supports-[backdrop-filter]:bg-bg/80',
+        'supports-[backdrop-filter]:bg-bg/90',
       )}
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
@@ -69,7 +69,7 @@ export function MobileBottomNav() {
                     className={cn(
                       'relative grid place-items-center',
                       tab.primary &&
-                        '-mt-3 h-11 w-11 rounded-full border border-border-strong bg-surface-2',
+                        '-mt-3 h-11 w-11 rounded-xl border border-border bg-surface-1 shadow-card',
                     )}
                   >
                     <Icon

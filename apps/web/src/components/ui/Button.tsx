@@ -14,12 +14,12 @@ const button = cva(
   {
     variants: {
       variant: {
-        primary: 'rounded-full bg-text-primary text-bg hover:bg-text-primary/90',
+        primary: 'rounded-lg bg-text-primary text-bg hover:bg-text-primary/90',
         secondary:
-          'rounded-full border border-border-strong bg-surface-2 text-text-primary hover:bg-surface-1',
+          'rounded-lg border border-border-strong bg-surface-1 text-text-primary hover:bg-surface-2',
         ghost:
-          'rounded-full border border-border-strong bg-transparent text-text-primary hover:bg-text-primary/5',
-        danger: 'rounded-full bg-danger text-text-primary hover:brightness-110',
+          'rounded-lg border border-border bg-transparent text-text-primary hover:bg-surface-2',
+        danger: 'rounded-lg bg-danger text-white hover:brightness-110',
       },
       size: {
         sm: 'h-8 px-3 text-[13px]',

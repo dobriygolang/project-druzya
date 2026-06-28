@@ -15,8 +15,8 @@ export function PageContent({
   return (
     <div
       className={cn(
-        'mx-auto flex w-full flex-col gap-6 px-4 py-10 sm:px-8 sm:py-14',
-        wide ? 'max-w-6xl' : 'max-w-4xl',
+        'mx-auto flex w-full flex-col gap-6 px-6 py-10 sm:px-8 sm:py-14',
+        wide ? 'max-w-[1200px]' : 'max-w-4xl',
         className,
       )}
     >

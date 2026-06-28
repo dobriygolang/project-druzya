@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Link, useNavigate } from 'react-router-dom'
 import { Check, Users } from 'lucide-react'
+import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
+import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { CompanyCard } from '@/components/mock/CompanyCard'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { PageContent } from '@/components/PageContent'
 import { getBillingMe } from '@/lib/api/billing'
 import { listCompanies, listInterviewTemplates } from '@/lib/api/content'
 import { startSession, startTrainingSession } from '@/lib/api/interview'
@@ -77,64 +80,55 @@ export default function MockHubPage() {
     companyTemplatesEnabled && !mockQuotaExhausted && !startMockM.isPending
 
   return (
-    <div className="flex flex-col gap-6 px-4 py-6 sm:px-8 lg:px-20 lg:py-8">
-      <header className="flex flex-col gap-1">
-        <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary">
-          Mock Interview
-        </div>
-        <h1 className="font-display text-2xl font-bold text-text-primary sm:text-3xl">
-          Mock & practice
-        </h1>
-        <p className="max-w-2xl text-sm text-text-secondary">
-          Company mock — секции из шаблона content service. Solo — одна тренировочная секция за
-          сессию.
-        </p>
-      </header>
+    <PageContent wide className="gap-8">
+      <PageHeader
+        eyebrow="Mock interview"
+        title="Mock & practice"
+        description="Company mock — секции из шаблона content service. Solo — одна тренировочная секция за сессию."
+      />
 
       <FirstRunSteps />
 
-      <section className="rounded-xl border border-border bg-surface-1 p-4">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-          Solo practice
-        </h2>
-        <p className="mt-1 text-xs text-text-secondary">
-          Одна секция → одна training-сессия на interview service.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {SOLO_SECTIONS.map((s) => (
-            <Button
-              key={s.id}
-              variant="ghost"
-              size="sm"
-              title={s.hint}
-              loading={startSoloM.isPending && startSoloM.variables === s.mode}
-              disabled={mockQuotaExhausted || startSoloM.isPending}
-              onClick={() => startSoloM.mutate(s.mode)}
-            >
-              {s.label}
-            </Button>
-          ))}
-        </div>
-      </section>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <SdvgCard
+          eyebrow="Solo practice"
+          title="Одна секция"
+          description="Training-сессия на interview service — выбери тип задач."
+        >
+          <div className="flex flex-wrap gap-2">
+            {SOLO_SECTIONS.map((s) => (
+              <Button
+                key={s.id}
+                variant="ghost"
+                size="sm"
+                title={s.hint}
+                loading={startSoloM.isPending && startSoloM.variables === s.mode}
+                disabled={mockQuotaExhausted || startSoloM.isPending}
+                onClick={() => startSoloM.mutate(s.mode)}
+              >
+                {s.label}
+              </Button>
+            ))}
+          </div>
+        </SdvgCard>
 
-      <section className="rounded-xl border border-border bg-surface-1 p-4">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-          Live collab
-        </h2>
-        <p className="mt-1 text-xs text-text-secondary">
-          Pair programming — комната создаётся через rooms service.
-        </p>
-        <Link to="/live/new" className="mt-3 inline-block">
-          <Button variant="ghost" size="sm" icon={<Users className="h-4 w-4" />}>
-            Создать live room
-          </Button>
-        </Link>
-      </section>
+        <SdvgCard
+          eyebrow="Live collab"
+          title="Pair programming"
+          description="Комната создаётся через rooms service — синхронный редактор."
+        >
+          <Link to="/live/new">
+            <Button variant="ghost" size="sm" icon={<Users className="h-4 w-4" />}>
+              Создать live room
+            </Button>
+          </Link>
+        </SdvgCard>
+      </div>
 
       {!companyTemplatesEnabled && billingQ.isSuccess ? (
         <QuotaBanner>
           Шаблоны компаний доступны на Pro.{' '}
-          <Link to="/pricing" className="underline">
+          <Link to="/pricing" className="text-text-primary underline">
             Тарифы
           </Link>
         </QuotaBanner>
@@ -157,21 +151,22 @@ export default function MockHubPage() {
       ) : null}
 
       <section>
-        <h2 className="font-display text-lg font-bold">Компании</h2>
-        <p className="mt-1 text-sm text-text-secondary">
-          Выбери компанию → шаблон интервью → multi-section mock с backend.
-        </p>
+        <PageHeader
+          eyebrow="Компании"
+          title="Шаблоны под компанию"
+          description="Выбери компанию → шаблон интервью → multi-section mock с backend."
+        />
 
         {companiesQ.isLoading ? (
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-lg bg-surface-2" />
+              <div key={i} className="h-28 animate-pulse rounded-2xl bg-surface-2" />
             ))}
           </div>
         ) : null}
 
         {companiesQ.isError ? (
-          <div className="mt-4">
+          <div className="mt-5">
             <ErrorMessage
               message={formatApiError(companiesQ.error)}
               onRetry={() => void companiesQ.refetch()}
@@ -180,11 +175,11 @@ export default function MockHubPage() {
         ) : null}
 
         {companiesQ.isSuccess && companies.length === 0 ? (
-          <p className="mt-4 text-sm text-text-muted">Каталог пуст — запусти seed content service.</p>
+          <p className="mt-5 text-sm text-text-muted">Каталог пуст — запусти seed content service.</p>
         ) : null}
 
         {companiesQ.isSuccess && companies.length > 0 ? (
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {companies.map((c) => (
               <CompanyCard
                 key={c.id}
@@ -214,7 +209,7 @@ export default function MockHubPage() {
           disabled={!canStartCompanyMock}
         />
       ) : null}
-    </div>
+    </PageContent>
   )
 }
 
@@ -247,11 +242,11 @@ function TemplatePicker({
   )
 
   return (
-    <section className="rounded-xl border border-border-strong bg-surface-1 p-5">
+    <SdvgCard eyebrow="Шаблон" className="border-border-strong">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-display text-lg font-bold">
-            {company?.name ?? 'Шаблоны'}
+          <h2 className="text-base font-semibold tracking-[-0.01em]">
+            {company?.name ?? 'Interview template'}
           </h2>
           <p className="mt-1 text-sm text-text-secondary">
             Секции и задачи задаются шаблоном в content service.
@@ -264,11 +259,7 @@ function TemplatePicker({
 
       {loading ? <p className="mt-4 text-sm text-text-muted">Загрузка шаблонов…</p> : null}
 
-      {error ? (
-        <div className="mt-4">
-          <ErrorMessage message={error} onRetry={onRetry} />
-        </div>
-      ) : null}
+      {error ? <div className="mt-4"><ErrorMessage message={error} onRetry={onRetry} /></div> : null}
 
       {!loading && !error && templates.length === 0 ? (
         <p className="mt-4 text-sm text-text-muted">Нет активных шаблонов для этой компании.</p>
@@ -284,10 +275,10 @@ function TemplatePicker({
                   type="button"
                   onClick={() => setPickedId(t.id)}
                   className={[
-                    'flex w-full items-start gap-3 rounded-lg border p-4 text-left transition-colors',
+                    'flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-colors',
                     active
-                      ? 'border-text-primary bg-text-primary/5'
-                      : 'border-border bg-surface-2 hover:border-border-strong',
+                      ? 'border-border-strong bg-surface-2'
+                      : 'border-border bg-surface-1 hover:border-border-strong',
                   ].join(' ')}
                 >
                   <span
@@ -299,12 +290,12 @@ function TemplatePicker({
                     {active ? <Check className="h-3 w-3" /> : null}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block font-medium text-text-primary">{t.title}</span>
+                    <span className="block font-medium">{t.title}</span>
                     {t.description ? (
-                      <span className="mt-1 block text-xs text-text-secondary">{t.description}</span>
+                      <span className="mt-1 block text-[13px] text-text-secondary">{t.description}</span>
                     ) : null}
                     {t.target_level ? (
-                      <span className="mt-1 inline-block font-mono text-[10px] uppercase tracking-wide text-text-muted">
+                      <span className="mt-1.5 inline-block font-mono text-[10px] uppercase tracking-[0.12em] text-text-muted">
                         {t.target_level}
                       </span>
                     ) : null}
@@ -326,17 +317,17 @@ function TemplatePicker({
           Начать mock — {picked.title}
         </Button>
       ) : null}
-    </section>
+    </SdvgCard>
   )
 }
 
 function QuotaBanner({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative pl-3 text-sm text-text-primary">
+    <div className="relative pl-3.5 text-sm text-text-primary">
       <span
         aria-hidden
-        className="absolute left-0 top-0 h-full w-[1.5px]"
-        style={{ background: 'var(--red)' }}
+        className="absolute bottom-0 left-0 top-0 w-0.5 rounded-full"
+        style={{ background: brand.dot }}
       />
       {children}
     </div>
@@ -350,24 +341,24 @@ function FirstRunSteps() {
     { n: '3', title: 'AI-разбор', body: 'Оценка попыток через ai + recommendation.' },
   ]
   return (
-    <div className="rounded-xl border border-border bg-surface-1 p-4">
-      <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-        Как это работает
-      </span>
-      <ol className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <SdvgCard eyebrow="Как это работает" title="Три шага до mock" lift={false}>
+      <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {steps.map((s) => (
           <li
             key={s.n}
-            className="flex flex-col gap-1.5 rounded-lg border border-border bg-surface-2 p-3"
+            className="flex flex-col gap-2 rounded-xl border border-border bg-surface-2 p-4"
           >
-            <span className="grid h-7 w-7 place-items-center rounded-full bg-text-primary/10 font-display text-sm font-bold text-text-primary">
-              {s.n}
+            <span className="inline-flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: brand.dot }} />
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-muted">
+                Шаг {s.n}
+              </span>
             </span>
-            <span className="font-display text-sm font-bold text-text-primary">{s.title}</span>
-            <span className="text-xs text-text-secondary">{s.body}</span>
+            <span className="font-medium">{s.title}</span>
+            <span className="text-[13px] leading-relaxed text-text-secondary">{s.body}</span>
           </li>
         ))}
       </ol>
-    </div>
+    </SdvgCard>
   )
 }

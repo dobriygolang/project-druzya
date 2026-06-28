@@ -1,5 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, ListTodo, X } from 'lucide-react'
+import { Check, X } from 'lucide-react'
+import { SdvgCard } from '@/components/brand/SdvgCard'
+import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import {
   completeLearningPlanItem,
@@ -27,30 +29,35 @@ export function LearningPlanCard({
   })
 
   if (loading) {
-    return (
-      <section className="h-32 animate-pulse rounded-xl border border-border bg-surface-2" aria-hidden />
-    )
+    return <section className="sdvg-card h-32 animate-pulse bg-surface-2 p-6" aria-hidden />
   }
 
   const active = items.filter((i) => i.status !== 'completed' && i.status !== 'dismissed')
   if (active.length === 0) return null
 
   return (
-    <section className="rounded-xl border border-border bg-surface-1 p-5">
-      <header className="mb-3 flex items-center gap-2">
-        <ListTodo className="h-4 w-4 text-text-secondary" aria-hidden />
-        <h2 className="font-display text-base font-bold">План обучения</h2>
-      </header>
-      <ul className="flex flex-col gap-3">
+    <SdvgCard
+      eyebrow="План"
+      title="План обучения"
+      description={`${active.length} ${active.length === 1 ? 'задача' : active.length < 5 ? 'задачи' : 'задач'} на повтор`}
+    >
+      <ul className="flex flex-col gap-2">
         {active.slice(0, 5).map((item) => (
           <li
             key={item.id}
-            className="flex flex-col gap-2 rounded-lg border border-border bg-surface-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+            className="relative flex flex-col gap-3 rounded-xl border border-border bg-surface-2 px-4 py-3.5 pl-5 sm:flex-row sm:items-center sm:justify-between"
           >
+            <span
+              className="absolute bottom-3 left-0 top-3 w-0.5 rounded-r"
+              style={{ background: brand.green }}
+              aria-hidden
+            />
             <div className="min-w-0">
-              <p className="text-sm font-medium text-text-primary">{item.title}</p>
+              <p className="text-[14px] font-medium">{item.title}</p>
               {item.description ? (
-                <p className="mt-1 text-[13px] text-text-secondary">{item.description}</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-text-secondary">
+                  {item.description}
+                </p>
               ) : null}
             </div>
             <div className="flex shrink-0 gap-2">
@@ -76,6 +83,6 @@ export function LearningPlanCard({
           </li>
         ))}
       </ul>
-    </section>
+    </SdvgCard>
   )
 }

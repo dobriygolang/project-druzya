@@ -6,7 +6,39 @@
 @tailwind utilities;
 
 @layer base {
+  /* sdvg.io light — default app theme */
   :root,
+  html.light {
+    --color-bg: 250 250 248;
+    --color-surface-1: 255 255 255;
+    --color-surface-2: 247 247 245;
+    --color-surface-3: 240 240 237;
+    --color-border: 232 232 230;
+    --color-border-strong: 215 215 212;
+    --color-text-primary: 15 15 15;
+    --color-text-secondary: 91 91 91;
+    --color-text-muted: 142 142 142;
+    --color-accent: 15 15 15;
+    --color-accent-hover: 35 35 35;
+    --color-success: 76 179 92;
+    --color-danger: 255 59 48;
+    --color-warn: 232 181 72;
+    --color-cyan: 15 15 15;
+    --color-pink: 15 15 15;
+    --ink: 15 15 15;
+    --ink-90: rgba(15, 15, 15, 0.9);
+    --ink-60: rgba(15, 15, 15, 0.6);
+    --ink-40: rgba(15, 15, 15, 0.4);
+    --ink-20: rgba(15, 15, 15, 0.2);
+    --hair: rgba(15, 15, 15, 0.06);
+    --hair-2: rgba(15, 15, 15, 0.12);
+    --red: #ff3b30;
+    --dot: #ff3b30;
+    --green: #4cb35c;
+  }
+
+  /* Optional dark — live editor chrome only */
+  html.dark,
   .dark {
     --color-bg: 0 0 0;
     --color-surface-1: 10 10 10;
@@ -34,34 +66,6 @@
     --red: #ff3b30;
   }
 
-  html.light,
-  .light {
-    --color-bg: 250 250 248;
-    --color-surface-1: 255 255 255;
-    --color-surface-2: 247 247 245;
-    --color-surface-3: 240 240 237;
-    --color-border: 232 232 230;
-    --color-border-strong: 215 215 212;
-    --color-text-primary: 15 15 15;
-    --color-text-secondary: 91 91 91;
-    --color-text-muted: 142 142 142;
-    --color-accent: 15 15 15;
-    --color-accent-hover: 35 35 35;
-    --color-success: 15 15 15;
-    --color-danger: 255 59 48;
-    --color-warn: 91 91 91;
-    --color-cyan: 15 15 15;
-    --color-pink: 15 15 15;
-    --ink: 15 15 15;
-    --ink-90: rgba(15, 15, 15, 0.9);
-    --ink-60: rgba(15, 15, 15, 0.6);
-    --ink-40: rgba(15, 15, 15, 0.4);
-    --ink-20: rgba(15, 15, 15, 0.2);
-    --hair: rgba(15, 15, 15, 0.06);
-    --hair-2: rgba(15, 15, 15, 0.12);
-    --red: #ff3b30;
-  }
-
   html {
     transition:
       background-color var(--motion-dur-medium) var(--motion-ease-standard),
@@ -84,7 +88,7 @@
   }
 
   body.v2 ::selection {
-    background: #ff3b30;
+    background: var(--dot);
     color: #fff;
   }
 
@@ -105,14 +109,21 @@
 }
 
 @layer components {
+  .sdvg-card {
+    @apply rounded-2xl border border-border bg-surface-1;
+    box-shadow: 0 1px 0 rgba(15, 15, 15, 0.02);
+  }
+  .sdvg-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-text-secondary;
+  }
   .v2-card {
-    @apply rounded-xl border border-border bg-surface-2 p-5;
+    @apply rounded-2xl border border-border bg-surface-1 p-5;
   }
   .v2-pill-active {
-    @apply rounded-md bg-surface-2 px-3.5 py-2 font-semibold text-text-primary;
+    @apply rounded-lg bg-surface-2 px-3.5 py-2 text-sm font-medium text-text-primary;
   }
   .v2-pill-idle {
-    @apply rounded-md px-3.5 py-2 font-medium text-text-secondary transition-colors hover:bg-surface-2;
+    @apply rounded-lg px-3.5 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-2 hover:text-text-primary;
   }
 }
 
@@ -127,11 +138,13 @@
   .card-lift {
     transition:
       transform var(--motion-dur-small) var(--motion-ease-standard),
-      border-color var(--motion-dur-small) var(--motion-ease-standard);
+      border-color var(--motion-dur-small) var(--motion-ease-standard),
+      box-shadow var(--motion-dur-small) var(--motion-ease-standard);
   }
   .card-lift:hover {
     transform: translateY(-1px);
     border-color: var(--hair-2);
+    box-shadow: 0 8px 24px -16px rgba(15, 15, 15, 0.12);
   }
   @media (prefers-reduced-motion: reduce) {
     .card-lift:hover {
