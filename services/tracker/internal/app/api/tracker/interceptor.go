@@ -14,14 +14,18 @@ import (
 const internalServicePrefix = "/tracker.v1.TrackerInternalService/"
 
 var protectedMethods = map[string]struct{}{
-	trackerv1.TrackerService_GetBoard_FullMethodName:      {},
-	trackerv1.TrackerService_CreateProject_FullMethodName: {},
-	trackerv1.TrackerService_CreateEpic_FullMethodName:    {},
-	trackerv1.TrackerService_CreateSprint_FullMethodName:  {},
-	trackerv1.TrackerService_CreateTask_FullMethodName:    {},
-	trackerv1.TrackerService_UpdateTask_FullMethodName:    {},
-	trackerv1.TrackerService_ArchiveSprint_FullMethodName: {},
-	trackerv1.TrackerService_ExportBoard_FullMethodName:   {},
+	trackerv1.TrackerService_GetBoard_FullMethodName:                    {},
+	trackerv1.TrackerService_CreateProject_FullMethodName:               {},
+	trackerv1.TrackerService_CreateEpic_FullMethodName:                  {},
+	trackerv1.TrackerService_CreateSprint_FullMethodName:                {},
+	trackerv1.TrackerService_CreateTask_FullMethodName:                  {},
+	trackerv1.TrackerService_UpdateTask_FullMethodName:                  {},
+	trackerv1.TrackerService_ArchiveSprint_FullMethodName:               {},
+	trackerv1.TrackerService_ExportBoard_FullMethodName:                 {},
+	trackerv1.TrackerService_GetSettings_FullMethodName:                 {},
+	trackerv1.TrackerService_UpdateSettings_FullMethodName:              {},
+	trackerv1.TrackerService_GetGoogleCalendarAuthURL_FullMethodName:    {},
+	trackerv1.TrackerService_DisconnectGoogleCalendar_FullMethodName:    {},
 }
 
 func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {
