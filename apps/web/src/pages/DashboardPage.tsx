@@ -4,9 +4,9 @@ import { Link } from 'react-router-dom'
 import { PageHeader } from '@/components/brand/SdvgCard'
 import { BackendReadinessCard } from '@/components/today/BackendReadinessCard'
 import { ErrorBoundary } from '@/components/today/ErrorBoundary'
-import { SprintPreviewCard } from '@/components/today/SprintPreviewCard'
 import { TodayActionGrid } from '@/components/today/TodayActionGrid'
 import { TodayPageShell } from '@/components/today/TodayPageShell'
+import { TodayPlanCard } from '@/components/today/TodayPlanCard'
 import { BillingUpsell } from '@/components/billing/BillingUpsell'
 import { getMe } from '@/lib/api/auth'
 import { getBillingMe } from '@/lib/api/billing'
@@ -64,7 +64,7 @@ export default function DashboardPage() {
         error={dashboardQ.isError}
       />
 
-      <SprintPreviewCard />
+      <TodayPlanCard />
 
       <ErrorBoundary message={t('today.errorSection', { section: t('today.insights.title') })}>
         <section className="flex flex-col gap-5">
@@ -73,10 +73,7 @@ export default function DashboardPage() {
             title={t('today.insights.title')}
             description={t('today.insights.description')}
           />
-          <TodayActionGrid
-            dashboard={dashboardQ.data}
-            loading={dashboardQ.isLoading}
-          />
+          <TodayActionGrid dashboard={dashboardQ.data} loading={dashboardQ.isLoading} />
         </section>
       </ErrorBoundary>
     </TodayPageShell>

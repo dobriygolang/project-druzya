@@ -15,6 +15,8 @@ var (
 	ErrInvalidOAuthState = errors.New("invalid oauth state")
 	// ErrInvalidExchangeCode is returned when a Yandex exchange code is invalid or expired.
 	ErrInvalidExchangeCode = errors.New("invalid exchange code")
+	// ErrInvalidTimezone is returned when an IANA timezone name is invalid.
+	ErrInvalidTimezone = errors.New("invalid timezone")
 	// ErrProviderAlreadyLinked is returned when a provider account is linked to another user.
 	ErrProviderAlreadyLinked = errors.New("provider already linked to another user")
 )

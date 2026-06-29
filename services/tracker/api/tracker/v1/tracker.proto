@@ -86,6 +86,10 @@ service TrackerService {
     option (google.api.http) = {get: "/v1/tracker/board"};
   }
 
+  rpc GetToday(GetTodayRequest) returns (GetTodayResponse) {
+    option (google.api.http) = {get: "/v1/tracker/today"};
+  }
+
   rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse) {
     option (google.api.http) = {
       post: "/v1/tracker/projects"
@@ -172,6 +176,38 @@ message GetBoardRequest {
 
 message GetBoardResponse {
   Board board = 1;
+}
+
+enum TodayReasonCode {
+  TODAY_REASON_UNSPECIFIED = 0;
+  TODAY_REASON_RETRY = 1;
+  TODAY_REASON_REVIEW = 2;
+  TODAY_REASON_SKILL = 3;
+  TODAY_REASON_MOCK = 4;
+  TODAY_REASON_LEARNING = 5;
+  TODAY_REASON_USER = 6;
+}
+
+message TodayTask {
+  Task task = 1;
+  TodayReasonCode reason_code = 2;
+  optional string epic_name = 3;
+  optional string action_path = 4;
+}
+
+message GetTodayRequest {
+  optional string local_date = 1;
+  optional string timezone = 2;
+}
+
+message GetTodayResponse {
+  repeated TodayTask today_tasks = 1;
+  repeated TodayTask later_tasks = 2;
+  float budget_used = 3;
+  float budget_capacity = 4;
+  optional Sprint active_sprint = 5;
+  repeated Epic epics = 6;
+  string local_date = 7;
 }
 
 message CreateProjectRequest {
@@ -354,6 +390,7 @@ message CreateTaskInternalRequest {
   google.protobuf.Struct metadata = 4;
   optional string dedup_key = 5;
   optional string epic_name = 6;
+  optional float estimate_days = 7;
 }
 
 message CreateTaskInternalResponse {

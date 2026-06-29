@@ -108,3 +108,11 @@ export async function getMe(): Promise<User> {
   const res = await api<{ user?: User }>('/me')
   return normalizeUser(res.user)
 }
+
+export async function updateMe(body: { timezone?: string }): Promise<User> {
+  const res = await api<{ user?: User }>('/me', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  })
+  return normalizeUser(res.user)
+}

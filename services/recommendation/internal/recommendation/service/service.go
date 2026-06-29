@@ -14,8 +14,10 @@ import (
 	trackeradapter "github.com/sedorofeevd/project-druzya/services/recommendation/internal/adapter/tracker"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/plan"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/payload"
+	"github.com/sedorofeevd/project-druzya/services/tracker/pkg/classify"
 )
 
 // ErrInvalidInput marks malformed handler input.
@@ -68,6 +70,8 @@ type Service interface {
 	CompleteRecommendation(ctx context.Context, userID, id string) error
 	MarkArticleRead(ctx context.Context, userID, slug string) (*model.ArticleRead, error)
 	GetTaskPickerHints(ctx context.Context, userID, taskType string) (*model.TaskPickerHints, error)
+	ReconcileUserPlan(ctx context.Context, userID, localDate, timezone string) error
+	PlanToday(ctx context.Context, userID, localDate, timezone string, tasks []plan.TaskInput) (*plan.TodayPartition, map[string]plan.ScoredTask, error)
 	GetMockHubContext(ctx context.Context, userID string) (*model.MockHubContext, error)
 }
 
@@ -201,6 +205,8 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 				}
 				if inserted != nil {
 					dedup := "improve:" + skillKey
+					epic := plan.EpicSkills
+					est := plan.EstimateImproveSkill
 					s.pushTrackerTask(txCtx, trackeradapter.CreateTaskParams{
 						UserID: event.UserID,
 						Title:  rec.Title,
@@ -209,8 +215,14 @@ func (s *recommendationService) HandleAttemptEvaluated(ctx context.Context, even
 							"recommendation_id": inserted.ID,
 							"skill_key":         skillKey,
 							"action_path":       practicePathForSkill(skillKey),
+							"task_kind":         classify.KindSystem,
+							"brief_type":        "skill",
+							"rec_type":          string(model.RecommendationTypeImproveSkill),
+							"rec_priority":      string(rec.Priority),
 						},
-						DedupKey: &dedup,
+						DedupKey:     &dedup,
+						EpicName:     &epic,
+						EstimateDays: &est,
 					})
 				}
 			}
@@ -286,53 +298,15 @@ func (s *recommendationService) GetDashboard(ctx context.Context, userID string)
 	}
 
 	weaknesses := computeWeaknesses(snap.SkillScores)
-	skillKeys := make([]string, 0, len(weaknesses))
-	for _, w := range weaknesses {
-		skillKeys = append(skillKeys, w.SkillKey)
-	}
-	articles, err := s.content.ListArticlesBySkillKeys(ctx, skillKeys)
-	if err != nil {
-		return nil, fmt.Errorf("list articles: %w", err)
-	}
-
 	readSlugs, err := s.repo.ListArticleReadSlugs(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("list article reads: %w", err)
 	}
 
-	practiceActivity, err := s.repo.ListPracticeModeActivity(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("list practice mode activity: %w", err)
+	brief := model.DailyBrief{
+		ReadinessScore: snap.Profile.ReadinessScore,
+		Items:          nil,
 	}
-	staleModes := computeStalePracticeModes(practiceActivity, time.Now().UTC())
-
-	retryTaskTitles := make(map[string]string, len(pendingRetries))
-	for _, retry := range pendingRetries {
-		if retry.TaskID == "" {
-			continue
-		}
-		if _, ok := retryTaskTitles[retry.TaskID]; ok {
-			continue
-		}
-		task, err := s.content.GetTask(ctx, retry.TaskID)
-		if err != nil || task == nil {
-			continue
-		}
-		retryTaskTitles[retry.TaskID] = task.Title
-	}
-
-	lang := locale.From(ctx)
-	brief := buildDailyBrief(
-		lang,
-		snap.Profile.ReadinessScore,
-		weaknesses,
-		snap.Recommendations,
-		pendingRetries,
-		retryTaskTitles,
-		indexArticlesBySkill(articles),
-		indexReadSlugs(readSlugs),
-		staleModes,
-	)
 
 	return &model.Dashboard{
 		ReadinessScore:    snap.Profile.ReadinessScore,

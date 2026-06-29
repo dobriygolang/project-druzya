@@ -29,6 +29,9 @@ func toProtoUser(user *model.User) *identityv1.User {
 	if user.TelegramID != nil {
 		out.TelegramId = *user.TelegramID
 	}
+	if user.Timezone != "" {
+		out.Timezone = user.Timezone
+	}
 	return out
 }
 
@@ -68,7 +71,8 @@ func mapServiceError(err error) error {
 	case errors.Is(err, authservice.ErrInvalidLoginCode),
 		errors.Is(err, authservice.ErrInvalidRefreshToken),
 		errors.Is(err, authservice.ErrInvalidOAuthState),
-		errors.Is(err, authservice.ErrInvalidExchangeCode):
+		errors.Is(err, authservice.ErrInvalidExchangeCode),
+		errors.Is(err, authservice.ErrInvalidTimezone):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, authservice.ErrProviderAlreadyLinked):
 		return failedPrecondition(err.Error())

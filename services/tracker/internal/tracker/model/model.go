@@ -128,3 +128,31 @@ type LearningBoard struct {
 	ProjectID string
 	SprintID  string
 }
+
+type TodayReasonCode string
+
+const (
+	TodayReasonRetry   TodayReasonCode = "retry"
+	TodayReasonReview  TodayReasonCode = "review"
+	TodayReasonSkill   TodayReasonCode = "skill"
+	TodayReasonMock    TodayReasonCode = "mock"
+	TodayReasonLearning TodayReasonCode = "learning"
+	TodayReasonUser    TodayReasonCode = "user"
+)
+
+type TodayTaskEntry struct {
+	Task        Task
+	ReasonCode  TodayReasonCode
+	EpicName    string
+	ActionPath  string
+}
+
+type TodayView struct {
+	TodayTasks     []TodayTaskEntry
+	LaterTasks     []TodayTaskEntry
+	BudgetUsed     float64
+	BudgetCapacity float64
+	LocalDate      string
+	ActiveSprint   *Sprint
+	Epics          []Epic
+}

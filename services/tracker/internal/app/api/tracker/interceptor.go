@@ -15,6 +15,7 @@ const internalServicePrefix = "/tracker.v1.TrackerInternalService/"
 
 var protectedMethods = map[string]struct{}{
 	trackerv1.TrackerService_GetBoard_FullMethodName:                    {},
+	trackerv1.TrackerService_GetToday_FullMethodName:                    {},
 	trackerv1.TrackerService_CreateProject_FullMethodName:               {},
 	trackerv1.TrackerService_CreateEpic_FullMethodName:                  {},
 	trackerv1.TrackerService_ReopenEpic_FullMethodName:                  {},

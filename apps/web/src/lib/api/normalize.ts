@@ -159,5 +159,6 @@ export function normalizeUser(raw?: User | null): User {
         : record.telegramId != null
           ? String(record.telegramId)
           : undefined,
+    timezone: record.timezone || undefined,
   }
 }

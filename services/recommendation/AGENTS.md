@@ -6,9 +6,9 @@ Module: `github.com/sedorofeevd/project-druzya/services/recommendation`
 
 ## Purpose
 
-Consume interview outbox → update skill profiles/scores → recommendations + **structured daily brief** for Today.
+Consume interview outbox → update skill profiles/scores → **sync learning tasks into tracker** + score daily plan.
 
-**Tracker is the canonical task list** — learning plan items were removed; pending items migrate to tracker via `make migrate-learning-plan-to-tracker`.
+**Tracker is the canonical task list** — Today UI reads `GET /v1/tracker/today`; recommendation runs reconcile + priority scoring internally.
 
 Calls **ai-service** only for optional tracker **smart parse** (`ClassifyTrackerTask`) when user enables it in tracker settings.
 
@@ -21,7 +21,7 @@ HTTP `8084` | gRPC `9094` | PG `5436` `druzya_recommendation`
 ```
 cmd/recommendation/app/
 cmd/migrate-learning-plan/     one-shot learning_plan → tracker migration
-internal/recommendation/       model, repository, service, copy/, brief builder
+internal/recommendation/       model, repository, service, plan/, copy/
 internal/adapter/interview/    outbox claim/ack/fail, eval summary, retries
 internal/adapter/content/      GetTask (legacy fallback when outbox payload lacks task_type)
 internal/adapter/tracker/      board ensure, CreateTaskInternal, settings, metadata patch
@@ -61,9 +61,19 @@ When `task_kind=general` and tracker `GetUserSettings.smart_parse_enabled`:
 2. `tracker.PatchTaskMetadata` with kind + metadata
 3. Re-evaluate `classify.ShouldEnrich` for learning enrichment
 
-## Daily brief (`GetDashboard`)
+## Daily plan
 
-Built on read in `service/brief.go` from readiness, weaknesses, active recommendations, pending retry queue, and content articles. **No learning plan block.**
+- `plan/desired_tasks.go` — idempotent desired tasks (retries, stale review, skills, mock) with epic + estimate.
+- `ReconcileUserPlan` (internal) — pushes missing tasks via `CreateTaskInternal` (debounced 30s/user).
+- `PlanToday` (internal) — scores open sprint tasks, greedy 1.5 person-day budget partition. **Scoring stays here** — tracker does not duplicate skill/readiness/stale logic.
+- `GetDashboard` — readiness, strengths, weaknesses, coach recommendations only (`daily_brief.items` empty; use tracker Today).
+
+### Planner rules
+
+- **User sovereignty:** reconcile pushes only tasks with `dedup_key` + `system_managed` metadata; `pushTrackerTask` no-ops without dedup; never deletes user tasks.
+- **Done tasks:** tracker dedup returns existing done row without insert; planner does not recreate.
+- **Sprint overload:** reconcile does not check sprint capacity (advisory overload bar on Tasks page).
+- **Timezone MVP:** client passes `local_date` + `timezone`; `plan.ResolvePlanClock` anchors scoring `now` and reconcile debounce (`user_id|local_date`); tracker falls back to identity profile TZ when client omits timezone.
 
 ## Article read progress
 
@@ -74,9 +84,18 @@ Table `article_reads(user_id, article_slug)`. `MarkArticleRead` upserts on scrol
 | RPC | HTTP | Auth |
 |-----|------|------|
 | GetDashboard | `GET /v1/recommendations/dashboard` | JWT |
+| GetMockHubContext | `GET /v1/recommendations/mock-hub` | JWT |
 | MarkArticleRead | `POST /v1/recommendations/articles/{slug}/read` | JWT |
 | DismissRecommendation | `POST /v1/recommendations/{id}/dismiss` | JWT |
 | CompleteRecommendation | `POST /v1/recommendations/{id}/complete` | JWT |
+
+Internal (`RecommendationInternalService`, `x-internal-token`):
+
+| RPC | Used by |
+|-----|---------|
+| GetTaskPickerHints | interview task picker |
+| ReconcileUserPlan | tracker `GetToday` |
+| PlanToday | tracker `GetToday` |
 
 ## Migration
 

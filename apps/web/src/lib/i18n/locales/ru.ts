@@ -173,7 +173,7 @@ export const ru = {
   today: {
     greeting: 'Привет',
     greetingNamed: 'Привет, {{name}}',
-    description: 'Готовность, план обучения и на чём сфокусироваться сегодня.',
+    description: 'Готовность и план на сегодня — из трекера задач.',
     startMock: 'Начать mock',
     readiness: {
       eyebrow: 'Готовность',
@@ -187,7 +187,25 @@ export const ru = {
     insights: {
       eyebrow: 'Инсайты',
       title: 'Что делать сегодня',
-      description: 'Подсказки появляются после mock-сессий.',
+      description: 'Советы коуча и слабые места по истории mock.',
+    },
+    plan: {
+      eyebrow: 'Сегодня',
+      title: 'Ваш план',
+      budget: '{{used}} / {{capacity}} person-days',
+      budgetHint: 'Задачи на сегодня (~1–2 рабочих дня). Остальное — в спринте.',
+      laterInSprint: 'Позже в спринте',
+      allTasks: 'Все задачи',
+      empty: 'Пройди mock или добавь задачи — план синхронизируется автоматически.',
+      todayEmpty: 'На сегодня задач нет — смотри «Позже в спринте» или добавь задачи.',
+      actionOpen: 'Открыть',
+      actionRetry: 'Повторить',
+      reasonRetry: 'Повтор',
+      reasonReview: 'Баланс',
+      reasonSkill: 'Навык',
+      reasonMock: 'Mock',
+      reasonLearning: 'Обучение',
+      reasonUser: 'Личное',
     },
     retry: {
       eyebrow: 'Повтор',

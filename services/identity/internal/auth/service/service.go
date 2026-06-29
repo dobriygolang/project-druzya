@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,7 @@ type Service interface {
 	RefreshToken(ctx context.Context, refreshToken string) (*AuthResult, error)
 	Logout(ctx context.Context, refreshToken string) error
 	GetMe(ctx context.Context, userID string) (*model.User, error)
+	UpdateMe(ctx context.Context, userID string, timezone *string) (*model.User, error)
 	LinkYandex(ctx context.Context, userID, code string) (*model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
 	GetUserByTelegramID(ctx context.Context, telegramID int64) (*model.User, error)
@@ -267,6 +269,27 @@ func (s *service) GetMe(ctx context.Context, userID string) (*model.User, error)
 		return nil, err
 	}
 	return user, nil
+}
+
+func (s *service) UpdateMe(ctx context.Context, userID string, timezone *string) (*model.User, error) {
+	user, err := s.users.GetByID(ctx, userID)
+	if err != nil {
+		if isUserNotFound(err) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	if timezone == nil {
+		return user, nil
+	}
+	tz := strings.TrimSpace(*timezone)
+	if tz != "" {
+		if _, err := time.LoadLocation(tz); err != nil {
+			return nil, ErrInvalidTimezone
+		}
+	}
+	user.Timezone = tz
+	return s.users.Update(ctx, user)
 }
 
 func (s *service) LinkYandex(ctx context.Context, userID, code string) (*model.User, error) {

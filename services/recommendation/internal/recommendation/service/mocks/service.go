@@ -6,6 +6,7 @@ import (
 	context "context"
 
 	model "github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
+	plan "github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/plan"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -640,6 +641,126 @@ func (_c *Service_MarkArticleRead_Call) Return(_a0 *model.ArticleRead, _a1 error
 }
 
 func (_c *Service_MarkArticleRead_Call) RunAndReturn(run func(context.Context, string, string) (*model.ArticleRead, error)) *Service_MarkArticleRead_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PlanToday provides a mock function with given fields: ctx, userID, localDate, timezone, tasks
+func (_m *Service) PlanToday(ctx context.Context, userID string, localDate string, timezone string, tasks []plan.TaskInput) (*plan.TodayPartition, map[string]plan.ScoredTask, error) {
+	ret := _m.Called(ctx, userID, localDate, timezone, tasks)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PlanToday")
+	}
+
+	var r0 *plan.TodayPartition
+	var r1 map[string]plan.ScoredTask
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, []plan.TaskInput) (*plan.TodayPartition, map[string]plan.ScoredTask, error)); ok {
+		return rf(ctx, userID, localDate, timezone, tasks)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string, []plan.TaskInput) *plan.TodayPartition); ok {
+		r0 = rf(ctx, userID, localDate, timezone, tasks)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*plan.TodayPartition)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, string, []plan.TaskInput) map[string]plan.ScoredTask); ok {
+		r1 = rf(ctx, userID, localDate, timezone, tasks)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(map[string]plan.ScoredTask)
+		}
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, string, string, string, []plan.TaskInput) error); ok {
+		r2 = rf(ctx, userID, localDate, timezone, tasks)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// Service_PlanToday_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PlanToday'
+type Service_PlanToday_Call struct {
+	*mock.Call
+}
+
+// PlanToday is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - localDate string
+//   - timezone string
+//   - tasks []plan.TaskInput
+func (_e *Service_Expecter) PlanToday(ctx interface{}, userID interface{}, localDate interface{}, timezone interface{}, tasks interface{}) *Service_PlanToday_Call {
+	return &Service_PlanToday_Call{Call: _e.mock.On("PlanToday", ctx, userID, localDate, timezone, tasks)}
+}
+
+func (_c *Service_PlanToday_Call) Run(run func(ctx context.Context, userID string, localDate string, timezone string, tasks []plan.TaskInput)) *Service_PlanToday_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string), args[4].([]plan.TaskInput))
+	})
+	return _c
+}
+
+func (_c *Service_PlanToday_Call) Return(_a0 *plan.TodayPartition, _a1 map[string]plan.ScoredTask, _a2 error) *Service_PlanToday_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *Service_PlanToday_Call) RunAndReturn(run func(context.Context, string, string, string, []plan.TaskInput) (*plan.TodayPartition, map[string]plan.ScoredTask, error)) *Service_PlanToday_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ReconcileUserPlan provides a mock function with given fields: ctx, userID, localDate, timezone
+func (_m *Service) ReconcileUserPlan(ctx context.Context, userID string, localDate string, timezone string) error {
+	ret := _m.Called(ctx, userID, localDate, timezone)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ReconcileUserPlan")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, string) error); ok {
+		r0 = rf(ctx, userID, localDate, timezone)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// Service_ReconcileUserPlan_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ReconcileUserPlan'
+type Service_ReconcileUserPlan_Call struct {
+	*mock.Call
+}
+
+// ReconcileUserPlan is a helper method to define mock.On call
+//   - ctx context.Context
+//   - userID string
+//   - localDate string
+//   - timezone string
+func (_e *Service_Expecter) ReconcileUserPlan(ctx interface{}, userID interface{}, localDate interface{}, timezone interface{}) *Service_ReconcileUserPlan_Call {
+	return &Service_ReconcileUserPlan_Call{Call: _e.mock.On("ReconcileUserPlan", ctx, userID, localDate, timezone)}
+}
+
+func (_c *Service_ReconcileUserPlan_Call) Run(run func(ctx context.Context, userID string, localDate string, timezone string)) *Service_ReconcileUserPlan_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string), args[2].(string), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *Service_ReconcileUserPlan_Call) Return(_a0 error) *Service_ReconcileUserPlan_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *Service_ReconcileUserPlan_Call) RunAndReturn(run func(context.Context, string, string, string) error) *Service_ReconcileUserPlan_Call {
 	_c.Call.Return(run)
 	return _c
 }

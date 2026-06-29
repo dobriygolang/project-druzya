@@ -29,7 +29,8 @@ Service details: `services/<name>/AGENTS.md`. Ports: [AGENTS.md](../../AGENTS.md
 |------|-----|-----|
 | interview | content, billing, **recommendation** | templates, quota, **task picker hints** |
 | ai | interview, content, billing | outbox, bundle, eval quota |
-| recommendation | interview, content | outbox, articles, **mock progress** |
+| recommendation | interview, content, **tracker** | outbox, articles, **CreateTaskInternal**, mock progress |
+| **tracker** | **recommendation**, **identity** | **GetToday** reconcile + daily plan scoring; profile timezone fallback |
 | sandbox | content, interview, billing | tests, submit, runs |
 | rooms | identity, billing | guest JWT, room quota |
 | billing | identity | telegram → user |
@@ -42,6 +43,8 @@ Service details: `services/<name>/AGENTS.md`. Ports: [AGENTS.md](../../AGENTS.md
 | `attempt_evaluated`, `session_completed`, `retry_item_created`, `task_skipped` | recommendation (skills + **mock progress**) |
 
 Mock progress & picking: [docs/architecture/mock-progress.md](../architecture/mock-progress.md).
+
+**Today plan:** recommendation syncs learning/review/retry tasks into tracker (epic + estimate); `GET /v1/tracker/today?local_date=&timezone=` returns today slice (~1.5 person-day budget) + later-in-sprint. Web sends browser IANA TZ and persists it via `PATCH /v1/me`; reconcile debounce is scoped per `user_id|local_date` in the user's timezone.
 
 Each worker claims only its events (not `*`).
 

@@ -3,7 +3,6 @@ import { ArrowRight, Loader2, Target } from 'lucide-react'
 import { SdvgCard } from '@/components/brand/SdvgCard'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
-import { DailyBriefCard } from '@/components/today/DailyBriefCard'
 import { skillLabel, useI18n } from '@/lib/i18n'
 import type { Dashboard } from '@/lib/types'
 
@@ -34,8 +33,8 @@ export function TodayActionGrid({
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="sdvg-card h-40 animate-pulse bg-surface-2" />
         ))}
       </div>
@@ -46,21 +45,7 @@ export function TodayActionGrid({
   const weaknesses = dashboard?.weaknesses ?? []
 
   return (
-    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-      <ActionCard eyebrow={t('today.actions.mockEyebrow')} title={t('today.actions.mockTitle')}>
-        <p className="text-[13px] leading-relaxed text-text-secondary">{t('today.actions.mockBody')}</p>
-        <Link to="/mock" className="mt-4 inline-block">
-          <Button
-            variant="primary"
-            size="sm"
-            icon={<Target className="h-4 w-4" />}
-            iconRight={<ArrowRight className="h-4 w-4" />}
-          >
-            {t('today.actions.mockCta')}
-          </Button>
-        </Link>
-      </ActionCard>
-
+    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       <ActionCard eyebrow={t('today.actions.insightEyebrow')} title={t('today.actions.insightTitle')}>
         {recommendations.length === 0 ? (
           <p className="text-[13px] text-text-muted">{t('today.actions.insightEmpty')}</p>
@@ -79,8 +64,18 @@ export function TodayActionGrid({
         )}
       </ActionCard>
 
-      <ActionCard eyebrow={t('today.actions.briefEyebrow')} title={t('today.actions.briefTitle')}>
-        <DailyBriefCard brief={dashboard?.daily_brief} />
+      <ActionCard eyebrow={t('today.actions.mockEyebrow')} title={t('today.actions.mockTitle')}>
+        <p className="text-[13px] leading-relaxed text-text-secondary">{t('today.actions.mockBody')}</p>
+        <Link to="/mock" className="mt-4 inline-block">
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<Target className="h-4 w-4" />}
+            iconRight={<ArrowRight className="h-4 w-4" />}
+          >
+            {t('today.actions.mockCta')}
+          </Button>
+        </Link>
       </ActionCard>
 
       <ActionCard eyebrow={t('today.actions.focusEyebrow')} title={t('today.actions.focusTitle')}>

@@ -104,7 +104,7 @@ func (c *Client) CreateTaskInternal(ctx context.Context, params trackeradapter.C
 	}
 	resp, err := c.client.CreateTaskInternal(c.authCtx(ctx), &trackerv1.CreateTaskInternalRequest{
 		UserId: params.UserID, Title: params.Title, Source: source, Metadata: meta,
-		DedupKey: params.DedupKey, EpicName: params.EpicName,
+		DedupKey: params.DedupKey, EpicName: params.EpicName, EstimateDays: float32Ptr(params.EstimateDays),
 	})
 	if err != nil {
 		return false, err
@@ -134,6 +134,14 @@ func (c *Client) PatchTaskMetadata(ctx context.Context, userID, taskID string, m
 		UserId: userID, TaskId: taskID, Metadata: meta,
 	})
 	return err
+}
+
+func float32Ptr(v *float64) *float32 {
+	if v == nil {
+		return nil
+	}
+	out := float32(*v)
+	return &out
 }
 
 var _ trackeradapter.Client = (*Client)(nil)

@@ -14,7 +14,7 @@ HTTP `8080` | gRPC `9090` | Postgres `5432` / `druzya` | Redis `6379`
 
 ## Data
 
-**users** — `id`, `username`, `telegram_id`, `yandex_id`, `avatar_url`. At least one provider id required.
+**users** — `id`, `username`, `telegram_id`, `yandex_id`, `avatar_url`, `timezone` (IANA, optional). At least one provider id required.
 
 **Redis:** `login_code:{code}` (5m), `refresh:{hash}` (720h), `oauth_state:{state}` (10m), `exchange_code:{code}` (5m).
 
@@ -36,6 +36,7 @@ Other services verify JWT via `pkg/jwt` or `GET /v1/jwt/public.pem`.
 | GET | `/v1/auth/yandex/url`, `/yandex/callback` | optional Bearer / no |
 | POST | `/v1/auth/yandex/exchange` | no |
 | GET | `/v1/me` | Bearer |
+| PATCH | `/v1/me` | Bearer — optional `timezone` (IANA) |
 
 Internal gRPC: `GetUser`, `ValidateToken`, `MintScopedAccessToken` (rooms guests).
 

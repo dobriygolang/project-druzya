@@ -21,7 +21,6 @@ import {
   startTrainingSession,
 } from '@/lib/api/interview'
 import { getMockHubContext } from '@/lib/api/recommendation'
-import { soloSectionIdFromSessionMode, sessionModeLabelKey } from '@/lib/mock/mockProgress'
 import { formatApiError, readAccessToken } from '@/lib/apiClient'
 import { useBillingLabels } from '@/lib/billingLabels'
 import { isActiveSessionConflict, useInterviewLabels } from '@/lib/interviewLabels'
@@ -29,7 +28,7 @@ import { useI18n } from '@/lib/i18n'
 import { persistGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
 import { listMyActiveRooms } from '@/lib/api/rooms'
-import type { PracticeScope, Progress, Session, StalePracticeMode } from '@/lib/types'
+import type { PracticeScope, Progress, Session } from '@/lib/types'
 
 export default function MockHubPage() {
   const { t, locale, formatDate } = useI18n()
@@ -167,7 +166,6 @@ export default function MockHubPage() {
     soloCardRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [soloFocus])
 
-  const staleModes = mockHubQ.data?.stale_modes ?? []
   const initialSoloScope =
     soloScope === 'review' ? ('review' as const) : soloScope === 'company' ? ('company' as const) : null
 
@@ -187,18 +185,6 @@ export default function MockHubPage() {
             <BillingUpsell />
           </div>
         </QuotaBanner>
-      ) : null}
-
-      {authed && staleModes.length > 0 ? (
-        <StalePracticeModesCard
-          modes={staleModes}
-          t={t}
-          sessionModeLabel={sessionModeLabel}
-          onPractice={(soloId) => {
-            setSoloModalOpen(true)
-            navigate(`/mock?solo=${soloId}&scope=review`, { replace: true })
-          }}
-        />
       ) : null}
 
       {activeSession ? (
@@ -334,49 +320,6 @@ export default function MockHubPage() {
         onStart={(templateId) => startMockM.mutate(templateId)}
       />
     </PageContent>
-  )
-}
-
-function StalePracticeModesCard({
-  modes,
-  t,
-  sessionModeLabel,
-  onPractice,
-}: {
-  modes: StalePracticeMode[]
-  t: (key: string, vars?: Record<string, string | number>) => string
-  sessionModeLabel: (mode: string) => string
-  onPractice: (soloSectionId: string) => void
-}) {
-  return (
-    <SdvgCard eyebrow={t('mock.stale.eyebrow')} title={t('mock.stale.title')}>
-      <p className="mb-4 text-[13px] text-text-secondary">{t('mock.stale.description')}</p>
-      <ul className="flex flex-col gap-2">
-        {modes.slice(0, 4).map((mode) => {
-          const soloId = soloSectionIdFromSessionMode(mode.session_mode)
-          const label = sessionModeLabel(sessionModeLabelKey(mode.session_mode))
-          const daysLabel = !mode.last_practiced_at
-            ? t('mock.stale.never')
-            : t('mock.stale.daysAgo', { days: mode.days_since })
-          return (
-            <li
-              key={`${mode.session_mode}-${mode.task_type}`}
-              className="flex flex-col gap-2 rounded-xl border border-border bg-surface-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="text-sm font-medium">{label}</p>
-                <p className="mt-0.5 text-[13px] text-text-muted">{daysLabel}</p>
-              </div>
-              {soloId ? (
-                <Button variant="ghost" size="sm" onClick={() => onPractice(soloId)}>
-                  {t('mock.stale.cta')}
-                </Button>
-              ) : null}
-            </li>
-          )
-        })}
-      </ul>
-    </SdvgCard>
   )
 }
 

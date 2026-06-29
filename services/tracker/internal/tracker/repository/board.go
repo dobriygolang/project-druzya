@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -283,7 +284,19 @@ func (r *Repository) CreateTask(ctx context.Context, in CreateTaskInput) (*model
 			return nil, false, err
 		}
 		if existing != nil {
-			return existing, false, nil
+			// Done system tasks stay closed — reconcile must not recreate (plan rule).
+			if existing.Done {
+				return existing, false, nil
+			}
+			// User tasks are never mutated by dedup sync (user sovereignty).
+			if existing.Source == model.TaskSourceUser {
+				return existing, false, nil
+			}
+			synced, err := r.syncOpenDedupTask(ctx, existing, in)
+			if err != nil {
+				return nil, false, err
+			}
+			return synced, false, nil
 		}
 	}
 	meta, err := json.Marshal(in.Metadata)
@@ -406,6 +419,61 @@ func (r *Repository) UpdateTask(ctx context.Context, taskID, userID string, patc
 		RETURNING id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
 	`, tid, title, done, epicUUID, position, estimateDays, completedAt)
 	return scanTask(row)
+}
+
+// syncOpenDedupTask updates planner-owned fields on an existing open system task.
+func (r *Repository) syncOpenDedupTask(ctx context.Context, existing *model.Task, in CreateTaskInput) (*model.Task, error) {
+	if existing.Done || existing.Source == model.TaskSourceUser {
+		return existing, nil
+	}
+	merged := mergeTaskMetadata(existing.Metadata, in.Metadata)
+	meta, err := json.Marshal(merged)
+	if err != nil {
+		return nil, err
+	}
+	tid, err := uuid.Parse(existing.ID)
+	if err != nil {
+		return nil, err
+	}
+	title := strings.TrimSpace(in.Title)
+	if title == "" {
+		title = existing.Title
+	}
+	estimate := in.EstimateDays
+	if estimate <= 0 {
+		estimate = existing.EstimateDays
+	}
+	var epicUUID *uuid.UUID
+	if in.EpicID != nil && *in.EpicID != "" {
+		parsed, err := uuid.Parse(*in.EpicID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid epic_id: %w", err)
+		}
+		epicUUID = &parsed
+	} else if existing.EpicID != nil {
+		parsed, err := uuid.Parse(*existing.EpicID)
+		if err != nil {
+			return nil, err
+		}
+		epicUUID = &parsed
+	}
+	row := r.conn(ctx).QueryRow(ctx, `
+		UPDATE tasks SET title = $2, estimate_days = $3, epic_id = $4, metadata = $5, updated_at = now()
+		WHERE id = $1 AND done = false
+		RETURNING id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+	`, tid, title, estimate, epicUUID, meta)
+	return scanTask(row)
+}
+
+func mergeTaskMetadata(base, patch map[string]any) map[string]any {
+	out := map[string]any{}
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range patch {
+		out[k] = v
+	}
+	return out
 }
 
 type CreateTaskInput struct {

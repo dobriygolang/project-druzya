@@ -42,6 +42,44 @@ export type TrackerTask = {
   metadata?: Record<string, unknown>
 }
 
+export type TodayReasonCode =
+  | 'TODAY_REASON_UNSPECIFIED'
+  | 'TODAY_REASON_RETRY'
+  | 'TODAY_REASON_REVIEW'
+  | 'TODAY_REASON_SKILL'
+  | 'TODAY_REASON_MOCK'
+  | 'TODAY_REASON_LEARNING'
+  | 'TODAY_REASON_USER'
+
+export type TodayTaskEntry = {
+  task: TrackerTask
+  reason_code?: TodayReasonCode | string
+  epic_name?: string
+  action_path?: string
+}
+
+export type TodayPlan = {
+  today_tasks: TodayTaskEntry[]
+  later_tasks: TodayTaskEntry[]
+  budget_used: number
+  budget_capacity: number
+  local_date?: string
+  active_sprint?: TrackerSprint
+  epics?: TrackerEpic[]
+}
+
+export function browserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}
+
+export function browserLocalDate(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export type TrackerBoard = {
   project?: TrackerProject
   epics?: TrackerEpic[]
@@ -64,6 +102,46 @@ function normalizeBoard(raw: { board?: TrackerBoard }): TrackerBoard {
 export function getBoard(projectId?: string) {
   const q = projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''
   return api<{ board?: TrackerBoard }>(`/tracker/board${q}`).then(normalizeBoard)
+}
+
+function normalizeTodayTask(raw: {
+  task?: TrackerTask
+  reason_code?: string
+  epic_name?: string
+  action_path?: string
+}): TodayTaskEntry {
+  return {
+    task: raw.task ?? { id: '', sprint_id: '', title: '', done: false },
+    reason_code: raw.reason_code,
+    epic_name: raw.epic_name,
+    action_path: raw.action_path,
+  }
+}
+
+export function getToday(localDate?: string, timezone?: string) {
+  const params = new URLSearchParams()
+  if (localDate) params.set('local_date', localDate)
+  if (timezone) params.set('timezone', timezone)
+  const q = params.toString() ? `?${params.toString()}` : ''
+  return api<{
+    today_tasks?: TodayTaskEntry[]
+    later_tasks?: TodayTaskEntry[]
+    budget_used?: number
+    budget_capacity?: number
+    local_date?: string
+    active_sprint?: TrackerSprint
+    epics?: TrackerEpic[]
+  }>(`/tracker/today${q}`).then(
+    (raw): TodayPlan => ({
+      today_tasks: (raw.today_tasks ?? []).map(normalizeTodayTask),
+      later_tasks: (raw.later_tasks ?? []).map(normalizeTodayTask),
+      budget_used: raw.budget_used ?? 0,
+      budget_capacity: raw.budget_capacity ?? 1.5,
+      local_date: raw.local_date,
+      active_sprint: raw.active_sprint,
+      epics: raw.epics ?? [],
+    }),
+  )
 }
 
 export function createProject(name: string) {

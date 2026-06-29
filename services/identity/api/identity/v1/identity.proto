@@ -51,6 +51,13 @@ service IdentityService {
     };
   }
 
+  rpc UpdateMe(UpdateMeRequest) returns (GetUserResponse) {
+    option (google.api.http) = {
+      patch: "/v1/me"
+      body: "*"
+    };
+  }
+
   rpc LinkYandex(LinkYandexRequest) returns (GetUserResponse) {
     option (google.api.http) = {
       post: "/v1/me/link/yandex"
@@ -73,6 +80,11 @@ message User {
   string avatar_url = 3;
   google.protobuf.Timestamp created_at = 4;
   int64 telegram_id = 5;
+  string timezone = 6;
+}
+
+message UpdateMeRequest {
+  optional string timezone = 1;
 }
 
 message AuthResponse {

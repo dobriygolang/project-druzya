@@ -8,6 +8,7 @@ import (
 	recommendationrepo "github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/repository"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/copy"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/model"
+	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/recommendation/plan"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/locale"
 	"github.com/sedorofeevd/project-druzya/services/recommendation/internal/tools/payload"
 	"github.com/sedorofeevd/project-druzya/services/tracker/pkg/classify"
@@ -69,19 +70,24 @@ func (s *recommendationService) HandleTrackerTaskCreated(ctx context.Context, ev
 				article := articles[0]
 				lang := locale.From(ctx)
 				readTitle := copy.BriefReadArticleTitle(lang, article.Title)
+				epic := plan.EpicLearning
+				est := plan.EstimateReadArticle
+				dedupKey := "enrich-read:" + taskID + ":" + article.Slug
 				s.pushTrackerTask(txCtx, trackeradapter.CreateTaskParams{
 					UserID: userID,
 					Title:  readTitle,
 					Source: "enrichment",
 					Metadata: map[string]any{
 						"task_kind":      classify.KindSystem,
+						"brief_type":     "learning",
 						"article_slug":   article.Slug,
 						"skill_key":      skillKey,
 						"action_path":    fmt.Sprintf("/learn/%s", article.Slug),
 						"parent_task_id": taskID,
 					},
-					DedupKey: strPtr("enrich-read:" + taskID + ":" + article.Slug),
-					EpicName: metaEpicName(meta),
+					DedupKey:     &dedupKey,
+					EpicName:     &epic,
+					EstimateDays: &est,
 				})
 			}
 			return s.maybePushWeakSkillPractice(txCtx, userID, skillKey)
@@ -144,16 +150,21 @@ func (s *recommendationService) maybePushWeakSkillPractice(ctx context.Context, 
 	lang := locale.From(ctx)
 	title := copy.BriefWeakSkillTitle(lang, humanizeSkillKey(skillKey))
 	dedup := "practice:" + skillKey
+	epic := plan.EpicSkills
+	est := plan.EstimateWeakSkill
 	s.pushTrackerTask(ctx, trackeradapter.CreateTaskParams{
 		UserID: userID,
 		Title:  title,
 		Source: "enrichment",
 		Metadata: map[string]any{
 			"task_kind":   classify.KindSystem,
+			"brief_type":  "skill",
 			"skill_key":   skillKey,
 			"action_path": practicePathForSkill(skillKey),
 		},
-		DedupKey: &dedup,
+		DedupKey:     &dedup,
+		EpicName:     &epic,
+		EstimateDays: &est,
 	})
 	return nil
 }

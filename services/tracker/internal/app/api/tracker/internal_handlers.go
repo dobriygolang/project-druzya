@@ -55,6 +55,7 @@ func (i *Implementation) CreateTaskInternal(ctx context.Context, req *trackerv1.
 	t, created, err := i.svc.CreateTaskInternal(ctx, trackerservice.InternalCreateTaskParams{
 		UserID: req.GetUserId(), Title: req.GetTitle(), Source: taskSourceFromProto(req.GetSource()),
 		Metadata: metadataFromProto(req.GetMetadata()), DedupKey: req.DedupKey, EpicName: req.EpicName,
+		EstimateDays: protoEstimateDays(req.EstimateDays),
 	})
 	if err != nil {
 		return nil, mapServiceError(err)

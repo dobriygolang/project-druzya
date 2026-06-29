@@ -71,7 +71,7 @@ func (s *recommendationService) HandleSessionCompleted(ctx context.Context, even
 			if inserted, err := s.repo.InsertTakeMockRecommendation(txCtx, rec); err != nil {
 				return fmt.Errorf("insert take_mock_interview: %w", err)
 			} else if inserted != nil {
-				s.pushRecommendationTrackerTask(txCtx, event.UserID, rec.Title, inserted.ID, rec.Metadata)
+				s.pushRecommendationTrackerTask(txCtx, event.UserID, rec.Title, inserted.ID, string(rec.Type), string(rec.Priority), rec.Metadata)
 			}
 		}
 
@@ -95,7 +95,7 @@ func (s *recommendationService) HandleSessionCompleted(ctx context.Context, even
 			if inserted, err := s.repo.InsertSpecialRecommendation(txCtx, rec); err != nil {
 				return fmt.Errorf("insert practice_section after session: %w", err)
 			} else if inserted != nil {
-				s.pushRecommendationTrackerTask(txCtx, event.UserID, rec.Title, inserted.ID, rec.Metadata)
+				s.pushRecommendationTrackerTask(txCtx, event.UserID, rec.Title, inserted.ID, string(rec.Type), string(rec.Priority), rec.Metadata)
 			}
 		}
 

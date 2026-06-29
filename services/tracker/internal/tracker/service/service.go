@@ -8,6 +8,8 @@ import (
 	"time"
 
 	googleadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/google"
+	identityadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/identity"
+	recommendationadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/recommendation"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/model"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/repository"
 	"github.com/sedorofeevd/project-druzya/services/tracker/pkg/classify"
@@ -59,6 +61,7 @@ type Service interface {
 	EnsureLearningBoard(ctx context.Context, userID string) (*model.LearningBoard, error)
 	CreateTaskInternal(ctx context.Context, in InternalCreateTaskParams) (*model.Task, bool, error)
 	GetSprintPreview(ctx context.Context, userID string, limit int) ([]model.Task, *model.Sprint, error)
+	GetToday(ctx context.Context, userID string, localDate, timezone *string) (*model.TodayView, error)
 	ClaimOutboxEvents(ctx context.Context, eventName string, limit int) ([]model.OutboxMessage, error)
 	AckOutboxEvents(ctx context.Context, ids []string) error
 	FailOutboxEvent(ctx context.Context, id, errMsg string) error
@@ -92,24 +95,29 @@ type UpdateTaskParams struct {
 }
 
 type InternalCreateTaskParams struct {
-	UserID   string
-	Title    string
-	Source   model.TaskSource
-	Metadata map[string]any
-	DedupKey *string
-	EpicName *string
+	UserID       string
+	Title        string
+	Source       model.TaskSource
+	Metadata     map[string]any
+	DedupKey     *string
+	EpicName     *string
+	EstimateDays *float64
 }
 
 type trackerService struct {
-	repo        Repository
-	google      *googleadapter.Client
-	frontendURL string
+	repo           Repository
+	google         *googleadapter.Client
+	frontendURL    string
+	recommendation recommendationadapter.Client
+	identity       identityadapter.Client
 }
 
 type Deps struct {
-	Repo        Repository
-	Google      *googleadapter.Client
-	FrontendURL string
+	Repo           Repository
+	Google         *googleadapter.Client
+	FrontendURL    string
+	Recommendation recommendationadapter.Client
+	Identity       identityadapter.Client
 }
 
 func New(deps Deps) Service {
@@ -117,7 +125,7 @@ func New(deps Deps) Service {
 	if frontend == "" {
 		frontend = "http://localhost:5173"
 	}
-	return &trackerService{repo: deps.Repo, google: deps.Google, frontendURL: frontend}
+	return &trackerService{repo: deps.Repo, google: deps.Google, frontendURL: frontend, recommendation: deps.Recommendation, identity: deps.Identity}
 }
 
 func (s *trackerService) GetBoard(ctx context.Context, userID string, projectID *string) (*model.Board, error) {
@@ -457,6 +465,9 @@ func (s *trackerService) EnsureLearningBoard(ctx context.Context, userID string)
 }
 
 func (s *trackerService) CreateTaskInternal(ctx context.Context, in InternalCreateTaskParams) (*model.Task, bool, error) {
+	if in.DedupKey == nil || strings.TrimSpace(*in.DedupKey) == "" {
+		return nil, false, fmt.Errorf("%w: dedup_key is required for internal task create", model.ErrInvalidArgument)
+	}
 	board, err := s.EnsureLearningBoard(ctx, in.UserID)
 	if err != nil {
 		return nil, false, err
@@ -485,12 +496,20 @@ func (s *trackerService) CreateTaskInternal(ctx context.Context, in InternalCrea
 	if source == "" {
 		source = model.TaskSourceRecommendation
 	}
+	estimate := model.DefaultTaskEstimateDays
+	if in.EstimateDays != nil {
+		normalized, err := model.NormalizeEstimateDays(*in.EstimateDays)
+		if err != nil {
+			return nil, false, err
+		}
+		estimate = normalized
+	}
 	var task *model.Task
 	var created bool
 	err = s.repo.WithTx(ctx, func(txCtx context.Context) error {
 		t, ok, err := s.repo.CreateTask(txCtx, repository.CreateTaskInput{
 			SprintID: board.SprintID, EpicID: epicID, Title: strings.TrimSpace(in.Title),
-			EstimateDays: model.DefaultTaskEstimateDays,
+			EstimateDays: estimate,
 			Source: source, Metadata: meta, DedupKey: in.DedupKey,
 		})
 		if err != nil {

@@ -13,12 +13,13 @@ type OutboxEvent struct {
 }
 
 type CreateTaskParams struct {
-	UserID   string
-	Title    string
-	Source   string
-	Metadata map[string]any
-	DedupKey *string
-	EpicName *string
+	UserID       string
+	Title        string
+	Source       string
+	Metadata     map[string]any
+	DedupKey     *string
+	EpicName     *string
+	EstimateDays *float64
 }
 
 type UserSettings struct {

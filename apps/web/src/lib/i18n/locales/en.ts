@@ -174,7 +174,7 @@ export const en: Messages = {
   today: {
     greeting: 'Hello',
     greetingNamed: 'Hello, {{name}}',
-    description: 'Your readiness, learning plan, and what to focus on today.',
+    description: 'Your readiness and today\'s sprint plan — synced from the tracker.',
     startMock: 'Start mock',
     readiness: {
       eyebrow: 'Readiness',
@@ -188,7 +188,25 @@ export const en: Messages = {
     insights: {
       eyebrow: 'Insights',
       title: 'What to do today',
-      description: 'Suggestions appear after you complete mock sessions.',
+      description: 'Coach tips and weak spots from your mock history.',
+    },
+    plan: {
+      eyebrow: 'Today',
+      title: 'Your plan',
+      budget: '{{used}} / {{capacity}} person-days',
+      budgetHint: 'Top tasks for today (~1–2 focused work days). The rest stays in the sprint.',
+      laterInSprint: 'Later in sprint',
+      allTasks: 'All tasks',
+      empty: 'Complete a mock or add tasks — your plan syncs automatically.',
+      todayEmpty: 'Nothing scheduled for today — check later in sprint or add tasks.',
+      actionOpen: 'Open',
+      actionRetry: 'Retry',
+      reasonRetry: 'Retry',
+      reasonReview: 'Review',
+      reasonSkill: 'Skill',
+      reasonMock: 'Mock',
+      reasonLearning: 'Learn',
+      reasonUser: 'Personal',
     },
     retry: {
       eyebrow: 'Retry',

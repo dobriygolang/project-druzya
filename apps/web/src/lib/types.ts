@@ -4,6 +4,7 @@ export interface User {
   avatar_url?: string
   created_at?: string
   telegram_id?: string
+  timezone?: string
 }
 
 export interface AuthResponse {

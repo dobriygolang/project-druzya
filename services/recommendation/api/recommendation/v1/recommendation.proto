@@ -3,6 +3,7 @@ syntax = "proto3";
 package recommendation.v1;
 
 import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/sedorofeevd/project-druzya/services/recommendation/pkg/api/recommendation/v1;recommendationv1";
@@ -73,6 +74,8 @@ service RecommendationService {
 
 service RecommendationInternalService {
   rpc GetTaskPickerHints(GetTaskPickerHintsRequest) returns (GetTaskPickerHintsResponse);
+  rpc ReconcileUserPlan(ReconcileUserPlanRequest) returns (ReconcileUserPlanResponse);
+  rpc PlanToday(PlanTodayRequest) returns (PlanTodayResponse);
 }
 
 message GetDashboardRequest {}
@@ -192,4 +195,45 @@ message ReviewTaskCandidate {
   string task_type = 2;
   int32 best_score = 3;
   google.protobuf.Timestamp last_passed_at = 4;
+}
+
+message ReconcileUserPlanRequest {
+  string user_id = 1;
+  optional string local_date = 2;
+  optional string timezone = 3;
+}
+
+message ReconcileUserPlanResponse {}
+
+message PlanTodayTaskInput {
+  string id = 1;
+  string title = 2;
+  float estimate_days = 3;
+  int32 position = 4;
+  string source = 5;
+  google.protobuf.Struct metadata = 6;
+  google.protobuf.Timestamp created_at = 7;
+  optional string epic_id = 8;
+}
+
+message PlanTodayTaskMeta {
+  string task_id = 1;
+  string reason_code = 2;
+  double score = 3;
+}
+
+message PlanTodayRequest {
+  string user_id = 1;
+  optional string local_date = 2;
+  repeated PlanTodayTaskInput tasks = 3;
+  optional string timezone = 4;
+}
+
+message PlanTodayResponse {
+  repeated string today_task_ids = 1;
+  repeated string later_task_ids = 2;
+  float budget_used = 3;
+  float budget_capacity = 4;
+  repeated PlanTodayTaskMeta task_meta = 5;
+  string local_date = 6;
 }

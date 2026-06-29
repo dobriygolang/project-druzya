@@ -19,6 +19,7 @@ HTTP `8089` | gRPC `9099` | PG `5441` `druzya_tracker`
 | RPC | HTTP | Auth |
 |-----|------|------|
 | GetBoard | `GET /v1/tracker/board` | JWT |
+| GetToday | `GET /v1/tracker/today` | JWT |
 | CreateProject | `POST /v1/tracker/projects` | JWT |
 | CreateEpic | `POST /v1/tracker/epics` | JWT |
 | ReopenEpic | `POST /v1/tracker/epics/{id}/reopen` | JWT |
@@ -45,7 +46,7 @@ Internal (`TrackerInternalService`, `x-internal-token`):
 |-----|---------|
 | ClaimOutboxEvents / Ack / Fail | recommendation worker |
 | EnsureLearningBoard | recommendation |
-| CreateTaskInternal | recommendation |
+| CreateTaskInternal | recommendation (with `epic_name`, `estimate_days`) |
 | GetSprintPreview | recommendation (optional) |
 | GetUserSettings | recommendation (smart parse gate) |
 | PatchTaskMetadata | recommendation (smart parse merge + epic from `epic_hint`) |
@@ -63,8 +64,22 @@ Internal (`TrackerInternalService`, `x-internal-token`):
 - `CreateSprint` archives any existing active sprint for the project, then inserts the new sprint as active.
 - Sprint proto includes `created_at` / `archived_at`, `estimate_days_used` / `estimate_days_capacity` (capacity = **10 person-days** for a 14-day sprint).
 - `ReopenEpic` | `POST /v1/tracker/epics/{id}/reopen` | JWT — manual reopen after all tasks done.
-- Task `estimate_days` (0.5–5, default 1); create/update rejected if sprint sum exceeds capacity (`FailedPrecondition`).
-+- Task `estimate_days` (0.5–5, default 1); sprint `estimate_days_used` vs capacity (5) is **advisory** — UI warns when over, API does not block.
+- Task `estimate_days` (0.5–5, default 1); sprint capacity is **advisory** (soft overload bar in UI).
+
+## Today plan (`GetToday`)
+
+- Calls recommendation internal `ReconcileUserPlan` (debounced) then `PlanToday` to score open sprint tasks and partition into **today** (~1.5 person-day budget) vs **later**.
+- SSOT for actionable items: tracker DB; recommendation is the scheduling engine (scoring stays in recommendation — not duplicated here).
+
+### Planner rules (enforced in code)
+
+| Rule | Behavior |
+|------|----------|
+| User sovereignty | Reconcile only `CreateTaskInternal` with `dedup_key`; never deletes/archives user tasks; dedup sync skips `source=user` |
+| Done tasks | Dedup hit on a **done** task → no recreate; excluded from `GetToday` via `filterOpenTasks` |
+| Open system sync | Dedup hit on open recommendation/enrichment task → update estimate, epic, metadata merge |
+| Sprint overload | Internal create ignores capacity cap (soft UI warning only on user create) |
+| Timezone | Client sends `local_date` + `timezone` on `GET /tracker/today`; falls back to identity profile TZ; scoring + reconcile debounce keyed by `user_id|local_date` in user's TZ |
 
 ## Epics
 
@@ -100,6 +115,8 @@ make start | gen-proto | test | lint | build
 | JWT_PUBLIC_KEY / JWT_PUBLIC_KEY_FILE | required |
 | INTERNAL_API_TOKEN | required |
 | FRONTEND_URL | `http://localhost:5173` |
+| RECOMMENDATION_GRPC_ADDR | optional; enables `GetToday` reconcile + scoring |
+| IDENTITY_GRPC_ADDR | optional; profile timezone fallback for `GetToday` (default `127.0.0.1:9090`) |
 | GOOGLE_CLIENT_ID | optional |
 | GOOGLE_CLIENT_SECRET | optional |
 | GOOGLE_REDIRECT_URI | optional |

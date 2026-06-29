@@ -10,6 +10,7 @@ import (
 
 var protectedMethods = map[string]struct{}{
 	identityv1.IdentityService_GetMe_FullMethodName:      {},
+	identityv1.IdentityService_UpdateMe_FullMethodName:   {},
 	identityv1.IdentityService_Logout_FullMethodName:     {},
 	identityv1.IdentityService_LinkYandex_FullMethodName: {},
 }

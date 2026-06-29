@@ -140,6 +140,14 @@ func metadataFromProto(st *structpb.Struct) map[string]any {
 	return st.AsMap()
 }
 
+func protoEstimateDays(v *float32) *float64 {
+	if v == nil {
+		return nil
+	}
+	out := float64(*v)
+	return &out
+}
+
 func userSettingsToProto(s *model.UserSettingsView) *trackerv1.UserSettings {
 	if s == nil {
 		return &trackerv1.UserSettings{}
@@ -148,5 +156,58 @@ func userSettingsToProto(s *model.UserSettingsView) *trackerv1.UserSettings {
 		SmartParseEnabled:         s.SmartParseEnabled,
 		GoogleCalendarSyncEnabled: s.GoogleCalendarSyncEnabled,
 		GoogleCalendarConnected:   s.GoogleCalendarConnected,
+	}
+}
+
+func todayViewToProto(v *model.TodayView) *trackerv1.GetTodayResponse {
+	if v == nil {
+		return &trackerv1.GetTodayResponse{BudgetCapacity: 1.5}
+	}
+	out := &trackerv1.GetTodayResponse{
+		BudgetUsed: float32(v.BudgetUsed), BudgetCapacity: float32(v.BudgetCapacity),
+		LocalDate:    v.LocalDate,
+		ActiveSprint: sprintToProto(v.ActiveSprint),
+	}
+	for _, e := range v.Epics {
+		out.Epics = append(out.Epics, epicToProto(&e))
+	}
+	for _, item := range v.TodayTasks {
+		out.TodayTasks = append(out.TodayTasks, todayTaskToProto(item))
+	}
+	for _, item := range v.LaterTasks {
+		out.LaterTasks = append(out.LaterTasks, todayTaskToProto(item))
+	}
+	return out
+}
+
+func todayTaskToProto(item model.TodayTaskEntry) *trackerv1.TodayTask {
+	out := &trackerv1.TodayTask{
+		Task: taskToProto(&item.Task), ReasonCode: todayReasonToProto(item.ReasonCode),
+	}
+	if item.EpicName != "" {
+		out.EpicName = &item.EpicName
+	}
+	if item.ActionPath != "" {
+		out.ActionPath = &item.ActionPath
+	}
+	return out
+}
+
+func todayReasonToProto(r model.TodayReasonCode) trackerv1.TodayReasonCode {
+	switch r {
+	case model.TodayReasonRetry:
+		return trackerv1.TodayReasonCode_TODAY_REASON_RETRY
+	case model.TodayReasonReview:
+		return trackerv1.TodayReasonCode_TODAY_REASON_REVIEW
+	case model.TodayReasonSkill:
+		return trackerv1.TodayReasonCode_TODAY_REASON_SKILL
+	case model.TodayReasonMock:
+		return trackerv1.TodayReasonCode_TODAY_REASON_MOCK
+	case model.TodayReasonLearning:
+		return trackerv1.TodayReasonCode_TODAY_REASON_LEARNING
+	case model.TodayReasonUser:
+		return trackerv1.TodayReasonCode_TODAY_REASON_USER
+	default:
+		return trackerv1.TodayReasonCode_TODAY_REASON_UNSPECIFIED
 	}
 }
