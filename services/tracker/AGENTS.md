@@ -21,6 +21,7 @@ HTTP `8089` | gRPC `9099` | PG `5441` `druzya_tracker`
 | GetBoard | `GET /v1/tracker/board` | JWT |
 | CreateProject | `POST /v1/tracker/projects` | JWT |
 | CreateEpic | `POST /v1/tracker/epics` | JWT |
+| ReopenEpic | `POST /v1/tracker/epics/{id}/reopen` | JWT |
 | CreateSprint | `POST /v1/tracker/sprints` | JWT |
 | CreateTask | `POST /v1/tracker/tasks` | JWT |
 | UpdateTask | `PATCH /v1/tracker/tasks/{id}` | JWT |
@@ -60,14 +61,15 @@ Internal (`TrackerInternalService`, `x-internal-token`):
 
 - One **active** sprint per project (`GetBoard.active_sprint`); archived sprints in `archived_sprints`.
 - `CreateSprint` archives any existing active sprint for the project, then inserts the new sprint as active.
-- Sprint proto includes `created_at` / `archived_at`, `estimate_days_used` / `estimate_days_capacity` (capacity = **5 person-days** per week).
+- Sprint proto includes `created_at` / `archived_at`, `estimate_days_used` / `estimate_days_capacity` (capacity = **10 person-days** for a 14-day sprint).
+- `ReopenEpic` | `POST /v1/tracker/epics/{id}/reopen` | JWT — manual reopen after all tasks done.
 - Task `estimate_days` (0.5–5, default 1); create/update rejected if sprint sum exceeds capacity (`FailedPrecondition`).
 +- Task `estimate_days` (0.5–5, default 1); sprint `estimate_days_used` vs capacity (5) is **advisory** — UI warns when over, API does not block.
 
 ## Epics
 
 - Tasks optionally link to an epic (`epic_id`); epic progress counts **all non-archived tasks** across sprints in the project.
-- Epic `status`: `open` | `done` — auto-set to `done` when every linked non-archived task is `done`; reopens when a task is unchecked or a new open task is added.
+- Epic `status`: `open` | `done` — auto-synced on `GetBoard` and after task changes when every linked non-archived task is `done`; reopens when a task is unchecked or a new open task is added. `ReopenEpic` forces `open` without new tasks.
 
 ## Data
 

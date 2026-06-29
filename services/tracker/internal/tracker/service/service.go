@@ -42,12 +42,14 @@ type Repository interface {
 	PatchTaskMetadata(ctx context.Context, taskID, userID string, patch map[string]any) (*model.Task, error)
 	SumEstimateDaysBySprint(ctx context.Context, sprintID string, excludeTaskID *string) (float64, error)
 	SyncEpicStatus(ctx context.Context, epicID string) error
+	ReopenEpic(ctx context.Context, epicID, userID string) (*model.Epic, error)
 }
 
 type Service interface {
 	GetBoard(ctx context.Context, userID string, projectID *string) (*model.Board, error)
 	CreateProject(ctx context.Context, userID, name string) (*model.Project, error)
 	CreateEpic(ctx context.Context, userID, projectID, name string) (*model.Epic, error)
+	ReopenEpic(ctx context.Context, userID, epicID string) (*model.Epic, error)
 	CreateSprint(ctx context.Context, userID, projectID string, name, goal *string) (*model.Sprint, error)
 	CreateTask(ctx context.Context, userID string, in CreateTaskParams) (*model.Task, error)
 	UpdateTask(ctx context.Context, userID string, in UpdateTaskParams) (*model.Task, error)
@@ -154,6 +156,15 @@ func (s *trackerService) buildBoard(ctx context.Context, project *model.Project)
 	if err != nil {
 		return nil, err
 	}
+	for _, e := range epics {
+		if err := s.repo.SyncEpicStatus(ctx, e.ID); err != nil {
+			return nil, err
+		}
+	}
+	epics, err = s.repo.ListEpicsByProject(ctx, project.ID)
+	if err != nil {
+		return nil, err
+	}
 	active, err := s.repo.GetActiveSprint(ctx, project.ID)
 	if err != nil && !errors.Is(err, repository.ErrNotFound) {
 		return nil, err
@@ -207,6 +218,23 @@ func (s *trackerService) CreateEpic(ctx context.Context, userID, projectID, name
 		return nil, err
 	}
 	return s.repo.CreateEpic(ctx, projectID, name)
+}
+
+func (s *trackerService) ReopenEpic(ctx context.Context, userID, epicID string) (*model.Epic, error) {
+	epic, err := s.repo.ReopenEpic(ctx, epicID, userID)
+	if err != nil {
+		return nil, err
+	}
+	epics, err := s.repo.ListEpicsByProject(ctx, epic.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range epics {
+		if epics[i].ID == epicID {
+			return &epics[i], nil
+		}
+	}
+	return epic, nil
 }
 
 func (s *trackerService) CreateSprint(ctx context.Context, userID, projectID string, name, goal *string) (*model.Sprint, error) {

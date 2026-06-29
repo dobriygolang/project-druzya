@@ -100,6 +100,13 @@ service TrackerService {
     };
   }
 
+  rpc ReopenEpic(ReopenEpicRequest) returns (ReopenEpicResponse) {
+    option (google.api.http) = {
+      post: "/v1/tracker/epics/{id}/reopen"
+      body: "*"
+    };
+  }
+
   rpc CreateSprint(CreateSprintRequest) returns (CreateSprintResponse) {
     option (google.api.http) = {
       post: "/v1/tracker/sprints"
@@ -181,6 +188,14 @@ message CreateEpicRequest {
 }
 
 message CreateEpicResponse {
+  Epic epic = 1;
+}
+
+message ReopenEpicRequest {
+  string id = 1;
+}
+
+message ReopenEpicResponse {
   Epic epic = 1;
 }
 

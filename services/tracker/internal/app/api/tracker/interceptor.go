@@ -17,6 +17,7 @@ var protectedMethods = map[string]struct{}{
 	trackerv1.TrackerService_GetBoard_FullMethodName:                    {},
 	trackerv1.TrackerService_CreateProject_FullMethodName:               {},
 	trackerv1.TrackerService_CreateEpic_FullMethodName:                  {},
+	trackerv1.TrackerService_ReopenEpic_FullMethodName:                  {},
 	trackerv1.TrackerService_CreateSprint_FullMethodName:                {},
 	trackerv1.TrackerService_CreateTask_FullMethodName:                  {},
 	trackerv1.TrackerService_UpdateTask_FullMethodName:                  {},

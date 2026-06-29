@@ -7,6 +7,7 @@ import { CollapsibleSection } from '@/components/tracker/CollapsibleSection'
 import { TrackerProgressBar } from '@/components/tracker/TrackerProgressBar'
 import { TodayPageShell } from '@/components/today/TodayPageShell'
 import { Button } from '@/components/ui/Button'
+import { Select } from '@/components/ui/Select'
 import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
 import {
@@ -20,6 +21,7 @@ import {
   getGoogleCalendarAuthURL,
   getSettings,
   getSprintTasks,
+  reopenEpic,
   updateSettings,
   updateTask,
   type TrackerBoard,
@@ -33,7 +35,7 @@ import { useI18n } from '@/lib/i18n'
 
 type KindFilter = 'all' | 'learning' | 'events' | 'life'
 
-const SPRINT_DAYS = 7
+const SPRINT_DAYS = 14
 
 function taskKind(task: TrackerTask): string {
   const k = task.metadata?.task_kind
@@ -59,8 +61,16 @@ function matchesKindFilter(task: TrackerTask, filter: KindFilter): boolean {
 }
 
 function isEpicDone(epic: TrackerEpic): boolean {
+  const total = epic.total_count ?? 0
+  if (total > 0) {
+    return (epic.done_count ?? 0) >= total
+  }
   const s = epic.status ?? ''
   return s === 'done' || s.includes('DONE')
+}
+
+function isEpicEmpty(epic: TrackerEpic): boolean {
+  return (epic.total_count ?? 0) === 0
 }
 
 function formatDays(n: number): string {
@@ -390,15 +400,6 @@ function SprintPanel({
     return map
   }, [epics])
 
-  const epicTaskCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const task of board.tasks ?? []) {
-      if (isTaskArchived(task) || !task.epic_id) continue
-      counts.set(task.epic_id, (counts.get(task.epic_id) ?? 0) + 1)
-    }
-    return counts
-  }, [board.tasks])
-
   const { activeTasks, archivedTasks } = useMemo(() => {
     const all = (board.tasks ?? []).filter((task) => {
       if (epicFilter && task.epic_id !== epicFilter) return false
@@ -419,6 +420,10 @@ function SprintPanel({
       setNewEpic('')
       onRefresh()
     },
+  })
+  const reopenEpicM = useMutation({
+    mutationFn: (id: string) => reopenEpic(id),
+    onSuccess: onRefresh,
   })
   const taskM = useMutation({
     mutationFn: ({ title, epicId, estimateDays }: { title: string; epicId?: string; estimateDays: number }) =>
@@ -515,7 +520,7 @@ function SprintPanel({
   ]
 
   const activeTaskTotal = (board.tasks ?? []).filter((task) => !isTaskArchived(task)).length
-  const sprintCapacity = sprint?.estimate_days_capacity ?? 5
+  const sprintCapacity = sprint?.estimate_days_capacity ?? 10
   const sprintUsed = sprint?.estimate_days_used ?? 0
   const sprintOver = sprintUsed > sprintCapacity + 1e-9
   const archivedSprintCount = board.archived_sprints?.length ?? 0
@@ -634,31 +639,26 @@ function SprintPanel({
                 taskM.mutate({ title: newTask.trim(), epicId: newTaskEpicId, estimateDays: newTaskEstimate })
               }
             />
-            <select
+            <Select
               aria-label={t('tracker.estimateDays')}
-              className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
-              value={newTaskEstimate}
-              onChange={(e) => setNewTaskEstimate(Number(e.target.value))}
-            >
-              {TASK_ESTIMATE_OPTIONS.map((d) => (
-                <option key={d} value={d}>
-                  {t('tracker.estimateDaysShort', { days: d })}
-                </option>
-              ))}
-            </select>
+              className="w-[5.5rem] shrink-0 sm:w-24"
+              value={String(newTaskEstimate)}
+              onChange={(v) => setNewTaskEstimate(Number(v))}
+              options={TASK_ESTIMATE_OPTIONS.map((d) => ({
+                value: String(d),
+                label: t('tracker.estimateDaysShort', { days: d }),
+              }))}
+            />
             {epics.length > 0 ? (
-              <select
-                className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+              <Select
+                className="min-w-[7rem] shrink-0 sm:min-w-[9rem]"
                 value={newTaskEpicId}
-                onChange={(e) => setNewTaskEpicId(e.target.value)}
-              >
-                <option value="">{t('tracker.noEpic')}</option>
-                {epics.map((epic) => (
-                  <option key={epic.id} value={epic.id}>
-                    {epic.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setNewTaskEpicId}
+                options={[
+                  { value: '', label: t('tracker.noEpic') },
+                  ...epics.map((epic) => ({ value: epic.id, label: epic.name })),
+                ]}
+              />
             ) : null}
             <Button
               size="sm"
@@ -694,48 +694,65 @@ function SprintPanel({
         {epics.length > 0 ? (
           <ul className="mt-4 flex flex-col gap-3">
             {epics.map((epic) => {
-              const count = epicTaskCounts.get(epic.id) ?? 0
               const selected = epicFilter === epic.id
               const doneEpic = isEpicDone(epic)
+              const emptyEpic = isEpicEmpty(epic)
               const epicDone = epic.done_count ?? 0
-              const epicTotal = epic.total_count ?? count
+              const epicTotal = epic.total_count ?? 0
               return (
                 <li key={epic.id}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectEpic(selected ? null : epic.id)}
+                  <div
                     className={cn(
-                      'w-full rounded-xl border px-3 py-2.5 text-left transition-colors',
+                      'rounded-xl border px-3 py-2.5 transition-colors',
                       selected
                         ? 'border-border-strong bg-surface-2'
                         : 'border-border hover:border-border-strong hover:bg-surface-1',
                       doneEpic && 'border-[var(--sdvg-green,#4CB35C)]/40 bg-[var(--sdvg-green,#4CB35C)]/5',
                     )}
                   >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={cn('text-sm font-medium', doneEpic && 'line-through opacity-70')}>
-                        {epic.name}
-                      </span>
-                      {doneEpic ? (
-                        <span className="text-xs font-medium text-[var(--sdvg-green,#4CB35C)]">
-                          {t('tracker.epicDone')}
+                    <button
+                      type="button"
+                      onClick={() => onSelectEpic(selected ? null : epic.id)}
+                      className="w-full text-left"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={cn('text-sm font-medium', doneEpic && 'line-through opacity-70')}>
+                          {epic.name}
                         </span>
-                      ) : (
-                        <span className="text-xs text-text-muted">{t('tracker.epicOpen')}</span>
-                      )}
-                    </div>
-                    {epicTotal > 0 ? (
-                      <TrackerProgressBar
-                        className="mt-2"
-                        value={epicDone}
-                        max={epicTotal}
-                        label={`${epicDone}/${epicTotal}`}
-                        mode="tasks"
-                      />
-                    ) : (
-                      <p className="mt-1 text-xs text-text-muted">{t('tracker.epicTaskCount', { count: 0 })}</p>
-                    )}
-                  </button>
+                        {emptyEpic ? (
+                          <span className="text-xs text-text-muted">{t('tracker.epicNoTasks')}</span>
+                        ) : doneEpic ? (
+                          <span className="text-xs font-medium text-[var(--sdvg-green,#4CB35C)]">
+                            {t('tracker.epicDone')}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-text-muted">{t('tracker.epicOpen')}</span>
+                        )}
+                      </div>
+                      {!emptyEpic ? (
+                        <TrackerProgressBar
+                          className="mt-2"
+                          value={epicDone}
+                          max={epicTotal}
+                          label={`${epicDone}/${epicTotal}`}
+                          mode="tasks"
+                        />
+                      ) : null}
+                    </button>
+                    {doneEpic && !emptyEpic ? (
+                      <div className="mt-2 border-t border-border pt-2">
+                        <p className="mb-2 text-xs text-text-muted">{t('tracker.epicReopenHint')}</p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={reopenEpicM.isPending}
+                          onClick={() => reopenEpicM.mutate(epic.id)}
+                        >
+                          {t('tracker.epicReopen')}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </div>
                 </li>
               )
             })}

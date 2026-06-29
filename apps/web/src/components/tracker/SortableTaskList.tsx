@@ -16,6 +16,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Archive, Check, GripVertical } from 'lucide-react'
+import { Select } from '@/components/ui/Select'
 import { cn } from '@/lib/cn'
 import { useI18n } from '@/lib/i18n'
 import type { TrackerTask } from '@/lib/api/tracker'
@@ -100,18 +101,17 @@ function SortableTaskRow({
           {epicName}
         </span>
       ) : null}
-      <select
+      <Select
         aria-label={t('tracker.estimateDays')}
-        value={task.estimate_days ?? 1}
-        onChange={(e) => onEstimateChange(task.id, Number(e.target.value))}
-        className="shrink-0 rounded-md border border-border bg-surface-1 px-1.5 py-0.5 text-[11px] text-text-secondary outline-none focus:border-border-strong"
-      >
-        {TASK_ESTIMATE_OPTIONS.map((d) => (
-          <option key={d} value={d}>
-            {t('tracker.estimateDaysShort', { days: d })}
-          </option>
-        ))}
-      </select>
+        size="sm"
+        className="w-[4.5rem] shrink-0"
+        value={String(task.estimate_days ?? 1)}
+        onChange={(v) => onEstimateChange(task.id, Number(v))}
+        options={TASK_ESTIMATE_OPTIONS.map((d) => ({
+          value: String(d),
+          label: t('tracker.estimateDaysShort', { days: d }),
+        }))}
+      />
       <button
         type="button"
         aria-label={t('tracker.archiveTask')}

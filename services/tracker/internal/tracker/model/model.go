@@ -18,8 +18,10 @@ const (
 	DefaultProjectName = "Board"
 	DefaultSprintName  = "This week"
 
-	// SprintCapacityDays: one calendar-week sprint ≈ 5 focused work days (Mon–Fri).
-	SprintCapacityDays      = 5.0
+	// SprintCalendarDays: two-week sprint window shown in UI countdown.
+	SprintCalendarDays = 14
+	// SprintCapacityDays: 14 calendar days ≈ 10 focused work days (2 × Mon–Fri).
+	SprintCapacityDays      = 10.0
 	DefaultTaskEstimateDays = 1.0
 	MinTaskEstimateDays     = 0.5
 	MaxTaskEstimateDays     = 5.0

@@ -47,6 +47,18 @@ func (i *Implementation) CreateEpic(ctx context.Context, req *trackerv1.CreateEp
 	return &trackerv1.CreateEpicResponse{Epic: epicToProto(e)}, nil
 }
 
+func (i *Implementation) ReopenEpic(ctx context.Context, req *trackerv1.ReopenEpicRequest) (*trackerv1.ReopenEpicResponse, error) {
+	userID, err := requireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	e, err := i.svc.ReopenEpic(ctx, userID, req.GetId())
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	return &trackerv1.ReopenEpicResponse{Epic: epicToProto(e)}, nil
+}
+
 func (i *Implementation) CreateSprint(ctx context.Context, req *trackerv1.CreateSprintRequest) (*trackerv1.CreateSprintResponse, error) {
 	userID, err := requireUserID(ctx)
 	if err != nil {

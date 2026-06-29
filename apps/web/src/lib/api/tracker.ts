@@ -80,6 +80,13 @@ export function createEpic(projectId: string, name: string) {
   })
 }
 
+export function reopenEpic(id: string) {
+  return api<{ epic: TrackerEpic }>(`/tracker/epics/${encodeURIComponent(id)}/reopen`, {
+    method: 'POST',
+    body: '{}',
+  })
+}
+
 export function createSprint(projectId: string, name?: string, goal?: string) {
   return api<{ sprint: TrackerSprint }>('/tracker/sprints', {
     method: 'POST',

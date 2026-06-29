@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/model"
 )
 
@@ -54,6 +56,13 @@ func (r *Repository) SyncEpicStatus(ctx context.Context, epicID string) error {
 	if err != nil {
 		return err
 	}
+	if total == 0 {
+		_, err = r.conn(ctx).Exec(ctx, `
+			UPDATE epics SET status = $2, completed_at = NULL, updated_at = now()
+			WHERE id = $1
+		`, eid, model.EpicStatusOpen)
+		return err
+	}
 	status := model.EpicStatusOpen
 	if total > 0 && done == total {
 		status = model.EpicStatusDone
@@ -68,4 +77,26 @@ func (r *Repository) SyncEpicStatus(ctx context.Context, epicID string) error {
 		WHERE id = $1
 	`, eid, status)
 	return err
+}
+
+func (r *Repository) ReopenEpic(ctx context.Context, epicID, userID string) (*model.Epic, error) {
+	eid, err := uuid.Parse(epicID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid epic_id: %w", err)
+	}
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
+	row := r.conn(ctx).QueryRow(ctx, `
+		UPDATE epics e SET status = 'open', completed_at = NULL, updated_at = now()
+		FROM projects p
+		WHERE e.id = $1 AND e.project_id = p.id AND p.user_id = $2
+		RETURNING e.id, e.project_id, e.name, e.position, e.status, e.created_at, e.updated_at, e.completed_at
+	`, eid, uid)
+	epic, err := scanEpicBase(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return epic, err
 }
