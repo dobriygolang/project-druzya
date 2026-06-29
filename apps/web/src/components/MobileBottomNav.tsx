@@ -14,7 +14,6 @@ const HIDE_ON: RegExp[] = [
   /^\/auth(\/|$)/,
   /^\/login$/,
   /^\/welcome(\/|$)/,
-  /^\/pricing$/,
   /^\/interview\/session\//,
   /^\/live\//,
 ]

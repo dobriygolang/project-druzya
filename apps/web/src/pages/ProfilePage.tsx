@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CreditCard, ListChecks, Sparkles } from 'lucide-react'
 import { Eyebrow } from '@/components/brand/Eyebrow'
@@ -7,7 +8,8 @@ import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { PageContent } from '@/components/PageContent'
-import { getBillingMe } from '@/lib/api/billing'
+import { PlanCheckoutActions } from '@/components/billing/PlanCheckoutActions'
+import { getBillingMe, getBillingPlans, startProTrial } from '@/lib/api/billing'
 import { getMe } from '@/lib/api/auth'
 import { formatApiError } from '@/lib/apiClient'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -22,8 +24,22 @@ import { useI18n } from '@/lib/i18n'
 export default function ProfilePage() {
   const { t, formatDate } = useI18n()
   const { entitlementLabel, formatLimitUsage } = useBillingLabels()
+  const queryClient = useQueryClient()
+  const [trialError, setTrialError] = useState<string | null>(null)
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe })
   const billingQ = useQuery({ queryKey: ['billing-me'], queryFn: getBillingMe })
+  const plansQ = useQuery({
+    queryKey: ['billing-plans'],
+    queryFn: getBillingPlans,
+    staleTime: 5 * 60_000,
+  })
+
+  const trialMutation = useMutation({
+    mutationFn: startProTrial,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['billing-me'] })
+    },
+  })
 
   if (meQ.isLoading) {
     return (
@@ -58,6 +74,9 @@ export default function ProfilePage() {
     ? formatDate(new Date(user.created_at), { month: 'long', year: 'numeric' })
     : null
   const limitEntries = billingQ.data ? sortLimitEntries(Object.entries(billingQ.data.limits)) : []
+  const proPlan = (plansQ.data?.plans ?? []).find((p) => p.highlight) ?? (plansQ.data?.plans ?? []).find((p) => p.slug !== 'free')
+  const isProActive = billingQ.data?.plan_slug != null && billingQ.data.plan_slug !== 'free' && !billingQ.data.is_trialing
+  const showUpgrade = billingQ.data && !isProActive && proPlan
 
   return (
     <PageContent className="gap-8">
@@ -143,6 +162,30 @@ export default function ProfilePage() {
           ) : (
             <p className="mt-2 text-sm text-text-muted">{t('billing.noLimits')}</p>
           )}
+          {showUpgrade && proPlan ? (
+            <div className="mt-6 border-t border-border pt-5">
+              <p className="mb-1 text-sm font-medium">{t('billing.upgradeTitle')}</p>
+              <p className="text-[13px] text-text-secondary">{t('billing.upgradeHint')}</p>
+              <PlanCheckoutActions
+                plan={proPlan}
+                isAuthed
+                isCurrent={billingQ.data?.plan_slug === proPlan.slug}
+                hasTelegram={!!meQ.data?.telegram_id}
+                meLoading={meQ.isLoading}
+                billing={billingQ.data}
+                trialLoading={trialMutation.isPending}
+                trialError={trialError}
+                onStartTrial={async () => {
+                  setTrialError(null)
+                  try {
+                    await trialMutation.mutateAsync()
+                  } catch (err) {
+                    setTrialError(formatApiError(err))
+                  }
+                }}
+              />
+            </div>
+          ) : null}
         </SdvgCard>
       ) : null}
     </PageContent>

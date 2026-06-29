@@ -14,14 +14,7 @@ export default function LegalPrivacyPage() {
       footer={t('legal.privacy.footer')}
     >
       <LegalSection title={t('legal.privacy.s1Title')}>
-        <ul className="list-disc space-y-1 pl-5">
-          <li>{t('legal.privacy.s1Account')}</li>
-          <li>{t('legal.privacy.s1Mock')}</li>
-          <li>{t('legal.privacy.s1Runs')}</li>
-          <li>{t('legal.privacy.s1Live')}</li>
-          <li>{t('legal.privacy.s1Rec')}</li>
-          <li>{t('legal.privacy.s1Billing')}</li>
-        </ul>
+        <p>{t('legal.privacy.s1Body')}</p>
       </LegalSection>
 
       <LegalSection title={t('legal.privacy.s2Title')}>
@@ -29,6 +22,10 @@ export default function LegalPrivacyPage() {
           <li>{t('legal.privacy.s2Li1')}</li>
           <li>{t('legal.privacy.s2Li2')}</li>
           <li>{t('legal.privacy.s2Li3')}</li>
+          <li>{t('legal.privacy.s2Li4')}</li>
+          <li>{t('legal.privacy.s2Li5')}</li>
+          <li>{t('legal.privacy.s2Li6')}</li>
+          <li>{t('legal.privacy.s2Li7')}</li>
         </ul>
       </LegalSection>
 

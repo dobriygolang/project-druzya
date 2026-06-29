@@ -22,8 +22,9 @@ export function PublicNav({ centerLinks, right, className }: Props) {
 
   const defaultCenter: LinkItem[] = [
     { href: '/welcome#features', label: t('public.features') },
+    { href: '/live/new', label: t('public.liveCoding') },
     { href: '/pricing', label: t('public.pricing') },
-    { href: 'https://t.me/druz9', label: t('public.channel'), external: true },
+    { href: 'https://t.me/gogymtrip', label: t('public.channel'), external: true },
   ]
 
   const links = centerLinks ?? defaultCenter

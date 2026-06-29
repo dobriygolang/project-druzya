@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
+import { PublicOrAuthedShell } from '@/components/brand/PublicOrAuthedShell'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { PageContent } from '@/components/PageContent'
 import { Button } from '@/components/ui/Button'
@@ -38,8 +38,7 @@ export default function BillingWelcomePage() {
   const isPro = billingQ.data?.plan_slug != null && billingQ.data.plan_slug !== 'free'
 
   return (
-    <PublicPageShell>
-      <PublicNav centerLinks={[{ href: '/today', label: t('nav.today') }]} />
+    <PublicOrAuthedShell>
       <PageContent className="text-center">
         <Eyebrow>{t('checkout.welcomeEyebrow')}</Eyebrow>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">
@@ -59,6 +58,6 @@ export default function BillingWelcomePage() {
           </Link>
         </div>
       </PageContent>
-    </PublicPageShell>
+    </PublicOrAuthedShell>
   )
 }

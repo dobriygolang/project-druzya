@@ -107,55 +107,58 @@ function EpicCard({
     <div
       className={cn(
         'rounded-xl border px-3 py-2 transition-colors',
-        selected ? 'border-border-strong bg-surface-2' : 'border-border hover:border-border-strong',
+        selected ? 'border-border-strong bg-surface-2' : 'border-border',
         doneEpic && 'border-[var(--sdvg-green,#4CB35C)]/30 bg-[var(--sdvg-green,#4CB35C)]/5',
         deferred && !doneEpic && 'opacity-60',
       )}
     >
-      <button type="button" onClick={onSelect} className="w-full text-left">
-        <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onSelect}
+          className={cn(
+            'min-w-0 flex-1 rounded-md py-0.5 text-left transition-colors',
+            'hover:bg-surface-1/80 active:bg-surface-1',
+            selected && 'bg-surface-1/50',
+          )}
+        >
           <span className={cn('truncate text-sm font-medium', doneEpic && 'line-through opacity-70')}>
             {epic.name}
           </span>
-          <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-muted">
-            {deferred && !doneEpic ? (
-              <span className="rounded-md border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
-                {t('tracker.epicNextSprint')}
-              </span>
-            ) : null}
-            {emptyEpic
-              ? t('tracker.epicNoTasks')
-              : doneEpic
-                ? t('tracker.epicDone')
-                : t('tracker.epicProgress', { done: epicDone, total: epicTotal })}
-          </span>
-        </div>
-        {!emptyEpic ? (
-          <TrackerProgressBar
-            className="mt-1.5"
-            value={epicDone}
-            max={epicTotal}
-            label={`${epicDone}/${epicTotal}`}
-            mode="tasks"
-          />
+        </button>
+        {!doneEpic && onToggleSprintScope ? (
+          <button
+            type="button"
+            disabled={sprintScopePending}
+            title={deferred ? t('tracker.epicIncludeSprint') : t('tracker.epicDeferSprint')}
+            onClick={onToggleSprintScope}
+            className="shrink-0 rounded-md px-1.5 py-0.5 text-[10px] text-text-muted transition-colors hover:bg-surface-1 hover:text-text-primary disabled:opacity-50"
+          >
+            {deferred ? t('tracker.epicIncludeShort') : t('tracker.epicDeferShort')}
+          </button>
         ) : null}
-      </button>
-      {!doneEpic && onToggleSprintScope ? (
-        <Button
-          size="sm"
-          variant="ghost"
-          className="mt-1.5 h-7 px-2 text-xs"
-          disabled={sprintScopePending}
-          onClick={onToggleSprintScope}
-        >
-          {deferred ? t('tracker.epicIncludeSprint') : t('tracker.epicDeferSprint')}
-        </Button>
+        <span className="shrink-0 text-xs text-text-muted">
+          {emptyEpic
+            ? t('tracker.epicNoTasks')
+            : doneEpic
+              ? t('tracker.epicDone')
+              : t('tracker.epicProgress', { done: epicDone, total: epicTotal })}
+        </span>
+      </div>
+      {!emptyEpic ? (
+        <TrackerProgressBar
+          className="mt-1 pointer-events-none select-none"
+          value={epicDone}
+          max={epicTotal}
+          label={`${epicDone}/${epicTotal}`}
+          mode="tasks"
+        />
       ) : null}
       {doneEpic && onReopen ? (
         <Button
           size="sm"
           variant="ghost"
-          className="mt-1.5 h-7 px-2 text-xs"
+          className="mt-1 h-7 px-2 text-xs"
           disabled={reopenPending}
           onClick={onReopen}
         >

@@ -164,9 +164,15 @@ export default function SystemDesignRoomPage() {
     (next: Partial<SystemDesignWorkspace>) => {
       if (!localWS || !sessionTaskId) return
       const merged = { ...localWS, ...next }
-      setLocalWS(merged)
+      const diagramOnly =
+        'diagram' in next &&
+        Object.keys(next).every((k) => k === 'diagram' || k === 'version')
+      if (!diagramOnly) {
+        setLocalWS(merged)
+      }
       if (saveTimer.current) window.clearTimeout(saveTimer.current)
       saveTimer.current = window.setTimeout(() => {
+        if (diagramOnly) setLocalWS(merged)
         if (sessionTaskId) void saveSDDraft(sessionTaskId, merged)
         patchM.mutate({
           sessionTaskId,
@@ -183,6 +189,14 @@ export default function SystemDesignRoomPage() {
       }, 800)
     },
     [localWS, patchM, sessionTaskId],
+  )
+
+  const handleDiagramChange = useCallback(
+    (diagram: Record<string, unknown>) => {
+      if (!localWS) return
+      scheduleSave({ diagram, version: localWS.version })
+    },
+    [localWS, scheduleSave],
   )
 
   const chatM = useMutation({
@@ -241,7 +255,7 @@ export default function SystemDesignRoomPage() {
   if (stateQ.isLoading || workspaceQ.isLoading) {
     return (
       <PageContent>
-        <p className="text-muted-foreground">{t('common.loading')}</p>
+        <p className="text-text-muted">{t('common.loading')}</p>
       </PageContent>
     )
   }
@@ -262,7 +276,7 @@ export default function SystemDesignRoomPage() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold">{task?.title ?? t('sdRoom.title')}</h1>
-          <p className="text-sm text-muted-foreground">{phaseLabel(currentPhase, t)}</p>
+          <p className="text-sm text-text-muted">{phaseLabel(currentPhase, t)}</p>
           {offlineNote ? <p className="text-xs text-amber-600">{offlineNote}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -301,7 +315,7 @@ export default function SystemDesignRoomPage() {
             currentPhase === 'SYSTEM_DESIGN_PHASE_CLARIFICATION') && (
             <Card className="p-4">
               <h2 className="mb-2 font-medium">{t('sdRoom.brief')}</h2>
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">{task?.description}</p>
+              <p className="whitespace-pre-wrap text-sm text-text-muted">{task?.description}</p>
             </Card>
           )}
 
@@ -313,7 +327,7 @@ export default function SystemDesignRoomPage() {
               >
                 <ExcalidrawCanvas
                   initialData={localWS.diagram}
-                  onChange={(diagram) => scheduleSave({ diagram, version: localWS.version })}
+                  onChange={handleDiagramChange}
                   onApiReady={(api) => {
                     excalidrawApi.current = api
                   }}
@@ -373,7 +387,7 @@ export default function SystemDesignRoomPage() {
           <h2 className="mb-2 font-medium">{t('sdRoom.interviewer')}</h2>
           <div className="mb-3 flex-1 space-y-2 overflow-y-auto text-sm">
             {turns.length === 0 && (
-              <p className="text-muted-foreground">{t('sdRoom.chatEmpty')}</p>
+              <p className="text-text-muted">{t('sdRoom.chatEmpty')}</p>
             )}
             {turns.map((turn) => (
               <div
@@ -382,7 +396,7 @@ export default function SystemDesignRoomPage() {
                   turn.role === 'SYSTEM_DESIGN_TURN_ROLE_USER'
                     ? 'rounded-md bg-primary/10 p-2'
                     : turn.role === 'SYSTEM_DESIGN_TURN_ROLE_SYSTEM'
-                      ? 'rounded-md border border-dashed p-2 text-muted-foreground'
+                      ? 'rounded-md border border-dashed p-2 text-text-muted'
                       : 'rounded-md bg-muted p-2'
                 }
               >

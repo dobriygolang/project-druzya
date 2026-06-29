@@ -1,6 +1,6 @@
 import { Excalidraw, exportToBlob } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import {
   EXCALIDRAW_MOUNT_CLASS,
   EXCALIDRAW_THEME,
@@ -23,37 +23,56 @@ type Props = {
 /** Excalidraw wrapper — stores excalidraw JSON in workspace.diagram */
 export function ExcalidrawCanvas({ initialData, onChange, onApiReady }: Props) {
   const apiRef = useRef<ExcalidrawSceneAPI | null>(null)
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+  const onApiReadyRef = useRef(onApiReady)
+  onApiReadyRef.current = onApiReady
+  const rafRef = useRef(0)
+  const pendingRef = useRef<Record<string, unknown> | null>(null)
 
-  const initialElements = useMemo(() => {
+  // initialData is mount-only — parent autosave must not feed updates back into Excalidraw.
+  const initialElementsRef = useRef<{
+    elements: unknown[]
+    appState: ReturnType<typeof excalidrawSiteAppState>
+  } | null>(null)
+  if (!initialElementsRef.current) {
     const elements = initialData?.elements
-    return {
+    initialElementsRef.current = {
       elements: Array.isArray(elements) ? elements : [],
       appState: excalidrawSiteAppState(),
     }
-  }, [initialData])
+  }
 
   const handleChange = useCallback(
     (elements: readonly unknown[], appState: unknown, files: unknown) => {
-      onChange({
+      pendingRef.current = {
         elements: [...elements],
         appState: appState as Record<string, unknown>,
         files: files as Record<string, unknown>,
+      }
+      if (rafRef.current) return
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = 0
+        const pending = pendingRef.current
+        if (pending) onChangeRef.current(pending)
       })
     },
-    [onChange],
+    [],
   )
+
+  const handleApi = useCallback((api: unknown) => {
+    const sceneApi = api as ExcalidrawSceneAPI
+    apiRef.current = sceneApi
+    onApiReadyRef.current?.(sceneApi)
+  }, [])
 
   return (
     <div className={`${EXCALIDRAW_MOUNT_CLASS} h-full w-full`}>
       <Excalidraw
         theme={EXCALIDRAW_THEME}
-        initialData={initialElements as never}
+        initialData={initialElementsRef.current as never}
         onChange={handleChange}
-        excalidrawAPI={(api) => {
-          const sceneApi = api as unknown as ExcalidrawSceneAPI
-          apiRef.current = sceneApi
-          onApiReady?.(sceneApi)
-        }}
+        excalidrawAPI={handleApi}
         UIOptions={EXCALIDRAW_UI_OPTIONS}
       />
     </div>

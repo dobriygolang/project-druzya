@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, Navigate, useParams, useSearchParams } from 'react-router-dom'
-import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
+import { PublicOrAuthedShell } from '@/components/brand/PublicOrAuthedShell'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { PageContent } from '@/components/PageContent'
 import { Button } from '@/components/ui/Button'
@@ -46,8 +46,7 @@ export default function CheckoutPage() {
   const hasTelegram = !!meQ.data?.telegram_id
 
   return (
-    <PublicPageShell>
-      <PublicNav centerLinks={[{ href: '/pricing', label: t('common.pricing') }]} />
+    <PublicOrAuthedShell publicNav={{ centerLinks: [{ href: '/pricing', label: t('common.pricing') }] }}>
       <PageContent>
         <header className="text-center">
           <Eyebrow>{t('checkout.eyebrow')}</Eyebrow>
@@ -119,6 +118,6 @@ export default function CheckoutPage() {
           </Link>
         </p>
       </PageContent>
-    </PublicPageShell>
+    </PublicOrAuthedShell>
   )
 }
