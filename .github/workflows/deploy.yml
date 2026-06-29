@@ -107,7 +107,6 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
           envs: DEPLOY_GIT_TOKEN
-          script_stop: true
           command_timeout: 30m
           script: |
             set -euo pipefail
@@ -204,8 +203,11 @@ jobs:
               echo "No image rebuild needed (same commit)."
             elif [ -n "$BUILD_TARGETS" ]; then
               echo "Incremental build: $BUILD_TARGETS"
-              bash scripts/build-images.sh $BUILD_TARGETS
-              echo "Image build step finished (exit 0)."
+              if ! bash scripts/build-images.sh $BUILD_TARGETS; then
+                echo "ERROR: docker compose build failed"
+                exit 1
+              fi
+              echo "Image build OK"
             else
               echo "No image rebuild needed (no service changes)."
             fi
@@ -213,15 +215,21 @@ jobs:
             RUN_MIGRATE=0
             if [ -z "$PREV_SHA" ] || [ "$PREV_SHA" = "$CUR_SHA" ]; then
               RUN_MIGRATE=1
-            elif (source scripts/services.conf.sh && migrations_changed "$PREV_SHA" "$CUR_SHA"); then
-              RUN_MIGRATE=1
+            else
+              # shellcheck source=scripts/services.conf.sh
+              source scripts/services.conf.sh
+              if migrations_changed "$PREV_SHA" "$CUR_SHA"; then
+                RUN_MIGRATE=1
+              fi
             fi
             if [ "$RUN_MIGRATE" = 1 ]; then
+              echo "Running migrations..."
               docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
             else
               echo "Skipping migrate (no migration changes)."
             fi
 
+            echo "Starting containers (compose up --wait)..."
             if ! docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans --wait --wait-timeout 300; then
               docker compose -f docker-compose.prod.yml --env-file .env ps
               docker compose -f docker-compose.prod.yml --env-file .env logs identity --tail 80
@@ -240,5 +248,10 @@ jobs:
 
             docker compose -f docker-compose.prod.yml --env-file .env ps
 
+            set -a
+            # shellcheck disable=SC1091
+            source .env
+            set +a
             curl -sf -H "Host: api.druz9.online" "http://127.0.0.1:${CADDY_HTTP_PORT:-18080}/healthz"
             curl -sfI -H "Host: druz9.online" "http://127.0.0.1:${CADDY_HTTP_PORT:-18080}/" | head -1
+            echo "Deploy completed successfully."
