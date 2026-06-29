@@ -20,6 +20,7 @@ var protectedMethods = map[string]struct{}{
 	trackerv1.TrackerService_CreateSprint_FullMethodName:                {},
 	trackerv1.TrackerService_CreateTask_FullMethodName:                  {},
 	trackerv1.TrackerService_UpdateTask_FullMethodName:                  {},
+	trackerv1.TrackerService_ListSprintTasks_FullMethodName:             {},
 	trackerv1.TrackerService_ArchiveSprint_FullMethodName:               {},
 	trackerv1.TrackerService_ExportBoard_FullMethodName:                 {},
 	trackerv1.TrackerService_GetSettings_FullMethodName:                 {},

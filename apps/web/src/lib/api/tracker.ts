@@ -94,12 +94,18 @@ export function createTask(sprintId: string, title: string, epicId?: string, met
 
 export function updateTask(
   id: string,
-  patch: { title?: string; done?: boolean; epic_id?: string | null },
+  patch: { title?: string; done?: boolean; epic_id?: string | null; position?: number; archived?: boolean },
 ) {
   return api<{ task: TrackerTask }>(`/tracker/tasks/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
   })
+}
+
+export function getSprintTasks(sprintId: string) {
+  return api<{ tasks?: TrackerTask[] }>(
+    `/tracker/sprints/${encodeURIComponent(sprintId)}/tasks`,
+  ).then((r) => r.tasks ?? [])
 }
 
 export function archiveSprint(id: string) {

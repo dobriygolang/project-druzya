@@ -82,11 +82,28 @@ func (i *Implementation) UpdateTask(ctx context.Context, req *trackerv1.UpdateTa
 	}
 	t, err := i.svc.UpdateTask(ctx, userID, trackerservice.UpdateTaskParams{
 		TaskID: req.GetId(), Title: req.Title, Done: req.Done, EpicID: req.EpicId, Position: int32Ptr(req.Position),
+		Archived: req.Archived,
 	})
 	if err != nil {
 		return nil, mapServiceError(err)
 	}
 	return &trackerv1.UpdateTaskResponse{Task: taskToProto(t)}, nil
+}
+
+func (i *Implementation) ListSprintTasks(ctx context.Context, req *trackerv1.ListSprintTasksRequest) (*trackerv1.ListSprintTasksResponse, error) {
+	userID, err := requireUserID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tasks, err := i.svc.ListSprintTasks(ctx, userID, req.GetSprintId())
+	if err != nil {
+		return nil, mapServiceError(err)
+	}
+	out := &trackerv1.ListSprintTasksResponse{}
+	for _, t := range tasks {
+		out.Tasks = append(out.Tasks, taskToProto(&t))
+	}
+	return out, nil
 }
 
 func (i *Implementation) ArchiveSprint(ctx context.Context, req *trackerv1.ArchiveSprintRequest) (*trackerv1.ArchiveSprintResponse, error) {

@@ -107,6 +107,10 @@ service TrackerService {
     };
   }
 
+  rpc ListSprintTasks(ListSprintTasksRequest) returns (ListSprintTasksResponse) {
+    option (google.api.http) = {get: "/v1/tracker/sprints/{sprint_id}/tasks"};
+  }
+
   rpc ArchiveSprint(ArchiveSprintRequest) returns (ArchiveSprintResponse) {
     option (google.api.http) = {
       post: "/v1/tracker/sprints/{id}/archive"
@@ -196,10 +200,19 @@ message UpdateTaskRequest {
   optional string epic_id = 4;
   optional int32 position = 5;
   optional string goal = 6;
+  optional bool archived = 7;
 }
 
 message UpdateTaskResponse {
   Task task = 1;
+}
+
+message ListSprintTasksRequest {
+  string sprint_id = 1;
+}
+
+message ListSprintTasksResponse {
+  repeated Task tasks = 1;
 }
 
 message ArchiveSprintRequest {

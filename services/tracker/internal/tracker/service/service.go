@@ -49,6 +49,7 @@ type Service interface {
 	CreateSprint(ctx context.Context, userID, projectID string, name, goal *string) (*model.Sprint, error)
 	CreateTask(ctx context.Context, userID string, in CreateTaskParams) (*model.Task, error)
 	UpdateTask(ctx context.Context, userID string, in UpdateTaskParams) (*model.Task, error)
+	ListSprintTasks(ctx context.Context, userID, sprintID string) ([]model.Task, error)
 	ArchiveSprint(ctx context.Context, userID, sprintID string) (*model.Sprint, error)
 	ExportBoard(ctx context.Context, userID string, projectID *string) (string, error)
 	EnsureLearningBoard(ctx context.Context, userID string) (*model.LearningBoard, error)
@@ -81,6 +82,7 @@ type UpdateTaskParams struct {
 	Done     *bool
 	EpicID   *string
 	Position *int
+	Archived *bool
 }
 
 type InternalCreateTaskParams struct {
@@ -289,6 +291,12 @@ func (s *trackerService) UpdateTask(ctx context.Context, userID string, in Updat
 		if err != nil {
 			return err
 		}
+		if in.Archived != nil {
+			t, err = s.repo.PatchTaskMetadata(txCtx, in.TaskID, userID, map[string]any{"archived": *in.Archived})
+			if err != nil {
+				return err
+			}
+		}
 		updated = t
 		if in.Done != nil && *in.Done && !before.Done {
 			return s.emitTaskEvent(txCtx, model.EventTaskCompleted, userID, t)
@@ -299,6 +307,13 @@ func (s *trackerService) UpdateTask(ctx context.Context, userID string, in Updat
 		s.syncGoogleCalendarOnChange(ctx, userID, before, updated)
 	}
 	return updated, err
+}
+
+func (s *trackerService) ListSprintTasks(ctx context.Context, userID, sprintID string) ([]model.Task, error) {
+	if _, err := s.getSprintForUser(ctx, sprintID, userID); err != nil {
+		return nil, err
+	}
+	return s.repo.ListTasksBySprint(ctx, sprintID)
 }
 
 func (s *trackerService) ArchiveSprint(ctx context.Context, userID, sprintID string) (*model.Sprint, error) {

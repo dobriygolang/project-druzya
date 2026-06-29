@@ -24,6 +24,7 @@ HTTP `8089` | gRPC `9099` | PG `5441` `druzya_tracker`
 | CreateSprint | `POST /v1/tracker/sprints` | JWT |
 | CreateTask | `POST /v1/tracker/tasks` | JWT |
 | UpdateTask | `PATCH /v1/tracker/tasks/{id}` | JWT |
+| ListSprintTasks | `GET /v1/tracker/sprints/{sprint_id}/tasks` | JWT |
 | ArchiveSprint | `POST /v1/tracker/sprints/{id}/archive` | JWT |
 | ExportBoard | `GET /v1/tracker/export` | JWT |
 | GetSettings | `GET /v1/tracker/settings` | JWT |
