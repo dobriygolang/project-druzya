@@ -9,16 +9,43 @@ export COMPOSE_PARALLEL_LIMIT="${COMPOSE_PARALLEL_LIMIT:-4}"
 export BUILDX_NO_DEFAULT_ATTESTATIONS=1
 
 COMPOSE=(docker compose -f docker-compose.prod.yml --env-file .env)
+# Must match `name:` in docker-compose.prod.yml.
+COMPOSE_PROJECT="${COMPOSE_PROJECT_NAME:-druzya-prod}"
+
+image_ref_for_service() {
+  local svc="$1"
+  echo "${COMPOSE_PROJECT}-${svc}:latest"
+}
+
+image_exists() {
+  local svc="$1"
+  local ref img_id
+  ref="$(image_ref_for_service "$svc")"
+  img_id=$("${COMPOSE[@]}" images -q "$svc" 2>/dev/null | head -1 || true)
+  if [ -n "$img_id" ]; then
+    return 0
+  fi
+  if docker image inspect "$ref" >/dev/null 2>&1; then
+    return 0
+  fi
+  return 1
+}
 
 verify_images() {
   local missing=0
+  local svc
   for svc in "$@"; do
-    if ! "${COMPOSE[@]}" images -q "$svc" 2>/dev/null | grep -q .; then
-      echo "build verify: no image for service ${svc}" >&2
+    if image_exists "$svc"; then
+      echo "build verify: ok ${svc} ($(image_ref_for_service "$svc"))"
+    else
+      echo "build verify: missing ${svc} ($(image_ref_for_service "$svc"))"
       missing=1
     fi
   done
-  return $missing
+  if [ "$missing" -eq 0 ]; then
+    return 0
+  fi
+  return 1
 }
 
 services=()
@@ -39,10 +66,10 @@ if [ "$rc" -eq 0 ]; then
   exit 0
 fi
 
-echo "docker compose build exited ${rc}" >&2
+echo "docker compose build exited ${rc} (checking tagged images...)"
 
 if [ ${#services[@]} -gt 0 ] && verify_images "${services[@]}"; then
-  echo "build: target images present despite compose exit ${rc} — continuing deploy" >&2
+  echo "build: target images present despite compose exit ${rc} — continuing deploy"
   exit 0
 fi
 
