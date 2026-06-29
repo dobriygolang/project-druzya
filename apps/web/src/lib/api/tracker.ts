@@ -21,6 +21,8 @@ export type TrackerSprint = {
   status?: string
   done_count?: number
   total_count?: number
+  created_at?: string
+  archived_at?: string
 }
 
 export type TrackerTask = {

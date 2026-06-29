@@ -22,11 +22,13 @@ import type { TrackerTask } from '@/lib/api/tracker'
 
 function SortableTaskRow({
   task,
+  epicName,
   dragDisabled,
   onToggle,
   onArchive,
 }: {
   task: TrackerTask
+  epicName?: string
   dragDisabled: boolean
   onToggle: (id: string, done: boolean) => void
   onArchive: (id: string) => void
@@ -89,6 +91,11 @@ function SortableTaskRow({
       >
         {task.title}
       </span>
+      {epicName ? (
+        <span className="hidden shrink-0 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11px] text-text-muted sm:inline">
+          {epicName}
+        </span>
+      ) : null}
       <button
         type="button"
         aria-label={t('tracker.archiveTask')}
@@ -103,12 +110,14 @@ function SortableTaskRow({
 
 export function SortableTaskList({
   tasks,
+  epicNames,
   dragDisabled,
   onReorder,
   onToggle,
   onArchive,
 }: {
   tasks: TrackerTask[]
+  epicNames?: Record<string, string>
   dragDisabled: boolean
   onReorder: (reordered: TrackerTask[]) => void
   onToggle: (id: string, done: boolean) => void
@@ -136,6 +145,7 @@ export function SortableTaskList({
             <SortableTaskRow
               key={task.id}
               task={task}
+              epicName={task.epic_id ? epicNames?.[task.epic_id] : undefined}
               dragDisabled={dragDisabled}
               onToggle={onToggle}
               onArchive={onArchive}

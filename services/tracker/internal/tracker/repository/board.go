@@ -142,7 +142,7 @@ func (r *Repository) GetActiveSprint(ctx context.Context, projectID string) (*mo
 		       COALESCE((SELECT COUNT(*) FROM tasks t WHERE t.sprint_id = s.id), 0)
 		FROM sprints s
 		WHERE s.project_id = $1 AND s.status = 'active'
-		ORDER BY s.position, s.created_at
+		ORDER BY s.position DESC, s.created_at DESC
 		LIMIT 1
 	`, pid)
 	s, err := scanSprint(row)
@@ -157,20 +157,34 @@ func (r *Repository) CreateSprint(ctx context.Context, projectID, name, goal str
 	if err != nil {
 		return nil, fmt.Errorf("invalid project_id: %w", err)
 	}
-	id, err := uuid.NewRandom()
+	var sprint *model.Sprint
+	err = r.WithTx(ctx, func(txCtx context.Context) error {
+		if _, err := r.conn(txCtx).Exec(txCtx, `
+			UPDATE sprints SET status = 'archived', archived_at = now(), updated_at = now()
+			WHERE project_id = $1 AND status = 'active'
+		`, pid); err != nil {
+			return err
+		}
+		id, err := uuid.NewRandom()
+		if err != nil {
+			return err
+		}
+		row := r.conn(txCtx).QueryRow(txCtx, `
+			INSERT INTO sprints (id, project_id, name, goal, status, position)
+			VALUES ($1, $2, $3, $4, 'active', COALESCE((SELECT MAX(position)+1 FROM sprints WHERE project_id = $2), 0))
+			RETURNING id, project_id, name, goal, status, position, created_at, updated_at, archived_at
+		`, id, pid, name, goal)
+		s, err := scanSprintBase(row)
+		if err != nil {
+			return err
+		}
+		sprint = s
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
-	row := r.conn(ctx).QueryRow(ctx, `
-		INSERT INTO sprints (id, project_id, name, goal, status, position)
-		VALUES ($1, $2, $3, $4, 'active', COALESCE((SELECT MAX(position)+1 FROM sprints WHERE project_id = $2), 0))
-		RETURNING id, project_id, name, goal, status, position, created_at, updated_at, archived_at
-	`, id, pid, name, goal)
-	s, err := scanSprintBase(row)
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
+	return sprint, nil
 }
 
 func (r *Repository) ArchiveSprint(ctx context.Context, sprintID, userID string) (*model.Sprint, error) {

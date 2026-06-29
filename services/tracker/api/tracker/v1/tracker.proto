@@ -43,6 +43,8 @@ message Sprint {
   int32 position = 6;
   int32 done_count = 7;
   int32 total_count = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp archived_at = 10;
 }
 
 message Task {

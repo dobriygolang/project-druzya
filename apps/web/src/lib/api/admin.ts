@@ -1,4 +1,4 @@
-import { api } from '@/lib/apiClient'
+import { api, ApiError } from '@/lib/apiClient'
 
 export interface AdminSession {
   user_id: string
@@ -75,8 +75,15 @@ export interface AdminArticle {
   linked_tasks?: AdminArticleTaskLink[]
 }
 
-export function getAdminSession() {
-  return api<AdminSession>('/admin/session')
+export async function getAdminSession(): Promise<AdminSession | null> {
+  try {
+    return await api<AdminSession>('/admin/session', {}, { redirectOnUnauthorized: false })
+  } catch (err) {
+    if (err instanceof ApiError && (err.status === 403 || err.status === 401)) {
+      return null
+    }
+    throw err
+  }
 }
 
 export interface AdminServiceHealth {

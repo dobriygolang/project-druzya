@@ -56,6 +56,12 @@ Internal (`TrackerInternalService`, `x-internal-token`):
 | `tracker.task_created` | User creates task (`source=user`) |
 | `tracker.task_completed` | User marks task done |
 
+## Sprints
+
+- One **active** sprint per project (`GetBoard.active_sprint`); archived sprints in `archived_sprints`.
+- `CreateSprint` archives any existing active sprint for the project, then inserts the new sprint as active.
+- Sprint proto includes `created_at` / `archived_at` (7-day UI countdown on web uses `created_at`).
+
 ## Data
 
 `user_settings(user_id, smart_parse_enabled, google_calendar_sync_enabled, google_refresh_token, google_oauth_state)`

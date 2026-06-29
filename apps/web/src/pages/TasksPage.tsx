@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, Check, ChevronDown } from 'lucide-react'
+import { Archive, Check, ChevronDown, Clock } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
 import { SortableTaskList } from '@/components/tracker/SortableTaskList'
 import { TodayPageShell } from '@/components/today/TodayPageShell'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { cn } from '@/lib/cn'
 import {
   archiveSprint,
@@ -21,6 +21,7 @@ import {
   updateSettings,
   updateTask,
   type TrackerBoard,
+  type TrackerEpic,
   type TrackerSprint,
   type TrackerTask,
   type TrackerUserSettings,
@@ -28,6 +29,8 @@ import {
 import { useI18n } from '@/lib/i18n'
 
 type KindFilter = 'all' | 'learning' | 'events' | 'life'
+
+const SPRINT_DAYS = 7
 
 function taskKind(task: TrackerTask): string {
   const k = task.metadata?.task_kind
@@ -54,6 +57,17 @@ function matchesKindFilter(task: TrackerTask, filter: KindFilter): boolean {
 
 function sortByPosition(tasks: TrackerTask[]): TrackerTask[] {
   return [...tasks].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+}
+
+function sprintDaysLeft(createdAt?: string): number | null {
+  if (!createdAt) return null
+  const start = new Date(createdAt)
+  if (Number.isNaN(start.getTime())) return null
+  const end = new Date(start)
+  end.setDate(end.getDate() + SPRINT_DAYS)
+  const msLeft = end.getTime() - Date.now()
+  if (msLeft <= 0) return 0
+  return Math.ceil(msLeft / (24 * 60 * 60 * 1000))
 }
 
 function FilterChips({
@@ -86,6 +100,54 @@ function FilterChips({
   )
 }
 
+function BoardOverview({
+  sprint,
+  archivedCount,
+  epics,
+  taskCount,
+}: {
+  sprint?: TrackerSprint
+  archivedCount: number
+  epics: TrackerEpic[]
+  taskCount: number
+}) {
+  const { t } = useI18n()
+  const daysLeft = sprintDaysLeft(sprint?.created_at)
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="rounded-xl border border-border bg-surface-1 px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{t('tracker.overviewActive')}</p>
+        <p className="mt-1 truncate text-sm font-medium text-text-primary">
+          {sprint?.name ?? t('tracker.noActiveSprint')}
+        </p>
+        {sprint && daysLeft !== null ? (
+          <p className="mt-1 flex items-center gap-1 text-xs text-text-muted">
+            <Clock className="h-3 w-3 shrink-0" aria-hidden />
+            {daysLeft === 0
+              ? t('tracker.sprintEnded')
+              : daysLeft === 1
+                ? t('tracker.sprintEndsToday')
+                : t('tracker.sprintEndsIn', { days: daysLeft })}
+          </p>
+        ) : null}
+      </div>
+      <div className="rounded-xl border border-border bg-surface-1 px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{t('tracker.overviewArchived')}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums text-text-primary">{archivedCount}</p>
+      </div>
+      <div className="rounded-xl border border-border bg-surface-1 px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{t('tracker.overviewEpics')}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums text-text-primary">{epics.length}</p>
+      </div>
+      <div className="rounded-xl border border-border bg-surface-1 px-4 py-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-text-muted">{t('tracker.overviewTasks')}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums text-text-primary">{taskCount}</p>
+      </div>
+    </div>
+  )
+}
+
 function TrackerSettingsPanel({
   settings,
   onRefresh,
@@ -94,6 +156,7 @@ function TrackerSettingsPanel({
   onRefresh: () => void
 }) {
   const { t } = useI18n()
+  const [open, setOpen] = useState(false)
   const settingsM = useMutation({
     mutationFn: (patch: { smart_parse_enabled?: boolean; google_calendar_sync_enabled?: boolean }) =>
       updateSettings(patch),
@@ -112,53 +175,63 @@ function TrackerSettingsPanel({
 
   return (
     <SdvgCard eyebrow={t('tracker.settings.title')}>
-      <div className="flex flex-col gap-4 text-sm">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-border accent-text-primary"
-            checked={settings.smart_parse_enabled}
-            disabled={settingsM.isPending}
-            onChange={(e) => settingsM.mutate({ smart_parse_enabled: e.target.checked })}
-          />
-          <span>
-            <span className="font-medium text-text-primary">{t('tracker.settings.smartParse')}</span>
-            <span className="mt-0.5 block text-text-muted">{t('tracker.settings.smartParseHint')}</span>
-          </span>
-        </label>
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            className="mt-0.5 h-4 w-4 rounded border-border accent-text-primary"
-            checked={settings.google_calendar_sync_enabled}
-            disabled={settingsM.isPending}
-            onChange={(e) => settingsM.mutate({ google_calendar_sync_enabled: e.target.checked })}
-          />
-          <span>
-            <span className="font-medium text-text-primary">{t('tracker.settings.googleSync')}</span>
-            <span className="mt-0.5 block text-text-muted">{t('tracker.settings.googleSyncHint')}</span>
-          </span>
-        </label>
-        <div className="flex flex-wrap items-center gap-3">
-          {settings.google_calendar_connected ? (
-            <>
-              <span className="text-text-secondary">{t('tracker.settings.connected')}</span>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => disconnectM.mutate()}
-                disabled={disconnectM.isPending}
-              >
-                {t('tracker.settings.disconnectGoogle')}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-2 text-left text-sm text-text-secondary"
+      >
+        <span>{t('tracker.settings.title')}</span>
+        <ChevronDown className={cn('h-4 w-4 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open ? (
+        <div className="mt-4 flex flex-col gap-4 border-t border-border pt-4 text-sm">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-border accent-text-primary"
+              checked={settings.smart_parse_enabled}
+              disabled={settingsM.isPending}
+              onChange={(e) => settingsM.mutate({ smart_parse_enabled: e.target.checked })}
+            />
+            <span>
+              <span className="font-medium text-text-primary">{t('tracker.settings.smartParse')}</span>
+              <span className="mt-0.5 block text-text-muted">{t('tracker.settings.smartParseHint')}</span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 rounded border-border accent-text-primary"
+              checked={settings.google_calendar_sync_enabled}
+              disabled={settingsM.isPending}
+              onChange={(e) => settingsM.mutate({ google_calendar_sync_enabled: e.target.checked })}
+            />
+            <span>
+              <span className="font-medium text-text-primary">{t('tracker.settings.googleSync')}</span>
+              <span className="mt-0.5 block text-text-muted">{t('tracker.settings.googleSyncHint')}</span>
+            </span>
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            {settings.google_calendar_connected ? (
+              <>
+                <span className="text-text-secondary">{t('tracker.settings.connected')}</span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => disconnectM.mutate()}
+                  disabled={disconnectM.isPending}
+                >
+                  {t('tracker.settings.disconnectGoogle')}
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="secondary" onClick={() => connectM.mutate()} disabled={connectM.isPending}>
+                {t('tracker.settings.connectGoogle')}
               </Button>
-            </>
-          ) : (
-            <Button size="sm" variant="secondary" onClick={() => connectM.mutate()} disabled={connectM.isPending}>
-              {t('tracker.settings.connectGoogle')}
-            </Button>
-          )}
+            )}
+          </div>
         </div>
-      </div>
+      ) : null}
     </SdvgCard>
   )
 }
@@ -236,6 +309,40 @@ function ArchivedSprintCard({ sprint, onUnarchiveTask }: { sprint: TrackerSprint
   )
 }
 
+function NoActiveSprintCard({
+  onCreate,
+  pending,
+}: {
+  onCreate: (name: string) => void
+  pending: boolean
+}) {
+  const { t } = useI18n()
+  const [name, setName] = useState('')
+
+  return (
+    <SdvgCard eyebrow={t('tracker.activeSprint')} title={t('tracker.noActiveSprint')}>
+      <p className="mb-4 text-sm text-text-muted">{t('tracker.noActiveSprintHint')}</p>
+      <div className="flex gap-2">
+        <input
+          className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+          placeholder={t('tracker.sprintPlaceholder')}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !pending && sprintCreate(name)}
+        />
+        <Button size="sm" onClick={() => sprintCreate(name)} disabled={pending}>
+          {t('tracker.startSprint')}
+        </Button>
+      </div>
+    </SdvgCard>
+  )
+
+  function sprintCreate(raw: string) {
+    onCreate(raw.trim())
+    setName('')
+  }
+}
+
 function SprintPanel({
   board,
   settings,
@@ -254,12 +361,30 @@ function SprintPanel({
   onRefresh: () => void
 }) {
   const { t } = useI18n()
+  const toast = useToast()
   const qc = useQueryClient()
   const sprint = board.active_sprint
   const project = board.project!
+  const epics = board.epics ?? []
   const [newEpic, setNewEpic] = useState('')
   const [newTask, setNewTask] = useState('')
+  const [newTaskEpicId, setNewTaskEpicId] = useState<string>('')
   const [newSprint, setNewSprint] = useState('')
+
+  const epicNameById = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const epic of epics) map[epic.id] = epic.name
+    return map
+  }, [epics])
+
+  const epicTaskCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const task of board.tasks ?? []) {
+      if (isTaskArchived(task) || !task.epic_id) continue
+      counts.set(task.epic_id, (counts.get(task.epic_id) ?? 0) + 1)
+    }
+    return counts
+  }, [board.tasks])
 
   const { activeTasks, archivedTasks } = useMemo(() => {
     const all = (board.tasks ?? []).filter((task) => {
@@ -283,7 +408,8 @@ function SprintPanel({
     },
   })
   const taskM = useMutation({
-    mutationFn: (title: string) => createTask(sprint!.id, title, epicFilter ?? undefined),
+    mutationFn: ({ title, epicId }: { title: string; epicId?: string }) =>
+      createTask(sprint!.id, title, epicId || undefined),
     onSuccess: () => {
       setNewTask('')
       onRefresh()
@@ -352,6 +478,7 @@ function SprintPanel({
     mutationFn: () => exportBoard(project.id),
     onSuccess: (md) => {
       void navigator.clipboard.writeText(md)
+      toast.push(t('tracker.exportCopied'), 'success')
     },
   })
 
@@ -364,57 +491,32 @@ function SprintPanel({
   ]
   const epicItems = [
     { id: '__all__', label: t('tracker.epicAll') },
-    ...(board.epics ?? []).map((e) => ({ id: e.id, label: e.name })),
+    ...epics.map((e) => ({ id: e.id, label: e.name })),
   ]
+
+  const activeTaskTotal = (board.tasks ?? []).filter((task) => !isTaskArchived(task)).length
 
   return (
     <TodayPageShell>
       <PageHeader
         title={t('tracker.boardTitle')}
         action={
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => exportM.mutate()} disabled={exportM.isPending}>
-              {t('tracker.export')}
-            </Button>
-            <Link to="/today" className="text-sm text-text-secondary no-underline hover:text-text-primary">
-              {t('tracker.backToday')}
-            </Link>
-          </div>
+          <Button variant="ghost" size="sm" onClick={() => exportM.mutate()} disabled={exportM.isPending}>
+            {t('tracker.export')}
+          </Button>
         }
       />
 
-      <TrackerSettingsPanel settings={settings} onRefresh={onRefresh} />
-
-      <SdvgCard eyebrow={`${t('tracker.epics')} · ${board.epics?.length ?? 0}`} title={t('tracker.epics')}>
-        <div className="flex gap-2">
-          <input
-            className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
-            placeholder={t('tracker.newEpic')}
-            value={newEpic}
-            onChange={(e) => setNewEpic(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && newEpic.trim() && epicM.mutate(newEpic.trim())}
-          />
-          <Button size="sm" onClick={() => newEpic.trim() && epicM.mutate(newEpic.trim())}>
-            {t('tracker.create')}
-          </Button>
-        </div>
-        <div className="mt-4 flex flex-col gap-3">
-          <FilterChips
-            items={kindItems}
-            selected={kindFilter}
-            onSelect={(id) => onSelectKind(id as KindFilter)}
-          />
-          <FilterChips
-            items={epicItems}
-            selected={epicFilter ?? '__all__'}
-            onSelect={(id) => onSelectEpic(id === '__all__' ? null : id)}
-          />
-        </div>
-      </SdvgCard>
+      <BoardOverview
+        sprint={sprint}
+        archivedCount={board.archived_sprints?.length ?? 0}
+        epics={epics}
+        taskCount={activeTaskTotal}
+      />
 
       {sprint ? (
         <SdvgCard eyebrow={t('tracker.activeSprint')} title={sprint.name}>
-          <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-text-muted">
               {done}/{activeTasks.length} {t('tracker.doneCount')}
             </p>
@@ -422,6 +524,32 @@ function SprintPanel({
               {t('tracker.archiveSprint')}
             </Button>
           </div>
+
+          <div className="mb-4 space-y-3 rounded-lg border border-border bg-surface-1/50 p-3">
+            <div>
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+                {t('tracker.filterLabelKind')}
+              </p>
+              <FilterChips
+                items={kindItems}
+                selected={kindFilter}
+                onSelect={(id) => onSelectKind(id as KindFilter)}
+              />
+            </div>
+            {epics.length > 0 ? (
+              <div>
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+                  {t('tracker.filterLabelEpic')}
+                </p>
+                <FilterChips
+                  items={epicItems}
+                  selected={epicFilter ?? '__all__'}
+                  onSelect={(id) => onSelectEpic(id === '__all__' ? null : id)}
+                />
+              </div>
+            ) : null}
+          </div>
+
           {activeTasks.length === 0 ? (
             <p className="mb-3 text-sm text-text-muted">{t('tracker.noTasks')}</p>
           ) : (
@@ -431,6 +559,7 @@ function SprintPanel({
               ) : null}
               <SortableTaskList
                 tasks={activeTasks}
+                epicNames={epicNameById}
                 dragDisabled={dragDisabled}
                 onReorder={(reordered) => reorderM.mutate(reordered)}
                 onToggle={(id, d) => toggleM.mutate({ id, done: d })}
@@ -438,15 +567,36 @@ function SprintPanel({
               />
             </>
           )}
-          <div className="mt-3 flex gap-2">
+
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
-              className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
               placeholder={t('tracker.newTask')}
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && newTask.trim() && taskM.mutate(newTask.trim())}
+              onKeyDown={(e) =>
+                e.key === 'Enter' && newTask.trim() && taskM.mutate({ title: newTask.trim(), epicId: newTaskEpicId })
+              }
             />
-            <Button size="sm" onClick={() => newTask.trim() && taskM.mutate(newTask.trim())}>
+            {epics.length > 0 ? (
+              <select
+                className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+                value={newTaskEpicId}
+                onChange={(e) => setNewTaskEpicId(e.target.value)}
+              >
+                <option value="">{t('tracker.noEpic')}</option>
+                {epics.map((epic) => (
+                  <option key={epic.id} value={epic.id}>
+                    {epic.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
+            <Button
+              size="sm"
+              className="shrink-0"
+              onClick={() => newTask.trim() && taskM.mutate({ title: newTask.trim(), epicId: newTaskEpicId })}
+            >
               {t('tracker.create')}
             </Button>
           </div>
@@ -474,22 +624,69 @@ function SprintPanel({
             </div>
           ) : null}
         </SdvgCard>
-      ) : null}
+      ) : (
+        <NoActiveSprintCard onCreate={(name) => sprintM.mutate(name)} pending={sprintM.isPending} />
+      )}
 
-      <SdvgCard eyebrow={t('tracker.newSprint')} title={t('tracker.newSprint')}>
+      <SdvgCard eyebrow={t('tracker.epics')} title={`${t('tracker.epics')} · ${epics.length}`}>
         <div className="flex gap-2">
           <input
             className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
-            placeholder={t('tracker.sprintPlaceholder')}
-            value={newSprint}
-            onChange={(e) => setNewSprint(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sprintM.mutate(newSprint.trim())}
+            placeholder={t('tracker.newEpic')}
+            value={newEpic}
+            onChange={(e) => setNewEpic(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && newEpic.trim() && epicM.mutate(newEpic.trim())}
           />
-          <Button size="sm" onClick={() => sprintM.mutate(newSprint.trim())}>
+          <Button size="sm" onClick={() => newEpic.trim() && epicM.mutate(newEpic.trim())}>
             {t('tracker.create')}
           </Button>
         </div>
+        {epics.length > 0 ? (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {epics.map((epic) => {
+              const count = epicTaskCounts.get(epic.id) ?? 0
+              const selected = epicFilter === epic.id
+              return (
+                <li key={epic.id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelectEpic(selected ? null : epic.id)}
+                    className={cn(
+                      'rounded-full border px-3 py-1 text-sm transition-colors',
+                      selected
+                        ? 'border-border-strong bg-surface-2 font-medium text-text-primary'
+                        : 'border-border text-text-secondary hover:border-border-strong hover:text-text-primary',
+                    )}
+                  >
+                    {epic.name}
+                    <span className="ml-1.5 text-xs text-text-muted">
+                      {t('tracker.epicTaskCount', { count })}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        ) : null}
       </SdvgCard>
+
+      {sprint ? (
+        <SdvgCard eyebrow={t('tracker.newSprint')} title={t('tracker.newSprint')}>
+          <p className="mb-3 text-sm text-text-muted">{t('tracker.newSprintHint')}</p>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+              placeholder={t('tracker.sprintPlaceholder')}
+              value={newSprint}
+              onChange={(e) => setNewSprint(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && sprintM.mutate(newSprint.trim())}
+            />
+            <Button size="sm" onClick={() => sprintM.mutate(newSprint.trim())} disabled={sprintM.isPending}>
+              {t('tracker.create')}
+            </Button>
+          </div>
+        </SdvgCard>
+      ) : null}
 
       {(board.archived_sprints?.length ?? 0) > 0 ? (
         <section className="flex flex-col gap-3">
@@ -501,11 +698,14 @@ function SprintPanel({
           ))}
         </section>
       ) : null}
+
+      <TrackerSettingsPanel settings={settings} onRefresh={onRefresh} />
     </TodayPageShell>
   )
 }
 
 export default function TasksPage() {
+  const { t } = useI18n()
   const qc = useQueryClient()
   const [epicFilter, setEpicFilter] = useState<string | null>(null)
   const [kindFilter, setKindFilter] = useState<KindFilter>('all')
@@ -513,7 +713,7 @@ export default function TasksPage() {
   const settingsQ = useQuery({ queryKey: ['tracker-settings'], queryFn: () => getSettings() })
 
   if (boardQ.isLoading || settingsQ.isLoading) {
-    return <div className="py-24 text-center text-sm text-text-muted">…</div>
+    return <div className="py-24 text-center text-sm text-text-muted">{t('common.loading')}</div>
   }
   if (boardQ.isError || settingsQ.isError) {
     return <div className="py-24 text-center text-sm text-red-500">{String(boardQ.error ?? settingsQ.error)}</div>
@@ -521,8 +721,8 @@ export default function TasksPage() {
 
   const board = boardQ.data!
   const settings = settingsQ.data!
-  if (!board.project || !board.active_sprint) {
-    return <div className="py-24 text-center text-sm text-text-muted">…</div>
+  if (!board.project) {
+    return <div className="py-24 text-center text-sm text-text-muted">{t('common.loading')}</div>
   }
 
   return (

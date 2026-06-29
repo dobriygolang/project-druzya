@@ -25,11 +25,18 @@ func sprintToProto(s *model.Sprint) *trackerv1.Sprint {
 	if s == nil {
 		return nil
 	}
-	return &trackerv1.Sprint{
+	out := &trackerv1.Sprint{
 		Id: s.ID, ProjectId: s.ProjectID, Name: s.Name, Goal: s.Goal,
 		Status: sprintStatusToProto(s.Status), Position: int32(s.Position),
 		DoneCount: int32(s.DoneCount), TotalCount: int32(s.TotalCount),
 	}
+	if !s.CreatedAt.IsZero() {
+		out.CreatedAt = timestamppb.New(s.CreatedAt)
+	}
+	if s.ArchivedAt != nil {
+		out.ArchivedAt = timestamppb.New(*s.ArchivedAt)
+	}
+	return out
 }
 
 func sprintStatusToProto(s model.SprintStatus) trackerv1.SprintStatus {
