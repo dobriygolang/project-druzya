@@ -111,6 +111,13 @@ service TrackerService {
     };
   }
 
+  rpc UpdateEpicSprintScope(UpdateEpicSprintScopeRequest) returns (UpdateSettingsResponse) {
+    option (google.api.http) = {
+      patch: "/v1/tracker/epics/{id}/sprint_scope"
+      body: "*"
+    };
+  }
+
   rpc CreateSprint(CreateSprintRequest) returns (CreateSprintResponse) {
     option (google.api.http) = {
       post: "/v1/tracker/sprints"
@@ -235,6 +242,11 @@ message ReopenEpicResponse {
   Epic epic = 1;
 }
 
+message UpdateEpicSprintScopeRequest {
+  string id = 1;
+  bool deferred = 2;
+}
+
 message CreateSprintRequest {
   string project_id = 1;
   optional string name = 2;
@@ -302,6 +314,7 @@ message UserSettings {
   bool smart_parse_enabled = 1;
   bool google_calendar_sync_enabled = 2;
   bool google_calendar_connected = 3;
+  repeated string deferred_sprint_epic_names = 4;
 }
 
 message GetSettingsRequest {}

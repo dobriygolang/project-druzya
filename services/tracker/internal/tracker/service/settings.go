@@ -34,6 +34,47 @@ func (s *trackerService) UpdateSettings(ctx context.Context, userID string, in U
 	return &view, nil
 }
 
+func (s *trackerService) UpdateEpicSprintScope(ctx context.Context, userID, epicID string, deferred bool) (*model.UserSettingsView, error) {
+	board, err := s.ensureDefaultBoard(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var epicName string
+	for _, e := range board.Epics {
+		if e.ID == epicID {
+			epicName = e.Name
+			break
+		}
+	}
+	if epicName == "" {
+		return nil, fmt.Errorf("%w: epic not found", model.ErrInvalidArgument)
+	}
+	current, err := s.repo.GetUserSettings(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	next := append([]string{}, current.DeferredSprintEpicNames...)
+	if deferred {
+		if !model.IsEpicDeferredForSprint(epicName, next) {
+			next = append(next, epicName)
+		}
+	} else {
+		filtered := make([]string, 0, len(next))
+		for _, name := range next {
+			if !strings.EqualFold(strings.TrimSpace(name), epicName) {
+				filtered = append(filtered, name)
+			}
+		}
+		next = filtered
+	}
+	settings, err := s.repo.SetDeferredSprintEpicNames(ctx, userID, next)
+	if err != nil {
+		return nil, err
+	}
+	view := settings.View()
+	return &view, nil
+}
+
 func (s *trackerService) GetGoogleCalendarAuthURL(ctx context.Context, userID string) (string, error) {
 	if s.google == nil || !s.google.Configured() {
 		return "", fmt.Errorf("%w: google calendar not configured", model.ErrInvalidArgument)

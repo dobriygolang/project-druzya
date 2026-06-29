@@ -5,11 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/model"
 )
+
+const userSettingsColumns = `user_id, smart_parse_enabled, google_calendar_sync_enabled,
+	deferred_sprint_epic_names, google_refresh_token, google_oauth_state, created_at, updated_at`
 
 func (r *Repository) GetUserSettings(ctx context.Context, userID string) (*model.UserSettings, error) {
 	uid, err := uuid.Parse(userID)
@@ -17,13 +22,12 @@ func (r *Repository) GetUserSettings(ctx context.Context, userID string) (*model
 		return nil, fmt.Errorf("invalid user_id: %w", err)
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT user_id, smart_parse_enabled, google_calendar_sync_enabled,
-		       google_refresh_token, google_oauth_state, created_at, updated_at
+		SELECT `+userSettingsColumns+`
 		FROM user_settings WHERE user_id = $1
 	`, uid)
 	s, err := scanUserSettings(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return &model.UserSettings{UserID: userID}, nil
+		return &model.UserSettings{UserID: userID, DeferredSprintEpicNames: []string{}}, nil
 	}
 	return s, err
 }
@@ -46,16 +50,63 @@ func (r *Repository) UpsertUserSettings(ctx context.Context, userID string, smar
 		gSync = *googleSync
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		INSERT INTO user_settings (user_id, smart_parse_enabled, google_calendar_sync_enabled)
-		VALUES ($1, $2, $3)
+		INSERT INTO user_settings (user_id, smart_parse_enabled, google_calendar_sync_enabled, deferred_sprint_epic_names)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_id) DO UPDATE SET
 			smart_parse_enabled = EXCLUDED.smart_parse_enabled,
 			google_calendar_sync_enabled = EXCLUDED.google_calendar_sync_enabled,
 			updated_at = now()
-		RETURNING user_id, smart_parse_enabled, google_calendar_sync_enabled,
-		          google_refresh_token, google_oauth_state, created_at, updated_at
-	`, uid, smart, gSync)
+		RETURNING `+userSettingsColumns+`
+	`, uid, smart, gSync, current.DeferredSprintEpicNames)
 	return scanUserSettings(row)
+}
+
+func (r *Repository) SetDeferredSprintEpicNames(ctx context.Context, userID string, names []string) (*model.UserSettings, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
+	current, err := r.GetUserSettings(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	normalized := normalizeEpicNames(names)
+	row := r.conn(ctx).QueryRow(ctx, `
+		INSERT INTO user_settings (user_id, smart_parse_enabled, google_calendar_sync_enabled, deferred_sprint_epic_names)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (user_id) DO UPDATE SET
+			deferred_sprint_epic_names = EXCLUDED.deferred_sprint_epic_names,
+			updated_at = now()
+		RETURNING `+userSettingsColumns+`
+	`, uid, current.SmartParseEnabled, current.GoogleCalendarSyncEnabled, normalized)
+	return scanUserSettings(row)
+}
+
+func (r *Repository) ClearDeferredSprintEpics(ctx context.Context, userID string) error {
+	_, err := r.SetDeferredSprintEpicNames(ctx, userID, nil)
+	return err
+}
+
+func normalizeEpicNames(names []string) []string {
+	if len(names) == 0 {
+		return []string{}
+	}
+	out := make([]string, 0, len(names))
+	seen := map[string]struct{}{}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		key := strings.ToLower(name)
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, name)
+	}
+	slices.Sort(out)
+	return out
 }
 
 func (r *Repository) SaveGoogleOAuthState(ctx context.Context, userID, state string) error {
@@ -144,10 +195,13 @@ func (r *Repository) PatchTaskMetadata(ctx context.Context, taskID, userID strin
 func scanUserSettings(row pgx.Row) (*model.UserSettings, error) {
 	var s model.UserSettings
 	var uid uuid.UUID
-	if err := row.Scan(&uid, &s.SmartParseEnabled, &s.GoogleCalendarSyncEnabled,
+	if err := row.Scan(&uid, &s.SmartParseEnabled, &s.GoogleCalendarSyncEnabled, &s.DeferredSprintEpicNames,
 		&s.GoogleRefreshToken, &s.GoogleOAuthState, &s.CreatedAt, &s.UpdatedAt); err != nil {
 		return nil, err
 	}
 	s.UserID = uid.String()
+	if s.DeferredSprintEpicNames == nil {
+		s.DeferredSprintEpicNames = []string{}
+	}
 	return &s, nil
 }

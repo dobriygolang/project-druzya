@@ -30,8 +30,8 @@ func TributeWebhookHandler(svc billingservice.Service) http.HandlerFunc {
 		}
 		err = svc.HandleProviderWebhook(r.Context(), "tribute", headers, body)
 		switch {
-		case err == nil, errors.Is(err, billingservice.ErrDuplicateEvent):
-			// Duplicate delivery is a no-op success so the provider stops retrying.
+		case err == nil, errors.Is(err, billingservice.ErrDuplicateEvent), errors.Is(err, billingservice.ErrUnknownUser):
+			// Acknowledge delivery so Tribute stops retrying (unknown user is logged server-side).
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{"status":"ok"}`))
 		case errors.Is(err, providers.ErrWebhookUnauthorized):

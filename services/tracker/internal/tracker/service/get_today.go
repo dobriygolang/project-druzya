@@ -23,6 +23,12 @@ func (s *trackerService) GetToday(ctx context.Context, userID string, localDate,
 		return nil, err
 	}
 	open := filterOpenTasks(board.Tasks)
+	epicNames := epicNameMap(board.Epics)
+	deferred := []string{}
+	if settings, err := s.repo.GetUserSettings(ctx, userID); err == nil && settings != nil {
+		deferred = settings.DeferredSprintEpicNames
+	}
+	open = filterTasksForSprintFocus(open, epicNames, deferred)
 	if board.ActiveSprint == nil {
 		return &model.TodayView{
 			BudgetCapacity: 1.5,
@@ -31,7 +37,6 @@ func (s *trackerService) GetToday(ctx context.Context, userID string, localDate,
 			Epics:          board.Epics,
 		}, nil
 	}
-	epicNames := epicNameMap(board.Epics)
 	if s.recommendation == nil {
 		view := fallbackTodayView(open, board)
 		view.LocalDate = date
@@ -84,6 +89,24 @@ func resolveTimezone(ctx context.Context, identity identityadapter.Client, userI
 		return ""
 	}
 	return strings.TrimSpace(user.Timezone)
+}
+
+func filterTasksForSprintFocus(tasks []model.Task, epicNames map[string]string, deferred []string) []model.Task {
+	if len(deferred) == 0 {
+		return tasks
+	}
+	out := make([]model.Task, 0, len(tasks))
+	for _, t := range tasks {
+		name := ""
+		if t.EpicID != nil {
+			name = epicNames[*t.EpicID]
+		}
+		if model.IsEpicDeferredForSprint(name, deferred) {
+			continue
+		}
+		out = append(out, t)
+	}
+	return out
 }
 
 func filterOpenTasks(tasks []model.Task) []model.Task {

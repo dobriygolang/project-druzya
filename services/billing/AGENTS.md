@@ -33,7 +33,7 @@ Seeded in `00001_init.sql`: `free`, `pro_monthly`.
 | GetMe | `GET /v1/billing/me` | JWT |
 | GetEntitlements, CheckEntitlement, CheckAndConsumeUsage, ReleaseUsage | gRPC | `x-internal-token` |
 | Grant/Revoke subscription | admin HTTP | `x-internal-token` |
-| Tribute webhook | `POST /v1/billing/webhooks/tribute` | secret header |
+| Tribute webhook | `POST /v1/billing/webhooks/tribute` | `trbt-signature` HMAC-SHA256 hex (API key) |
 
 Consumers: **ai** (eval/day), **interview** (mock/month, company templates), **sandbox** (runs/day, hidden tests).
 

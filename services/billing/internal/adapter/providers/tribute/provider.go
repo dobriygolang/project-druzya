@@ -2,8 +2,13 @@ package tribute
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,27 +33,38 @@ func New(cfg Config) *Provider {
 
 func (p *Provider) ProviderName() string { return "tribute" }
 
+type webhookEnvelope struct {
+	Name      string          `json:"name"`
+	SentAt    string          `json:"sent_at"`
+	CreatedAt string          `json:"created_at"`
+	EventID   string          `json:"event_id"`
+	Payload   json.RawMessage `json:"payload"`
+}
+
 type webhookPayload struct {
-	EventID        string          `json:"event_id"`
-	ID             string          `json:"id"`
-	EventType      string          `json:"event_type"`
-	Event          string          `json:"event"`
-	Name           string          `json:"name"`
-	TelegramUserID int64           `json:"telegram_user_id"`
-	TelegramID     int64           `json:"telegram_id"`
-	Username       string          `json:"username"`
-	SubscriptionID string          `json:"subscription_id"`
-	PaymentID      string          `json:"payment_id"`
-	Tier           string          `json:"tier"`
-	ProductID      string          `json:"product_id"`
-	Amount         string          `json:"amount"`
-	Currency       string          `json:"currency"`
-	Status         string          `json:"status"`
-	PeriodStart    *time.Time      `json:"period_start"`
-	PeriodEnd      *time.Time      `json:"period_end"`
-	User           *webhookUser    `json:"user"`
-	Data           json.RawMessage `json:"data"`
-	Raw            json.RawMessage `json:"-"`
+	EventID          string          `json:"event_id"`
+	ID               string          `json:"id"`
+	EventType        string          `json:"event_type"`
+	Event            string          `json:"event"`
+	Name             string          `json:"name"`
+	TelegramUserID   int64           `json:"telegram_user_id"`
+	TelegramID       int64           `json:"telegram_id"`
+	Username         string          `json:"username"`
+	SubscriptionID   json.RawMessage `json:"subscription_id"`
+	PaymentID        string          `json:"payment_id"`
+	Tier             string          `json:"tier"`
+	ProductID        json.RawMessage `json:"product_id"`
+	Amount           string          `json:"amount"`
+	Currency         string          `json:"currency"`
+	Status           string          `json:"status"`
+	PeriodStart      *time.Time      `json:"period_start"`
+	PeriodEnd        *time.Time      `json:"period_end"`
+	User             *webhookUser    `json:"user"`
+	Data             json.RawMessage `json:"data"`
+	Raw              json.RawMessage `json:"-"`
+	envelopeName     string
+	envelopeSentAt   string
+	envelopeEventID  string
 }
 
 type webhookUser struct {
@@ -56,13 +72,19 @@ type webhookUser struct {
 	Username   string `json:"username"`
 }
 
-// VerifyWebhook validates shared secret header when configured.
-func (p *Provider) VerifyWebhook(_ context.Context, headers map[string]string, _ []byte) error {
+// VerifyWebhook validates Tribute trbt-signature (HMAC-SHA256 hex of raw body) or legacy secret headers.
+func (p *Provider) VerifyWebhook(_ context.Context, headers map[string]string, body []byte) error {
 	if p.cfg.WebhookSecret == "" {
 		return fmt.Errorf("tribute webhook secret not configured: %w", providers.ErrWebhookUnauthorized)
 	}
+	if sig := headerValue(headers, "trbt-signature"); sig != "" {
+		if verifyTRBTSignature(p.cfg.WebhookSecret, body, sig) {
+			return nil
+		}
+		return fmt.Errorf("invalid tribute webhook signature: %w", providers.ErrWebhookUnauthorized)
+	}
 	for _, key := range []string{"X-Tribute-Secret", "X-Webhook-Secret", "X-Api-Key", "Api-Key"} {
-		if headers[key] == p.cfg.WebhookSecret {
+		if headerValue(headers, key) == p.cfg.WebhookSecret {
 			return nil
 		}
 	}
@@ -71,13 +93,16 @@ func (p *Provider) VerifyWebhook(_ context.Context, headers map[string]string, _
 
 // ParseWebhook decodes a Tribute webhook body.
 func (p *Provider) ParseWebhook(_ context.Context, _ map[string]string, body []byte) (providers.Event, error) {
-	var payload webhookPayload
-	if err := json.Unmarshal(body, &payload); err != nil {
-		return providers.Event{}, fmt.Errorf("decode tribute payload: %w", err)
+	payload, err := decodeWebhookPayload(body)
+	if err != nil {
+		return providers.Event{}, err
 	}
 	payload.Raw = append(json.RawMessage(nil), body...)
 
-	eventID := firstNonEmpty(payload.EventID, payload.ID)
+	eventID := firstNonEmpty(payload.EventID, payload.ID, payload.envelopeEventID)
+	if eventID == "" && payload.envelopeName != "" && payload.envelopeSentAt != "" {
+		eventID = payload.envelopeName + ":" + payload.envelopeSentAt
+	}
 	if eventID == "" {
 		return providers.Event{}, fmt.Errorf("missing event_id")
 	}
@@ -99,7 +124,7 @@ func (p *Provider) ParseWebhook(_ context.Context, _ map[string]string, body []b
 			if nested.Tier != "" && payload.Tier == "" {
 				payload.Tier = nested.Tier
 			}
-			if nested.SubscriptionID != "" && payload.SubscriptionID == "" {
+			if len(nested.SubscriptionID) > 0 && len(payload.SubscriptionID) == 0 {
 				payload.SubscriptionID = nested.SubscriptionID
 			}
 		}
@@ -108,13 +133,15 @@ func (p *Provider) ParseWebhook(_ context.Context, _ map[string]string, body []b
 		return providers.Event{}, fmt.Errorf("missing telegram_user_id")
 	}
 
-	eventType := normalizeEventType(firstNonEmpty(payload.EventType, payload.Event, payload.Name))
+	rawEventType := firstNonEmpty(payload.EventType, payload.Event, payload.Name, payload.envelopeName)
+	eventType := normalizeEventType(rawEventType)
 	if eventType == "" {
-		return providers.Event{}, fmt.Errorf("unsupported event_type %q", payload.EventType)
+		return providers.Event{}, fmt.Errorf("unsupported event_type %q", rawEventType)
 	}
 
 	username := firstNonEmpty(payload.Username, userName(payload.User))
-	tier := firstNonEmpty(payload.Tier, payload.ProductID)
+	subscriptionID := rawJSONID(payload.SubscriptionID)
+	tier := firstNonEmpty(payload.Tier, rawJSONID(payload.ProductID), subscriptionID)
 
 	return providers.Event{
 		Provider:               p.ProviderName(),
@@ -122,7 +149,7 @@ func (p *Provider) ParseWebhook(_ context.Context, _ map[string]string, body []b
 		ProviderEventID:        eventID,
 		ProviderUserID:         fmt.Sprintf("%d", telegramID),
 		ProviderUsername:       username,
-		ProviderSubscriptionID: payload.SubscriptionID,
+		ProviderSubscriptionID: subscriptionID,
 		ProviderPaymentID:      payload.PaymentID,
 		Tier:                   tier,
 		Amount:                 payload.Amount,
@@ -132,6 +159,66 @@ func (p *Provider) ParseWebhook(_ context.Context, _ map[string]string, body []b
 		CurrentPeriodEnd:       payload.PeriodEnd,
 		RawPayload:             payload.Raw,
 	}, nil
+}
+
+func decodeWebhookPayload(body []byte) (webhookPayload, error) {
+	var envelope webhookEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return webhookPayload{}, fmt.Errorf("decode tribute payload: %w", err)
+	}
+	if len(envelope.Payload) > 0 {
+		var payload webhookPayload
+		if err := json.Unmarshal(envelope.Payload, &payload); err != nil {
+			return webhookPayload{}, fmt.Errorf("decode tribute payload: %w", err)
+		}
+		if payload.Name == "" {
+			payload.Name = envelope.Name
+		}
+		payload.envelopeName = envelope.Name
+		payload.envelopeSentAt = envelope.SentAt
+		payload.envelopeEventID = envelope.EventID
+		return payload, nil
+	}
+	var payload webhookPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return webhookPayload{}, fmt.Errorf("decode tribute payload: %w", err)
+	}
+	return payload, nil
+}
+
+func verifyTRBTSignature(secret string, body []byte, signature string) bool {
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(body)
+	expected := hex.EncodeToString(mac.Sum(nil))
+	got := strings.TrimSpace(signature)
+	if len(expected) != len(got) {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(expected), []byte(got)) == 1
+}
+
+func headerValue(headers map[string]string, name string) string {
+	for k, v := range headers {
+		if strings.EqualFold(k, name) {
+			return v
+		}
+	}
+	return ""
+}
+
+func rawJSONID(raw json.RawMessage) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var s string
+	if err := json.Unmarshal(raw, &s); err == nil {
+		return strings.TrimSpace(s)
+	}
+	var n int64
+	if err := json.Unmarshal(raw, &n); err == nil {
+		return strconv.FormatInt(n, 10)
+	}
+	return strings.TrimSpace(string(raw))
 }
 
 func userName(u *webhookUser) string {
@@ -152,11 +239,11 @@ func firstNonEmpty(values ...string) string {
 
 func normalizeEventType(raw string) string {
 	switch strings.ToLower(strings.TrimSpace(raw)) {
-	case providers.EventSubscriptionCreated, "subscription.created", "new_subscription":
+	case providers.EventSubscriptionCreated, "subscription.created", "new_subscription", "newsubscription":
 		return providers.EventSubscriptionCreated
-	case providers.EventSubscriptionRenewed, "subscription.renewed", "renewed":
+	case providers.EventSubscriptionRenewed, "subscription.renewed", "renewed", "renewed_subscription", "renewedsubscription":
 		return providers.EventSubscriptionRenewed
-	case providers.EventSubscriptionCancelled, "subscription.canceled", "subscription.cancelled", "cancelled", "canceled":
+	case providers.EventSubscriptionCancelled, "subscription.canceled", "subscription.cancelled", "cancelled", "canceled", "cancelled_subscription", "cancelledsubscription":
 		return providers.EventSubscriptionCancelled
 	case providers.EventSubscriptionExpired, "subscription.expired", "expired":
 		return providers.EventSubscriptionExpired

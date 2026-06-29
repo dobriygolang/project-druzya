@@ -37,6 +37,8 @@ type Repository interface {
 	WithTx(ctx context.Context, fn func(ctx context.Context) error) error
 	GetUserSettings(ctx context.Context, userID string) (*model.UserSettings, error)
 	UpsertUserSettings(ctx context.Context, userID string, smartParse, googleSync *bool) (*model.UserSettings, error)
+	SetDeferredSprintEpicNames(ctx context.Context, userID string, names []string) (*model.UserSettings, error)
+	ClearDeferredSprintEpics(ctx context.Context, userID string) error
 	SaveGoogleOAuthState(ctx context.Context, userID, state string) error
 	ConsumeGoogleOAuthState(ctx context.Context, state string) (string, error)
 	SaveGoogleRefreshToken(ctx context.Context, userID, refreshToken string) error
@@ -67,6 +69,7 @@ type Service interface {
 	FailOutboxEvent(ctx context.Context, id, errMsg string) error
 	GetSettings(ctx context.Context, userID string) (*model.UserSettingsView, error)
 	UpdateSettings(ctx context.Context, userID string, in UpdateSettingsParams) (*model.UserSettingsView, error)
+	UpdateEpicSprintScope(ctx context.Context, userID, epicID string, deferred bool) (*model.UserSettingsView, error)
 	GetGoogleCalendarAuthURL(ctx context.Context, userID string) (string, error)
 	HandleGoogleCallback(ctx context.Context, code, state string) (string, error)
 	DisconnectGoogleCalendar(ctx context.Context, userID string) (*model.UserSettingsView, error)
@@ -257,7 +260,12 @@ func (s *trackerService) CreateSprint(ctx context.Context, userID, projectID str
 	if goal != nil {
 		goalText = strings.TrimSpace(*goal)
 	}
-	return s.repo.CreateSprint(ctx, projectID, sprintName, goalText)
+	sprint, err := s.repo.CreateSprint(ctx, projectID, sprintName, goalText)
+	if err != nil {
+		return nil, err
+	}
+	_ = s.repo.ClearDeferredSprintEpics(ctx, userID)
+	return sprint, nil
 }
 
 func (s *trackerService) CreateTask(ctx context.Context, userID string, in CreateTaskParams) (*model.Task, error) {
