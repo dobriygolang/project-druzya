@@ -186,6 +186,7 @@ jobs:
 
             cd deploy
             make keys
+            bash scripts/ensure-env-dsns.sh .env
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
             export BUILDX_NO_DEFAULT_ATTESTATIONS=1
@@ -228,6 +229,7 @@ jobs:
             fi
             if [ "$RUN_MIGRATE" = 1 ]; then
               echo "Running migrations..."
+              bash scripts/ensure-prod-databases.sh
               docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
             else
               echo "Skipping migrate (no migration changes)."

@@ -6,7 +6,6 @@ import { LoginScreen } from './components/LoginScreen';
 import { useFocusSession } from './hooks/useFocusSession';
 import { HomePage } from './pages/Home';
 import { NotesPage } from './pages/Notes';
-import { SchedulePage } from './pages/Schedule';
 import { SettingsPage } from './pages/Settings';
 import { StatsPage } from './pages/Stats';
 import { TaskBoardPage } from './pages/TaskBoard';
@@ -186,7 +185,7 @@ export default function App() {
       );
       break;
     case 'schedule':
-      content = <SchedulePage />;
+      content = <TaskBoardPage />;
       break;
     case 'stats':
       content = <StatsPage />;

@@ -55,7 +55,7 @@ npm run dev                                         # окно Tauri + Vite :517
 ### 4. Вход
 
 - **Tauri:** кнопка Telegram в приложении (нужен бот + `make run-bot` в identity, если настраиваете с нуля).
-- **Dev login:** если на identity включён `DEV_AUTH=true` — кнопка в UI.
+- **Dev login:** feature flag `VITE_HONE_DEV_LOGIN` (default **on** in `npm run dev`, **off** in `npm run build`). Backend: `DEV_AUTH=true` on identity. UI — subtle bar at the bottom of the login screen.
 - **Только браузер** (`npm run dev:vite`): задайте `VITE_DRUZ9_DEV_TOKEN=<jwt>` в `.env`.
 
 ### 5. Сборка релиза
@@ -66,6 +66,17 @@ npm run build    # .dmg / .app в src-tauri/target/release/bundle/
 ```
 
 ---
+
+## Icons
+
+App icon = [`apps/web/public/favicon.svg`](../web/public/favicon.svg) (two circles on dark square).
+
+- Browser tab: `public/favicon.svg`
+- Tauri bundle: `src-tauri/icons/` — regenerate after changing the SVG:
+
+```bash
+npm run icon
+```
 
 ## Dev scripts
 
@@ -82,6 +93,7 @@ npm run build    # .dmg / .app в src-tauri/target/release/bundle/
 |----------|-------------|----------|
 | `VITE_DRUZ9_API_BASE` | *(пусто → proxy)* | Явный API URL |
 | `VITE_DRUZ9_DEV_TOKEN` | — | Bearer для browser-only |
+| `VITE_HONE_DEV_LOGIN` | `true` in dev / `false` in prod build | Dev login UI |
 | `HONE_API_BASE` | `http://localhost:8080` | Rust-side Telegram auth |
 
 ## MVP pages
@@ -89,9 +101,8 @@ npm run build    # .dmg / .app в src-tauri/target/release/bundle/
 | Page | Status |
 |------|--------|
 | **Focus** | Pomodoro + stopwatch → `focus` |
-| **Today** | Vertical task list → `tracker` |
+| **Today** | Day columns + timeline → `tracker` |
 | **Notes** | Sidebar + markdown → `notes` |
-| **Schedule** | Day timeline + backlog → `tracker` |
 | **Stats** | KPIs + heatmap → `focus` |
 
 ## Rust shell

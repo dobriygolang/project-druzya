@@ -21,9 +21,28 @@ run_migrate() {
   goose -dir "$dir" postgres "$dsn" up
 }
 
-for svc in "${DB_SERVICES[@]}"; do
+dsn_for_service() {
+  local svc="$1"
+  local dsn_var dsn db user pass
   dsn_var="$(dsn_env_for_service "$svc")"
-  run_migrate "$svc" "${!dsn_var}" "/migrations/$svc"
+  dsn="${!dsn_var:-}"
+  if [ -n "$dsn" ]; then
+    echo "$dsn"
+    return 0
+  fi
+  db="$(db_name_for_service "$svc")"
+  user="${POSTGRES_USER:-druzya}"
+  pass="${POSTGRES_PASSWORD:-}"
+  if [ -z "$pass" ]; then
+    echo "migrate-all: ${dsn_var} is not set and POSTGRES_PASSWORD is empty" >&2
+    return 1
+  fi
+  echo "postgres://${user}:${pass}@postgres:5432/${db}?sslmode=disable"
+}
+
+for svc in "${DB_SERVICES[@]}"; do
+  dsn="$(dsn_for_service "$svc")"
+  run_migrate "$svc" "$dsn" "/migrations/$svc"
 done
 
 echo "all migrations applied"

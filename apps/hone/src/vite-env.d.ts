@@ -4,6 +4,8 @@ interface ImportMetaEnv {
   readonly VITE_DRUZ9_API_BASE?: string;
   readonly VITE_DRUZ9_WEB_BASE?: string;
   readonly VITE_DRUZ9_DEV_TOKEN?: string;
+  /** Dev login UI + API. Default: true in dev, false in prod build. */
+  readonly VITE_HONE_DEV_LOGIN?: string;
 }
 
 interface ImportMeta {

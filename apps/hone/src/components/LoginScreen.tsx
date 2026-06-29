@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TelegramStart } from '@shared/ipc';
 
 import { API_BASE_URL } from '../api/config';
+import { DEV_LOGIN_ENABLED } from '../features';
 import { useSessionStore } from '../stores/session';
 
 const POLL_INTERVAL_MS = 2000;
@@ -15,7 +16,18 @@ type Phase =
   | { kind: 'expired' }
   | { kind: 'error'; message: string };
 
-export function LoginScreen() {
+function TelegramIcon(): JSX.Element {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden focusable="false">
+      <path
+        fill="#229ED9"
+        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"
+      />
+    </svg>
+  );
+}
+
+export function LoginScreen(): JSX.Element {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
   const [devUsername, setDevUsername] = useState('sergey');
   const [devBusy, setDevBusy] = useState(false);
@@ -23,7 +35,14 @@ export function LoginScreen() {
   const pollEpochRef = useRef(0);
   const cancelledRef = useRef(false);
 
-  async function devLogin() {
+  useEffect(() => {
+    return () => {
+      cancelledRef.current = true;
+      if (pollTimer.current !== null) window.clearTimeout(pollTimer.current);
+    };
+  }, []);
+
+  async function devLogin(): Promise<void> {
     setDevBusy(true);
     try {
       const resp = await fetch(`${API_BASE_URL}/api/v1/auth/dev/login`, {
@@ -33,12 +52,11 @@ export function LoginScreen() {
         body: JSON.stringify({ username: devUsername.trim() || 'sergey' }),
       });
       if (!resp.ok) {
-        const txt = await resp.text();
         setPhase({
           kind: 'error',
           message: resp.status === 404
             ? 'DEV_AUTH not enabled on backend'
-            : `dev login: ${resp.status} ${txt.slice(0, 140)}`,
+            : `Dev login failed (${resp.status})`,
         });
         return;
       }
@@ -64,17 +82,10 @@ export function LoginScreen() {
     }
   }
 
-  useEffect(() => {
-    return () => {
-      cancelledRef.current = true;
-      if (pollTimer.current !== null) window.clearTimeout(pollTimer.current);
-    };
-  }, []);
-
-  const onSignIn = async () => {
+  const onSignIn = async (): Promise<void> => {
     const bridge = window.hone;
     if (!bridge) {
-      setPhase({ kind: 'error', message: 'Native bridge unavailable' });
+      setPhase({ kind: 'error', message: 'Sign in requires the Hone desktop app' });
       return;
     }
     setPhase({ kind: 'starting' });
@@ -91,15 +102,15 @@ export function LoginScreen() {
     }
   };
 
-  function startPolling(code: string) {
+  function startPolling(code: string): void {
     pollEpochRef.current += 1;
     const epoch = pollEpochRef.current;
     const startedAt = Date.now();
 
-    const tick = async () => {
+    const tick = async (): Promise<void> => {
       if (cancelledRef.current || pollEpochRef.current !== epoch) return;
       if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
-        setPhase({ kind: 'error', message: 'Telegram bot did not respond in time' });
+        setPhase({ kind: 'error', message: 'Telegram did not respond in time' });
         return;
       }
       const bridge = window.hone;
@@ -142,62 +153,71 @@ export function LoginScreen() {
     void tick();
   }
 
+  const busy = phase.kind === 'starting' || phase.kind === 'awaiting';
+  const statusText =
+    phase.kind === 'starting'
+      ? 'Opening Telegram…'
+      : phase.kind === 'awaiting'
+        ? 'Confirm in the bot, then return here'
+        : phase.kind === 'expired'
+          ? 'Code expired'
+          : phase.kind === 'error'
+            ? phase.message
+            : null;
+
+  const handlePrimary = (): void => {
+    if (phase.kind === 'awaiting') {
+      void window.hone?.shell.openExternal(phase.flow.deepLink);
+      return;
+    }
+    if (phase.kind === 'idle' || phase.kind === 'expired' || phase.kind === 'error') {
+      void onSignIn();
+    }
+  };
+
   return (
     <div className="login-screen">
-      <h1 className="login-title">Hone</h1>
-      <p className="login-sub">Sign in to sync tasks, notes, and focus sessions.</p>
+      <div className="login-stack">
+        <h1 className="login-brand">Hone</h1>
+        <span className="login-rule" aria-hidden />
 
-      {phase.kind === 'idle' && (
-        <button type="button" className="btn-primary" onClick={() => void onSignIn()}>
-          Continue with Telegram
+        <button
+          type="button"
+          className="login-tg-btn"
+          onClick={handlePrimary}
+          disabled={busy && phase.kind === 'starting'}
+          aria-label="Continue with Telegram"
+        >
+          <TelegramIcon />
         </button>
-      )}
 
-      {phase.kind === 'starting' && <p className="login-hint">Starting…</p>}
+        {statusText && (
+          <p className={phase.kind === 'error' ? 'login-status login-status--error' : 'login-status'}>
+            {statusText}
+          </p>
+        )}
+      </div>
 
-      {phase.kind === 'awaiting' && (
-        <div className="login-await">
-          <p>Confirm in Telegram, then return here.</p>
-          <button
-            type="button"
-            className="btn-ghost"
-            onClick={() => void window.hone?.shell.openExternal(phase.flow.deepLink)}
-          >
-            Open Telegram again
-          </button>
-        </div>
-      )}
-
-      {phase.kind === 'expired' && (
-        <div className="login-await">
-          <p>Code expired.</p>
-          <button type="button" className="btn-primary" onClick={() => void onSignIn()}>
-            Try again
-          </button>
-        </div>
-      )}
-
-      {phase.kind === 'error' && (
-        <div className="login-await">
-          <p className="login-error">{phase.message}</p>
-          <button type="button" className="btn-primary" onClick={() => setPhase({ kind: 'idle' })}>
-            Back
-          </button>
-        </div>
-      )}
-
-      {import.meta.env.DEV && (
-        <div className="login-dev">
+      {DEV_LOGIN_ENABLED && (
+        <form
+          className="login-dev"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void devLogin();
+          }}
+        >
           <input
+            className="login-dev-input"
             value={devUsername}
             onChange={(e) => setDevUsername(e.target.value)}
-            placeholder="dev username"
+            placeholder="username"
             aria-label="Dev username"
+            autoComplete="username"
           />
-          <button type="button" className="btn-ghost" disabled={devBusy} onClick={() => void devLogin()}>
-            {devBusy ? '…' : 'Dev login'}
+          <button type="submit" className="login-dev-btn" disabled={devBusy}>
+            {devBusy ? '…' : 'Dev'}
           </button>
-        </div>
+        </form>
       )}
     </div>
   );

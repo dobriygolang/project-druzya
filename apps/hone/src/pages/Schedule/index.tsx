@@ -1,1 +1,1 @@
-export { SchedulePage } from './SchedulePage';
+export { DailyPlannerPage as SchedulePage } from '../DailyPlanner/DailyPlannerPage';
