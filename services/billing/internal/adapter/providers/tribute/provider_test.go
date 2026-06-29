@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"testing"
 
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/providers"
@@ -86,6 +87,21 @@ func TestParseWebhookTributeEnvelope(t *testing.T) {
 	}
 	if event.ProviderUserID != "4242" || event.Tier != "12345" {
 		t.Fatalf("unexpected event: %+v", event)
+	}
+}
+
+func TestParseWebhookPingPayloads(t *testing.T) {
+	t.Parallel()
+	p := tribute.New(tribute.Config{WebhookSecret: "secret"})
+	for _, body := range [][]byte{
+		[]byte(`{}`),
+		[]byte(`{"name":"test_webhook"}`),
+		[]byte(`{"name":"new_subscription","sent_at":"2026-06-29T11:00:00Z","payload":{}}`),
+	} {
+		_, err := p.ParseWebhook(context.Background(), nil, body)
+		if !errors.Is(err, providers.ErrWebhookPing) {
+			t.Fatalf("body %s: expected ping, got %v", body, err)
+		}
 	}
 }
 

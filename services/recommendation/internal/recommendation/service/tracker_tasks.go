@@ -17,9 +17,23 @@ func (s *recommendationService) pushTrackerTask(ctx context.Context, params trac
 	if params.DedupKey == nil || strings.TrimSpace(*params.DedupKey) == "" {
 		return // planner only writes dedup-keyed system tasks; never touch user backlog
 	}
+	if params.EpicName != nil && s.isEpicDeferredForSprint(ctx, params.UserID, *params.EpicName) {
+		return
+	}
 	if _, err := s.tracker.CreateTaskInternal(ctx, params); err != nil {
 		_ = err // best-effort; tracker must not block interview outbox
 	}
+}
+
+func (s *recommendationService) isEpicDeferredForSprint(ctx context.Context, userID, epicName string) bool {
+	if strings.TrimSpace(epicName) == "" {
+		return false
+	}
+	settings, err := s.tracker.GetUserSettings(ctx, userID)
+	if err != nil || settings == nil {
+		return false
+	}
+	return plan.IsEpicDeferred(epicName, settings.DeferredSprintEpicNames)
 }
 
 func retryTrackerDedup(retryItemID string) string {

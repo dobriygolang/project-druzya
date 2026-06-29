@@ -93,18 +93,28 @@ func (p *Provider) VerifyWebhook(_ context.Context, headers map[string]string, b
 
 // ParseWebhook decodes a Tribute webhook body.
 func (p *Provider) ParseWebhook(_ context.Context, _ map[string]string, body []byte) (providers.Event, error) {
+	trimmed := strings.TrimSpace(string(body))
+	if trimmed == "" || trimmed == "{}" {
+		return providers.Event{}, providers.ErrWebhookPing
+	}
+
 	payload, err := decodeWebhookPayload(body)
 	if err != nil {
 		return providers.Event{}, err
 	}
 	payload.Raw = append(json.RawMessage(nil), body...)
 
+	rawEventType := firstNonEmpty(payload.EventType, payload.Event, payload.Name, payload.envelopeName)
+	if isTributeTestEvent(rawEventType) {
+		return providers.Event{}, providers.ErrWebhookPing
+	}
+
 	eventID := firstNonEmpty(payload.EventID, payload.ID, payload.envelopeEventID)
 	if eventID == "" && payload.envelopeName != "" && payload.envelopeSentAt != "" {
 		eventID = payload.envelopeName + ":" + payload.envelopeSentAt
 	}
 	if eventID == "" {
-		return providers.Event{}, fmt.Errorf("missing event_id")
+		return providers.Event{}, providers.ErrWebhookPing
 	}
 
 	telegramID := payload.TelegramUserID
@@ -130,10 +140,12 @@ func (p *Provider) ParseWebhook(_ context.Context, _ map[string]string, body []b
 		}
 	}
 	if telegramID == 0 {
+		if len(payload.SubscriptionID) == 0 && payload.Tier == "" && len(payload.ProductID) == 0 {
+			return providers.Event{}, providers.ErrWebhookPing
+		}
 		return providers.Event{}, fmt.Errorf("missing telegram_user_id")
 	}
 
-	rawEventType := firstNonEmpty(payload.EventType, payload.Event, payload.Name, payload.envelopeName)
 	eventType := normalizeEventType(rawEventType)
 	if eventType == "" {
 		return providers.Event{}, fmt.Errorf("unsupported event_type %q", rawEventType)
@@ -204,6 +216,15 @@ func headerValue(headers map[string]string, name string) string {
 		}
 	}
 	return ""
+}
+
+func isTributeTestEvent(name string) bool {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "test", "test_webhook", "ping", "webhook_test":
+		return true
+	default:
+		return false
+	}
 }
 
 func rawJSONID(raw json.RawMessage) string {

@@ -122,6 +122,7 @@ func (c *Client) GetUserSettings(ctx context.Context, userID string) (*trackerad
 		SmartParseEnabled:         s.GetSmartParseEnabled(),
 		GoogleCalendarSyncEnabled: s.GetGoogleCalendarSyncEnabled(),
 		GoogleCalendarConnected:   s.GetGoogleCalendarConnected(),
+		DeferredSprintEpicNames:   append([]string{}, s.GetDeferredSprintEpicNames()...),
 	}, nil
 }
 

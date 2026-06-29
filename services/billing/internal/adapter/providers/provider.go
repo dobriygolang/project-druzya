@@ -10,6 +10,9 @@ import (
 // ErrWebhookUnauthorized indicates webhook verification failed (bad/missing secret).
 var ErrWebhookUnauthorized = errors.New("webhook verification failed")
 
+// ErrWebhookPing indicates an authenticated connectivity/test payload with no billable event.
+var ErrWebhookPing = errors.New("webhook ping")
+
 // Event is a provider-normalized billing event.
 type Event struct {
 	Provider               string

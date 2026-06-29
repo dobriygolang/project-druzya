@@ -22,6 +22,7 @@ import {
   getSettings,
   getSprintTasks,
   reopenEpic,
+  updateEpicSprintScope,
   updateSettings,
   updateTask,
   type TrackerBoard,
@@ -80,13 +81,19 @@ function sortByPosition(tasks: TrackerTask[]): TrackerTask[] {
 function EpicCard({
   epic,
   selected,
+  deferred,
   onSelect,
+  onToggleSprintScope,
+  sprintScopePending,
   onReopen,
   reopenPending,
 }: {
   epic: TrackerEpic
   selected: boolean
+  deferred?: boolean
   onSelect: () => void
+  onToggleSprintScope?: () => void
+  sprintScopePending?: boolean
   onReopen?: () => void
   reopenPending?: boolean
 }) {
@@ -102,6 +109,7 @@ function EpicCard({
         'rounded-xl border px-3 py-2 transition-colors',
         selected ? 'border-border-strong bg-surface-2' : 'border-border hover:border-border-strong',
         doneEpic && 'border-[var(--sdvg-green,#4CB35C)]/30 bg-[var(--sdvg-green,#4CB35C)]/5',
+        deferred && !doneEpic && 'opacity-60',
       )}
     >
       <button type="button" onClick={onSelect} className="w-full text-left">
@@ -109,7 +117,12 @@ function EpicCard({
           <span className={cn('truncate text-sm font-medium', doneEpic && 'line-through opacity-70')}>
             {epic.name}
           </span>
-          <span className="shrink-0 text-xs text-text-muted">
+          <span className="flex shrink-0 items-center gap-1.5 text-xs text-text-muted">
+            {deferred && !doneEpic ? (
+              <span className="rounded-md border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+                {t('tracker.epicNextSprint')}
+              </span>
+            ) : null}
             {emptyEpic
               ? t('tracker.epicNoTasks')
               : doneEpic
@@ -127,6 +140,17 @@ function EpicCard({
           />
         ) : null}
       </button>
+      {!doneEpic && onToggleSprintScope ? (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="mt-1.5 h-7 px-2 text-xs"
+          disabled={sprintScopePending}
+          onClick={onToggleSprintScope}
+        >
+          {deferred ? t('tracker.epicIncludeSprint') : t('tracker.epicDeferSprint')}
+        </Button>
+      ) : null}
       {doneEpic && onReopen ? (
         <Button
           size="sm"
@@ -396,6 +420,11 @@ function NoActiveSprintCard({
   }
 }
 
+function isEpicDeferred(epicName: string, deferred: string[]): boolean {
+  const key = epicName.trim().toLowerCase()
+  return deferred.some((name) => name.trim().toLowerCase() === key)
+}
+
 function SprintPanel({
   board,
   settings,
@@ -431,17 +460,31 @@ function SprintPanel({
     return map
   }, [epics])
 
-  const { activeTasks, archivedTasks } = useMemo(() => {
+  const deferredEpics = settings.deferred_sprint_epic_names ?? []
+
+  const { activeTasks, archivedTasks, deferredTasks } = useMemo(() => {
     const all = (board.tasks ?? []).filter((task) => {
-      if (epicFilter && task.epic_id !== epicFilter) return false
+      if (epicFilter) {
+        return task.epic_id === epicFilter && matchesKindFilter(task, kindFilter)
+      }
+      const epicName = task.epic_id ? epicNameById[task.epic_id] ?? '' : ''
+      if (!epicFilter && epicName && isEpicDeferred(epicName, deferredEpics)) {
+        return false
+      }
       return matchesKindFilter(task, kindFilter)
+    })
+    const deferredOnly = (board.tasks ?? []).filter((task) => {
+      if (epicFilter) return false
+      const epicName = task.epic_id ? epicNameById[task.epic_id] ?? '' : ''
+      return epicName !== '' && isEpicDeferred(epicName, deferredEpics) && matchesKindFilter(task, kindFilter)
     })
     const sorted = sortByPosition(all)
     return {
       activeTasks: sorted.filter((task) => !isTaskArchived(task)),
       archivedTasks: sorted.filter((task) => isTaskArchived(task)),
+      deferredTasks: sortByPosition(deferredOnly.filter((task) => !isTaskArchived(task))),
     }
-  }, [board.tasks, epicFilter, kindFilter])
+  }, [board.tasks, epicFilter, kindFilter, epicNameById, deferredEpics])
 
   const dragDisabled = kindFilter !== 'all' || epicFilter !== null
 
@@ -454,6 +497,12 @@ function SprintPanel({
   })
   const reopenEpicM = useMutation({
     mutationFn: (id: string) => reopenEpic(id),
+    onSuccess: onRefresh,
+    onError: (err) => toast.push(formatApiError(err), 'error'),
+  })
+  const epicScopeM = useMutation({
+    mutationFn: ({ epicId, deferred }: { epicId: string; deferred: boolean }) =>
+      updateEpicSprintScope(epicId, deferred),
     onSuccess: onRefresh,
     onError: (err) => toast.push(formatApiError(err), 'error'),
   })
@@ -663,6 +712,25 @@ function SprintPanel({
             </>
           )}
 
+          {deferredTasks.length > 0 && epicFilter === null ? (
+            <CollapsibleSection
+              title={t('tracker.deferredEpicsSection')}
+              count={deferredTasks.length}
+              defaultOpen={false}
+            >
+              <p className="mb-2 text-xs text-text-muted">{t('tracker.deferredEpicsHint')}</p>
+              <SortableTaskList
+                tasks={deferredTasks}
+                epicNames={epicNameById}
+                dragDisabled
+                onReorder={() => {}}
+                onToggle={(id, d) => toggleM.mutate({ id, done: d })}
+                onArchive={(id) => archiveTaskM.mutate(id)}
+                onEstimateChange={(id, days) => estimateM.mutate({ id, estimateDays: days })}
+              />
+            </CollapsibleSection>
+          ) : null}
+
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               className="min-w-0 flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
@@ -734,7 +802,15 @@ function SprintPanel({
                 <EpicCard
                   epic={epic}
                   selected={epicFilter === epic.id}
+                  deferred={isEpicDeferred(epic.name, deferredEpics)}
                   onSelect={() => onSelectEpic(epicFilter === epic.id ? null : epic.id)}
+                  onToggleSprintScope={() =>
+                    epicScopeM.mutate({
+                      epicId: epic.id,
+                      deferred: !isEpicDeferred(epic.name, deferredEpics),
+                    })
+                  }
+                  sprintScopePending={epicScopeM.isPending}
                 />
               </li>
             ))}

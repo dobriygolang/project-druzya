@@ -231,6 +231,7 @@ export type TrackerUserSettings = {
   smart_parse_enabled: boolean
   google_calendar_sync_enabled: boolean
   google_calendar_connected: boolean
+  deferred_sprint_epic_names?: string[]
 }
 
 function normalizeSettings(raw: { settings?: TrackerUserSettings }): TrackerUserSettings {
@@ -239,6 +240,7 @@ function normalizeSettings(raw: { settings?: TrackerUserSettings }): TrackerUser
     smart_parse_enabled: s.smart_parse_enabled ?? false,
     google_calendar_sync_enabled: s.google_calendar_sync_enabled ?? false,
     google_calendar_connected: s.google_calendar_connected ?? false,
+    deferred_sprint_epic_names: s.deferred_sprint_epic_names ?? [],
   }
 }
 
@@ -254,6 +256,16 @@ export function updateSettings(patch: {
     method: 'PATCH',
     body: JSON.stringify(patch),
   }).then(normalizeSettings)
+}
+
+export function updateEpicSprintScope(epicId: string, deferred: boolean) {
+  return api<{ settings?: TrackerUserSettings }>(
+    `/tracker/epics/${encodeURIComponent(epicId)}/sprint_scope`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ deferred }),
+    },
+  ).then(normalizeSettings)
 }
 
 export function getGoogleCalendarAuthURL() {

@@ -31,6 +31,7 @@ HTTP `8089` | gRPC `9099` | PG `5441` `druzya_tracker`
 | ExportBoard | `GET /v1/tracker/export` | JWT |
 | GetSettings | `GET /v1/tracker/settings` | JWT |
 | UpdateSettings | `PATCH /v1/tracker/settings` | JWT |
+| UpdateEpicSprintScope | `PATCH /v1/tracker/epics/{id}/sprint_scope` | JWT — defer epic to next sprint |
 | GetGoogleCalendarAuthURL | `GET /v1/tracker/integrations/google/url` | JWT |
 | DisconnectGoogleCalendar | `POST /v1/tracker/integrations/google/disconnect` | JWT |
 
@@ -80,6 +81,7 @@ Internal (`TrackerInternalService`, `x-internal-token`):
 | Open system sync | Dedup hit on open recommendation/enrichment task → update estimate, epic, metadata merge |
 | Sprint overload | Internal create ignores capacity cap (soft UI warning only on user create) |
 | Timezone | Client sends `local_date` + `timezone` on `GET /tracker/today`; falls back to identity profile TZ; scoring + reconcile debounce keyed by `user_id|local_date` in user's TZ |
+| Sprint epic focus | `deferred_sprint_epic_names` in user settings; deferred epics excluded from Today + recommendation reconcile; cleared on `CreateSprint` |
 
 ## Epics
 

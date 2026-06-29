@@ -26,6 +26,7 @@ type UserSettings struct {
 	SmartParseEnabled         bool
 	GoogleCalendarSyncEnabled bool
 	GoogleCalendarConnected   bool
+	DeferredSprintEpicNames   []string
 }
 
 // Client calls tracker internal API.

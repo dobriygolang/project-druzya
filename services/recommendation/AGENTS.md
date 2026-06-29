@@ -74,6 +74,7 @@ When `task_kind=general` and tracker `GetUserSettings.smart_parse_enabled`:
 - **Done tasks:** tracker dedup returns existing done row without insert; planner does not recreate.
 - **Sprint overload:** reconcile does not check sprint capacity (advisory overload bar on Tasks page).
 - **Timezone MVP:** client passes `local_date` + `timezone`; `plan.ResolvePlanClock` anchors scoring `now` and reconcile debounce (`user_id|local_date`); tracker falls back to identity profile TZ when client omits timezone.
+- **Sprint epic focus:** tracker `deferred_sprint_epic_names`; `pushTrackerTask` skips deferred epics; GetToday filters them out.
 
 ## Article read progress
 

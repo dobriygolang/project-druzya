@@ -156,6 +156,7 @@ func userSettingsToProto(s *model.UserSettingsView) *trackerv1.UserSettings {
 		SmartParseEnabled:         s.SmartParseEnabled,
 		GoogleCalendarSyncEnabled: s.GoogleCalendarSyncEnabled,
 		GoogleCalendarConnected:   s.GoogleCalendarConnected,
+		DeferredSprintEpicNames:   append([]string{}, s.DeferredSprintEpicNames...),
 	}
 }
 
