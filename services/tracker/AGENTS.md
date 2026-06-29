@@ -60,7 +60,14 @@ Internal (`TrackerInternalService`, `x-internal-token`):
 
 - One **active** sprint per project (`GetBoard.active_sprint`); archived sprints in `archived_sprints`.
 - `CreateSprint` archives any existing active sprint for the project, then inserts the new sprint as active.
-- Sprint proto includes `created_at` / `archived_at` (7-day UI countdown on web uses `created_at`).
+- Sprint proto includes `created_at` / `archived_at`, `estimate_days_used` / `estimate_days_capacity` (capacity = **5 person-days** per week).
+- Task `estimate_days` (0.5–5, default 1); create/update rejected if sprint sum exceeds capacity (`FailedPrecondition`).
++- Task `estimate_days` (0.5–5, default 1); sprint `estimate_days_used` vs capacity (5) is **advisory** — UI warns when over, API does not block.
+
+## Epics
+
+- Tasks optionally link to an epic (`epic_id`); epic progress counts **all non-archived tasks** across sprints in the project.
+- Epic `status`: `open` | `done` — auto-set to `done` when every linked non-archived task is `done`; reopens when a task is unchecked or a new open task is added.
 
 ## Data
 

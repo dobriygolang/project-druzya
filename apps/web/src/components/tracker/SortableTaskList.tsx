@@ -20,18 +20,22 @@ import { cn } from '@/lib/cn'
 import { useI18n } from '@/lib/i18n'
 import type { TrackerTask } from '@/lib/api/tracker'
 
+export const TASK_ESTIMATE_OPTIONS = [0.5, 1, 1.5, 2, 3, 5] as const
+
 function SortableTaskRow({
   task,
   epicName,
   dragDisabled,
   onToggle,
   onArchive,
+  onEstimateChange,
 }: {
   task: TrackerTask
   epicName?: string
   dragDisabled: boolean
   onToggle: (id: string, done: boolean) => void
   onArchive: (id: string) => void
+  onEstimateChange: (id: string, days: number) => void
 }) {
   const { t } = useI18n()
   const done = Boolean(task.done)
@@ -96,6 +100,18 @@ function SortableTaskRow({
           {epicName}
         </span>
       ) : null}
+      <select
+        aria-label={t('tracker.estimateDays')}
+        value={task.estimate_days ?? 1}
+        onChange={(e) => onEstimateChange(task.id, Number(e.target.value))}
+        className="shrink-0 rounded-md border border-border bg-surface-1 px-1.5 py-0.5 text-[11px] text-text-secondary outline-none focus:border-border-strong"
+      >
+        {TASK_ESTIMATE_OPTIONS.map((d) => (
+          <option key={d} value={d}>
+            {t('tracker.estimateDaysShort', { days: d })}
+          </option>
+        ))}
+      </select>
       <button
         type="button"
         aria-label={t('tracker.archiveTask')}
@@ -115,6 +131,7 @@ export function SortableTaskList({
   onReorder,
   onToggle,
   onArchive,
+  onEstimateChange,
 }: {
   tasks: TrackerTask[]
   epicNames?: Record<string, string>
@@ -122,6 +139,7 @@ export function SortableTaskList({
   onReorder: (reordered: TrackerTask[]) => void
   onToggle: (id: string, done: boolean) => void
   onArchive: (id: string) => void
+  onEstimateChange: (id: string, days: number) => void
 }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -149,6 +167,7 @@ export function SortableTaskList({
               dragDisabled={dragDisabled}
               onToggle={onToggle}
               onArchive={onArchive}
+              onEstimateChange={onEstimateChange}
             />
           ))}
         </ul>

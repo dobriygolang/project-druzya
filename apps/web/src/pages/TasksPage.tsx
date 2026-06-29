@@ -2,7 +2,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Archive, Check, ChevronDown, Clock } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
-import { SortableTaskList } from '@/components/tracker/SortableTaskList'
+import { SortableTaskList, TASK_ESTIMATE_OPTIONS } from '@/components/tracker/SortableTaskList'
+import { CollapsibleSection } from '@/components/tracker/CollapsibleSection'
+import { TrackerProgressBar } from '@/components/tracker/TrackerProgressBar'
 import { TodayPageShell } from '@/components/today/TodayPageShell'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/components/ui/Toast'
@@ -26,6 +28,7 @@ import {
   type TrackerTask,
   type TrackerUserSettings,
 } from '@/lib/api/tracker'
+import { formatApiError } from '@/lib/apiClient'
 import { useI18n } from '@/lib/i18n'
 
 type KindFilter = 'all' | 'learning' | 'events' | 'life'
@@ -53,6 +56,15 @@ function matchesKindFilter(task: TrackerTask, filter: KindFilter): boolean {
     default:
       return true
   }
+}
+
+function isEpicDone(epic: TrackerEpic): boolean {
+  const s = epic.status ?? ''
+  return s === 'done' || s.includes('DONE')
+}
+
+function formatDays(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }
 
 function sortByPosition(tasks: TrackerTask[]): TrackerTask[] {
@@ -369,6 +381,7 @@ function SprintPanel({
   const [newEpic, setNewEpic] = useState('')
   const [newTask, setNewTask] = useState('')
   const [newTaskEpicId, setNewTaskEpicId] = useState<string>('')
+  const [newTaskEstimate, setNewTaskEstimate] = useState<number>(1)
   const [newSprint, setNewSprint] = useState('')
 
   const epicNameById = useMemo(() => {
@@ -408,12 +421,19 @@ function SprintPanel({
     },
   })
   const taskM = useMutation({
-    mutationFn: ({ title, epicId }: { title: string; epicId?: string }) =>
-      createTask(sprint!.id, title, epicId || undefined),
+    mutationFn: ({ title, epicId, estimateDays }: { title: string; epicId?: string; estimateDays: number }) =>
+      createTask(sprint!.id, title, epicId || undefined, estimateDays),
     onSuccess: () => {
       setNewTask('')
       onRefresh()
     },
+    onError: (err) => toast.push(formatApiError(err), 'error'),
+  })
+  const estimateM = useMutation({
+    mutationFn: ({ id, estimateDays }: { id: string; estimateDays: number }) =>
+      updateTask(id, { estimate_days: estimateDays }),
+    onSuccess: onRefresh,
+    onError: (err) => toast.push(formatApiError(err), 'error'),
   })
   const toggleM = useMutation({
     mutationFn: ({ id, done }: { id: string; done: boolean }) => updateTask(id, { done }),
@@ -495,6 +515,11 @@ function SprintPanel({
   ]
 
   const activeTaskTotal = (board.tasks ?? []).filter((task) => !isTaskArchived(task)).length
+  const sprintCapacity = sprint?.estimate_days_capacity ?? 5
+  const sprintUsed = sprint?.estimate_days_used ?? 0
+  const sprintOver = sprintUsed > sprintCapacity + 1e-9
+  const archivedSprintCount = board.archived_sprints?.length ?? 0
+  const archiveTotalCount = archivedTasks.length + archivedSprintCount
 
   return (
     <TodayPageShell>
@@ -517,12 +542,40 @@ function SprintPanel({
       {sprint ? (
         <SdvgCard eyebrow={t('tracker.activeSprint')} title={sprint.name}>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-text-muted">
-              {done}/{activeTasks.length} {t('tracker.doneCount')}
-            </p>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                {t('tracker.sprintTasksProgress')}
+              </p>
+              <TrackerProgressBar
+                value={done}
+                max={activeTasks.length}
+                label={`${done}/${activeTasks.length}`}
+                mode="tasks"
+              />
+            </div>
             <Button variant="ghost" size="sm" onClick={() => archiveM.mutate()} disabled={archiveM.isPending}>
               {t('tracker.archiveSprint')}
             </Button>
+          </div>
+
+          <div className="mb-4 space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                {t('tracker.estimateDays')}
+              </p>
+              {sprintOver ? (
+                <span className="text-xs text-[var(--tracker-progress-over,#E8B548)]">
+                  {t('tracker.sprintCapacityOver', { over: formatDays(sprintUsed - sprintCapacity) })}
+                </span>
+              ) : null}
+            </div>
+            <TrackerProgressBar
+              value={sprintUsed}
+              max={sprintCapacity}
+              label={`${formatDays(sprintUsed)}/${formatDays(sprintCapacity)}`}
+              mode="capacity"
+            />
+            <p className="text-xs text-text-muted">{t('tracker.sprintCapacityHint')}</p>
           </div>
 
           <div className="mb-4 space-y-3 rounded-lg border border-border bg-surface-1/50 p-3">
@@ -564,6 +617,7 @@ function SprintPanel({
                 onReorder={(reordered) => reorderM.mutate(reordered)}
                 onToggle={(id, d) => toggleM.mutate({ id, done: d })}
                 onArchive={(id) => archiveTaskM.mutate(id)}
+                onEstimateChange={(id, days) => estimateM.mutate({ id, estimateDays: days })}
               />
             </>
           )}
@@ -575,9 +629,23 @@ function SprintPanel({
               value={newTask}
               onChange={(e) => setNewTask(e.target.value)}
               onKeyDown={(e) =>
-                e.key === 'Enter' && newTask.trim() && taskM.mutate({ title: newTask.trim(), epicId: newTaskEpicId })
+                e.key === 'Enter' &&
+                newTask.trim() &&
+                taskM.mutate({ title: newTask.trim(), epicId: newTaskEpicId, estimateDays: newTaskEstimate })
               }
             />
+            <select
+              aria-label={t('tracker.estimateDays')}
+              className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
+              value={newTaskEstimate}
+              onChange={(e) => setNewTaskEstimate(Number(e.target.value))}
+            >
+              {TASK_ESTIMATE_OPTIONS.map((d) => (
+                <option key={d} value={d}>
+                  {t('tracker.estimateDaysShort', { days: d })}
+                </option>
+              ))}
+            </select>
             {epics.length > 0 ? (
               <select
                 className="rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
@@ -595,40 +663,22 @@ function SprintPanel({
             <Button
               size="sm"
               className="shrink-0"
-              onClick={() => newTask.trim() && taskM.mutate({ title: newTask.trim(), epicId: newTaskEpicId })}
+              disabled={taskM.isPending}
+              onClick={() =>
+                newTask.trim() &&
+                taskM.mutate({ title: newTask.trim(), epicId: newTaskEpicId, estimateDays: newTaskEstimate })
+              }
             >
               {t('tracker.create')}
             </Button>
           </div>
-
-          {archivedTasks.length > 0 ? (
-            <div className="mt-6 border-t border-border pt-4">
-              <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
-                {t('tracker.archivedTasks')} ({archivedTasks.length})
-              </h3>
-              <ul className="space-y-1">
-                {archivedTasks.map((task) => (
-                  <li key={task.id} className="flex items-center gap-2 px-2 py-1.5 text-sm text-text-muted">
-                    <Archive className="h-3.5 w-3.5 shrink-0" />
-                    <span className="flex-1 line-through">{task.title}</span>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => updateTask(task.id, { archived: false }).then(onRefresh)}
-                    >
-                      {t('tracker.restoreTask')}
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
         </SdvgCard>
       ) : (
         <NoActiveSprintCard onCreate={(name) => sprintM.mutate(name)} pending={sprintM.isPending} />
       )}
 
       <SdvgCard eyebrow={t('tracker.epics')} title={`${t('tracker.epics')} · ${epics.length}`}>
+        <p className="mb-3 text-sm text-text-muted">{t('tracker.epicAutoDoneHint')}</p>
         <div className="flex gap-2">
           <input
             className="flex-1 rounded-lg border border-border bg-surface-1 px-3 py-2 text-sm outline-none focus:border-border-strong"
@@ -642,26 +692,49 @@ function SprintPanel({
           </Button>
         </div>
         {epics.length > 0 ? (
-          <ul className="mt-4 flex flex-wrap gap-2">
+          <ul className="mt-4 flex flex-col gap-3">
             {epics.map((epic) => {
               const count = epicTaskCounts.get(epic.id) ?? 0
               const selected = epicFilter === epic.id
+              const doneEpic = isEpicDone(epic)
+              const epicDone = epic.done_count ?? 0
+              const epicTotal = epic.total_count ?? count
               return (
                 <li key={epic.id}>
                   <button
                     type="button"
                     onClick={() => onSelectEpic(selected ? null : epic.id)}
                     className={cn(
-                      'rounded-full border px-3 py-1 text-sm transition-colors',
+                      'w-full rounded-xl border px-3 py-2.5 text-left transition-colors',
                       selected
-                        ? 'border-border-strong bg-surface-2 font-medium text-text-primary'
-                        : 'border-border text-text-secondary hover:border-border-strong hover:text-text-primary',
+                        ? 'border-border-strong bg-surface-2'
+                        : 'border-border hover:border-border-strong hover:bg-surface-1',
+                      doneEpic && 'border-[var(--sdvg-green,#4CB35C)]/40 bg-[var(--sdvg-green,#4CB35C)]/5',
                     )}
                   >
-                    {epic.name}
-                    <span className="ml-1.5 text-xs text-text-muted">
-                      {t('tracker.epicTaskCount', { count })}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={cn('text-sm font-medium', doneEpic && 'line-through opacity-70')}>
+                        {epic.name}
+                      </span>
+                      {doneEpic ? (
+                        <span className="text-xs font-medium text-[var(--sdvg-green,#4CB35C)]">
+                          {t('tracker.epicDone')}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-text-muted">{t('tracker.epicOpen')}</span>
+                      )}
+                    </div>
+                    {epicTotal > 0 ? (
+                      <TrackerProgressBar
+                        className="mt-2"
+                        value={epicDone}
+                        max={epicTotal}
+                        label={`${epicDone}/${epicTotal}`}
+                        mode="tasks"
+                      />
+                    ) : (
+                      <p className="mt-1 text-xs text-text-muted">{t('tracker.epicTaskCount', { count: 0 })}</p>
+                    )}
                   </button>
                 </li>
               )
@@ -688,15 +761,43 @@ function SprintPanel({
         </SdvgCard>
       ) : null}
 
-      {(board.archived_sprints?.length ?? 0) > 0 ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="text-xs font-medium uppercase tracking-wide text-text-muted">
-            {t('tracker.archivedSprints')} ({board.archived_sprints!.length})
-          </h2>
-          {board.archived_sprints!.map((s) => (
-            <ArchivedSprintCard key={s.id} sprint={s} onUnarchiveTask={onRefresh} />
-          ))}
-        </section>
+      {archiveTotalCount > 0 ? (
+        <CollapsibleSection title={t('tracker.archiveSection')} count={archiveTotalCount} defaultOpen={false}>
+          <div className="flex flex-col gap-4">
+            {archivedTasks.length > 0 ? (
+              <div>
+                <h3 className="mb-2 text-xs font-medium uppercase tracking-wide text-text-muted">
+                  {t('tracker.archivedTasks')} ({archivedTasks.length})
+                </h3>
+                <ul className="space-y-1">
+                  {archivedTasks.map((task) => (
+                    <li key={task.id} className="flex items-center gap-2 px-2 py-1.5 text-sm text-text-muted">
+                      <Archive className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex-1 line-through">{task.title}</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => updateTask(task.id, { archived: false }).then(onRefresh)}
+                      >
+                        {t('tracker.restoreTask')}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            {archivedSprintCount > 0 ? (
+              <div className="flex flex-col gap-3">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-text-muted">
+                  {t('tracker.archivedSprints')} ({archivedSprintCount})
+                </h3>
+                {board.archived_sprints!.map((s) => (
+                  <ArchivedSprintCard key={s.id} sprint={s} onUnarchiveTask={onRefresh} />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </CollapsibleSection>
       ) : null}
 
       <TrackerSettingsPanel settings={settings} onRefresh={onRefresh} />

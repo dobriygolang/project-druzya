@@ -21,6 +21,12 @@ enum TaskSource {
   TASK_SOURCE_ENRICHMENT = 3;
 }
 
+enum EpicStatus {
+  EPIC_STATUS_UNSPECIFIED = 0;
+  EPIC_STATUS_OPEN = 1;
+  EPIC_STATUS_DONE = 2;
+}
+
 message Project {
   string id = 1;
   string name = 2;
@@ -32,6 +38,9 @@ message Epic {
   string project_id = 2;
   string name = 3;
   int32 position = 4;
+  EpicStatus status = 5;
+  int32 done_count = 6;
+  int32 total_count = 7;
 }
 
 message Sprint {
@@ -45,6 +54,8 @@ message Sprint {
   int32 total_count = 8;
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp archived_at = 10;
+  float estimate_days_used = 11;
+  float estimate_days_capacity = 12;
 }
 
 message Task {
@@ -59,6 +70,7 @@ message Task {
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
   optional google.protobuf.Timestamp completed_at = 11;
+  float estimate_days = 12;
 }
 
 message Board {
@@ -189,6 +201,7 @@ message CreateTaskRequest {
   optional TaskSource source = 4;
   optional google.protobuf.Struct metadata = 5;
   optional string dedup_key = 6;
+  optional float estimate_days = 7;
 }
 
 message CreateTaskResponse {
@@ -203,6 +216,7 @@ message UpdateTaskRequest {
   optional int32 position = 5;
   optional string goal = 6;
   optional bool archived = 7;
+  optional float estimate_days = 8;
 }
 
 message UpdateTaskResponse {

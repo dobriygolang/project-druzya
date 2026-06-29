@@ -40,6 +40,8 @@ type Repository interface {
 	SaveGoogleRefreshToken(ctx context.Context, userID, refreshToken string) error
 	ClearGoogleRefreshToken(ctx context.Context, userID string) error
 	PatchTaskMetadata(ctx context.Context, taskID, userID string, patch map[string]any) (*model.Task, error)
+	SumEstimateDaysBySprint(ctx context.Context, sprintID string, excludeTaskID *string) (float64, error)
+	SyncEpicStatus(ctx context.Context, epicID string) error
 }
 
 type Service interface {
@@ -68,21 +70,23 @@ type Service interface {
 }
 
 type CreateTaskParams struct {
-	SprintID string
-	Title    string
-	EpicID   *string
-	Source   model.TaskSource
-	Metadata map[string]any
-	DedupKey *string
+	SprintID     string
+	Title        string
+	EpicID       *string
+	EstimateDays *float64
+	Source       model.TaskSource
+	Metadata     map[string]any
+	DedupKey     *string
 }
 
 type UpdateTaskParams struct {
-	TaskID   string
-	Title    *string
-	Done     *bool
-	EpicID   *string
-	Position *int
-	Archived *bool
+	TaskID       string
+	Title        *string
+	Done         *bool
+	EpicID       *string
+	Position     *int
+	EstimateDays *float64
+	Archived     *bool
 }
 
 type InternalCreateTaskParams struct {
@@ -164,6 +168,14 @@ func (s *trackerService) buildBoard(ctx context.Context, project *model.Project)
 	archived, err := s.repo.ListArchivedSprints(ctx, project.ID)
 	if err != nil {
 		return nil, err
+	}
+	if active != nil {
+		used, err := s.repo.SumEstimateDaysBySprint(ctx, active.ID, nil)
+		if err != nil {
+			return nil, err
+		}
+		active.EstimateDaysUsed = used
+		active.EstimateDaysCapacity = model.SprintCapacityDays
 	}
 	return &model.Board{Project: project, Epics: epics, ActiveSprint: active, Tasks: tasks, ArchivedSprints: archived}, nil
 }
@@ -258,15 +270,27 @@ func (s *trackerService) CreateTask(ctx context.Context, userID string, in Creat
 			meta["task_kind"] = classify.KindSystem
 		}
 	}
+	estimate := model.DefaultTaskEstimateDays
+	if in.EstimateDays != nil {
+		normalized, err := model.NormalizeEstimateDays(*in.EstimateDays)
+		if err != nil {
+			return nil, err
+		}
+		estimate = normalized
+	}
 	var task *model.Task
 	err := s.repo.WithTx(ctx, func(txCtx context.Context) error {
 		t, created, err := s.repo.CreateTask(txCtx, repository.CreateTaskInput{
-			SprintID: in.SprintID, EpicID: epicID, Title: title, Source: source, Metadata: meta, DedupKey: in.DedupKey,
+			SprintID: in.SprintID, EpicID: epicID, Title: title, EstimateDays: estimate,
+			Source: source, Metadata: meta, DedupKey: in.DedupKey,
 		})
 		if err != nil {
 			return err
 		}
 		task = t
+		if err := s.syncEpicsForTask(txCtx, epicID); err != nil {
+			return err
+		}
 		if created {
 			return s.emitTaskEvent(txCtx, model.EventTaskCreated, userID, t)
 		}
@@ -283,10 +307,25 @@ func (s *trackerService) UpdateTask(ctx context.Context, userID string, in Updat
 	if err != nil {
 		return nil, err
 	}
+	nextEstimate := before.EstimateDays
+	if in.EstimateDays != nil {
+		normalized, err := model.NormalizeEstimateDays(*in.EstimateDays)
+		if err != nil {
+			return nil, err
+		}
+		nextEstimate = normalized
+	}
 	var updated *model.Task
 	err = s.repo.WithTx(ctx, func(txCtx context.Context) error {
 		t, err := s.repo.UpdateTask(txCtx, in.TaskID, userID, repository.TaskPatch{
 			Title: in.Title, Done: in.Done, EpicID: in.EpicID, Position: in.Position,
+			EstimateDays: func() *float64 {
+				if in.EstimateDays == nil {
+					return nil
+				}
+				v := nextEstimate
+				return &v
+			}(),
 		})
 		if err != nil {
 			return err
@@ -298,6 +337,9 @@ func (s *trackerService) UpdateTask(ctx context.Context, userID string, in Updat
 			}
 		}
 		updated = t
+		if err := s.syncEpicsForTask(txCtx, before.EpicID, updated.EpicID); err != nil {
+			return err
+		}
 		if in.Done != nil && *in.Done && !before.Done {
 			return s.emitTaskEvent(txCtx, model.EventTaskCompleted, userID, t)
 		}
@@ -420,6 +462,7 @@ func (s *trackerService) CreateTaskInternal(ctx context.Context, in InternalCrea
 	err = s.repo.WithTx(ctx, func(txCtx context.Context) error {
 		t, ok, err := s.repo.CreateTask(txCtx, repository.CreateTaskInput{
 			SprintID: board.SprintID, EpicID: epicID, Title: strings.TrimSpace(in.Title),
+			EstimateDays: model.DefaultTaskEstimateDays,
 			Source: source, Metadata: meta, DedupKey: in.DedupKey,
 		})
 		if err != nil {
@@ -427,6 +470,9 @@ func (s *trackerService) CreateTaskInternal(ctx context.Context, in InternalCrea
 		}
 		task = t
 		created = ok
+		if err := s.syncEpicsForTask(txCtx, epicID); err != nil {
+			return err
+		}
 		if ok && source == model.TaskSourceUser {
 			return s.emitTaskEvent(txCtx, model.EventTaskCreated, in.UserID, t)
 		}

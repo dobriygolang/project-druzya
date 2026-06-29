@@ -52,7 +52,7 @@ export function AddToSprintButton({
       if (!sprintId) {
         throw new Error('no active sprint')
       }
-      return createTask(sprintId, title, undefined, metadata)
+      return createTask(sprintId, title, undefined, 1, metadata)
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['tracker-board'] })

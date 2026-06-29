@@ -6,9 +6,9 @@ import (
 )
 
 var (
-	ErrInvalidArgument = errors.New("invalid argument")
-	ErrNotFound        = errors.New("not found")
-	ErrForbidden       = errors.New("forbidden")
+	ErrInvalidArgument        = errors.New("invalid argument")
+	ErrNotFound               = errors.New("not found")
+	ErrForbidden              = errors.New("forbidden")
 )
 
 const (
@@ -17,6 +17,19 @@ const (
 
 	DefaultProjectName = "Board"
 	DefaultSprintName  = "This week"
+
+	// SprintCapacityDays: one calendar-week sprint ≈ 5 focused work days (Mon–Fri).
+	SprintCapacityDays      = 5.0
+	DefaultTaskEstimateDays = 1.0
+	MinTaskEstimateDays     = 0.5
+	MaxTaskEstimateDays     = 5.0
+)
+
+type EpicStatus string
+
+const (
+	EpicStatusOpen EpicStatus = "open"
+	EpicStatusDone EpicStatus = "done"
 )
 
 type SprintStatus string
@@ -44,41 +57,48 @@ type Project struct {
 }
 
 type Epic struct {
-	ID        string
-	ProjectID string
-	Name      string
-	Position  int
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-type Sprint struct {
-	ID         string
-	ProjectID  string
-	Name       string
-	Goal       string
-	Status     SprintStatus
-	Position   int
-	DoneCount  int
-	TotalCount int
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	ArchivedAt *time.Time
-}
-
-type Task struct {
 	ID          string
-	SprintID    string
-	EpicID      *string
-	Title       string
-	Done        bool
+	ProjectID   string
+	Name        string
 	Position    int
-	Source      TaskSource
-	Metadata    map[string]any
-	DedupKey    *string
+	Status      EpicStatus
+	DoneCount   int
+	TotalCount  int
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	CompletedAt *time.Time
+}
+
+type Sprint struct {
+	ID                   string
+	ProjectID            string
+	Name                 string
+	Goal                 string
+	Status               SprintStatus
+	Position             int
+	DoneCount            int
+	TotalCount           int
+	EstimateDaysUsed     float64
+	EstimateDaysCapacity float64
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	ArchivedAt           *time.Time
+}
+
+type Task struct {
+	ID           string
+	SprintID     string
+	EpicID       *string
+	Title        string
+	Done         bool
+	Position     int
+	EstimateDays float64
+	Source       TaskSource
+	Metadata     map[string]any
+	DedupKey     *string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	CompletedAt  *time.Time
 }
 
 type Board struct {

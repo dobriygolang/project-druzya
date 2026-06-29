@@ -65,9 +65,14 @@ func (i *Implementation) CreateTask(ctx context.Context, req *trackerv1.CreateTa
 		return nil, err
 	}
 	source := taskSourceFromProto(req.GetSource())
+	var estimateDays *float64
+	if req.EstimateDays != nil {
+		v := float64(*req.EstimateDays)
+		estimateDays = &v
+	}
 	t, err := i.svc.CreateTask(ctx, userID, trackerservice.CreateTaskParams{
 		SprintID: req.GetSprintId(), Title: req.GetTitle(), EpicID: req.EpicId,
-		Source: source, Metadata: metadataFromProto(req.GetMetadata()), DedupKey: req.DedupKey,
+		EstimateDays: estimateDays, Source: source, Metadata: metadataFromProto(req.GetMetadata()), DedupKey: req.DedupKey,
 	})
 	if err != nil {
 		return nil, mapServiceError(err)
@@ -80,9 +85,14 @@ func (i *Implementation) UpdateTask(ctx context.Context, req *trackerv1.UpdateTa
 	if err != nil {
 		return nil, err
 	}
+	var estimateDays *float64
+	if req.EstimateDays != nil {
+		v := float64(*req.EstimateDays)
+		estimateDays = &v
+	}
 	t, err := i.svc.UpdateTask(ctx, userID, trackerservice.UpdateTaskParams{
 		TaskID: req.GetId(), Title: req.Title, Done: req.Done, EpicID: req.EpicId, Position: int32Ptr(req.Position),
-		Archived: req.Archived,
+		EstimateDays: estimateDays, Archived: req.Archived,
 	})
 	if err != nil {
 		return nil, mapServiceError(err)

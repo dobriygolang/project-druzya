@@ -18,7 +18,21 @@ func epicToProto(e *model.Epic) *trackerv1.Epic {
 	if e == nil {
 		return nil
 	}
-	return &trackerv1.Epic{Id: e.ID, ProjectId: e.ProjectID, Name: e.Name, Position: int32(e.Position)}
+	return &trackerv1.Epic{
+		Id: e.ID, ProjectId: e.ProjectID, Name: e.Name, Position: int32(e.Position),
+		Status: epicStatusToProto(e.Status), DoneCount: int32(e.DoneCount), TotalCount: int32(e.TotalCount),
+	}
+}
+
+func epicStatusToProto(s model.EpicStatus) trackerv1.EpicStatus {
+	switch s {
+	case model.EpicStatusOpen:
+		return trackerv1.EpicStatus_EPIC_STATUS_OPEN
+	case model.EpicStatusDone:
+		return trackerv1.EpicStatus_EPIC_STATUS_DONE
+	default:
+		return trackerv1.EpicStatus_EPIC_STATUS_UNSPECIFIED
+	}
 }
 
 func sprintToProto(s *model.Sprint) *trackerv1.Sprint {
@@ -29,6 +43,7 @@ func sprintToProto(s *model.Sprint) *trackerv1.Sprint {
 		Id: s.ID, ProjectId: s.ProjectID, Name: s.Name, Goal: s.Goal,
 		Status: sprintStatusToProto(s.Status), Position: int32(s.Position),
 		DoneCount: int32(s.DoneCount), TotalCount: int32(s.TotalCount),
+		EstimateDaysUsed: float32(s.EstimateDaysUsed), EstimateDaysCapacity: float32(s.EstimateDaysCapacity),
 	}
 	if !s.CreatedAt.IsZero() {
 		out.CreatedAt = timestamppb.New(s.CreatedAt)
@@ -57,6 +72,7 @@ func taskToProto(t *model.Task) *trackerv1.Task {
 	out := &trackerv1.Task{
 		Id: t.ID, SprintId: t.SprintID, Title: t.Title, Done: t.Done,
 		Position: int32(t.Position), Source: taskSourceToProto(t.Source),
+		EstimateDays: float32(t.EstimateDays),
 		CreatedAt: timestamppb.New(t.CreatedAt), UpdatedAt: timestamppb.New(t.UpdatedAt),
 	}
 	if t.EpicID != nil {

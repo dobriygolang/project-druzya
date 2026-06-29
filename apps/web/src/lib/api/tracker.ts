@@ -11,6 +11,9 @@ export type TrackerEpic = {
   project_id: string
   name: string
   position?: number
+  status?: string
+  done_count?: number
+  total_count?: number
 }
 
 export type TrackerSprint = {
@@ -23,6 +26,8 @@ export type TrackerSprint = {
   total_count?: number
   created_at?: string
   archived_at?: string
+  estimate_days_used?: number
+  estimate_days_capacity?: number
 }
 
 export type TrackerTask = {
@@ -32,6 +37,7 @@ export type TrackerTask = {
   title: string
   done: boolean
   position?: number
+  estimate_days?: number
   source?: string
   metadata?: Record<string, unknown>
 }
@@ -81,13 +87,20 @@ export function createSprint(projectId: string, name?: string, goal?: string) {
   })
 }
 
-export function createTask(sprintId: string, title: string, epicId?: string, metadata?: Record<string, unknown>) {
+export function createTask(
+  sprintId: string,
+  title: string,
+  epicId?: string,
+  estimateDays?: number,
+  metadata?: Record<string, unknown>,
+) {
   return api<{ task: TrackerTask }>('/tracker/tasks', {
     method: 'POST',
     body: JSON.stringify({
       sprint_id: sprintId,
       title,
       epic_id: epicId,
+      estimate_days: estimateDays,
       source: 'TASK_SOURCE_USER',
       metadata,
     }),
@@ -96,7 +109,14 @@ export function createTask(sprintId: string, title: string, epicId?: string, met
 
 export function updateTask(
   id: string,
-  patch: { title?: string; done?: boolean; epic_id?: string | null; position?: number; archived?: boolean },
+  patch: {
+    title?: string
+    done?: boolean
+    epic_id?: string | null
+    position?: number
+    archived?: boolean
+    estimate_days?: number
+  },
 ) {
   return api<{ task: TrackerTask }>(`/tracker/tasks/${encodeURIComponent(id)}`, {
     method: 'PATCH',

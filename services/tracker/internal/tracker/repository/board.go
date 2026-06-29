@@ -79,8 +79,16 @@ func (r *Repository) ListEpicsByProject(ctx context.Context, projectID string) (
 		return nil, fmt.Errorf("invalid project_id: %w", err)
 	}
 	rows, err := r.conn(ctx).Query(ctx, `
-		SELECT id, project_id, name, position, created_at, updated_at
-		FROM epics WHERE project_id = $1 ORDER BY position, created_at
+		SELECT e.id, e.project_id, e.name, e.position, e.status, e.created_at, e.updated_at, e.completed_at,
+		       COALESCE((SELECT COUNT(*)::int FROM tasks t
+		                 JOIN sprints s ON s.id = t.sprint_id
+		                 WHERE t.epic_id = e.id AND s.project_id = e.project_id
+		                   AND NOT COALESCE((t.metadata->>'archived')::boolean, false)), 0),
+		       COALESCE((SELECT COUNT(*)::int FROM tasks t
+		                 JOIN sprints s ON s.id = t.sprint_id
+		                 WHERE t.epic_id = e.id AND s.project_id = e.project_id AND t.done
+		                   AND NOT COALESCE((t.metadata->>'archived')::boolean, false)), 0)
+		FROM epics e WHERE e.project_id = $1 ORDER BY e.position, e.created_at
 	`, pid)
 	if err != nil {
 		return nil, err
@@ -109,9 +117,9 @@ func (r *Repository) CreateEpic(ctx context.Context, projectID, name string) (*m
 	row := r.conn(ctx).QueryRow(ctx, `
 		INSERT INTO epics (id, project_id, name, position)
 		VALUES ($1, $2, $3, COALESCE((SELECT MAX(position)+1 FROM epics WHERE project_id = $2), 0))
-		RETURNING id, project_id, name, position, created_at, updated_at
+		RETURNING id, project_id, name, position, status, created_at, updated_at, completed_at
 	`, id, pid, name)
-	return scanEpic(row)
+	return scanEpicBase(row)
 }
 
 func (r *Repository) FindEpicByName(ctx context.Context, projectID, name string) (*model.Epic, error) {
@@ -120,11 +128,11 @@ func (r *Repository) FindEpicByName(ctx context.Context, projectID, name string)
 		return nil, fmt.Errorf("invalid project_id: %w", err)
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT id, project_id, name, position, created_at, updated_at
+		SELECT id, project_id, name, position, status, created_at, updated_at, completed_at
 		FROM epics WHERE project_id = $1 AND lower(name) = lower($2)
 		LIMIT 1
 	`, pid, name)
-	e, err := scanEpic(row)
+	e, err := scanEpicBase(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -246,7 +254,7 @@ func (r *Repository) ListTasksBySprint(ctx context.Context, sprintID string) ([]
 		return nil, fmt.Errorf("invalid sprint_id: %w", err)
 	}
 	rows, err := r.conn(ctx).Query(ctx, `
-		SELECT id, sprint_id, epic_id, title, done, position, source, metadata, dedup_key, created_at, updated_at, completed_at
+		SELECT id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
 		FROM tasks WHERE sprint_id = $1 ORDER BY position, created_at
 	`, sid)
 	if err != nil {
@@ -295,10 +303,10 @@ func (r *Repository) CreateTask(ctx context.Context, in CreateTaskInput) (*model
 		epicID = &parsed
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		INSERT INTO tasks (id, sprint_id, epic_id, title, done, position, source, metadata, dedup_key)
-		VALUES ($1, $2, $3, $4, false, COALESCE((SELECT MAX(position)+1 FROM tasks WHERE sprint_id = $2), 0), $5, $6, $7)
-		RETURNING id, sprint_id, epic_id, title, done, position, source, metadata, dedup_key, created_at, updated_at, completed_at
-	`, id, sid, epicID, in.Title, string(in.Source), meta, in.DedupKey)
+		INSERT INTO tasks (id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key)
+		VALUES ($1, $2, $3, $4, false, COALESCE((SELECT MAX(position)+1 FROM tasks WHERE sprint_id = $2), 0), $5, $6, $7, $8)
+		RETURNING id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+	`, id, sid, epicID, in.Title, in.EstimateDays, string(in.Source), meta, in.DedupKey)
 	t, err := scanTask(row)
 	if err != nil {
 		return nil, false, err
@@ -312,7 +320,7 @@ func (r *Repository) findTaskByDedup(ctx context.Context, sprintID, dedupKey str
 		return nil, err
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT id, sprint_id, epic_id, title, done, position, source, metadata, dedup_key, created_at, updated_at, completed_at
+		SELECT id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
 		FROM tasks WHERE sprint_id = $1 AND dedup_key = $2
 	`, sid, dedupKey)
 	t, err := scanTask(row)
@@ -332,7 +340,7 @@ func (r *Repository) GetTask(ctx context.Context, taskID, userID string) (*model
 		return nil, fmt.Errorf("invalid user_id: %w", err)
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT t.id, t.sprint_id, t.epic_id, t.title, t.done, t.position, t.source, t.metadata, t.dedup_key, t.created_at, t.updated_at, t.completed_at
+		SELECT t.id, t.sprint_id, t.epic_id, t.title, t.done, t.position, t.estimate_days, t.source, t.metadata, t.dedup_key, t.created_at, t.updated_at, t.completed_at
 		FROM tasks t
 		JOIN sprints s ON s.id = t.sprint_id
 		JOIN projects p ON p.id = s.project_id
@@ -370,6 +378,10 @@ func (r *Repository) UpdateTask(ctx context.Context, taskID, userID string, patc
 	if patch.Position != nil {
 		position = *patch.Position
 	}
+	estimateDays := current.EstimateDays
+	if patch.EstimateDays != nil {
+		estimateDays = *patch.EstimateDays
+	}
 	var epicUUID *uuid.UUID
 	if epicID != nil && *epicID != "" {
 		parsed, err := uuid.Parse(*epicID)
@@ -389,27 +401,29 @@ func (r *Repository) UpdateTask(ctx context.Context, taskID, userID string, patc
 		completedAt = current.CompletedAt
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		UPDATE tasks SET title = $2, done = $3, epic_id = $4, position = $5, completed_at = $6, updated_at = now()
+		UPDATE tasks SET title = $2, done = $3, epic_id = $4, position = $5, estimate_days = $6, completed_at = $7, updated_at = now()
 		WHERE id = $1
-		RETURNING id, sprint_id, epic_id, title, done, position, source, metadata, dedup_key, created_at, updated_at, completed_at
-	`, tid, title, done, epicUUID, position, completedAt)
+		RETURNING id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+	`, tid, title, done, epicUUID, position, estimateDays, completedAt)
 	return scanTask(row)
 }
 
 type CreateTaskInput struct {
-	SprintID string
-	EpicID   *string
-	Title    string
-	Source   model.TaskSource
-	Metadata map[string]any
-	DedupKey *string
+	SprintID     string
+	EpicID       *string
+	Title        string
+	EstimateDays float64
+	Source       model.TaskSource
+	Metadata     map[string]any
+	DedupKey     *string
 }
 
 type TaskPatch struct {
-	Title    *string
-	Done     *bool
-	EpicID   *string
-	Position *int
+	Title        *string
+	Done         *bool
+	EpicID       *string
+	Position     *int
+	EstimateDays *float64
 }
 
 func scanProject(row pgx.Row) (*model.Project, error) {
@@ -426,11 +440,26 @@ func scanProject(row pgx.Row) (*model.Project, error) {
 func scanEpic(row pgx.Row) (*model.Epic, error) {
 	var e model.Epic
 	var id, projectID uuid.UUID
-	if err := row.Scan(&id, &projectID, &e.Name, &e.Position, &e.CreatedAt, &e.UpdatedAt); err != nil {
+	var status string
+	if err := row.Scan(&id, &projectID, &e.Name, &e.Position, &status, &e.CreatedAt, &e.UpdatedAt, &e.CompletedAt, &e.DoneCount, &e.TotalCount); err != nil {
 		return nil, err
 	}
 	e.ID = id.String()
 	e.ProjectID = projectID.String()
+	e.Status = model.EpicStatus(status)
+	return &e, nil
+}
+
+func scanEpicBase(row pgx.Row) (*model.Epic, error) {
+	var e model.Epic
+	var id, projectID uuid.UUID
+	var status string
+	if err := row.Scan(&id, &projectID, &e.Name, &e.Position, &status, &e.CreatedAt, &e.UpdatedAt, &e.CompletedAt); err != nil {
+		return nil, err
+	}
+	e.ID = id.String()
+	e.ProjectID = projectID.String()
+	e.Status = model.EpicStatus(status)
 	return &e, nil
 }
 
@@ -467,7 +496,7 @@ func scanTask(row pgx.Row) (*model.Task, error) {
 	var source string
 	var meta []byte
 	var dedup *string
-	if err := row.Scan(&id, &sprintID, &epicID, &t.Title, &t.Done, &t.Position, &source, &meta, &dedup, &t.CreatedAt, &t.UpdatedAt, &t.CompletedAt); err != nil {
+	if err := row.Scan(&id, &sprintID, &epicID, &t.Title, &t.Done, &t.Position, &t.EstimateDays, &source, &meta, &dedup, &t.CreatedAt, &t.UpdatedAt, &t.CompletedAt); err != nil {
 		return nil, err
 	}
 	t.ID = id.String()
