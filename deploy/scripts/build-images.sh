@@ -19,16 +19,9 @@ image_ref_for_service() {
 
 image_exists() {
   local svc="$1"
-  local ref img_id
+  local ref
   ref="$(image_ref_for_service "$svc")"
-  img_id=$("${COMPOSE[@]}" images -q "$svc" 2>/dev/null | head -1 || true)
-  if [ -n "$img_id" ]; then
-    return 0
-  fi
-  if docker image inspect "$ref" >/dev/null 2>&1; then
-    return 0
-  fi
-  return 1
+  docker image inspect "$ref" >/dev/null 2>&1
 }
 
 verify_images() {
