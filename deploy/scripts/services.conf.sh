@@ -35,6 +35,7 @@ PROD_APP_SERVICES=(
   sandbox
   rooms
   admin
+  tracker
 )
 
 # Postgres DBs in prod migrate image (Dockerfile.migrate + migrate-all.sh + init-databases.sql).
@@ -47,6 +48,7 @@ DB_SERVICES=(
   billing
   sandbox
   rooms
+  tracker
 )
 
 db_name_for_service() {

@@ -255,6 +255,7 @@ services:
       INTERVIEW_GRPC_ADDR: interview:9092
       CONTENT_GRPC_ADDR: content:9091
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      TRACKER_GRPC_ADDR: tracker:9099
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
       WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-2s}
       NATS_URL: ${NATS_URL:-nats://nats:4222}
@@ -274,7 +275,39 @@ services:
         condition: service_healthy
       ai:
         condition: service_healthy
+      tracker:
+        condition: service_healthy
       nats:
+        condition: service_healthy
+
+  tracker:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: tracker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      <<: *service-env
+      HTTP_PORT: 8089
+      GRPC_PORT: 9099
+      POSTGRES_DSN: ${TRACKER_POSTGRES_DSN}
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      FRONTEND_URL: ${FRONTEND_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+    volumes:
+      - ./secrets/jwt:/run/secrets/jwt:ro
+    healthcheck:
+      <<: *health-ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8089/healthz"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      identity:
         condition: service_healthy
 
   billing:
@@ -422,6 +455,8 @@ services:
       sandbox:
         condition: service_healthy
       rooms:
+        condition: service_healthy
+      tracker:
         condition: service_healthy
       admin:
         condition: service_healthy

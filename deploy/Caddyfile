@@ -51,6 +51,9 @@
 	handle /v1/billing* {
 		reverse_proxy billing:8085
 	}
+	handle /v1/tracker* {
+		reverse_proxy tracker:8089
+	}
 	handle /v1/* {
 		header Content-Type application/json
 		respond "{\"error\":\"not found\"}" 404

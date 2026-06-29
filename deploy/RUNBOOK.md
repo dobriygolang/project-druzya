@@ -4,13 +4,13 @@
 
 1. `postgres`, `redis`
 2. `migrate` (after schema change only)
-3. `identity` → `content` → `interview` → `billing` → `sandbox` → `rooms`
+3. `identity` → `content` → `interview` → `billing` → `sandbox` → `rooms` → `tracker`
 4. `ai`, `recommendation`
 5. `identity-bot`, `caddy`, `admin`
 
 ```bash
 cd deploy
-docker compose -f docker-compose.prod.yml --env-file .env restart identity content interview billing sandbox rooms ai recommendation admin caddy
+docker compose -f docker-compose.prod.yml --env-file .env restart identity content interview billing sandbox rooms ai recommendation tracker admin caddy
 ```
 
 ## Health
@@ -18,6 +18,20 @@ docker compose -f docker-compose.prod.yml --env-file .env restart identity conte
 Public: `https://api.druz9.online/healthz`
 
 Per-service: `/healthz`, `/readyz` on each container HTTP port.
+
+### Tracker (first deploy on existing Postgres)
+
+`init-databases.sql` runs only on a fresh volume. On an existing server:
+
+```bash
+cd deploy
+# Add to .env: TRACKER_POSTGRES_DSN=postgres://druzya:...@postgres:5432/druzya_tracker?sslmode=disable
+docker compose -f docker-compose.prod.yml --env-file .env exec -T postgres \
+  psql -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE druzya_tracker;'
+docker compose -f docker-compose.prod.yml --env-file .env build migrate tracker caddy
+docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
+docker compose -f docker-compose.prod.yml --env-file .env up -d tracker recommendation caddy
+```
 
 ## Logs
 
@@ -42,7 +56,7 @@ Empty prod (no users):
 
 ```bash
 cd deploy
-docker compose -f docker-compose.prod.yml stop identity content interview ai recommendation billing sandbox rooms admin identity-bot caddy
+docker compose -f docker-compose.prod.yml stop identity content interview ai recommendation billing sandbox rooms tracker admin identity-bot caddy
 make reset-db
 docker compose -f docker-compose.prod.yml run --rm migrate
 docker compose -f docker-compose.prod.yml up -d

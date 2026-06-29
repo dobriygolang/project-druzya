@@ -48,6 +48,7 @@ expand() {
     interview) add ai; add recommendation; add sandbox; add admin ;;
     ai) add recommendation; add admin; add interview ;;
     recommendation) add interview ;;
+    tracker) add recommendation; add caddy ;;
   esac
 }
 
