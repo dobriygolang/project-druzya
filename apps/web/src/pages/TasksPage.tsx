@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Archive, Check, ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
+import { Archive, Check, ChevronDown } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PageHeader, SdvgCard } from '@/components/brand/SdvgCard'
+import { SortableTaskList } from '@/components/tracker/SortableTaskList'
 import { TodayPageShell } from '@/components/today/TodayPageShell'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
@@ -162,80 +163,6 @@ function TrackerSettingsPanel({
   )
 }
 
-function TaskRow({
-  task,
-  canMoveUp,
-  canMoveDown,
-  onToggle,
-  onArchive,
-  onMove,
-}: {
-  task: TrackerTask
-  canMoveUp: boolean
-  canMoveDown: boolean
-  onToggle: (id: string, done: boolean) => void
-  onArchive: (id: string) => void
-  onMove: (id: string, direction: 'up' | 'down') => void
-}) {
-  const { t } = useI18n()
-  const done = Boolean(task.done)
-
-  return (
-    <li className="group flex items-center gap-2 rounded-lg border border-transparent px-2 py-2 transition-colors hover:border-border hover:bg-surface-1">
-      <GripVertical className="h-4 w-4 shrink-0 text-text-muted/40" aria-hidden="true" />
-      <button
-        type="button"
-        aria-label={done ? t('tracker.markOpen') : t('tracker.markDone')}
-        onClick={() => onToggle(task.id, !done)}
-        className={cn(
-          'grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors',
-          done
-            ? 'border-[var(--sdvg-green,#4CB35C)] bg-[var(--sdvg-green,#4CB35C)] text-white'
-            : 'border-border-strong bg-surface-1 hover:border-text-muted',
-        )}
-      >
-        {done ? <Check className="h-3 w-3" strokeWidth={3} /> : null}
-      </button>
-      <span
-        className={cn(
-          'min-w-0 flex-1 text-sm leading-snug',
-          done ? 'text-text-muted line-through' : 'text-text-primary',
-        )}
-      >
-        {task.title}
-      </span>
-      <div className="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100">
-        <button
-          type="button"
-          aria-label={t('tracker.moveUp')}
-          disabled={!canMoveUp}
-          onClick={() => onMove(task.id, 'up')}
-          className="grid h-7 w-7 place-items-center rounded-md text-text-muted hover:bg-surface-2 hover:text-text-primary disabled:pointer-events-none disabled:opacity-30"
-        >
-          <ChevronUp className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          aria-label={t('tracker.moveDown')}
-          disabled={!canMoveDown}
-          onClick={() => onMove(task.id, 'down')}
-          className="grid h-7 w-7 place-items-center rounded-md text-text-muted hover:bg-surface-2 hover:text-text-primary disabled:pointer-events-none disabled:opacity-30"
-        >
-          <ChevronDown className="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          aria-label={t('tracker.archiveTask')}
-          onClick={() => onArchive(task.id)}
-          className="grid h-7 w-7 place-items-center rounded-md text-text-muted hover:bg-surface-2 hover:text-text-primary"
-        >
-          <Archive className="h-3.5 w-3.5" />
-        </button>
-      </div>
-    </li>
-  )
-}
-
 function ArchivedSprintCard({ sprint, onUnarchiveTask }: { sprint: TrackerSprint; onUnarchiveTask: () => void }) {
   const { t } = useI18n()
   const [open, setOpen] = useState(false)
@@ -346,6 +273,8 @@ function SprintPanel({
     }
   }, [board.tasks, epicFilter, kindFilter])
 
+  const dragDisabled = kindFilter !== 'all' || epicFilter !== null
+
   const epicM = useMutation({
     mutationFn: (name: string) => createEpic(project.id, name),
     onSuccess: () => {
@@ -382,21 +311,31 @@ function SprintPanel({
     mutationFn: (id: string) => updateTask(id, { archived: true }),
     onSuccess: onRefresh,
   })
-  const moveM = useMutation({
-    mutationFn: async ({ id, direction }: { id: string; direction: 'up' | 'down' }) => {
-      const list = activeTasks
-      const idx = list.findIndex((task) => task.id === id)
-      if (idx < 0) return
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1
-      if (swapIdx < 0 || swapIdx >= list.length) return
-      const a = list[idx]
-      const b = list[swapIdx]
-      await Promise.all([
-        updateTask(a.id, { position: b.position ?? swapIdx }),
-        updateTask(b.id, { position: a.position ?? idx }),
-      ])
+  const reorderM = useMutation({
+    mutationFn: async (reordered: TrackerTask[]) => {
+      const updates = reordered
+        .map((task, index) => ({ id: task.id, position: index, prev: task.position ?? 0 }))
+        .filter((u) => u.position !== u.prev)
+      await Promise.all(updates.map((u) => updateTask(u.id, { position: u.position })))
     },
-    onSuccess: onRefresh,
+    onMutate: async (reordered) => {
+      await qc.cancelQueries({ queryKey: ['tracker-board'] })
+      const prev = qc.getQueryData<TrackerBoard>(['tracker-board'])
+      if (prev?.tasks) {
+        const posMap = new Map(reordered.map((task, index) => [task.id, index]))
+        qc.setQueryData<TrackerBoard>(['tracker-board'], {
+          ...prev,
+          tasks: prev.tasks.map((task) =>
+            posMap.has(task.id) ? { ...task, position: posMap.get(task.id)! } : task,
+          ),
+        })
+      }
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['tracker-board'], ctx.prev)
+    },
+    onSettled: onRefresh,
   })
   const sprintM = useMutation({
     mutationFn: (name: string) => createSprint(project.id, name || undefined),
@@ -486,19 +425,18 @@ function SprintPanel({
           {activeTasks.length === 0 ? (
             <p className="mb-3 text-sm text-text-muted">{t('tracker.noTasks')}</p>
           ) : (
-            <ul className="mb-1">
-              {activeTasks.map((task, idx) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  canMoveUp={idx > 0}
-                  canMoveDown={idx < activeTasks.length - 1}
-                  onToggle={(id, d) => toggleM.mutate({ id, done: d })}
-                  onArchive={(id) => archiveTaskM.mutate(id)}
-                  onMove={(id, direction) => moveM.mutate({ id, direction })}
-                />
-              ))}
-            </ul>
+            <>
+              {dragDisabled ? (
+                <p className="mb-2 text-xs text-text-muted">{t('tracker.reorderFilteredHint')}</p>
+              ) : null}
+              <SortableTaskList
+                tasks={activeTasks}
+                dragDisabled={dragDisabled}
+                onReorder={(reordered) => reorderM.mutate(reordered)}
+                onToggle={(id, d) => toggleM.mutate({ id, done: d })}
+                onArchive={(id) => archiveTaskM.mutate(id)}
+              />
+            </>
           )}
           <div className="mt-3 flex gap-2">
             <input
