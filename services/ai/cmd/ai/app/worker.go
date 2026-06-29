@@ -10,6 +10,11 @@ import (
 
 // RunWorker polls interview outbox or subscribes via NATS when relay is enabled.
 func RunWorker(ctx context.Context, a *App) error {
+	if a.InterviewClient == nil {
+		a.Logger.Info("interview client not configured — evaluation outbox worker disabled")
+		<-ctx.Done()
+		return nil
+	}
 	h := &outboxworker.Handler{
 		Interview: a.InterviewClient,
 		Service:   a.Service,

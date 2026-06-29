@@ -25,7 +25,7 @@ export default function AuthCallbackPage() {
       try {
         await exchangeYandexCode(exchangeCode)
         if (cancelled) return
-        const next = sessionStorage.getItem('oauth_next') ?? '/today'
+        const next = sessionStorage.getItem('oauth_next') ?? '/profile'
         sessionStorage.removeItem('oauth_next')
         sessionStorage.removeItem('oauth_state_yandex')
         navigate(next, { replace: true })

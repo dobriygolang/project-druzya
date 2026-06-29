@@ -1,0 +1,18 @@
+---
+description: notes service — skeleton, not production
+alwaysApply: true
+---
+
+# notes service (skeleton)
+
+Module: `github.com/sedorofeevd/project-druzya/services/notes`. **Copy to create new services** — see `AGENTS.md`.
+
+## Layers
+
+```
+cmd/notes/app/run.go          → DI
+internal/app/api/notes/       → gRPC/HTTP (one RPC per file)
+internal/notes/model|repository|service/
+```
+
+HTTP `:8090`, gRPC `:9100`. Do not deploy as production.

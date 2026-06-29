@@ -9,7 +9,6 @@ import (
 
 	googleadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/google"
 	identityadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/identity"
-	recommendationadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/recommendation"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/model"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/repository"
 	"github.com/sedorofeevd/project-druzya/services/tracker/pkg/classify"
@@ -47,6 +46,9 @@ type Repository interface {
 	SumEstimateDaysBySprint(ctx context.Context, sprintID string, excludeTaskID *string) (float64, error)
 	SyncEpicStatus(ctx context.Context, epicID string) error
 	ReopenEpic(ctx context.Context, epicID, userID string) (*model.Epic, error)
+	ListWorkTasksByUser(ctx context.Context, userID string) ([]model.Task, error)
+	CreateWorkTask(ctx context.Context, sprintID, userID, title string, meta map[string]any, boardStatus string) (*model.Task, error)
+	PatchWorkTask(ctx context.Context, taskID, userID string, patch repository.WorkTaskPatch) (*model.Task, error)
 }
 
 type Service interface {
@@ -75,6 +77,14 @@ type Service interface {
 	DisconnectGoogleCalendar(ctx context.Context, userID string) (*model.UserSettingsView, error)
 	GetUserSettings(ctx context.Context, userID string) (*model.UserSettingsView, error)
 	PatchTaskMetadata(ctx context.Context, userID, taskID string, patch map[string]any) (*model.Task, error)
+
+	ListWorkTasks(ctx context.Context, userID string) ([]WorkTask, error)
+	CreateWorkTask(ctx context.Context, userID string, in CreateWorkTaskParams) (*WorkTask, error)
+	UpdateWorkTaskStatus(ctx context.Context, userID, taskID, status string) (*WorkTask, error)
+	DeleteWorkTask(ctx context.Context, userID, taskID string) error
+	ScheduleWorkTask(ctx context.Context, userID, taskID, startISO string, durationMin int) (*WorkTask, error)
+	UnscheduleWorkTask(ctx context.Context, userID, taskID string) (*WorkTask, error)
+	UpdateWorkTaskKind(ctx context.Context, userID, taskID, kind string, manualOverride bool) (*WorkTask, error)
 }
 
 type CreateTaskParams struct {
@@ -108,19 +118,17 @@ type InternalCreateTaskParams struct {
 }
 
 type trackerService struct {
-	repo           Repository
-	google         *googleadapter.Client
-	frontendURL    string
-	recommendation recommendationadapter.Client
-	identity       identityadapter.Client
+	repo        Repository
+	google      *googleadapter.Client
+	frontendURL string
+	identity    identityadapter.Client
 }
 
 type Deps struct {
-	Repo           Repository
-	Google         *googleadapter.Client
-	FrontendURL    string
-	Recommendation recommendationadapter.Client
-	Identity       identityadapter.Client
+	Repo        Repository
+	Google      *googleadapter.Client
+	FrontendURL string
+	Identity    identityadapter.Client
 }
 
 func New(deps Deps) Service {
@@ -128,7 +136,7 @@ func New(deps Deps) Service {
 	if frontend == "" {
 		frontend = "http://localhost:5173"
 	}
-	return &trackerService{repo: deps.Repo, google: deps.Google, frontendURL: frontend, recommendation: deps.Recommendation, identity: deps.Identity}
+	return &trackerService{repo: deps.Repo, google: deps.Google, frontendURL: frontend, identity: deps.Identity}
 }
 
 func (s *trackerService) GetBoard(ctx context.Context, userID string, projectID *string) (*model.Board, error) {

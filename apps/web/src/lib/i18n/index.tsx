@@ -10,7 +10,6 @@ import {
 import { readStoredLocale, writeStoredLocale, type Locale } from './localeStorage'
 import { en } from './locales/en'
 import { ru, type Messages } from './locales/ru'
-import { skillKeyLabel } from '@/lib/labels/domainLabels'
 
 export type { Locale } from './localeStorage'
 export { readStoredLocale } from './localeStorage'
@@ -81,9 +80,6 @@ export function useI18n(): I18nContextValue {
   const ctx = useContext(I18nContext)
   if (!ctx) throw new Error('useI18n must be used within I18nProvider')
   return ctx
-}
-export function skillLabel(t: I18nContextValue['t'], skillKey: string): string {
-  return skillKeyLabel(t, skillKey)
 }
 
 export function liveWsStatusLabel(

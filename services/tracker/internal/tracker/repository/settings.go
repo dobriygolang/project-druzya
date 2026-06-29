@@ -183,7 +183,7 @@ func (r *Repository) PatchTaskMetadata(ctx context.Context, taskID, userID strin
 		UPDATE tasks t SET metadata = t.metadata || $3::jsonb, updated_at = now()
 		FROM sprints s, projects p
 		WHERE t.id = $1 AND t.sprint_id = s.id AND s.project_id = p.id AND p.user_id = $2
-		RETURNING t.id, t.sprint_id, t.epic_id, t.title, t.done, t.position, t.estimate_days, t.source, t.metadata, t.dedup_key, t.created_at, t.updated_at, t.completed_at
+		RETURNING t.id, t.sprint_id, t.epic_id, t.title, t.done, t.position, t.estimate_days, t.source, t.metadata, t.dedup_key, t.board_status, t.scheduled_start, t.scheduled_duration_min, t.archived_at, t.created_at, t.updated_at, t.completed_at
 	`, tid, uid, meta)
 	task, err := scanTask(row)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -89,19 +89,23 @@ type Sprint struct {
 }
 
 type Task struct {
-	ID           string
-	SprintID     string
-	EpicID       *string
-	Title        string
-	Done         bool
-	Position     int
-	EstimateDays float64
-	Source       TaskSource
-	Metadata     map[string]any
-	DedupKey     *string
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
-	CompletedAt  *time.Time
+	ID                   string
+	SprintID             string
+	EpicID               *string
+	Title                string
+	Done                 bool
+	Position             int
+	EstimateDays         float64
+	Source               TaskSource
+	Metadata             map[string]any
+	DedupKey             *string
+	BoardStatus          string
+	ScheduledStart       *time.Time
+	ScheduledDurationMin *int
+	ArchivedAt           *time.Time
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
+	CompletedAt          *time.Time
 }
 
 type Board struct {

@@ -123,161 +123,43 @@ services:
       redis:
         condition: service_healthy
 
-  content:
+  sandbox:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
       args:
-        SERVICE: content
+        SERVICE: sandbox
     restart: unless-stopped
+    user: "0:0"
     env_file: .env
     environment:
       <<: *service-env
-      HTTP_PORT: 8081
-      GRPC_PORT: 9091
-      POSTGRES_DSN: ${CONTENT_POSTGRES_DSN}
-      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN}
-    healthcheck:
-      <<: *health-ready
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/readyz"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-
-  interview:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      args:
-        SERVICE: interview
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      <<: *service-env
-      HTTP_PORT: 8082
-      GRPC_PORT: 9092
-      POSTGRES_DSN: ${INTERVIEW_POSTGRES_DSN}
-      CONTENT_GRPC_ADDR: content:9091
+      HTTP_PORT: 8086
+      GRPC_PORT: 9096
+      POSTGRES_DSN: ${SANDBOX_POSTGRES_DSN}
       BILLING_GRPC_ADDR: billing:9095
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
-      NATS_URL: ${NATS_URL:-nats://nats:4222}
-      OUTBOX_RELAY_ENABLED: ${OUTBOX_RELAY_ENABLED:-true}
+      RUNNER_MODE: ${SANDBOX_RUNNER_MODE:-docker}
+      SANDBOX_MAX_OUTPUT_BYTES: ${SANDBOX_MAX_OUTPUT_BYTES:-65536}
+      SANDBOX_DEFAULT_TIMEOUT_MS: ${SANDBOX_DEFAULT_TIMEOUT_MS:-10000}
+      SANDBOX_ASYNC_RUNS: ${SANDBOX_ASYNC_RUNS:-auto}
+      SANDBOX_DOCKER_GO_IMAGE: ${SANDBOX_DOCKER_GO_IMAGE:-golang:1.24-alpine}
+      SANDBOX_DOCKER_PYTHON_IMAGE: ${SANDBOX_DOCKER_PYTHON_IMAGE:-python:3.12-alpine}
+      SANDBOX_DOCKER_NODE_IMAGE: ${SANDBOX_DOCKER_NODE_IMAGE:-node:22-alpine}
+      SANDBOX_DOCKER_WORK_ROOT: /var/lib/sandbox-work
     volumes:
       - ./secrets/jwt:/run/secrets/jwt:ro
-    healthcheck:
-      <<: *health-ready
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8082/readyz"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      content:
-        condition: service_healthy
-      identity:
-        condition: service_started
-      billing:
-        condition: service_healthy
-      nats:
-        condition: service_healthy
-
-  ai:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      args:
-        SERVICE: ai
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      <<: *service-env
-      HTTP_PORT: 8083
-      GRPC_PORT: 9093
-      POSTGRES_DSN: ${AI_POSTGRES_DSN}
-      INTERVIEW_GRPC_ADDR: interview:9092
-      CONTENT_GRPC_ADDR: content:9091
-      BILLING_GRPC_ADDR: billing:9095
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
-      LLM_CHAIN_ORDER: ${LLM_CHAIN_ORDER}
-      LLM_FREE_CHAIN_ORDER: ${LLM_FREE_CHAIN_ORDER:-${LLM_CHAIN_ORDER}}
-      LLM_PAID_CHAIN_ORDER: ${LLM_PAID_CHAIN_ORDER:-deepseek,groq}
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      GROQ_PAID_API_KEY: ${GROQ_PAID_API_KEY}
-      CEREBRAS_API_KEY: ${CEREBRAS_API_KEY}
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
-      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      OPENROUTER_PAID_API_KEY: ${OPENROUTER_PAID_API_KEY}
-      CLOUDFLARE_API_KEY: ${CLOUDFLARE_API_KEY}
-      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-      LLM_CAVEMAN: ${LLM_CAVEMAN:-lite}
-      LLM_PROMPT_CACHE: ${LLM_PROMPT_CACHE:-on}
-      LLM_PROMPT_CACHE_MAX_ENTRIES: ${LLM_PROMPT_CACHE_MAX_ENTRIES:-1000}
-      LLM_PROMPT_CACHE_TTL: ${LLM_PROMPT_CACHE_TTL:-24h}
-      REDIS_ADDR: redis:6379
-      WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-2s}
-      EVAL_WORKER_CONCURRENCY: ${EVAL_WORKER_CONCURRENCY:-20}
-      EVAL_MAX_RETRIES: ${EVAL_MAX_RETRIES:-3}
-      NATS_URL: ${NATS_URL:-nats://nats:4222}
-      OUTBOX_POLL_ENABLED: ${OUTBOX_POLL_ENABLED:-false}
-    healthcheck:
-      <<: *health-ready
-      start_period: 90s
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8083/readyz"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-      interview:
-        condition: service_healthy
-      content:
-        condition: service_healthy
-      billing:
-        condition: service_healthy
-      nats:
-        condition: service_healthy
-
-  recommendation:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      args:
-        SERVICE: recommendation
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      <<: *service-env
-      HTTP_PORT: 8084
-      GRPC_PORT: 9094
-      POSTGRES_DSN: ${RECOMMENDATION_POSTGRES_DSN}
-      INTERVIEW_GRPC_ADDR: interview:9092
-      CONTENT_GRPC_ADDR: content:9091
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
-      TRACKER_GRPC_ADDR: tracker:9099
-      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
-      WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-2s}
-      NATS_URL: ${NATS_URL:-nats://nats:4222}
-      OUTBOX_POLL_ENABLED: ${OUTBOX_POLL_ENABLED:-false}
-    volumes:
-      - ./secrets/jwt:/run/secrets/jwt:ro
+      - /var/lib/sandbox-work:/var/lib/sandbox-work
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       <<: *health-ready
       timeout: 15s
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8084/readyz"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8086/healthz"]
     depends_on:
       migrate:
         condition: service_completed_successfully
-      interview:
-        condition: service_healthy
-      content:
-        condition: service_healthy
-      ai:
-        condition: service_healthy
-      tracker:
-        condition: service_healthy
-      nats:
+      billing:
         condition: service_healthy
 
   tracker:
@@ -296,7 +178,6 @@ services:
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
       FRONTEND_URL: ${FRONTEND_URL}
-      RECOMMENDATION_GRPC_ADDR: recommendation:9094
       IDENTITY_GRPC_ADDR: identity:9090
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
@@ -351,48 +232,6 @@ services:
       identity:
         condition: service_healthy
 
-  sandbox:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      args:
-        SERVICE: sandbox
-    restart: unless-stopped
-    user: "0:0"
-    env_file: .env
-    environment:
-      <<: *service-env
-      HTTP_PORT: 8086
-      GRPC_PORT: 9096
-      POSTGRES_DSN: ${SANDBOX_POSTGRES_DSN}
-      CONTENT_GRPC_ADDR: content:9091
-      INTERVIEW_GRPC_ADDR: interview:9092
-      BILLING_GRPC_ADDR: billing:9095
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
-      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
-      RUNNER_MODE: ${SANDBOX_RUNNER_MODE:-docker}
-      SANDBOX_MAX_OUTPUT_BYTES: ${SANDBOX_MAX_OUTPUT_BYTES:-65536}
-      SANDBOX_DEFAULT_TIMEOUT_MS: ${SANDBOX_DEFAULT_TIMEOUT_MS:-10000}
-      SANDBOX_ASYNC_RUNS: ${SANDBOX_ASYNC_RUNS:-auto}
-      SANDBOX_DOCKER_GO_IMAGE: ${SANDBOX_DOCKER_GO_IMAGE:-golang:1.24-alpine}
-      SANDBOX_DOCKER_PYTHON_IMAGE: ${SANDBOX_DOCKER_PYTHON_IMAGE:-python:3.12-alpine}
-      SANDBOX_DOCKER_NODE_IMAGE: ${SANDBOX_DOCKER_NODE_IMAGE:-node:22-alpine}
-      SANDBOX_DOCKER_WORK_ROOT: /var/lib/sandbox-work
-    volumes:
-      - ./secrets/jwt:/run/secrets/jwt:ro
-      # Host path must match SANDBOX_DOCKER_WORK_ROOT so docker.sock bind mounts resolve on the host.
-      - /var/lib/sandbox-work:/var/lib/sandbox-work
-      - /var/run/docker.sock:/var/run/docker.sock
-    healthcheck:
-      <<: *health-ready
-      timeout: 15s
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8086/healthz"]
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      billing:
-        condition: service_healthy
-
   rooms:
     build:
       context: ..
@@ -428,6 +267,60 @@ services:
       billing:
         condition: service_healthy
 
+  notes:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: notes
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      <<: *service-env
+      HTTP_PORT: 8090
+      GRPC_PORT: 9100
+      POSTGRES_DSN: ${NOTES_POSTGRES_DSN}
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
+      BILLING_GRPC_ADDR: billing:9095
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+    volumes:
+      - ./secrets/jwt:/run/secrets/jwt:ro
+    healthcheck:
+      <<: *health-ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/healthz"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      identity:
+        condition: service_healthy
+      billing:
+        condition: service_healthy
+
+  focus:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: focus
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      <<: *service-env
+      HTTP_PORT: 8091
+      GRPC_PORT: 9101
+      POSTGRES_DSN: ${FOCUS_POSTGRES_DSN}
+      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
+    volumes:
+      - ./secrets/jwt:/run/secrets/jwt:ro
+    healthcheck:
+      <<: *health-ready
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/healthz"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      identity:
+        condition: service_healthy
+
   caddy:
     build:
       context: ..
@@ -444,14 +337,6 @@ services:
     depends_on:
       identity:
         condition: service_healthy
-      content:
-        condition: service_healthy
-      interview:
-        condition: service_healthy
-      recommendation:
-        condition: service_healthy
-      ai:
-        condition: service_healthy
       billing:
         condition: service_healthy
       sandbox:
@@ -460,41 +345,9 @@ services:
         condition: service_healthy
       tracker:
         condition: service_healthy
-      admin:
+      notes:
         condition: service_healthy
-
-  admin:
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile
-      args:
-        SERVICE: admin
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      <<: *service-env
-      HTTP_PORT: 8088
-      GRPC_PORT: 9098
-      JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
-      ADMIN_USER_IDS: ${ADMIN_USER_IDS}
-      CONTENT_ADMIN_TOKEN: ${ADMIN_API_TOKEN}
-      CONTENT_GRPC_ADDR: content:9091
-      IDENTITY_GRPC_ADDR: identity:9090
-      BILLING_GRPC_ADDR: billing:9095
-      AI_GRPC_ADDR: ai:9093
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
-      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-    volumes:
-      - ./secrets/jwt:/run/secrets/jwt:ro
-    healthcheck:
-      <<: *health-ready
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8088/healthz"]
-    depends_on:
-      content:
-        condition: service_healthy
-      billing:
-        condition: service_healthy
-      ai:
+      focus:
         condition: service_healthy
 
   prometheus:
@@ -550,9 +403,9 @@ services:
     depends_on:
       identity:
         condition: service_healthy
-      content:
+      billing:
         condition: service_healthy
-      ai:
+      sandbox:
         condition: service_healthy
 
   grafana:

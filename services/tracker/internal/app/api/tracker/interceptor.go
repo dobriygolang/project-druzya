@@ -30,6 +30,13 @@ var protectedMethods = map[string]struct{}{
 	trackerv1.TrackerService_UpdateSettings_FullMethodName:              {},
 	trackerv1.TrackerService_GetGoogleCalendarAuthURL_FullMethodName:    {},
 	trackerv1.TrackerService_DisconnectGoogleCalendar_FullMethodName:    {},
+	trackerv1.TrackerService_ListWorkTasks_FullMethodName:             {},
+	trackerv1.TrackerService_CreateWorkTask_FullMethodName:            {},
+	trackerv1.TrackerService_UpdateWorkTaskStatus_FullMethodName:      {},
+	trackerv1.TrackerService_DeleteWorkTask_FullMethodName:            {},
+	trackerv1.TrackerService_ScheduleWorkTask_FullMethodName:          {},
+	trackerv1.TrackerService_UnscheduleWorkTask_FullMethodName:        {},
+	trackerv1.TrackerService_UpdateWorkTaskKind_FullMethodName:        {},
 }
 
 func AuthInterceptor(v *jwt.Validator) grpc.UnaryServerInterceptor {

@@ -35,11 +35,8 @@ func RunAPI(ctx context.Context, a *App) error {
 
 	httpMux := http.NewServeMux()
 	httpMux.HandleFunc("/healthz", ops.HealthzHandler())
-	httpMux.HandleFunc("/readyz", ops.ReadyzHandler(
-		ops.PingPostgres(a.Postgres.Pool),
-		func(ctx context.Context) error { return a.interviewConn.Ping(ctx) },
-		func(ctx context.Context) error { return a.contentConn.Ping(ctx) },
-	))
+	readyCheckers := []ops.Checker{ops.PingPostgres(a.Postgres.Pool)}
+	httpMux.HandleFunc("/readyz", ops.ReadyzHandler(readyCheckers...))
 	httpMux.Handle("/metrics", ops.MetricsHandler())
 
 	if err := aiapi.RegisterGateway(ctx, httpMux, dialAddr); err != nil {

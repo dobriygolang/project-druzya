@@ -99,11 +99,13 @@ func toLimitSpec(val entitlement.Value) PlanLimitSpec {
 }
 
 var highlightOrder = []string{
-	model.EntitlementAIEvaluationsPerDay,
-	model.EntitlementMockInterviewsPerMonth,
+	model.EntitlementCloudNotesCount,
 	model.EntitlementCodeRunsPerDay,
+	model.EntitlementAIInsightsPerDay,
 	model.EntitlementLiveRoomsPerMonth,
 	model.EntitlementLiveRoomsConcurrent,
+	model.EntitlementAIEvaluationsPerDay,
+	model.EntitlementMockInterviewsPerMonth,
 	model.EntitlementCompanyTemplatesEnabled,
 	model.EntitlementHiddenTestsEnabled,
 	model.EntitlementRecommendationsEnabled,
@@ -176,6 +178,11 @@ func formatHighlight(planSlug, key string, val entitlement.Value) (string, bool)
 				return "Запуски кода без дневного лимита (beta)", true
 			}
 			return fmt.Sprintf("%d запусков кода в день", *val.Limit), true
+		case model.EntitlementAIInsightsPerDay:
+			if val.Limit == nil {
+				return "AI-инсайты без дневного лимита (beta)", true
+			}
+			return fmt.Sprintf("%d AI-инсайтов в день", *val.Limit), true
 		default:
 			if val.Limit == nil {
 				return humanizeKey(key) + " без лимита (beta)", true
@@ -183,10 +190,18 @@ func formatHighlight(planSlug, key string, val entitlement.Value) (string, bool)
 			return fmt.Sprintf("%d %s", *val.Limit, humanizeKey(key)), true
 		}
 	case entitlement.TypeGauge:
-		if val.Limit == nil {
-			return humanizeKey(key) + " без лимита (beta)", true
+		switch key {
+		case model.EntitlementCloudNotesCount:
+			if val.Limit == nil {
+				return "Облачные заметки без лимита", true
+			}
+			return fmt.Sprintf("%d облачных заметок", *val.Limit), true
+		default:
+			if val.Limit == nil {
+				return humanizeKey(key) + " без лимита (beta)", true
+			}
+			return fmt.Sprintf("%d %s", *val.Limit, humanizeKey(key)), true
 		}
-		return fmt.Sprintf("%d %s", *val.Limit, humanizeKey(key)), true
 	case entitlement.TypeBool:
 		if !val.Value {
 			return "", false

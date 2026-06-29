@@ -42,13 +42,13 @@ add() {
 
 expand() {
   case "$1" in
-    identity) add billing; add rooms; add interview; add admin ;;
-    content) add interview; add ai; add recommendation; add sandbox; add admin ;;
-    billing) add interview; add ai; add sandbox; add rooms; add admin ;;
-    interview) add ai; add recommendation; add sandbox; add admin ;;
-    ai) add recommendation; add admin; add interview ;;
-    recommendation) add interview ;;
-    tracker) add recommendation; add caddy ;;
+    identity) add billing; add rooms ;;
+    billing) add sandbox; add rooms ;;
+    sandbox) add caddy ;;
+    rooms) add caddy ;;
+    tracker) add caddy ;;
+    notes) add caddy ;;
+    focus) add caddy ;;
   esac
 }
 

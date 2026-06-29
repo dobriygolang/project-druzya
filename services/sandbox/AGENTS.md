@@ -42,4 +42,6 @@ cd services/sandbox
 make gen-proto | start | test | lint
 ```
 
-Env: JWT public key, `CONTENT_GRPC_ADDR`, `INTERVIEW_GRPC_ADDR`, `BILLING_GRPC_ADDR`, `SANDBOX_*` limits.
+Env: JWT public key, `CONTENT_GRPC_ADDR` (optional), `INTERVIEW_GRPC_ADDR` (optional), `BILLING_GRPC_ADDR`, `SANDBOX_*` limits.
+
+Live rooms use sandbox without content/interview when those env vars are unset.

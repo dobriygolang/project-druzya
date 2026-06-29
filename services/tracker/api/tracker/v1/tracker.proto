@@ -175,6 +175,50 @@ service TrackerService {
       body: "*"
     };
   }
+
+  // Hone work board (kanban + schedule view on active sprint tasks).
+  rpc ListWorkTasks(ListWorkTasksRequest) returns (ListWorkTasksResponse) {
+    option (google.api.http) = {get: "/v1/tracker/work/tasks"};
+  }
+
+  rpc CreateWorkTask(CreateWorkTaskRequest) returns (CreateWorkTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tracker/work/tasks"
+      body: "*"
+    };
+  }
+
+  rpc UpdateWorkTaskStatus(UpdateWorkTaskStatusRequest) returns (UpdateWorkTaskStatusResponse) {
+    option (google.api.http) = {
+      post: "/v1/tracker/work/tasks/{id}/status"
+      body: "*"
+    };
+  }
+
+  rpc DeleteWorkTask(DeleteWorkTaskRequest) returns (DeleteWorkTaskResponse) {
+    option (google.api.http) = {delete: "/v1/tracker/work/tasks/{id}"};
+  }
+
+  rpc ScheduleWorkTask(ScheduleWorkTaskRequest) returns (ScheduleWorkTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tracker/work/tasks/{id}/schedule"
+      body: "*"
+    };
+  }
+
+  rpc UnscheduleWorkTask(UnscheduleWorkTaskRequest) returns (UnscheduleWorkTaskResponse) {
+    option (google.api.http) = {
+      post: "/v1/tracker/work/tasks/{id}/unschedule"
+      body: "*"
+    };
+  }
+
+  rpc UpdateWorkTaskKind(UpdateWorkTaskKindRequest) returns (UpdateWorkTaskKindResponse) {
+    option (google.api.http) = {
+      post: "/v1/tracker/work/tasks/{id}/kind"
+      body: "*"
+    };
+  }
 }
 
 message GetBoardRequest {
@@ -342,6 +386,85 @@ message DisconnectGoogleCalendarRequest {}
 
 message DisconnectGoogleCalendarResponse {
   UserSettings settings = 1;
+}
+
+message WorkTask {
+  string id = 1;
+  string status = 2;
+  string kind = 3;
+  string source = 4;
+  string title = 5;
+  string brief_md = 6;
+  string skill_key = 7;
+  string deep_link = 8;
+  int32 priority = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  optional google.protobuf.Timestamp completed_at = 12;
+  bool manual_kind_override = 13;
+  optional google.protobuf.Timestamp scheduled_start = 14;
+  optional int32 scheduled_duration_min = 15;
+}
+
+message ListWorkTasksRequest {}
+
+message ListWorkTasksResponse {
+  repeated WorkTask tasks = 1;
+}
+
+message CreateWorkTaskRequest {
+  string kind = 1;
+  string title = 2;
+  string brief_md = 3;
+  string skill_key = 4;
+  string deep_link = 5;
+}
+
+message CreateWorkTaskResponse {
+  WorkTask task = 1;
+}
+
+message UpdateWorkTaskStatusRequest {
+  string id = 1;
+  string status = 2;
+}
+
+message UpdateWorkTaskStatusResponse {
+  WorkTask task = 1;
+}
+
+message DeleteWorkTaskRequest {
+  string id = 1;
+}
+
+message DeleteWorkTaskResponse {}
+
+message ScheduleWorkTaskRequest {
+  string id = 1;
+  string scheduled_start_iso = 2;
+  int32 duration_min = 3;
+}
+
+message ScheduleWorkTaskResponse {
+  WorkTask task = 1;
+}
+
+message UnscheduleWorkTaskRequest {
+  string id = 1;
+}
+
+message UnscheduleWorkTaskResponse {
+  WorkTask task = 1;
+}
+
+message UpdateWorkTaskKindRequest {
+  string id = 1;
+  string kind = 2;
+  bool manual_override = 3;
+}
+
+message UpdateWorkTaskKindResponse {
+  WorkTask task = 1;
 }
 
 // Internal API for recommendation-service and other workers.

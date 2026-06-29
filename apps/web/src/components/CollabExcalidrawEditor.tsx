@@ -8,19 +8,17 @@ import {
   EXCALIDRAW_THEME,
   EXCALIDRAW_UI_OPTIONS,
   excalidrawSiteAppState,
-} from '@/components/system-design/excalidrawTheme'
+} from '@/lib/collab/excalidrawTheme'
 import { collabUserColors } from '@/lib/codemirror/collabColors'
 import { peersFromAwareness, type CollabPeer } from '@/lib/codemirror/collabPresence'
 import {
   migrateLegacySceneText,
   observeSceneChanges,
   readSceneFromYjs,
-  sceneHasContent,
   sceneToJSON,
   writeSceneToYjs,
   type ScenePayload,
 } from '@/lib/collab/excalidrawYjsDoc'
-import { getSystemDesignWorkspace, patchSystemDesignWorkspace } from '@/lib/api/systemDesign'
 import {
   applyWsEnvelope,
   bytesToB64,
@@ -39,8 +37,6 @@ type Props = {
   userId?: string
   displayName?: string
   accessToken?: string
-  sessionTaskId?: string
-  workspaceVersion?: number
   onPeersChange?: (peers: CollabPeer[]) => void
   onWsStatusChange?: (status: import('@/lib/ws/collabEditor').EditorWsStatus) => void
 }
@@ -57,8 +53,6 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
       userId,
       displayName,
       accessToken,
-      sessionTaskId,
-      workspaceVersion,
       onPeersChange,
       onWsStatusChange,
     },
@@ -76,15 +70,11 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
     const sendSnapshotRef = useRef<(full: Uint8Array) => void>(() => {})
     const sendAwarenessRef = useRef<(update: Uint8Array) => void>(() => {})
     const pendingEnvelopesRef = useRef<EditorWsEnvelope[]>([])
-    const sessionSyncTimer = useRef<number | null>(null)
-    const workspaceVersionRef = useRef(workspaceVersion ?? 1)
     const pendingLocalRef = useRef<ScenePayload | null>(null)
     const localRafRef = useRef(0)
 
     const [initialScene, setInitialScene] = useState<ScenePayload>({ elements: [], files: {} })
     const [ready, setReady] = useState(false)
-
-    workspaceVersionRef.current = workspaceVersion ?? workspaceVersionRef.current
 
     const token = accessToken ?? ''
 
@@ -194,52 +184,8 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
         }, 1500)
       }
 
-      const scheduleSessionSync = () => {
-        if (!sessionTaskId) return
-        if (sessionSyncTimer.current) window.clearTimeout(sessionSyncTimer.current)
-        sessionSyncTimer.current = window.setTimeout(() => {
-          sessionSyncTimer.current = null
-          const scene = readSceneFromYjs(ydoc)
-          void patchSystemDesignWorkspace({
-            sessionTaskId,
-            expectedVersion: workspaceVersionRef.current,
-            diagram: {
-              elements: scene.elements,
-              files: scene.files,
-            },
-          })
-            .then((res) => {
-              workspaceVersionRef.current = res.workspace.version
-            })
-            .catch(() => {
-              /* best-effort sync from collab tab */
-            })
-        }, 1200)
-      }
-
-      const seedFromSessionWorkspace = async () => {
-        if (!sessionTaskId || sceneHasContent(ydoc)) return
-        try {
-          const res = await getSystemDesignWorkspace(sessionTaskId)
-          workspaceVersionRef.current = res.workspace.version
-          const diagram = res.workspace.diagram
-          if (!diagram || !Array.isArray(diagram.elements)) return
-          writeSceneToYjs(
-            ydoc,
-            diagram.elements,
-            diagram.files && typeof diagram.files === 'object'
-              ? (diagram.files as Record<string, unknown>)
-              : {},
-            'seed',
-          )
-        } catch {
-          /* empty collab doc is fine */
-        }
-      }
-
       const stopObserving = observeSceneChanges(ydoc, (scene) => {
         pushSceneToExcalidraw(scene)
-        scheduleSessionSync()
       })
 
       const onYUpdate = (update: Uint8Array, origin: unknown) => {
@@ -271,9 +217,6 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
       }
 
       setInitialScene(readSceneFromYjs(ydoc))
-      if (!sceneHasContent(ydoc)) {
-        void seedFromSessionWorkspace()
-      }
       setReady(true)
       flushPendingEnvelopes()
 
@@ -286,7 +229,6 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
         } catch {
           /* ignore */
         }
-        if (sessionSyncTimer.current) window.clearTimeout(sessionSyncTimer.current)
         stopObserving()
         document.removeEventListener('visibilitychange', onTabActivity)
         window.removeEventListener('focus', onTabActivity)
@@ -304,7 +246,7 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
         pendingLocalRef.current = null
         setReady(false)
       }
-    }, [roomId, token, displayName, userId, sessionTaskId, flushPendingEnvelopes, pushSceneToExcalidraw])
+    }, [roomId, token, displayName, userId, flushPendingEnvelopes, pushSceneToExcalidraw])
 
     const handleChange = useCallback(
       (elements: readonly unknown[], _appState: unknown, files: unknown) => {

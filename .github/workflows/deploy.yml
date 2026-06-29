@@ -31,9 +31,13 @@ jobs:
           cache: true
           cache-dependency-path: |
             services/identity/go.sum
-            services/content/go.sum
-            services/interview/go.sum
             services/ai/go.sum
+            services/billing/go.sum
+            services/sandbox/go.sum
+            services/rooms/go.sum
+            services/tracker/go.sum
+            services/notes/go.sum
+            services/focus/go.sum
 
       - uses: bufbuild/buf-setup-action@v1.50.0
         with:

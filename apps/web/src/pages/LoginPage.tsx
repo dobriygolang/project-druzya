@@ -14,7 +14,7 @@ export default function LoginPage() {
   const { t } = useI18n()
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const next = params.get('next') ?? '/today'
+  const next = params.get('next') ?? '/profile'
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Phase K Wave 15 — Quick Capture standalone overlay window.
+
+      Triggered by globalShortcut ⌘⇧Space anywhere on macOS / Win / Linux.
+      Renders ~480×80 spotlight-style input that posts a captured thought
+      into the user's Hone Inbox folder via main-process IPC.
+
+      Deliberately self-contained — no React, no app bundle. Window is
+      `transparent + frameless + alwaysOnTop`, opens fast, closes on
+      Enter / Esc. CSP same shape as the main app: scripts от self,
+      no inline JS (Vite bundles to a file).
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; script-src 'self';"
+    />
+    <title>Quick Capture</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: transparent;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        display: flex;
+        align-items: stretch;
+        justify-content: stretch;
+      }
+      .shell {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: rgba(8, 8, 10, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 12px;
+        overflow: hidden;
+        backdrop-filter: blur(28px);
+        -webkit-backdrop-filter: blur(28px);
+        box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+      }
+      .row {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 16px;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #ff3b30;
+        flex-shrink: 0;
+      }
+      input {
+        flex: 1;
+        min-width: 0;
+        background: transparent;
+        border: 0;
+        outline: 0;
+        color: #f4f4f6;
+        font-size: 16px;
+        font-weight: 400;
+        letter-spacing: -0.01em;
+        caret-color: #f4f4f6;
+        font-family: inherit;
+      }
+      input::placeholder {
+        color: rgba(244, 244, 246, 0.32);
+      }
+      .hint {
+        padding: 4px 16px 8px;
+        font-size: 11px;
+        color: rgba(244, 244, 246, 0.32);
+        letter-spacing: 0.02em;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .hint kbd {
+        font-family: inherit;
+        font-size: 10px;
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(244, 244, 246, 0.6);
+        padding: 1px 6px;
+        border-radius: 4px;
+      }
+      .err {
+        color: #ff3b30;
+      }
+      .row.draggable {
+        -webkit-app-region: drag;
+      }
+      input,
+      .hint kbd {
+        -webkit-app-region: no-drag;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="row draggable">
+        <span class="dot"></span>
+        <input
+          id="qc-input"
+          type="text"
+          autofocus
+          placeholder="Быстрая мысль…"
+          autocomplete="off"
+          autocapitalize="off"
+          spellcheck="false"
+        />
+      </div>
+      <div class="hint">
+        <span id="qc-status">Inbox · Hone</span>
+        <span><kbd>Enter</kbd> save · <kbd>Esc</kbd> cancel</span>
+      </div>
+    </div>
+    <script type="module" src="./src/quick-capture/main.ts"></script>
+  </body>
+</html>

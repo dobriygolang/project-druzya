@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package focus.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/focus/pkg/api/focus/v1;focusv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service FocusService {
+  rpc StartFocusSession(StartFocusSessionRequest) returns (StartFocusSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/focus/sessions/start"
+      body: "*"
+    };
+  }
+
+  rpc EndFocusSession(EndFocusSessionRequest) returns (EndFocusSessionResponse) {
+    option (google.api.http) = {
+      post: "/v1/focus/sessions/{session_id}/end"
+      body: "*"
+    };
+  }
+
+  rpc GetStats(GetStatsRequest) returns (GetStatsResponse) {
+    option (google.api.http) = {
+      get: "/v1/focus/stats"
+    };
+  }
+}
+
+message FocusSession {
+  string id = 1;
+  string mode = 2;
+  string pinned_title = 3;
+  string task_id = 4;
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp ended_at = 6;
+  int32 seconds_focused = 7;
+  int32 pomodoros_completed = 8;
+}
+
+message FocusDay {
+  string date = 1;
+  int32 seconds = 2;
+  int32 sessions = 3;
+}
+
+message StartFocusSessionRequest {
+  string mode = 1;
+  string pinned_title = 2;
+  string task_id = 3;
+}
+
+message StartFocusSessionResponse {
+  FocusSession session = 1;
+}
+
+message EndFocusSessionRequest {
+  string session_id = 1;
+  int32 seconds_focused = 2;
+  int32 pomodoros_completed = 3;
+}
+
+message EndFocusSessionResponse {
+  FocusSession session = 1;
+}
+
+message GetStatsRequest {
+  string up_to_date = 1;
+}
+
+message GetStatsResponse {
+  int32 current_streak_days = 1;
+  int32 longest_streak_days = 2;
+  int32 total_focused_seconds = 3;
+  repeated FocusDay heatmap = 4;
+  repeated FocusDay last_seven_days = 5;
+}

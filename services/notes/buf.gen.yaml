@@ -1,0 +1,19 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/sedorofeevd/project-druzya/services/notes/pkg/api
+plugins:
+  - local: protoc-gen-go
+    out: pkg/api
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-go-grpc
+    out: pkg/api
+    opt:
+      - paths=source_relative
+  - local: protoc-gen-grpc-gateway
+    out: pkg/api
+    opt:
+      - paths=source_relative

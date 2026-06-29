@@ -198,7 +198,7 @@ export default function CollabRoomPage() {
         message={t('live.roomNotFound')}
         sub={roomQ.error instanceof Error ? roomQ.error.message : undefined}
         action={
-          <Link to="/mock">
+          <Link to="/live/new">
             <Button variant="secondary" size="sm">
               {t('live.createNew')}
             </Button>
@@ -213,7 +213,7 @@ export default function CollabRoomPage() {
   const isOwner = sessionUserId === room.owner_id
   const canFreeze = myRole === 'owner' || myRole === 'interviewer' || isOwner
   const canRun = !!hasSession
-  const closeTo = authed ? '/today' : '/welcome'
+  const closeTo = authed ? '/profile' : '/welcome'
   const designRoom = isDesignRoom(room)
   const panelHeight = designRoom ? 0 : runPanelHeight(run.panelOpen)
   const displayName = meQ.data?.username ?? (guestName || t('common.guest'))
@@ -302,7 +302,6 @@ export default function CollabRoomPage() {
             userId={sessionUserId ?? guestName}
             displayName={displayName}
             accessToken={wsToken}
-            sessionTaskId={sessionTaskId}
             onPeersChange={setPeers}
             onWsStatusChange={setWsStatus}
           />
@@ -460,7 +459,7 @@ function GuestGate({
               <Link to={loginTo}>
                 <Button className="w-full">{t('live.loginAccount')}</Button>
               </Link>
-              <Link to="/mock">
+              <Link to="/live/new">
                 <Button variant="ghost" className="w-full">
                   {t('live.createOwnRoom')}
                 </Button>

@@ -1,0 +1,30 @@
+{
+  "name": "hone",
+  "productName": "Hone",
+  "version": "0.1.0",
+  "description": "Hone — Winter-like focus workspace (Tauri + React)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "dev:vite": "vite",
+    "build": "tauri build",
+    "build:vite": "vite build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint 'src/**/*.{ts,tsx}'"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.0",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
+  }
+}

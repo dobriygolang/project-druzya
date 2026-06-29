@@ -1,0 +1,18 @@
+---
+description: focus service — skeleton, not production
+alwaysApply: true
+---
+
+# focus service (skeleton)
+
+Module: `github.com/sedorofeevd/project-druzya/services/focus`. **Copy to create new services** — see `AGENTS.md`.
+
+## Layers
+
+```
+cmd/focus/app/run.go          → DI
+internal/app/api/focus/       → gRPC/HTTP (one RPC per file)
+internal/focus/model|repository|service/
+```
+
+HTTP `:8091`, gRPC `:9101`. Do not deploy as production.

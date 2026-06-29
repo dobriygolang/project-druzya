@@ -54,7 +54,7 @@ export function LiveNewPage() {
           <div className="flex items-center gap-3">
             <LocaleSwitcher compact />
             {authed ? (
-              <Link to="/today" className="text-sm text-text-secondary no-underline hover:text-text-primary">
+              <Link to="/profile" className="text-sm text-text-secondary no-underline hover:text-text-primary">
                 {t('public.openApp')}
               </Link>
             ) : (

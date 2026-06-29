@@ -21,10 +21,10 @@ export function PublicNav({ centerLinks, right, className }: Props) {
   const isAuthed = !!readAccessToken()
 
   const defaultCenter: LinkItem[] = [
+    { href: '/welcome#philosophy', label: t('welcome.navPhilosophy') },
     { href: '/welcome#features', label: t('public.features') },
     { href: '/live/new', label: t('public.liveCoding') },
     { href: '/pricing', label: t('public.pricing') },
-    { href: 'https://t.me/gogymtrip', label: t('public.channel'), external: true },
   ]
 
   const links = centerLinks ?? defaultCenter
@@ -74,11 +74,11 @@ export function PublicNav({ centerLinks, right, className }: Props) {
           {right ??
             (isAuthed ? (
               <Link
-                to="/today"
+                to="/profile"
                 className="rounded-lg px-3.5 py-2 text-sm font-medium no-underline"
                 style={{ background: brand.ink, color: brand.bg }}
               >
-                {t('public.openApp')}
+                {t('public.account')}
               </Link>
             ) : (
               <Link

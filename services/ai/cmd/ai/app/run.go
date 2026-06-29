@@ -9,9 +9,7 @@ import (
 	billingadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing"
 	billinggrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/billing/grpc"
 	contentadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content"
-	contentgrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/content/grpc"
 	interviewadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview"
-	interviewgrpc "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/interview/grpc"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmcache"
 	llmadapter "github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm"
 	"github.com/sedorofeevd/project-druzya/services/ai/internal/adapter/llm/llmchain"
@@ -34,13 +32,11 @@ type App struct {
 	InterviewClient interviewadapter.Client
 	ContentClient   contentadapter.Client
 	BillingClient   billingadapter.Client
-	interviewConn   *interviewgrpc.Client
-	contentConn     *contentgrpc.Client
 	billingConn     *billinggrpc.Client
 	Repo            *evaluationrepo.Repository
 	LLMConfigRepo   *llmconfigrepo.Repository
 	LLMConfig       llmconfigservice.Service
-	LLMChains        *llmchain.TierChains
+	LLMChains       *llmchain.TierChains
 	Service         evaluationservice.Service
 }
 
@@ -61,17 +57,14 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
-	interviewClient, err := interviewgrpc.NewClient(ctx, cfg.InterviewGRPCAddr, cfg.InternalAPIToken)
-	if err != nil {
-		pg.Close()
-		return nil, fmt.Errorf("init interview client: %w", err)
+	var interviewClient interviewadapter.Client
+	if cfg.InterviewGRPCAddr != "" {
+		log.Warn("INTERVIEW_GRPC_ADDR is set but interview-service was removed from the monorepo; evaluation worker disabled")
 	}
 
-	contentClient, err := contentgrpc.NewClient(ctx, cfg.ContentGRPCAddr)
-	if err != nil {
-		_ = interviewClient.Close()
-		pg.Close()
-		return nil, fmt.Errorf("init content client: %w", err)
+	var contentClient contentadapter.Client
+	if cfg.ContentGRPCAddr != "" {
+		log.Warn("CONTENT_GRPC_ADDR is set but content-service was removed from the monorepo")
 	}
 
 	var billingClient billingadapter.Client
@@ -79,8 +72,6 @@ func New(ctx context.Context) (*App, error) {
 	if cfg.BillingGRPCAddr != "" {
 		billingConn, err = billinggrpc.NewClient(ctx, cfg.BillingGRPCAddr, cfg.InternalAPIToken)
 		if err != nil {
-			_ = contentClient.Close()
-			_ = interviewClient.Close()
 			pg.Close()
 			return nil, fmt.Errorf("init billing client: %w", err)
 		}
@@ -93,8 +84,9 @@ func New(ctx context.Context) (*App, error) {
 
 	redisClient, err := llmcache.NewRedisClient(ctx, cfg.RedisAddr)
 	if err != nil {
-		_ = contentClient.Close()
-		_ = interviewClient.Close()
+		if billingConn != nil {
+			_ = billingConn.Close()
+		}
 		pg.Close()
 		return nil, fmt.Errorf("init redis: %w", err)
 	}
@@ -138,8 +130,6 @@ func New(ctx context.Context) (*App, error) {
 		if billingConn != nil {
 			_ = billingConn.Close()
 		}
-		_ = contentClient.Close()
-		_ = interviewClient.Close()
 		pg.Close()
 		return nil, err
 	}
@@ -173,8 +163,6 @@ func New(ctx context.Context) (*App, error) {
 		InterviewClient: interviewClient,
 		ContentClient:   contentClient,
 		BillingClient:   billingClient,
-		interviewConn:   interviewClient,
-		contentConn:     contentClient,
 		billingConn:     billingConn,
 		Repo:            repo,
 		LLMConfigRepo:   llmConfigRepo,
@@ -191,12 +179,6 @@ func (a *App) Close() {
 	}
 	if a.billingConn != nil {
 		_ = a.billingConn.Close()
-	}
-	if a.contentConn != nil {
-		_ = a.contentConn.Close()
-	}
-	if a.interviewConn != nil {
-		_ = a.interviewConn.Close()
 	}
 	if a.Postgres != nil {
 		a.Postgres.Close()

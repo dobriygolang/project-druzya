@@ -50,11 +50,11 @@ export default function BillingWelcomePage() {
           </p>
         ) : null}
         <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-          <Link to="/today">
-            <Button variant="primary">{t('checkout.goToday')}</Button>
+          <Link to="/welcome">
+            <Button variant="primary">{t('checkout.goWelcome')}</Button>
           </Link>
-          <Link to="/mock">
-            <Button variant="ghost">{t('today.startMock')}</Button>
+          <Link to="/profile">
+            <Button variant="ghost">{t('public.account')}</Button>
           </Link>
         </div>
       </PageContent>

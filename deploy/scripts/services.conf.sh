@@ -10,15 +10,13 @@ TEMPLATE_SERVICE=template
 # go.work must include every entry (plus template).
 CI_SERVICES=(
   identity
-  content
-  interview
   ai
-  recommendation
   billing
   sandbox
   rooms
-  admin
   tracker
+  notes
+  focus
 )
 
 # buf generate → services/<name>/pkg/api (gitignored; CI runs gen-all-proto.sh first).
@@ -27,41 +25,35 @@ PROTO_SERVICES=("${CI_SERVICES[@]}")
 # Prod docker-compose app services (HTTP backends). Add here when the service ships.
 PROD_APP_SERVICES=(
   identity
-  content
-  interview
-  ai
-  recommendation
   billing
   sandbox
   rooms
-  admin
   tracker
+  notes
+  focus
 )
 
 # Postgres DBs in prod migrate image (Dockerfile.migrate + migrate-all.sh + init-databases.sql).
 DB_SERVICES=(
   identity
-  content
-  interview
-  ai
-  recommendation
   billing
   sandbox
   rooms
   tracker
+  notes
+  focus
 )
 
 db_name_for_service() {
   case "$1" in
     identity) echo druzya ;;
-    content) echo druzya_content ;;
-    interview) echo druzya_interview ;;
     ai) echo druzya_ai ;;
-    recommendation) echo druzya_recommendation ;;
     billing) echo druzya_billing ;;
     sandbox) echo druzya_sandbox ;;
     rooms) echo druzya_rooms ;;
     tracker) echo druzya_tracker ;;
+    notes) echo druzya_notes ;;
+    focus) echo druzya_focus ;;
     *) return 1 ;;
   esac
 }
@@ -69,14 +61,13 @@ db_name_for_service() {
 dsn_env_for_service() {
   case "$1" in
     identity) echo IDENTITY_POSTGRES_DSN ;;
-    content) echo CONTENT_POSTGRES_DSN ;;
-    interview) echo INTERVIEW_POSTGRES_DSN ;;
     ai) echo AI_POSTGRES_DSN ;;
-    recommendation) echo RECOMMENDATION_POSTGRES_DSN ;;
     billing) echo BILLING_POSTGRES_DSN ;;
     sandbox) echo SANDBOX_POSTGRES_DSN ;;
     rooms) echo ROOMS_POSTGRES_DSN ;;
     tracker) echo TRACKER_POSTGRES_DSN ;;
+    notes) echo NOTES_POSTGRES_DSN ;;
+    focus) echo FOCUS_POSTGRES_DSN ;;
     *) return 1 ;;
   esac
 }
@@ -90,15 +81,13 @@ done
 service_http_port() {
   case "$1" in
     identity) echo 8080 ;;
-    content) echo 8081 ;;
-    interview) echo 8082 ;;
     ai) echo 8083 ;;
-    recommendation) echo 8084 ;;
     billing) echo 8085 ;;
     sandbox) echo 8086 ;;
     rooms) echo 8087 ;;
-    admin) echo 8088 ;;
     tracker) echo 8089 ;;
+    notes) echo 8090 ;;
+    focus) echo 8091 ;;
     *) return 1 ;;
   esac
 }

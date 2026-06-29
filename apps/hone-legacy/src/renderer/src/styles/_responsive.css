@@ -1,0 +1,47 @@
+/**
+ * Responsive utility classes — byte-identical to frontend/src/styles/_responsive.css.
+ *
+ * Use these classes to flex Hone windows from ~800×600 up to 4K+ without
+ * hardcoded widths (memory/feedback_responsive_rule.md).
+ */
+
+.flex-wrap-row {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.min-w-0 {
+  min-width: 0;
+}
+
+.auto-fit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--auto-fit-min, 240px), 1fr));
+  gap: var(--gap-row, 12px);
+}
+
+.cq {
+  container-type: inline-size;
+}
+
+@container (max-width: 768px) {
+  .cq-md-col {
+    flex-direction: column;
+  }
+  .cq-md-hide {
+    display: none;
+  }
+  .cq-md-full {
+    width: 100%;
+  }
+}
+
+@container (min-width: 1024px) {
+  .cq-lg-row {
+    flex-direction: row;
+  }
+  .cq-lg-show {
+    display: revert;
+  }
+}

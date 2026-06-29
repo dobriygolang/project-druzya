@@ -17,30 +17,6 @@ prometheus.scrape "identity" {
   job_name   = "identity"
 }
 
-prometheus.scrape "content" {
-  targets    = [{ __address__ = "content:8081" }]
-  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
-  job_name   = "content"
-}
-
-prometheus.scrape "interview" {
-  targets    = [{ __address__ = "interview:8082" }]
-  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
-  job_name   = "interview"
-}
-
-prometheus.scrape "ai" {
-  targets    = [{ __address__ = "ai:8083" }]
-  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
-  job_name   = "ai"
-}
-
-prometheus.scrape "recommendation" {
-  targets    = [{ __address__ = "recommendation:8084" }]
-  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
-  job_name   = "recommendation"
-}
-
 prometheus.scrape "billing" {
   targets    = [{ __address__ = "billing:8085" }]
   forward_to = [prometheus.remote_write.grafana_cloud.receiver]
@@ -59,8 +35,20 @@ prometheus.scrape "rooms" {
   job_name   = "rooms"
 }
 
-prometheus.scrape "admin" {
-  targets    = [{ __address__ = "admin:8088" }]
+prometheus.scrape "tracker" {
+  targets    = [{ __address__ = "tracker:8089" }]
   forward_to = [prometheus.remote_write.grafana_cloud.receiver]
-  job_name   = "admin"
+  job_name   = "tracker"
+}
+
+prometheus.scrape "notes" {
+  targets    = [{ __address__ = "notes:8090" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "notes"
+}
+
+prometheus.scrape "focus" {
+  targets    = [{ __address__ = "focus:8091" }]
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+  job_name   = "focus"
 }

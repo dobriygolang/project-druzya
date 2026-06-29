@@ -10,15 +10,19 @@ When working on a service, **open only that service folder** and read its local 
 |---------|-----------|---------------|
 | **template** | [services/template/AGENTS.md](services/template/AGENTS.md) | **copy skeleton** for new services |
 | identity | [services/identity/AGENTS.md](services/identity/AGENTS.md) | auth, Redis, interceptors, custom HTTP |
-| content | [services/content/AGENTS.md](services/content/AGENTS.md) | catalog domain, many read RPCs |
-| interview | [services/interview/AGENTS.md](services/interview/AGENTS.md) | sessions, attempts, retry queue, content gRPC client |
-| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | attempt evaluation, LLM scoring, outbox worker |
-| recommendation | [services/recommendation/AGENTS.md](services/recommendation/AGENTS.md) | skill profiles, outbox consumer |
-| billing | [services/billing/AGENTS.md](services/billing/AGENTS.md) | usage quotas, plan limits |
-| sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | code execution runs (MVP) |
+| billing | [services/billing/AGENTS.md](services/billing/AGENTS.md) | usage quotas, Tribute billing |
+| sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | code execution + LSP (live rooms) |
 | **rooms** | [services/rooms/AGENTS.md](services/rooms/AGENTS.md) | live coding collab, WS + Yjs |
-| **tracker** | [services/tracker/AGENTS.md](services/tracker/AGENTS.md) | text-file task board, sprint/epic/task |
-| **admin** | [services/admin/AGENTS.md](services/admin/AGENTS.md) | operator BFF, JWT allowlist, content proxy |
+| **tracker** | [services/tracker/AGENTS.md](services/tracker/AGENTS.md) | task board, sprint/epic, Google Calendar |
+| **notes** | [services/notes/AGENTS.md](services/notes/AGENTS.md) | Obsidian-like notes, E2EE vault (WIP) |
+| **focus** | [services/focus/AGENTS.md](services/focus/AGENTS.md) | pomodoro, streaks, focus stats (WIP) |
+| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | LLM gateway (not in prod stack) |
+
+**Desktop app:** [apps/hone/README.md](apps/hone/README.md) — Tauri focus workspace (Winter-like). Legacy Electron: [apps/hone-legacy/](apps/hone-legacy/).
+
+**Web companion:** [apps/web/](apps/web/) — welcome, billing, `/live/new` guest rooms.
+
+**Retired (removed):** content, interview, recommendation, admin.
 
 Prod deploy: [deploy/PRODUCTION_CHECKLIST.md](deploy/PRODUCTION_CHECKLIST.md), [deploy/RUNBOOK.md](deploy/RUNBOOK.md)
 
@@ -37,7 +41,7 @@ Pattern from **search-performance** + **identity** + **content**. **Start new se
 > Per domain add `usecase/{command,query}/<op>/` packages (each = `command|query.go`
 > with `Validate()` + `handler.go` with `New`/`Handle` + `mocks/`) and a `repository/store.go`
 > port. Reference exemplars: `services/template/internal/example/usecase/query/get_item/`
-> (read) and `services/interview/internal/interview/usecase/command/submit_attempt/` (write).
+> (read) and `services/template/internal/example/usecase/command/` (write — add when extracting commands).
 > The directory tree below is the minimal skeleton; grow it toward the standard as a service matures.
 
 ### Directory tree
@@ -135,15 +139,13 @@ func NewRegisteredImplementation(s *grpc.Server, svc exampleservice.Service) *Im
 | Service | HTTP | gRPC | Postgres port | DB name |
 |---------|------|------|---------------|---------|
 | identity | 8080 | 9090 | 5432 | druzya |
-| content | 8081 | 9091 | 5433 | druzya_content |
-| interview | 8082 | 9092 | 5434 | druzya_interview |
 | ai | 8083 | 9093 | 5435 | druzya_ai |
-| recommendation | 8084 | 9094 | 5436 | druzya_recommendation |
 | billing | 8085 | 9095 | 5438 | druzya_billing |
 | sandbox | 8086 | 9096 | 5439 | druzya_sandbox |
 | **rooms** | **8087** | **9097** | **5440** | **druzya_rooms** |
 | **tracker** | **8089** | **9099** | **5441** | **druzya_tracker** |
-| **admin** | **8088** | **9098** | — | — (stateless BFF) |
+| **notes** | **8090** | **9100** | **5442** | **druzya_notes** |
+| **focus** | **8091** | **9101** | **5443** | **druzya_focus** |
 | template | 8099 | 9199 | 5439 | druzya_template |
 
 Pick unused ports for each new service. Update `Makefile`, `config.go`, `docker-compose.yml`.

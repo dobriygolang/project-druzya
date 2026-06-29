@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowRight, CreditCard, ListChecks, Sparkles } from 'lucide-react'
+import { ArrowRight, CreditCard, Download, Users } from 'lucide-react'
 import { Eyebrow } from '@/components/brand/Eyebrow'
 import { SdvgCard } from '@/components/brand/SdvgCard'
 import { brand } from '@/lib/brand/tokens'
@@ -199,16 +199,16 @@ function QuickLinksCard({
 }) {
   const links = [
     {
-      to: '/mock',
-      label: t('profile.quickLinks.mockLabel'),
-      hint: t('profile.quickLinks.mockHint'),
-      icon: Sparkles,
+      to: '/welcome',
+      label: t('profile.quickLinks.downloadLabel'),
+      hint: t('profile.quickLinks.downloadHint'),
+      icon: Download,
     },
     {
-      to: '/today',
-      label: t('profile.quickLinks.todayLabel'),
-      hint: t('profile.quickLinks.todayHint'),
-      icon: ListChecks,
+      to: '/live/new',
+      label: t('profile.quickLinks.liveLabel'),
+      hint: t('profile.quickLinks.liveHint'),
+      icon: Users,
     },
   ]
 

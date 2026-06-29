@@ -24,6 +24,8 @@ const (
 	EntitlementAIEvaluationsPerDay     = "ai_evaluations_per_day"
 	EntitlementMockInterviewsPerMonth  = "mock_interviews_per_month"
 	EntitlementCodeRunsPerDay          = "code_runs_per_day"
+	EntitlementCloudNotesCount         = "cloud_notes_count"
+	EntitlementAIInsightsPerDay        = "ai_insights_per_day"
 	EntitlementLiveRoomsPerMonth       = "live_rooms_per_month"
 	EntitlementLiveRoomsConcurrent     = "live_rooms_concurrent"
 	EntitlementHiddenTestsEnabled      = "hidden_tests_enabled"

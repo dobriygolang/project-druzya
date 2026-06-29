@@ -38,11 +38,7 @@ func RunAPI(ctx context.Context, a *App) error {
 
 	httpMux := http.NewServeMux()
 	httpMux.HandleFunc("/healthz", ops.HealthzHandler())
-	httpMux.HandleFunc("/readyz", ops.ReadyzHandler(
-		ops.PingPostgres(a.Postgres.Pool),
-		func(ctx context.Context) error { return a.ContentConn.Ping(ctx) },
-		func(ctx context.Context) error { return a.InterviewConn.Ping(ctx) },
-	))
+	httpMux.HandleFunc("/readyz", ops.ReadyzHandler(ops.PingPostgres(a.Postgres.Pool)))
 	httpMux.Handle("/metrics", ops.MetricsHandler())
 
 	lspHandler := lspws.NewHandler(a.JWT, a.Config.DockerWorkRoot, a.Config.GoplsPath, nil)

@@ -9,9 +9,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/sedorofeevd/project-druzya/services/billing v0.0.0
-	github.com/sedorofeevd/project-druzya/services/content v0.0.0
 	github.com/sedorofeevd/project-druzya/services/identity v0.0.0
-	github.com/sedorofeevd/project-druzya/services/interview v0.0.0
 	go.uber.org/zap v1.28.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
@@ -19,9 +17,7 @@ require (
 
 replace (
 	github.com/sedorofeevd/project-druzya/services/billing => ../billing
-	github.com/sedorofeevd/project-druzya/services/content => ../content
 	github.com/sedorofeevd/project-druzya/services/identity => ../identity
-	github.com/sedorofeevd/project-druzya/services/interview => ../interview
 )
 
 require (

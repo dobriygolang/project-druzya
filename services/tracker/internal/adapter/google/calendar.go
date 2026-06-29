@@ -95,6 +95,61 @@ func (c *Client) DeleteEvent(ctx context.Context, refreshToken, eventID string) 
 	return nil
 }
 
+// CreateEventFromSchedule inserts a timed calendar event from a work-task schedule.
+func (c *Client) CreateEventFromSchedule(ctx context.Context, refreshToken, title string, start time.Time, durationMin int) (string, error) {
+	if !c.Configured() {
+		return "", fmt.Errorf("google calendar not configured")
+	}
+	svc, err := calendar.NewService(ctx, option.WithTokenSource(c.TokenSource(ctx, refreshToken)))
+	if err != nil {
+		return "", fmt.Errorf("calendar service: %w", err)
+	}
+	end := start.Add(time.Duration(durationMin) * time.Minute)
+	ev := &calendar.Event{
+		Summary: title,
+		Start: &calendar.EventDateTime{
+			DateTime: start.UTC().Format(time.RFC3339),
+			TimeZone: "UTC",
+		},
+		End: &calendar.EventDateTime{
+			DateTime: end.UTC().Format(time.RFC3339),
+			TimeZone: "UTC",
+		},
+	}
+	created, err := svc.Events.Insert("primary", ev).Context(ctx).Do()
+	if err != nil {
+		return "", fmt.Errorf("create calendar event: %w", err)
+	}
+	return created.Id, nil
+}
+
+// UpdateEventFromSchedule updates a timed calendar event from a work-task schedule.
+func (c *Client) UpdateEventFromSchedule(ctx context.Context, refreshToken, eventID, title string, start time.Time, durationMin int) error {
+	if !c.Configured() {
+		return fmt.Errorf("google calendar not configured")
+	}
+	svc, err := calendar.NewService(ctx, option.WithTokenSource(c.TokenSource(ctx, refreshToken)))
+	if err != nil {
+		return fmt.Errorf("calendar service: %w", err)
+	}
+	end := start.Add(time.Duration(durationMin) * time.Minute)
+	ev := &calendar.Event{
+		Summary: title,
+		Start: &calendar.EventDateTime{
+			DateTime: start.UTC().Format(time.RFC3339),
+			TimeZone: "UTC",
+		},
+		End: &calendar.EventDateTime{
+			DateTime: end.UTC().Format(time.RFC3339),
+			TimeZone: "UTC",
+		},
+	}
+	if _, err := svc.Events.Update("primary", eventID, ev).Context(ctx).Do(); err != nil {
+		return fmt.Errorf("update calendar event: %w", err)
+	}
+	return nil
+}
+
 func parseEventWindow(meta map[string]any, now time.Time) (start, end time.Time, allDay bool) {
 	year, month, day := now.Date()
 	if raw, ok := meta["event_date"].(string); ok && raw != "" {

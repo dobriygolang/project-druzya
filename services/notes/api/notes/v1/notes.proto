@@ -1,0 +1,328 @@
+syntax = "proto3";
+
+package notes.v1;
+
+option go_package = "github.com/sedorofeevd/project-druzya/services/notes/pkg/api/notes/v1;notesv1";
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+
+service NotesService {
+  // Vault
+  rpc InitVault(InitVaultRequest) returns (InitVaultResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/vault/init"
+      body: "*"
+    };
+  }
+
+  rpc GetVaultSalt(GetVaultSaltRequest) returns (GetVaultSaltResponse) {
+    option (google.api.http) = {
+      get: "/v1/notes/vault/salt"
+    };
+  }
+
+  rpc EncryptNote(EncryptNoteRequest) returns (EncryptNoteResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/vault/notes/{note_id}/encrypt"
+      body: "*"
+    };
+  }
+
+  rpc PermanentlyDecryptNote(PermanentlyDecryptNoteRequest) returns (PermanentlyDecryptNoteResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/vault/notes/{note_id}/decrypt"
+      body: "*"
+    };
+  }
+
+  // Notes CRUD
+  rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {
+    option (google.api.http) = {
+      get: "/v1/notes"
+    };
+  }
+
+  rpc GetNote(GetNoteRequest) returns (GetNoteResponse) {
+    option (google.api.http) = {
+      get: "/v1/notes/{id}"
+    };
+  }
+
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes"
+      body: "*"
+    };
+  }
+
+  rpc UpdateNote(UpdateNoteRequest) returns (UpdateNoteResponse) {
+    option (google.api.http) = {
+      put: "/v1/notes/{id}"
+      body: "*"
+    };
+  }
+
+  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/notes/{id}"
+    };
+  }
+
+  rpc MoveNote(MoveNoteRequest) returns (MoveNoteResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/{note_id}/move"
+      body: "*"
+    };
+  }
+
+  rpc GetNotesMeta(GetNotesMetaRequest) returns (GetNotesMetaResponse) {
+    option (google.api.http) = {
+      get: "/v1/notes/meta"
+    };
+  }
+
+  // Folders
+  rpc ListFolders(ListFoldersRequest) returns (ListFoldersResponse) {
+    option (google.api.http) = {
+      get: "/v1/notes/folders"
+    };
+  }
+
+  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/folders"
+      body: "*"
+    };
+  }
+
+  rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse) {
+    option (google.api.http) = {
+      delete: "/v1/notes/folders/{id}"
+    };
+  }
+
+  // Publish
+  rpc PublishNote(PublishNoteRequest) returns (PublishNoteResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/{note_id}/publish"
+      body: "*"
+    };
+  }
+
+  rpc UnpublishNote(UnpublishNoteRequest) returns (UnpublishNoteResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/{note_id}/unpublish"
+      body: "*"
+    };
+  }
+
+  rpc GetPublishStatus(GetPublishStatusRequest) returns (GetPublishStatusResponse) {
+    option (google.api.http) = {
+      get: "/v1/notes/{note_id}/publish-status"
+    };
+  }
+
+  rpc ShareNoteToWeb(ShareNoteToWebRequest) returns (ShareNoteToWebResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/{note_id}/share-to-web"
+      body: "*"
+    };
+  }
+
+  rpc MakeNotePrivate(MakeNotePrivateRequest) returns (MakeNotePrivateResponse) {
+    option (google.api.http) = {
+      post: "/v1/notes/{note_id}/make-private"
+      body: "*"
+    };
+  }
+}
+
+message Note {
+  string id = 1;
+  string title = 2;
+  string body_md = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+  int32 size_bytes = 6;
+  string folder_id = 7;
+  bool encrypted = 8;
+}
+
+message NoteSummary {
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  int32 size_bytes = 4;
+  string folder_id = 5;
+}
+
+message NoteMeta {
+  string id = 1;
+  bool encrypted = 2;
+  bool published = 3;
+}
+
+message Folder {
+  string id = 1;
+  string name = 2;
+  string parent_id = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message InitVaultRequest {}
+
+message InitVaultResponse {
+  string salt_b64 = 1;
+  bool initialized = 2;
+}
+
+message GetVaultSaltRequest {}
+
+message GetVaultSaltResponse {
+  string salt_b64 = 1;
+  bool initialized = 2;
+}
+
+message EncryptNoteRequest {
+  string note_id = 1;
+  string ciphertext_b64 = 2;
+}
+
+message EncryptNoteResponse {}
+
+message PermanentlyDecryptNoteRequest {
+  string note_id = 1;
+  string body_md = 2;
+}
+
+message PermanentlyDecryptNoteResponse {}
+
+message ListNotesRequest {
+  int32 limit = 1;
+  string cursor = 2;
+  string folder_id = 3;
+}
+
+message ListNotesResponse {
+  repeated NoteSummary notes = 1;
+  string next_cursor = 2;
+}
+
+message GetNoteRequest {
+  string id = 1;
+}
+
+message GetNoteResponse {
+  Note note = 1;
+}
+
+message CreateNoteRequest {
+  string title = 1;
+  string body_md = 2;
+  string folder_id = 3;
+}
+
+message CreateNoteResponse {
+  Note note = 1;
+}
+
+message UpdateNoteRequest {
+  string id = 1;
+  string title = 2;
+  string body_md = 3;
+}
+
+message UpdateNoteResponse {
+  Note note = 1;
+}
+
+message DeleteNoteRequest {
+  string id = 1;
+}
+
+message DeleteNoteResponse {}
+
+message MoveNoteRequest {
+  string note_id = 1;
+  string folder_id = 2;
+}
+
+message MoveNoteResponse {
+  Note note = 1;
+}
+
+message GetNotesMetaRequest {}
+
+message GetNotesMetaResponse {
+  repeated NoteMeta notes = 1;
+}
+
+message ListFoldersRequest {}
+
+message ListFoldersResponse {
+  repeated Folder folders = 1;
+}
+
+message CreateFolderRequest {
+  string name = 1;
+  string parent_id = 2;
+}
+
+message CreateFolderResponse {
+  Folder folder = 1;
+}
+
+message DeleteFolderRequest {
+  string id = 1;
+  bool move_notes_to_root = 2;
+}
+
+message DeleteFolderResponse {}
+
+message PublishNoteRequest {
+  string note_id = 1;
+}
+
+message PublishNoteResponse {
+  string slug = 1;
+  string url = 2;
+  google.protobuf.Timestamp published_at = 3;
+}
+
+message UnpublishNoteRequest {
+  string note_id = 1;
+}
+
+message UnpublishNoteResponse {}
+
+message GetPublishStatusRequest {
+  string note_id = 1;
+}
+
+message GetPublishStatusResponse {
+  bool published = 1;
+  string slug = 2;
+  string url = 3;
+  google.protobuf.Timestamp published_at = 4;
+}
+
+message ShareNoteToWebRequest {
+  string note_id = 1;
+  string plaintext_md = 2;
+}
+
+message ShareNoteToWebResponse {
+  string slug = 1;
+  string url = 2;
+  google.protobuf.Timestamp published_at = 3;
+  bool already_published = 4;
+}
+
+message MakeNotePrivateRequest {
+  string note_id = 1;
+  string ciphertext_b64 = 2;
+}
+
+message MakeNotePrivateResponse {}

@@ -11,26 +11,6 @@ scrape_configs:
       - targets: ["identity:8080"]
     metrics_path: /metrics
 
-  - job_name: content
-    static_configs:
-      - targets: ["content:8081"]
-    metrics_path: /metrics
-
-  - job_name: interview
-    static_configs:
-      - targets: ["interview:8082"]
-    metrics_path: /metrics
-
-  - job_name: ai
-    static_configs:
-      - targets: ["ai:8083"]
-    metrics_path: /metrics
-
-  - job_name: recommendation
-    static_configs:
-      - targets: ["recommendation:8084"]
-    metrics_path: /metrics
-
   - job_name: billing
     static_configs:
       - targets: ["billing:8085"]
@@ -46,9 +26,19 @@ scrape_configs:
       - targets: ["rooms:8087"]
     metrics_path: /metrics
 
-  - job_name: admin
+  - job_name: tracker
     static_configs:
-      - targets: ["admin:8088"]
+      - targets: ["tracker:8089"]
+    metrics_path: /metrics
+
+  - job_name: notes
+    static_configs:
+      - targets: ["notes:8090"]
+    metrics_path: /metrics
+
+  - job_name: focus
+    static_configs:
+      - targets: ["focus:8091"]
     metrics_path: /metrics
 
   - job_name: node

@@ -1,0 +1,49 @@
+appId: app.druzya.hone
+productName: Hone
+copyright: Copyright © 2026 druz9
+asar: true
+directories:
+  output: dist
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+
+# Runtime-loaded ассеты — Dock-иконка в .png формате (BrowserWindow
+# icon: и app.dock.setIcon резолвят через process.resourcesPath).
+extraResources:
+  - from: resources/icon.png
+    to: icon.png
+
+# Auto-update feed. electron-updater читает latest-mac.yml отсюда.
+# GitHub Releases — ноль-инфра, достаточно для v1 (до ~10k DAU).
+# Когда вырастем, флипаем на CDN через generic provider.
+publish:
+  provider: github
+  owner: druz9
+  repo: hone
+  # releaseType auto: stable релизы попадают в production, *-beta/*-rc —
+  # в prerelease, юзер получает то что выбрал через HONE_UPDATE_CHANNEL.
+  releaseType: release
+
+mac:
+  icon: resources/icon.icns
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize: false # ставим true и выставляем APPLE_* env в CI для signed builds
+  # druz9:// URL scheme is shared с web и cue.
+  extendInfo:
+    CFBundleURLTypes:
+      - CFBundleURLName: druz9
+        CFBundleURLSchemes:
+          - druz9
+  entitlements: resources/entitlements.mac.plist
+  entitlementsInherit: resources/entitlements.mac.plist
+
+dmg:
+  # Фон / window configuration придём когда продизайним splash.
+  artifactName: '${productName}-${version}-${arch}.${ext}'

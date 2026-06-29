@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	identityadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/identity"
-	recommendationadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/recommendation"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/model"
 )
 
@@ -15,9 +14,8 @@ func (s *trackerService) GetToday(ctx context.Context, userID string, localDate,
 	if localDate != nil {
 		date = *localDate
 	}
-	if s.recommendation != nil {
-		_ = s.recommendation.ReconcileUserPlan(ctx, userID, date, tz)
-	}
+	_ = tz
+
 	board, err := s.ensureDefaultBoard(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -37,41 +35,9 @@ func (s *trackerService) GetToday(ctx context.Context, userID string, localDate,
 			Epics:          board.Epics,
 		}, nil
 	}
-	if s.recommendation == nil {
-		view := fallbackTodayView(open, board)
-		view.LocalDate = date
-		return view, nil
-	}
-	inputs := make([]recommendationadapter.PlanTaskInput, 0, len(open))
-	for _, t := range open {
-		epicID := ""
-		if t.EpicID != nil {
-			epicID = *t.EpicID
-		}
-		inputs = append(inputs, recommendationadapter.PlanTaskInput{
-			ID: t.ID, Title: t.Title, EstimateDays: t.EstimateDays, Position: t.Position,
-			Source: string(t.Source), Metadata: t.Metadata, CreatedAt: t.CreatedAt, EpicID: epicID,
-		})
-	}
-	plan, err := s.recommendation.PlanToday(ctx, userID, date, tz, inputs)
-	if err != nil {
-		view := fallbackTodayView(open, board)
-		view.LocalDate = date
-		return view, nil
-	}
-	taskByID := map[string]model.Task{}
-	for _, t := range open {
-		taskByID[t.ID] = t
-	}
-	view := &model.TodayView{
-		BudgetUsed:     plan.BudgetUsed,
-		BudgetCapacity: plan.BudgetCapacity,
-		LocalDate:      plan.LocalDate,
-		ActiveSprint:   board.ActiveSprint,
-		Epics:          board.Epics,
-	}
-	view.TodayTasks = buildTodayEntries(plan.TodayTaskIDs, taskByID, epicNames, plan.TaskMeta)
-	view.LaterTasks = buildTodayEntries(plan.LaterTaskIDs, taskByID, epicNames, plan.TaskMeta)
+
+	view := fallbackTodayView(open, board)
+	view.LocalDate = date
 	return view, nil
 }
 
@@ -124,29 +90,6 @@ func epicNameMap(epics []model.Epic) map[string]string {
 	out := map[string]string{}
 	for _, e := range epics {
 		out[e.ID] = e.Name
-	}
-	return out
-}
-
-func buildTodayEntries(ids []string, tasks map[string]model.Task, epicNames map[string]string, meta map[string]recommendationadapter.PlanTaskMeta) []model.TodayTaskEntry {
-	out := make([]model.TodayTaskEntry, 0, len(ids))
-	for _, id := range ids {
-		t, ok := tasks[id]
-		if !ok {
-			continue
-		}
-		reason := model.TodayReasonUser
-		if m, ok := meta[id]; ok {
-			reason = recommendationadapter.ReasonFromString(m.ReasonCode)
-		}
-		epicName := ""
-		if t.EpicID != nil {
-			epicName = epicNames[*t.EpicID]
-		}
-		actionPath := actionPathFromMeta(t.Metadata)
-		out = append(out, model.TodayTaskEntry{
-			Task: t, ReasonCode: reason, EpicName: epicName, ActionPath: actionPath,
-		})
 	}
 	return out
 }

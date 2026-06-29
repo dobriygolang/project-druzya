@@ -1,0 +1,9 @@
+---
+description: Go backend conventions for focus skeleton
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go backend — focus
+
+Follow root [AGENTS.md](../../AGENTS.md#service-focus-canonical). Transport thin; logic in `internal/<domain>/service/`.

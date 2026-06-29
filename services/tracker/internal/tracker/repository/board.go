@@ -249,13 +249,17 @@ func (r *Repository) ListArchivedSprints(ctx context.Context, projectID string) 
 	return out, rows.Err()
 }
 
+const taskReturningCols = `id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, board_status, scheduled_start, scheduled_duration_min, archived_at, created_at, updated_at, completed_at`
+
+const taskSelectCols = `t.id, t.sprint_id, t.epic_id, t.title, t.done, t.position, t.estimate_days, t.source, t.metadata, t.dedup_key, t.board_status, t.scheduled_start, t.scheduled_duration_min, t.archived_at, t.created_at, t.updated_at, t.completed_at`
+
 func (r *Repository) ListTasksBySprint(ctx context.Context, sprintID string) ([]model.Task, error) {
 	sid, err := uuid.Parse(sprintID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid sprint_id: %w", err)
 	}
 	rows, err := r.conn(ctx).Query(ctx, `
-		SELECT id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+		SELECT `+taskReturningCols+`
 		FROM tasks WHERE sprint_id = $1 ORDER BY position, created_at
 	`, sid)
 	if err != nil {
@@ -318,7 +322,7 @@ func (r *Repository) CreateTask(ctx context.Context, in CreateTaskInput) (*model
 	row := r.conn(ctx).QueryRow(ctx, `
 		INSERT INTO tasks (id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key)
 		VALUES ($1, $2, $3, $4, false, COALESCE((SELECT MAX(position)+1 FROM tasks WHERE sprint_id = $2), 0), $5, $6, $7, $8)
-		RETURNING id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+		RETURNING `+taskReturningCols+`
 	`, id, sid, epicID, in.Title, in.EstimateDays, string(in.Source), meta, in.DedupKey)
 	t, err := scanTask(row)
 	if err != nil {
@@ -333,7 +337,7 @@ func (r *Repository) findTaskByDedup(ctx context.Context, sprintID, dedupKey str
 		return nil, err
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+		SELECT `+taskReturningCols+`
 		FROM tasks WHERE sprint_id = $1 AND dedup_key = $2
 	`, sid, dedupKey)
 	t, err := scanTask(row)
@@ -353,7 +357,7 @@ func (r *Repository) GetTask(ctx context.Context, taskID, userID string) (*model
 		return nil, fmt.Errorf("invalid user_id: %w", err)
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		SELECT t.id, t.sprint_id, t.epic_id, t.title, t.done, t.position, t.estimate_days, t.source, t.metadata, t.dedup_key, t.created_at, t.updated_at, t.completed_at
+		SELECT `+taskSelectCols+`
 		FROM tasks t
 		JOIN sprints s ON s.id = t.sprint_id
 		JOIN projects p ON p.id = s.project_id
@@ -416,7 +420,7 @@ func (r *Repository) UpdateTask(ctx context.Context, taskID, userID string, patc
 	row := r.conn(ctx).QueryRow(ctx, `
 		UPDATE tasks SET title = $2, done = $3, epic_id = $4, position = $5, estimate_days = $6, completed_at = $7, updated_at = now()
 		WHERE id = $1
-		RETURNING id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+		RETURNING `+taskReturningCols+`
 	`, tid, title, done, epicUUID, position, estimateDays, completedAt)
 	return scanTask(row)
 }
@@ -460,7 +464,7 @@ func (r *Repository) syncOpenDedupTask(ctx context.Context, existing *model.Task
 	row := r.conn(ctx).QueryRow(ctx, `
 		UPDATE tasks SET title = $2, estimate_days = $3, epic_id = $4, metadata = $5, updated_at = now()
 		WHERE id = $1 AND done = false
-		RETURNING id, sprint_id, epic_id, title, done, position, estimate_days, source, metadata, dedup_key, created_at, updated_at, completed_at
+		RETURNING `+taskReturningCols+`
 	`, tid, title, estimate, epicUUID, meta)
 	return scanTask(row)
 }
@@ -561,10 +565,13 @@ func scanTask(row pgx.Row) (*model.Task, error) {
 	var t model.Task
 	var id, sprintID uuid.UUID
 	var epicID *uuid.UUID
-	var source string
+	var source, boardStatus string
 	var meta []byte
 	var dedup *string
-	if err := row.Scan(&id, &sprintID, &epicID, &t.Title, &t.Done, &t.Position, &t.EstimateDays, &source, &meta, &dedup, &t.CreatedAt, &t.UpdatedAt, &t.CompletedAt); err != nil {
+	var scheduledStart *time.Time
+	var scheduledDur *int
+	var archivedAt *time.Time
+	if err := row.Scan(&id, &sprintID, &epicID, &t.Title, &t.Done, &t.Position, &t.EstimateDays, &source, &meta, &dedup, &boardStatus, &scheduledStart, &scheduledDur, &archivedAt, &t.CreatedAt, &t.UpdatedAt, &t.CompletedAt); err != nil {
 		return nil, err
 	}
 	t.ID = id.String()
@@ -574,6 +581,10 @@ func scanTask(row pgx.Row) (*model.Task, error) {
 		t.EpicID = &s
 	}
 	t.Source = model.TaskSource(source)
+	t.BoardStatus = boardStatus
+	t.ScheduledStart = scheduledStart
+	t.ScheduledDurationMin = scheduledDur
+	t.ArchivedAt = archivedAt
 	t.DedupKey = dedup
 	if len(meta) > 0 {
 		_ = json.Unmarshal(meta, &t.Metadata)

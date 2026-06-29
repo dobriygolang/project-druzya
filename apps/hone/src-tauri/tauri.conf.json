@@ -1,0 +1,36 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Hone",
+  "version": "0.0.1",
+  "identifier": "online.druz9.hone",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm run dev:vite",
+    "beforeBuildCommand": "npm run build:vite"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Hone",
+        "width": 1280,
+        "height": 840,
+        "minWidth": 960,
+        "minHeight": 620,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://esm.sh https://cdn.druz9.online; img-src 'self' data: https://druz9.online https://cdn.druz9.online; media-src 'self' https://druz9.online https://cdn.druz9.online blob:; connect-src 'self' https://druz9.online https://cdn.druz9.online https://druz9.ru https://esm.sh http://localhost:8080 ws: wss: ipc: http://ipc.localhost;"
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["druz9"]
+      }
+    }
+  }
+}

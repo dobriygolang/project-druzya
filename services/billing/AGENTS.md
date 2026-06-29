@@ -10,21 +10,23 @@ Module: `github.com/sedorofeevd/project-druzya/services/billing`
 
 Owns: plans, entitlements, subscriptions, usage counters, Tribute webhooks.
 
-Does not own: users (identity), tasks (content), attempts (interview).
+Does not own: users (identity), tasks (tracker), notes (notes service).
 
 ## Entitlements
 
-`value_json`: `{"type":"bool","value":true}` or `{"type":"counter","limit":N,"period":"day"|"month"}`.
+`value_json`: `{"type":"bool","value":true}` or `{"type":"counter","limit":N,"period":"day"|"month"}` or `{"type":"gauge","limit":N}`.
 
-Seeded in `00001_init.sql`: `free`, `pro_monthly`.
+Seeded in `00001_init.sql` + `00002_productivity_entitlements.sql`: `free`, `pro_monthly`.
 
 | Key | Free | Pro |
 |-----|------|-----|
-| ai_evaluations_per_day | 25 | 100 |
-| mock_interviews_per_month | 3 | 30 |
-| sd_ai_turns_per_month | 40 | 400 |
+| cloud_notes_count | 10 | unlimited |
+| ai_insights_per_day | 5 | 50 |
+| live_rooms_per_month | 5 | 30 |
+| live_rooms_concurrent | 1 | 5 |
 | code_runs_per_day | 50 | 500 |
-| hidden_tests_enabled | false | true |
+| ai_evaluations_per_day | 25 | 100 (ai service, CI only) |
+| mock_interviews_per_month | 3 | 30 (legacy seed) |
 
 ## API
 
@@ -35,7 +37,7 @@ Seeded in `00001_init.sql`: `free`, `pro_monthly`.
 | Grant/Revoke subscription | admin HTTP | `x-internal-token` |
 | Tribute webhook | `POST /v1/billing/webhooks/tribute` | `trbt-signature` HMAC-SHA256 hex (API key) |
 
-Consumers: **ai** (eval/day), **interview** (mock/month, company templates), **sandbox** (runs/day, hidden tests).
+Consumers: **rooms** (live rooms/month + concurrent), **sandbox** (runs/day, hidden tests), **notes** (cloud_notes_count, future), **ai** (eval/day, CI only).
 
 ## Invariants
 

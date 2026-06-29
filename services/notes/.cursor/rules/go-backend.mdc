@@ -1,0 +1,9 @@
+---
+description: Go backend conventions for notes skeleton
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go backend — notes
+
+Follow root [AGENTS.md](../../AGENTS.md#service-notes-canonical). Transport thin; logic in `internal/<domain>/service/`.

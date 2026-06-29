@@ -16,7 +16,9 @@ HTTP `8087` | gRPC `9097` | PG `5440` / `druzya_rooms`
 
 ## API
 
-REST: `POST/GET /v1/rooms/*`, guest join, invite. WS: `GET /ws/editor/{room_id}?token=JWT`.
+REST: `POST/GET /v1/rooms/*`, `POST /v1/rooms/guest-create` (no auth), guest join, invite. WS: `GET /ws/editor/{room_id}?token=JWT`.
+
+Frontend: `/live/new` — public create (guest or authed); guest flow mints scoped JWT via identity s2s.
 
 Roles: `owner`, `interviewer`, `participant`, `viewer`.
 

@@ -37,7 +37,7 @@ export default function CheckoutPage() {
   }
 
   if (billingQ.data?.plan_slug != null && billingQ.data.plan_slug !== 'free' && !billingQ.data.is_trialing) {
-    return <Navigate to="/today" replace />
+    return <Navigate to="/profile" replace />
   }
 
   const webUrl = plan?.checkout_url?.trim()

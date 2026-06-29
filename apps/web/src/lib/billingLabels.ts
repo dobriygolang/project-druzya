@@ -10,11 +10,12 @@ export type UsageLimit = {
 
 /** Preferred display order on profile. Unknown keys sort after these. */
 export const COUNTER_DISPLAY_ORDER = [
-  'mock_interviews_per_month',
-  'ai_evaluations_per_day',
+  'cloud_notes_count',
   'code_runs_per_day',
   'live_rooms_per_month',
   'live_rooms_concurrent',
+  'focus_stats_history_days',
+  'ai_insights_per_day',
 ] as const
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string

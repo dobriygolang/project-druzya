@@ -4,13 +4,12 @@
 
 1. `postgres`, `redis`
 2. `migrate` (after schema change only)
-3. `identity` → `content` → `interview` → `billing` → `sandbox` → `rooms` → `tracker`
-4. `ai`, `recommendation`
-5. `identity-bot`, `caddy`, `admin`
+3. `identity` → `billing` → `sandbox` → `rooms` → `tracker` → `notes` → `focus`
+4. `identity-bot`, `caddy`
 
 ```bash
 cd deploy
-docker compose -f docker-compose.prod.yml --env-file .env restart identity content interview billing sandbox rooms ai recommendation tracker admin caddy
+docker compose -f docker-compose.prod.yml --env-file .env restart identity billing sandbox rooms tracker notes focus caddy
 ```
 
 ## Health
@@ -30,21 +29,17 @@ docker compose -f docker-compose.prod.yml --env-file .env exec -T postgres \
   psql -U "$POSTGRES_USER" -d postgres -c 'CREATE DATABASE druzya_tracker;'
 docker compose -f docker-compose.prod.yml --env-file .env build migrate tracker caddy
 docker compose -f docker-compose.prod.yml --env-file .env run --rm migrate
-docker compose -f docker-compose.prod.yml --env-file .env up -d tracker recommendation caddy
+docker compose -f docker-compose.prod.yml --env-file .env up -d tracker notes focus caddy
 ```
 
 ## Logs
 
 ```bash
 cd deploy
-docker compose -f docker-compose.prod.yml logs -f identity ai interview
+docker compose -f docker-compose.prod.yml logs -f identity tracker
 ```
 
 ## Common fixes
-
-**ai won't start** — set `GROQ_API_KEY` (or other LLM key) + strong `INTERNAL_API_TOKEN`.
-
-**interview `/readyz` fails** — check content is healthy, `CONTENT_GRPC_ADDR=content:9091`.
 
 **sandbox timeout / go.mod not found** — `SANDBOX_DEFAULT_TIMEOUT_MS=10000`, host dir `/var/lib/sandbox-work` bind-mounted, `RUNNER_MODE=docker`.
 
@@ -56,7 +51,7 @@ Empty prod (no users):
 
 ```bash
 cd deploy
-docker compose -f docker-compose.prod.yml stop identity content interview ai recommendation billing sandbox rooms tracker admin identity-bot caddy
+docker compose -f docker-compose.prod.yml stop identity billing sandbox rooms tracker notes focus identity-bot caddy
 make reset-db
 docker compose -f docker-compose.prod.yml run --rm migrate
 docker compose -f docker-compose.prod.yml up -d
@@ -107,7 +102,7 @@ Single replica by default. Multiple pods need sticky `/ws/*` — see [services/r
 
 ## Secret rotation
 
-**INTERNAL_API_TOKEN** — update `.env`, restart ai + interview + recommendation together.
+**INTERNAL_API_TOKEN** — update `.env`, restart services that use `x-internal-token` (tracker, billing adapters, etc.).
 
 **JWT keys** — maintenance window; redeploy all JWT consumers.
 

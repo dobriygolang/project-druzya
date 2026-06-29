@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en" class="light" style="color-scheme: light;">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FAFAF8" />
+    <!--
+      CSP: Hone speaks to its own backend (druz9 monolith) over Connect-RPC.
+      `connect-src` whitelists local dev + the prod api host. If/when we
+      start loading images from a CDN or mount external fonts, extend here
+      rather than relaxing the policy globally.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data: https://esm.sh https://cdn.druz9.online; img-src 'self' data: https://druz9.online https://cdn.druz9.online; media-src 'self' https://druz9.online https://cdn.druz9.online blob:; connect-src 'self' https://druz9.online https://cdn.druz9.online https://druz9.ru https://esm.sh http://localhost:8080 ws: wss: sentry-ipc:;"
+    />
+    <title>Hone</title>
+  </head>
+  <body data-density="comfortable">
+    <div id="root"></div>
+    <script type="module" src="./src/main.tsx"></script>
+  </body>
+</html>
