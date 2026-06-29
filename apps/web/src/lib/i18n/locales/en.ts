@@ -1,4 +1,4 @@
-import type { Messages } from './ru'
+import type { Messages, TrackerMessages } from './ru'
 import { legalEn } from './legal.en'
 import { enumsEn } from '@/lib/labels/enums.en'
 
@@ -68,6 +68,7 @@ export const en: Messages = {
     epicReopen: 'Reopen epic',
     epicReopenHint: 'Need another task? Start a sprint and add a task to this epic — or reopen manually.',
     epicNoTasks: 'No tasks',
+    epicsTitleCounts: '{{open}} active · {{done}} done',
     estimateDays: 'Estimate',
     estimateDaysShort: '{{days}}d',
     sprintCapacity: '{{used}} / {{capacity}} days',
@@ -92,7 +93,7 @@ export const en: Messages = {
       connected: 'Connected',
       disconnectGoogle: 'Disconnect Google',
     },
-  },
+  } satisfies TrackerMessages,
   common: {
     loading: 'Loading…',
     error: 'Error',

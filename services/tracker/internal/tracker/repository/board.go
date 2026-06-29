@@ -79,7 +79,7 @@ func (r *Repository) ListEpicsByProject(ctx context.Context, projectID string) (
 		return nil, fmt.Errorf("invalid project_id: %w", err)
 	}
 	rows, err := r.conn(ctx).Query(ctx, `
-		SELECT e.id, e.project_id, e.name, e.position, e.status, e.created_at, e.updated_at, e.completed_at,
+		SELECT e.id, e.project_id, e.name, e.position, e.status, e.hold_open, e.created_at, e.updated_at, e.completed_at,
 		       COALESCE((SELECT COUNT(*)::int FROM tasks t
 		                 JOIN sprints s ON s.id = t.sprint_id
 		                 WHERE t.epic_id = e.id AND s.project_id = e.project_id
@@ -441,7 +441,7 @@ func scanEpic(row pgx.Row) (*model.Epic, error) {
 	var e model.Epic
 	var id, projectID uuid.UUID
 	var status string
-	if err := row.Scan(&id, &projectID, &e.Name, &e.Position, &status, &e.CreatedAt, &e.UpdatedAt, &e.CompletedAt, &e.DoneCount, &e.TotalCount); err != nil {
+	if err := row.Scan(&id, &projectID, &e.Name, &e.Position, &status, &e.HoldOpen, &e.CreatedAt, &e.UpdatedAt, &e.CompletedAt, &e.TotalCount, &e.DoneCount); err != nil {
 		return nil, err
 	}
 	e.ID = id.String()

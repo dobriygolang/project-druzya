@@ -64,6 +64,7 @@ type Epic struct {
 	Name        string
 	Position    int
 	Status      EpicStatus
+	HoldOpen    bool
 	DoneCount   int
 	TotalCount  int
 	CreatedAt   time.Time

@@ -67,6 +67,7 @@ export const ru = {
     epicReopen: 'Возобновить эпик',
     epicReopenHint: 'Нужна ещё задача? Создайте спринт и добавьте задачу к эпику — или возобновите вручную.',
     epicNoTasks: 'Нет задач',
+    epicsTitleCounts: '{{open}} в работе · {{done}} завершено',
     estimateDays: 'Оценка',
     estimateDaysShort: '{{days}} д',
     sprintCapacity: '{{used}} / {{capacity}} дн.',
@@ -642,3 +643,4 @@ type DeepStringRecord<T> = {
 }
 
 export type Messages = DeepStringRecord<typeof ru>
+export type TrackerMessages = DeepStringRecord<(typeof ru)['tracker']>

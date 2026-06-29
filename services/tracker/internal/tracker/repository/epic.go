@@ -44,6 +44,14 @@ func (r *Repository) SyncEpicStatus(ctx context.Context, epicID string) error {
 	if err != nil {
 		return fmt.Errorf("invalid epic_id: %w", err)
 	}
+	var holdOpen bool
+	err = r.conn(ctx).QueryRow(ctx, `SELECT hold_open FROM epics WHERE id = $1`, eid).Scan(&holdOpen)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
 	var total, done int
 	err = r.conn(ctx).QueryRow(ctx, `
 		SELECT
@@ -58,24 +66,29 @@ func (r *Repository) SyncEpicStatus(ctx context.Context, epicID string) error {
 	}
 	if total == 0 {
 		_, err = r.conn(ctx).Exec(ctx, `
+			UPDATE epics SET status = $2, hold_open = false, completed_at = NULL, updated_at = now()
+			WHERE id = $1
+		`, eid, model.EpicStatusOpen)
+		return err
+	}
+	if done < total {
+		_, err = r.conn(ctx).Exec(ctx, `
+			UPDATE epics SET status = $2, hold_open = false, completed_at = NULL, updated_at = now()
+			WHERE id = $1
+		`, eid, model.EpicStatusOpen)
+		return err
+	}
+	if holdOpen {
+		_, err = r.conn(ctx).Exec(ctx, `
 			UPDATE epics SET status = $2, completed_at = NULL, updated_at = now()
 			WHERE id = $1
 		`, eid, model.EpicStatusOpen)
 		return err
 	}
-	status := model.EpicStatusOpen
-	if total > 0 && done == total {
-		status = model.EpicStatusDone
-		_, err = r.conn(ctx).Exec(ctx, `
-			UPDATE epics SET status = $2, completed_at = now(), updated_at = now()
-			WHERE id = $1
-		`, eid, status)
-		return err
-	}
 	_, err = r.conn(ctx).Exec(ctx, `
-		UPDATE epics SET status = $2, completed_at = NULL, updated_at = now()
+		UPDATE epics SET status = $2, hold_open = false, completed_at = now(), updated_at = now()
 		WHERE id = $1
-	`, eid, status)
+	`, eid, model.EpicStatusDone)
 	return err
 }
 
@@ -89,7 +102,7 @@ func (r *Repository) ReopenEpic(ctx context.Context, epicID, userID string) (*mo
 		return nil, fmt.Errorf("invalid user_id: %w", err)
 	}
 	row := r.conn(ctx).QueryRow(ctx, `
-		UPDATE epics e SET status = 'open', completed_at = NULL, updated_at = now()
+		UPDATE epics e SET status = 'open', hold_open = true, completed_at = NULL, updated_at = now()
 		FROM projects p
 		WHERE e.id = $1 AND e.project_id = p.id AND p.user_id = $2
 		RETURNING e.id, e.project_id, e.name, e.position, e.status, e.created_at, e.updated_at, e.completed_at

@@ -69,7 +69,7 @@ Internal (`TrackerInternalService`, `x-internal-token`):
 ## Epics
 
 - Tasks optionally link to an epic (`epic_id`); epic progress counts **all non-archived tasks** across sprints in the project.
-- Epic `status`: `open` | `done` — auto-synced on `GetBoard` and after task changes when every linked non-archived task is `done`; reopens when a task is unchecked or a new open task is added. `ReopenEpic` forces `open` without new tasks.
+- Epic `status`: `open` | `done` — auto-synced on `GetBoard` and after task changes when every linked non-archived task is `done`; reopens when a task is unchecked or a new open task is added. `ReopenEpic` sets `hold_open=true` so sync does not immediately re-close until a new open task appears.
 
 ## Data
 
