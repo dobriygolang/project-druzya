@@ -21,9 +21,20 @@ xcode-select --install   # если ещё нет Command Line Tools
 rustup update stable
 ```
 
-### 2. Бэкенд (минимум для Today / Notes / Schedule / Stats)
+### 2. API (по умолчанию — prod)
 
-В **отдельных терминалах** из корня monorepo:
+**`npm run dev` без `.env` ходит на `https://druz9.online`** — локальный identity/tracker не нужен.
+
+Telegram-вход — как на вебе: бот `/start login` → код → `POST /v1/auth/telegram`.
+
+**Локальный microservices stack** — только если явно включили в `apps/hone/.env`:
+
+```bash
+VITE_HONE_LOCAL_API=true
+HONE_API_BASE=http://localhost:8080
+```
+
+Тогда поднимите сервисы в отдельных терминалах:
 
 ```bash
 cd services/identity && make gen-jwt-keys && make start   # :8080
@@ -32,15 +43,7 @@ cd services/notes    && make start                        # :8090
 cd services/focus    && make start                        # :8091
 ```
 
-Проверка: `curl -s http://localhost:8080/healthz` и `http://localhost:8089/healthz`.
-
-**Альтернатива без локального бэка:** в `.env` задать prod API:
-
-```bash
-VITE_DRUZ9_API_BASE=https://druz9.online
-```
-
-(нужен реальный аккаунт / токен).
+Фронт в этом режиме идёт через Vite proxy (`vite.config.ts`).
 
 ### 3. Desktop-приложение
 
@@ -49,8 +52,6 @@ cd apps/hone
 npm install --registry https://registry.npmjs.org   # если корп. registry ломает install
 npm run dev                                         # окно Tauri + Vite :5173
 ```
-
-В dev запросы идут **через Vite proxy** (`vite.config.ts`) на сервисы выше — отдельный gateway не нужен.
 
 ### 4. Вход
 
@@ -89,12 +90,13 @@ npm run icon
 
 ## Env (optional)
 
-| Variable | Default dev | Описание |
-|----------|-------------|----------|
-| `VITE_DRUZ9_API_BASE` | *(пусто → proxy)* | Явный API URL |
+| Variable | Default | Описание |
+|----------|---------|----------|
+| `VITE_DRUZ9_API_BASE` | `https://druz9.online` | API для React (override) |
+| `VITE_HONE_LOCAL_API` | off | `true` → Vite proxy на localhost |
 | `VITE_DRUZ9_DEV_TOKEN` | — | Bearer для browser-only |
-| `VITE_HONE_DEV_LOGIN` | `true` in dev / `false` in prod build | Dev login UI |
-| `HONE_API_BASE` | `http://localhost:8080` | Rust-side Telegram auth |
+| `VITE_HONE_DEV_LOGIN` | on in dev / off in prod build | Dev login UI |
+| `HONE_API_BASE` | `https://druz9.online` | Rust Telegram auth |
 
 ## MVP pages
 

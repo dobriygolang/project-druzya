@@ -15,8 +15,8 @@ function formatTime(remain: number): string {
   return `${mm}:${ss}`;
 }
 
-function modeLabel(mode: FocusMode): string {
-  return mode === 'pomodoro' ? 'Pomodoro' : 'Stopwatch';
+function modeGlyph(mode: FocusMode): string {
+  return mode === 'pomodoro' ? 'P' : 'S';
 }
 
 export function FocusDock({
@@ -31,23 +31,28 @@ export function FocusDock({
     <div className="focus-dock" aria-label="Focus timer">
       <button
         type="button"
-        className="focus-dock-btn"
+        className="focus-dock-seg focus-dock-mode"
         onClick={onToggleMode}
-        title={`Mode: ${modeLabel(mode)} — click to switch`}
+        title={`Mode: ${mode === 'pomodoro' ? 'Pomodoro' : 'Stopwatch'} — click to switch`}
+        aria-label={`Switch mode, current ${mode}`}
       >
-        {modeLabel(mode)}
+        {modeGlyph(mode)}
       </button>
+
+      <span className="focus-dock-divider" aria-hidden />
+
+      <span className="focus-dock-seg focus-dock-time" title="Reset timer">
+        <span className="focus-dock-dot" aria-hidden data-running={running} />
+        <button type="button" className="focus-dock-timer" onClick={onReset}>
+          {formatTime(remain)}
+        </button>
+      </span>
+
+      <span className="focus-dock-divider" aria-hidden />
+
       <button
         type="button"
-        className="focus-dock-timer"
-        onClick={onReset}
-        title="Reset timer"
-      >
-        {formatTime(remain)}
-      </button>
-      <button
-        type="button"
-        className="focus-dock-btn focus-dock-play"
+        className="focus-dock-seg focus-dock-play"
         onClick={onToggle}
         aria-pressed={running}
         aria-label={running ? 'Pause' : 'Start focus'}

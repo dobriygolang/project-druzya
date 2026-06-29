@@ -30,13 +30,20 @@ export default function LoginPage() {
   }, [])
 
   const botLinkName = botUsername || 'your_bot'
+  const botUrl = `https://t.me/${botLinkName}?start=login`
+  const trimmedCode = code.trim()
+  const hasCode = trimmedCode.length > 0
 
   async function onTelegramSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!hasCode) {
+      window.location.href = botUrl
+      return
+    }
     setError(null)
     setBusy(true)
     try {
-      await authTelegram(code)
+      await authTelegram(trimmedCode)
       navigate(next, { replace: true })
     } catch (err) {
       setError(err instanceof Error ? err.message : t('login.loginError'))
@@ -114,8 +121,8 @@ export default function LoginPage() {
                 maxLength={16}
               />
             </div>
-            <Button type="submit" className="w-full" loading={busy} disabled={code.trim().length < 4}>
-              {t('login.submitTelegram')}
+            <Button type="submit" className="w-full" loading={busy}>
+              {hasCode ? t('login.submitTelegram') : t('login.openTelegramBot')}
             </Button>
           </form>
 

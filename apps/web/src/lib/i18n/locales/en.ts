@@ -87,6 +87,7 @@ export const en: Messages = {
     telegramHintOpen: 'Open',
     telegramHintAfter: ', send /start login, and enter the code from the bot.',
     submitTelegram: 'Sign in with Telegram',
+    openTelegramBot: 'Open bot in Telegram',
     submitYandex: 'Sign in with Yandex',
     autoRegister: 'No account? Registration happens automatically on first sign-in.',
   },
@@ -127,43 +128,48 @@ export const en: Messages = {
     goWelcome: 'Back to home',
   },
   welcome: {
-    pill: 'Accepting early access',
+    version: '0.0.1',
+    pill: 'ACCEPTING EARLY ACCESS',
     navPhilosophy: 'Philosophy',
-    navDownload: 'Get Hone',
     heroLine1: 'Deep focus.',
     heroLine2: 'Beautiful design.',
     heroLine3: 'Made for builders.',
     heroBody:
-      'A calm workspace in one place — notes, tasks, and focus — for builders who want clarity.',
-    heroPlatforms: 'macOS & Windows desktop app',
+      'Minimal workspace in one calm place - notes, tasks, focus, for builders who want clarity.',
+    preparingDownload: 'Preparing download',
     downloadCta: 'Download Hone',
     downloadStarted: 'Download started',
-    earlyAccessCta: 'Join early access',
-    philosophyTitle: 'Our philosophy',
-    philosophyParagraphs:
-      'This isn’t just another todo list.\nIt’s a space where builders come to focus and create.\nYou don’t get lost in tabs. You don’t jump between Notion, Trello, pomodoro, and music apps.\nEverything works in one keystroke — simple and beautiful.\nToo many tools are noisy and overwhelming. They demand attention when you want to focus.\nSo we removed everything that doesn’t matter and kept flow, planning, clarity, and focus.\nWhen you sit down at your desk and open Hone, you feel calm, ready, and in control.\nThis isn’t about hustle. It’s about building what you love and honoring your time.',
-    philosophySignoff: '— the builder (just like you).',
-    featuresEyebrow: 'Workspace',
-    featuresTitle: 'Everything you need to ship',
-    featuresBody:
-      'Daily planning, encrypted notes, focus stats, and guest collab rooms — without switching apps.',
-    featScheduleTitle: 'Infinite daily plan',
-    featScheduleText:
-      'Schedule tasks across the week with durations, epics, and Google Calendar sync.',
-    featNotesTitle: 'Obsidian-like notes',
-    featNotesText:
-      'Markdown editor, folders, wikilinks, and an optional encrypted vault for sync-only E2EE.',
-    featFocusTitle: 'Focus & pomodoro',
-    featFocusText:
-      'Built-in timer, streaks, and activity stats so you see where your attention goes.',
-    featLiveTitle: 'Live collab rooms',
-    featLiveText: 'Share a link for real-time code or whiteboard sessions — no signup required.',
-    featLiveCta: 'Create a room →',
-    pricingEyebrow: 'Pricing',
-    pricingTitle: 'Free is enough to start',
-    pricingBody: '14 days of Pro free — no card required. Manage billing from your account.',
-    pricingMore: 'Compare plans and get Pro →',
-    footerTagline: 'Deep focus workspace for builders — notes, tasks, and pomodoro in one calm app.',
+    philosophyTitle: 'Our Philosophy',
+    philosophyBody:
+      'hone - isn’t just another todo list.\n' +
+      'it’s a space, where builders just like you come, focus, and create.\n' +
+      '\n' +
+      'you don’t get lost in tabs.\n' +
+      'you don’t jump between notion/trello/pomodoro/music apps.\n' +
+      'everything just works, simple and beautiful, in one keystroke.\n' +
+      '\n' +
+      'i built this because too many tools are noisy, complicated, overwhelming.\n' +
+      'they demand your attention when you want to focus.\n' +
+      'they distract you when you should be creating.\n' +
+      'so i removed everything that doesn’t matter (for me, at least). and kept flow, planning, clarity, focus.\n' +
+      '\n' +
+      'when you sit down at your desk, open this app -\n' +
+      'you’ll feel calm.\n' +
+      'you’ll feel ready.\n' +
+      'you’ll feel in control.\n' +
+      '\n' +
+      'this isn’t about hustle.\n' +
+      'it’s about creating awesome things.\n' +
+      'about building what you love.\n' +
+      'about honoring your time, your attention, and your creativity.\n' +
+      '\n' +
+      'if you care about what you build - and how you build it -\n' +
+      'then this is for you.\n' +
+      '\n' +
+      'welcome to your workspace.\n' +
+      '\n' +
+      '- the builder (just like you).',
+    footerCopyright: '© {{year}} Hone. All rights reserved.',
   },
   live: {
     brand: 'Hone live',

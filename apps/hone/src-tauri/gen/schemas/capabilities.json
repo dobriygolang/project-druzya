@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Default Hone capabilities","local":true,"windows":["main"],"permissions":["core:default","shell:allow-open","deep-link:default","store:default"]}}
+{"default":{"identifier":"default","description":"Default Hone capabilities","local":true,"windows":["main"],"permissions":["core:default","opener:default","deep-link:default","store:default"]}}

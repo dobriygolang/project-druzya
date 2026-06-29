@@ -7,6 +7,14 @@ export default {
   theme: {
     extend: {
       colors: {
+        winter: {
+          bg: '#050505',
+          card: '#0f0f0f',
+          border: '#27272a',
+          text: '#e4e4e7',
+          muted: '#a1a1aa',
+          accent: '#ffffff',
+        },
         bg: 'rgb(var(--color-bg) / <alpha-value>)',
         surface: {
           1: 'rgb(var(--color-surface-1) / <alpha-value>)',
@@ -40,6 +48,15 @@ export default {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         display: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SF Mono', 'Menlo', 'monospace'],
+      },
+      keyframes: {
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        fadeInUp: 'fadeInUp 0.8s ease-out forwards',
       },
       fontSize: {
         h1: ['48px', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '800' }],

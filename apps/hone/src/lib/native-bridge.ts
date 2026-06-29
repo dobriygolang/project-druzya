@@ -11,8 +11,6 @@ import {
   type FocusModeResult,
   type HoneAPI,
   type PomodoroSnapshot,
-  type TelegramPollResult,
-  type TelegramStart,
 } from '@shared/ipc';
 
 function isTauri(): boolean {
@@ -28,8 +26,6 @@ export function installNativeBridge(): void {
       session: () => invoke<AuthSession | null>('auth_session'),
       persist: (s) => invoke('auth_persist', { session: s }),
       logout: () => invoke('auth_logout'),
-      tgStart: () => invoke<TelegramStart>('auth_tg_start'),
-      tgPoll: (code) => invoke<TelegramPollResult>('auth_tg_poll', { code }),
     },
     pomodoro: {
       load: () => invoke<PomodoroSnapshot | null>('pomodoro_load'),

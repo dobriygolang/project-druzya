@@ -106,6 +106,25 @@
   body.v2 ::-webkit-scrollbar-thumb:hover {
     background: rgb(var(--color-text-muted));
   }
+
+  body.landing-page {
+    background: #050505;
+    color: #e4e4e7;
+  }
+
+  body.landing-page ::-webkit-scrollbar {
+    width: 8px;
+  }
+  body.landing-page ::-webkit-scrollbar-track {
+    background: #050505;
+  }
+  body.landing-page ::-webkit-scrollbar-thumb {
+    background: #27272a;
+    border-radius: 4px;
+  }
+  body.landing-page ::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
 }
 
 @layer components {

@@ -646,18 +646,79 @@ input {
   background: rgb(255 255 255 / 0.28);
 }
 
+.login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(280px, 100%);
+}
+
+.login-hint {
+  margin: 0 0 14px;
+  max-width: 260px;
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 0.45);
+  text-align: center;
+}
+
+.login-hint-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgb(255 255 255 / 0.75);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.login-code-input {
+  box-sizing: border-box;
+  width: 156px;
+  height: 32px;
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgb(255 255 255 / 0.18);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 0.04);
+  color: #fff;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.login-code-input::placeholder {
+  color: rgb(255 255 255 / 0.28);
+  letter-spacing: 0.04em;
+}
+
+.login-code-input:focus {
+  border-color: rgb(255 255 255 / 0.35);
+}
+
 .login-tg-btn {
-  width: 168px;
-  height: 48px;
+  box-sizing: border-box;
+  width: 156px;
+  height: 32px;
+  padding: 8px 10px;
   border: none;
   border-radius: 8px;
   background: #fff;
+  color: #0a0a0a;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: transform var(--motion-dur-small) var(--motion-ease-standard),
     opacity var(--motion-dur-small) var(--motion-ease-standard);
+}
+
+.login-tg-icon {
+  display: block;
+  flex-shrink: 0;
 }
 
 .login-tg-btn:hover:not(:disabled) {
@@ -764,12 +825,99 @@ input {
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
-  border-radius: 14px;
+  gap: 0;
+  padding: 4px;
+  border-radius: 999px;
   border: 1px solid var(--ink-tint-08);
   background: var(--surface);
   z-index: 15;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.5);
+}
+
+.focus-dock-seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--ink-60);
+  cursor: pointer;
+}
+
+.focus-dock-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 0;
+  background: var(--ink-tint-08);
+}
+
+.focus-dock-mode {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-40);
+  border-radius: 999px;
+  transition: color var(--motion-dur-small) var(--motion-ease-standard),
+    background var(--motion-dur-small) var(--motion-ease-standard);
+}
+
+.focus-dock-mode:hover {
+  color: var(--ink);
+  background: var(--ink-tint-06);
+}
+
+.focus-dock-time {
+  gap: 8px;
+  padding: 0 6px 0 10px;
+}
+
+.focus-dock-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--ink-tint-20);
+  transition: background var(--motion-dur-small) var(--motion-ease-standard);
+}
+
+.focus-dock-dot[data-running='true'] {
+  background: var(--red);
+  box-shadow: 0 0 8px rgb(255 59 48 / 0.6);
+}
+
+.focus-dock-timer {
+  min-width: 64px;
+  padding: 6px 4px;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.focus-dock-timer:hover {
+  color: var(--ink-90);
+}
+
+.focus-dock-play {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--ink-tint-06);
+  border-radius: 999px;
+  transition: background var(--motion-dur-small) var(--motion-ease-standard);
+}
+
+.focus-dock-play:hover {
+  background: var(--ink-tint-12);
 }
 
 .focus-dock-btn {
@@ -790,27 +938,93 @@ input {
   color: var(--ink);
 }
 
-.focus-dock-timer {
-  min-width: 72px;
-  padding: 6px 12px;
-  border: none;
-  border-radius: 8px;
-  background: var(--ink-tint-04);
-  color: var(--ink);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 14px;
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-}
-
-.focus-dock-play {
-  font-size: 14px;
-  padding: 6px 12px;
-}
-
 .home-page {
   position: absolute;
   inset: 0;
+  background-color: #000;
+  background-image: url('../assets/home-bg.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+.home-page::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgb(0 0 0 / 0.72) 0%, rgb(0 0 0 / 0) 42%),
+    radial-gradient(120% 80% at 100% 0%, rgb(0 0 0 / 0.66) 0%, rgb(0 0 0 / 0) 42%),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.35) 0%, rgb(0 0 0 / 0) 26%, rgb(0 0 0 / 0) 60%, rgb(0 0 0 / 0.55) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.home-header,
+.home-idle,
+.home-pinned,
+.home-stop-btn,
+.home-reflection {
+  z-index: 1;
+}
+
+.home-header {
+  position: absolute;
+  top: 28px;
+  left: 32px;
+  right: 32px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.home-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.home-brand-name {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.home-brand-rule {
+  display: block;
+  width: 44px;
+  height: 1px;
+  margin: 10px 0 8px;
+  background: var(--ink-tint-20);
+}
+
+.home-brand-sub {
+  margin: 0;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-40);
+}
+
+.home-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--ink-40);
+  letter-spacing: 0.04em;
+}
+
+.home-meta-line {
+  line-height: 1.2;
 }
 
 .home-idle {
@@ -821,6 +1035,13 @@ input {
   height: 100%;
   padding: 24px;
   text-align: center;
+}
+
+.home-idle-hint {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-40);
 }
 
 .home-title {
@@ -850,16 +1071,6 @@ input {
   width: 24px;
   height: 1.5px;
   background: var(--red);
-}
-
-.home-corner-timer {
-  position: absolute;
-  top: 36px;
-  right: 36px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
-  color: var(--ink-40);
-  opacity: 0.7;
 }
 
 .home-stop-btn {

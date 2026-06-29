@@ -2,6 +2,8 @@ import { memo, useEffect, useRef, useState } from 'react';
 
 import type { ReflectionPrompt } from '../hooks/useFocusSession';
 
+const APP_VERSION = 'v0.1.0';
+
 interface HomePageProps {
   running: boolean;
   remain: number;
@@ -42,13 +44,25 @@ function HomePageImpl({
 }: HomePageProps) {
   const mm = String(Math.floor(remain / 60)).padStart(2, '0');
   const ss = String(remain % 60).padStart(2, '0');
+  const metaClock = running ? `${mm}${ss}` : '0000';
 
   return (
     <div className="home-page">
+      <header className="home-header">
+        <div className="home-brand">
+          <h1 className="home-brand-name">HONE</h1>
+          <span className="home-brand-rule" aria-hidden />
+          <p className="home-brand-sub">focus workspace</p>
+        </div>
+        <div className="home-meta" aria-hidden>
+          <span className="home-meta-line">{metaClock}</span>
+          <span className="home-meta-line">{APP_VERSION}</span>
+        </div>
+      </header>
+
       {!running && !reflectionPrompt && (
         <div className="home-idle">
-          <h2 className="home-title">Focus</h2>
-          <p className="home-hint">Start a session with the timer below.</p>
+          <p className="home-idle-hint">Press play to begin a focus session.</p>
         </div>
       )}
 
@@ -56,12 +70,6 @@ function HomePageImpl({
         <div className="home-pinned" style={captionMono}>
           <span aria-hidden="true" className="home-pinned-stripe" />
           <span>Working on · {pinnedTitle.toUpperCase()}</span>
-        </div>
-      )}
-
-      {running && (
-        <div className="home-corner-timer" aria-live="off" title={`${mm}:${ss}`}>
-          {mm}:{ss}
         </div>
       )}
 
