@@ -169,16 +169,6 @@ func (s *recommendationService) maybePushWeakSkillPractice(ctx context.Context, 
 	return nil
 }
 
-func metaEpicName(meta map[string]any) *string {
-	if book, ok := meta["book"].(string); ok && book != "" {
-		return &book
-	}
-	if hint, ok := meta["epic_hint"].(string); ok && hint != "" {
-		return &hint
-	}
-	return nil
-}
-
 func (s *recommendationService) maybeSmartParseTask(
 	ctx context.Context,
 	userID, taskID, title, kind string,
