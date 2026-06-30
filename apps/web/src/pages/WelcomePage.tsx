@@ -1,30 +1,20 @@
-import { useEffect } from 'react'
 import { LandingDownloadProvider } from '@/lib/landing/useLandingDownload'
 import { LandingDownloadToast } from '@/components/landing/LandingDownloadButton'
 import { LandingFooter } from '@/components/landing/LandingFooter'
 import { LandingHero } from '@/components/landing/LandingHero'
 import { LandingNav } from '@/components/landing/LandingNav'
 import { LandingPhilosophy } from '@/components/landing/LandingPhilosophy'
+import { SiteThemeShell, useSiteTheme } from '@/lib/site/useSiteTheme'
 
 export default function WelcomePage() {
-  useEffect(() => {
-    const html = document.documentElement
-    const prevScroll = html.style.scrollBehavior
-    html.style.scrollBehavior = 'smooth'
-    html.classList.remove('light')
-    html.classList.add('dark')
-    document.body.classList.add('landing-page')
-    return () => {
-      html.style.scrollBehavior = prevScroll
-      html.classList.remove('dark')
-      html.classList.add('light')
-      document.body.classList.remove('landing-page')
-    }
-  }, [])
+  const { theme } = useSiteTheme()
 
   return (
-    <LandingDownloadProvider>
-      <div className="min-h-screen bg-winter-bg font-sans text-winter-text selection:bg-white/20 selection:text-white">
+    <SiteThemeShell
+      theme={theme}
+      className="min-h-screen bg-site-bg font-sans text-site-text selection:bg-site-accent/20 selection:text-site-text"
+    >
+      <LandingDownloadProvider>
         <LandingNav />
         <main>
           <LandingHero />
@@ -32,7 +22,7 @@ export default function WelcomePage() {
         </main>
         <LandingFooter />
         <LandingDownloadToast />
-      </div>
-    </LandingDownloadProvider>
+      </LandingDownloadProvider>
+    </SiteThemeShell>
   )
 }

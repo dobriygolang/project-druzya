@@ -35,7 +35,7 @@ import {
   persistGuestToken,
   readGuestToken,
 } from '@/lib/api/rooms'
-import { readAccessToken } from '@/lib/apiClient'
+import { readAccessToken, hasValidAccessToken } from '@/lib/apiClient'
 import { markInviteCopied, readInviteCopied } from '@/lib/live/useCreateLiveRoom'
 import { liveWsStatusLabel, useI18n } from '@/lib/i18n'
 
@@ -70,7 +70,7 @@ export default function CollabRoomPage() {
   const [fontSize, setFontSize] = useState(14)
   const [peers, setPeers] = useState<CollabPeer[]>([])
   const isNew = roomId === 'new'
-  const authed = !!readAccessToken()
+  const authed = hasValidAccessToken()
   const hasSession = authed || !!guestToken
 
   const meQ = useQuery({ queryKey: ['me'], queryFn: getMe, enabled: authed })

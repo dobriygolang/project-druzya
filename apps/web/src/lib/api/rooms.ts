@@ -127,7 +127,7 @@ export async function createGuestRoom(input: {
     body: JSON.stringify({
       display_name: input.displayName.trim() || 'guest',
       language: input.language ?? 'go',
-      room_type: input.roomType ?? 'interview',
+      room_type: input.roomType ?? 'practice',
     }),
   })
   if (!res.ok) {

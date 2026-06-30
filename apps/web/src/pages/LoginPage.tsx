@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Logo } from '@/components/brand/Logo'
-import { LocaleSwitcher } from '@/components/LocaleSwitcher'
-import { PublicPageShell } from '@/components/brand/PublicNav'
-import { brand } from '@/lib/brand/tokens'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
 import { authTelegram, getAuthConfig, getYandexAuthURL } from '@/lib/api/auth'
 import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n'
@@ -21,7 +18,6 @@ export default function LoginPage() {
   const [botUsername, setBotUsername] = useState(DEFAULT_BOT)
 
   useEffect(() => {
-    document.documentElement.classList.add('light')
     getAuthConfig()
       .then((cfg) => {
         if (cfg.telegram_bot_username) setBotUsername(cfg.telegram_bot_username)
@@ -68,22 +64,12 @@ export default function LoginPage() {
 
   return (
     <PublicPageShell>
-      <header className="border-b px-6 py-5 sm:px-8" style={{ borderColor: brand.hair }}>
-        <div className="mx-auto flex max-w-[1200px] items-center justify-between">
-          <Logo to="/welcome" />
-          <div className="flex items-center gap-3">
-            <LocaleSwitcher compact />
-            <Link to="/welcome" className="text-[13.5px] text-text-secondary no-underline">
-              {t('public.back')}
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PublicNav />
 
-      <main className="flex flex-1 justify-center px-6 pb-16 pt-20 sm:px-8 sm:pt-24">
+      <main className="mx-auto flex max-w-7xl flex-1 justify-center px-6 pb-16 pt-12 sm:px-8 sm:pt-16">
         <div className="w-full max-w-[400px]">
-          <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.02em]">{t('login.title')}</h1>
-          <p className="mt-2.5 text-[14.5px] leading-relaxed text-text-secondary">{t('login.subtitle')}</p>
+          <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-site-text">{t('login.title')}</h1>
+          <p className="mt-2.5 text-[14.5px] leading-relaxed text-site-muted">{t('login.subtitle')}</p>
 
           {error ? (
             <div
@@ -96,16 +82,16 @@ export default function LoginPage() {
 
           <form onSubmit={(e) => void onTelegramSubmit(e)} className="mt-8 space-y-4">
             <div>
-              <label htmlFor="tg-code" className="block text-sm font-medium">
+              <label htmlFor="tg-code" className="block text-sm font-medium text-site-text">
                 {t('login.telegram')}
               </label>
-              <p className="mt-1 text-xs text-text-secondary">
+              <p className="mt-1 text-xs text-site-muted">
                 {t('login.telegramHintOpen')}{' '}
                 <a
                   href={`https://t.me/${botLinkName}?start=login`}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-text-primary underline"
+                  className="text-site-text underline"
                 >
                   @{botLinkName}
                 </a>
@@ -116,7 +102,7 @@ export default function LoginPage() {
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="ABCD1234"
-                className="mono mt-2 w-full rounded-xl border border-border bg-surface-1 px-3 py-2.5 text-sm outline-none focus:border-border-strong"
+                className="mono mt-2 w-full rounded-xl border border-site-border bg-site-bg px-3 py-2.5 text-sm text-site-text outline-none focus:border-site-muted"
                 autoComplete="one-time-code"
                 maxLength={16}
               />
@@ -127,15 +113,15 @@ export default function LoginPage() {
           </form>
 
           <div className="relative my-5 text-center">
-            <span className="absolute inset-x-0 top-1/2 h-px bg-border" />
-            <span className="relative bg-bg px-3 text-[13px] text-text-secondary">{t('common.or')}</span>
+            <span className="absolute inset-x-0 top-1/2 h-px bg-site-border" />
+            <span className="relative bg-site-bg px-3 text-[13px] text-site-muted">{t('common.or')}</span>
           </div>
 
           <Button variant="ghost" className="w-full" loading={busy} onClick={() => void onYandex()}>
             {t('login.submitYandex')}
           </Button>
 
-          <p className="mt-8 text-center text-xs text-text-secondary">{t('login.autoRegister')}</p>
+          <p className="mt-8 text-center text-xs text-site-muted">{t('login.autoRegister')}</p>
         </div>
       </main>
     </PublicPageShell>

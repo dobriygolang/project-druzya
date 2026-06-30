@@ -38,7 +38,7 @@ export function Logo({ to = '/welcome', size = 'md', tone = 'light', className }
   const inner = (
     <span className={cn('inline-flex items-center gap-2.5', className)}>
       <HoneMark size={size} tone={tone} />
-      <span className={cn('font-semibold tracking-[-0.03em]', nameSize, tone === 'dark' ? 'text-white' : 'text-text-primary')}>
+      <span className={cn('font-semibold tracking-[-0.03em]', nameSize, tone === 'dark' ? 'text-white' : 'text-site-text')}>
         Hone
       </span>
     </span>

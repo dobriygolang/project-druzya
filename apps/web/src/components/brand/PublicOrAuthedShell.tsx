@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { AppShell } from '@/components/AppShell'
 import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
-import { readAccessToken } from '@/lib/apiClient'
+import { hasValidAccessToken } from '@/lib/apiClient'
 
 type LinkItem = { href: string; label: string; external?: boolean }
 
@@ -15,7 +15,7 @@ type Props = {
 }
 
 export function PublicOrAuthedShell({ children, publicNav }: Props) {
-  const isAuthed = !!readAccessToken()
+  const isAuthed = hasValidAccessToken()
 
   if (isAuthed) {
     return <AppShell>{children}</AppShell>

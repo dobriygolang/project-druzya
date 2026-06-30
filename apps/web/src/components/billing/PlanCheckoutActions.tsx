@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n'
+import { siteAwareClasses } from '@/lib/site/publicClasses'
 import type { BillingMe, PlanCatalogEntry } from '@/lib/types'
 
 export function PlanCheckoutActions({
@@ -25,6 +26,7 @@ export function PlanCheckoutActions({
   onStartTrial: () => void | Promise<void>
 }) {
   const { t } = useI18n()
+  const c = siteAwareClasses(isAuthed)
   const returnUrl = `${window.location.origin}/pricing?paid=1`
   const trialDays = plan.trial_days ?? billing?.trial_days ?? 14
   const showTrialStart = !!billing?.trial_available && !billing?.is_trialing
@@ -49,7 +51,7 @@ export function PlanCheckoutActions({
   const hasCheckout = !!(webUrl || tgUrl)
 
   if (meLoading) {
-    return <p className="mt-6 text-center text-xs text-text-muted">{t('common.loading')}</p>
+    return <p className={`mt-6 text-center text-xs ${c.muted}`}>{t('common.loading')}</p>
   }
 
   return (
@@ -60,24 +62,24 @@ export function PlanCheckoutActions({
             {trialLoading ? t('common.loading') : t('pricing.startTrial', { days: trialDays })}
           </Button>
           {trialError ? <p className="text-center text-xs text-danger">{trialError}</p> : null}
-          <p className="text-center text-[11px] text-text-muted">{t('pricing.trialThenPay', { days: trialDays })}</p>
+          <p className={`text-center text-[11px] ${c.muted}`}>{t('pricing.trialThenPay', { days: trialDays })}</p>
         </>
       ) : null}
 
       {isTrialing ? (
-        <p className="text-center text-xs text-text-secondary">{t('pricing.trialActivePayHint')}</p>
+        <p className={`text-center text-xs ${c.secondary}`}>{t('pricing.trialActivePayHint')}</p>
       ) : null}
 
       {!showTrialStart && !hasCheckout && !isTrialing ? (
-        <p className="mt-6 text-center text-xs text-text-muted">{t('pricing.checkoutUnavailable')}</p>
+        <p className={`mt-6 text-center text-xs ${c.muted}`}>{t('pricing.checkoutUnavailable')}</p>
       ) : null}
 
       {(isTrialing || !showTrialStart) && hasCheckout ? (
         <>
           {!hasTelegram ? (
-            <p className="text-center text-xs text-text-secondary">
+            <p className={`text-center text-xs ${c.secondary}`}>
               {t('pricing.linkTelegramFirst')}{' '}
-              <Link to="/login" className="underline underline-offset-2 hover:text-text-primary">
+              <Link to="/login" className={c.link}>
                 {t('pricing.linkTelegramAction')}
               </Link>
             </p>
@@ -97,12 +99,12 @@ export function PlanCheckoutActions({
             </a>
           ) : null}
           {(webUrl || tgUrl) && hasTelegram ? (
-            <Link to={`/checkout/${plan.slug}`} className="block text-center text-xs text-text-muted underline underline-offset-2">
+            <Link to={`/checkout/${plan.slug}`} className={`block text-center text-xs ${c.muted} underline underline-offset-2`}>
               {t('checkout.eyebrow')}
             </Link>
           ) : null}
           {!isTrialing ? (
-            <p className="text-center text-[11px] text-text-muted">
+            <p className={`text-center text-[11px] ${c.muted}`}>
               {t('pricing.returnAfterPay', { url: returnUrl })}
             </p>
           ) : null}

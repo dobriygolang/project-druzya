@@ -2,14 +2,14 @@ mod auth;
 mod focus;
 mod store;
 
-use auth::{AuthSession};
+use auth::{AuthSession, TelegramPollResult, TelegramStart};
 use store::PomodoroSnapshot;
 use tauri::{AppHandle, Emitter};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
@@ -18,7 +18,7 @@ pub fn run() {
             {
                 use tauri_plugin_deep_link::DeepLinkExt;
                 let h = handle.clone();
-                let _ = app.deep_link().on_open_url(move |event| {
+                app.deep_link().on_open_url(move |event| {
                     for url in event.urls() {
                         let _ = h.emit("app:deep-link", DeepLinkPayload {
                             url: url.to_string(),
@@ -32,6 +32,8 @@ pub fn run() {
             auth_session,
             auth_persist,
             auth_logout,
+            auth_tg_start,
+            auth_tg_poll,
             pomodoro_load,
             pomodoro_save,
             shell_open_external,
@@ -81,6 +83,16 @@ fn auth_logout(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn auth_tg_start(app: AppHandle) -> Result<TelegramStart, String> {
+    auth::telegram_start(&app).await
+}
+
+#[tauri::command]
+async fn auth_tg_poll(app: AppHandle, code: String) -> Result<TelegramPollResult, String> {
+    auth::telegram_poll(&app, &code).await
+}
+
+#[tauri::command]
 fn pomodoro_load(app: AppHandle) -> Result<Option<PomodoroSnapshot>, String> {
     store::load_pomodoro(&app)
 }
@@ -92,9 +104,9 @@ fn pomodoro_save(app: AppHandle, snapshot: PomodoroSnapshot) -> Result<(), Strin
 
 #[tauri::command]
 async fn shell_open_external(app: AppHandle, url: String) -> Result<(), String> {
-    use tauri_plugin_opener::OpenerExt;
-    app.opener()
-        .open_url(url, None::<&str>)
+    use tauri_plugin_shell::ShellExt;
+    app.shell()
+        .open(url, None)
         .map_err(|e| e.to_string())?;
     Ok(())
 }

@@ -125,6 +125,42 @@
   body.landing-page ::-webkit-scrollbar-thumb:hover {
     background: #3f3f46;
   }
+
+  [data-site-theme='dark'] {
+    --site-bg: 5 5 5;
+    --site-surface: 8 8 8;
+    --site-card: 15 15 15;
+    --site-border: 39 39 42;
+    --site-text: 228 228 231;
+    --site-muted: 161 161 170;
+    --site-accent: 255 255 255;
+    --site-accent-fg: 0 0 0;
+    --site-glow: 255 255 255;
+    --site-hero-gradient-to: 75 85 99;
+  }
+
+  [data-site-theme='light'] {
+    --site-bg: 250 250 248;
+    --site-surface: 255 255 255;
+    --site-card: 255 255 255;
+    --site-border: 232 232 230;
+    --site-text: 15 15 15;
+    --site-muted: 113 113 122;
+    --site-accent: 15 15 15;
+    --site-accent-fg: 250 250 248;
+    --site-glow: 255 59 48;
+    --site-hero-gradient-to: 142 142 142;
+  }
+
+  body.site-public {
+    background: rgb(var(--site-bg));
+    color: rgb(var(--site-text));
+  }
+
+  body.site-public ::selection {
+    background: rgb(var(--site-accent) / 0.2);
+    color: rgb(var(--site-text));
+  }
 }
 
 @layer components {

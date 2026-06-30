@@ -1,0 +1,21 @@
+[[permission]]
+identifier = "allow-hone-commands"
+description = "Hone custom invoke handlers (auth, vault, pomodoro, focus, shell)."
+commands.allow = [
+  "auth_session",
+  "auth_persist",
+  "auth_logout",
+  "auth_tg_start",
+  "auth_tg_poll",
+  "pomodoro_load",
+  "pomodoro_save",
+  "shell_open_external",
+  "vault_pass_load",
+  "vault_pass_save",
+  "vault_pass_clear",
+  "focus_mode_start",
+  "focus_mode_stop",
+  "tray_update",
+  "window_traffic_lights_show",
+  "updater_install",
+]

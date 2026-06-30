@@ -38,7 +38,7 @@ export function LandingDownloadButton({ compact, className }: Props) {
       disabled={preparing}
       onClick={onDownload}
       className={cn(
-        'group relative inline-flex items-center justify-center overflow-hidden rounded-md bg-winter-accent font-medium text-black shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-200 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-winter-bg disabled:pointer-events-none disabled:opacity-50',
+        'group relative inline-flex items-center justify-center overflow-hidden rounded-md bg-site-accent font-medium text-site-accent-fg shadow-[0_0_15px_rgba(255,255,255,0.1)] transition-all duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-site-bg disabled:pointer-events-none disabled:opacity-50',
         compact ? 'h-9 px-4 py-2 text-sm' : 'px-6 py-3 text-sm',
         className,
       )}
@@ -57,7 +57,7 @@ export function LandingDownloadToast() {
   return (
     <div
       className={cn(
-        'pointer-events-none fixed bottom-6 right-6 z-50 rounded-full border border-white/15 bg-black/70 px-4 py-2 text-xs text-white/80 shadow-lg backdrop-blur-md transition-all duration-300',
+        'pointer-events-none fixed bottom-6 right-6 z-50 rounded-full border border-site-border bg-site-card/90 px-4 py-2 text-xs text-site-muted shadow-lg backdrop-blur-md transition-all duration-300',
         downloaded ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0',
       )}
     >

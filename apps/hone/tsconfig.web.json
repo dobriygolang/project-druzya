@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowJs": true,
+    "composite": true,
+    "paths": {
+      "@app/*": ["./src/renderer/src/app/*"],
+      "@pages/*": ["./src/renderer/src/pages/*"],
+      "@widgets/*": ["./src/renderer/src/widgets/*"],
+      "@features/*": ["./src/renderer/src/features/*"],
+      "@shared/*": ["./src/renderer/src/shared/*"],
+      "@platform/*": ["./src/renderer/src/platform/*"],
+      "@d9-i18n": ["../shared/i18n"],
+      "@d9-i18n/*": ["../shared/i18n/*"],
+      "@bufbuild/protobuf": ["./node_modules/@bufbuild/protobuf"],
+      "@connectrpc/connect": ["./node_modules/@connectrpc/connect"],
+      "@connectrpc/connect-web": ["./node_modules/@connectrpc/connect-web"]
+    }
+  },
+  "include": ["src/renderer/**/*", "src/test/**/*", "../shared/i18n/**/*"],
+  "exclude": ["out", "dist", "node_modules", "src-tauri/target"]
+}

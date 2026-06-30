@@ -24,10 +24,12 @@ export const en: Messages = {
     home: 'Home',
     openApp: 'Account',
     account: 'Account',
-    startFree: 'Start for free',
+    startFree: 'Sign in',
     back: 'Back',
     terms: 'Terms',
     privacy: 'Privacy',
+    themeLight: 'Light',
+    themeDark: 'Dark',
   },
   shell: {
     profile: 'Profile',
@@ -129,46 +131,40 @@ export const en: Messages = {
   },
   welcome: {
     version: '0.0.1',
-    pill: 'ACCEPTING EARLY ACCESS',
+    pill: 'EARLY ACCESS',
     navPhilosophy: 'Philosophy',
     heroLine1: 'Deep focus.',
     heroLine2: 'Beautiful design.',
     heroLine3: 'Made for builders.',
     heroBody:
-      'Minimal workspace in one calm place - notes, tasks, focus, for builders who want clarity.',
+      'Notes, daily plan, and pomodoro in one calm desktop workspace — plus live collab rooms in the browser.',
+    heroLiveCta: 'Start a live room',
+    heroPreviewLine1: 'Today · 3 tasks scheduled',
+    heroPreviewLine2: 'Notes · weekly plan synced',
+    heroPreviewLine3: 'Focus · 25:00 · streak 4',
     preparingDownload: 'Preparing download',
     downloadCta: 'Download Hone',
     downloadStarted: 'Download started',
-    philosophyTitle: 'Our Philosophy',
+    philosophyTitle: 'Our philosophy',
     philosophyBody:
-      'hone - isn’t just another todo list.\n' +
-      'it’s a space, where builders just like you come, focus, and create.\n' +
+      'Hone is not another tab in your browser.\n' +
+      'It is a workspace for people who build — notes, tasks, and focus in one place.\n' +
       '\n' +
-      'you don’t get lost in tabs.\n' +
-      'you don’t jump between notion/trello/pomodoro/music apps.\n' +
-      'everything just works, simple and beautiful, in one keystroke.\n' +
+      'You should not jump between Notion, a task app, a timer, and a music player just to start working.\n' +
+      'We kept planning, writing, and focus together so getting started takes one keystroke.\n' +
       '\n' +
-      'i built this because too many tools are noisy, complicated, overwhelming.\n' +
-      'they demand your attention when you want to focus.\n' +
-      'they distract you when you should be creating.\n' +
-      'so i removed everything that doesn’t matter (for me, at least). and kept flow, planning, clarity, focus.\n' +
+      'Most tools compete for your attention. Hone is built to protect it.\n' +
+      'We removed what does not help you ship and kept flow, clarity, and calm.\n' +
       '\n' +
-      'when you sit down at your desk, open this app -\n' +
-      'you’ll feel calm.\n' +
-      'you’ll feel ready.\n' +
-      'you’ll feel in control.\n' +
+      'When you open Hone, the goal is simple:\n' +
+      'feel ready, stay oriented, and finish what matters today.\n' +
       '\n' +
-      'this isn’t about hustle.\n' +
-      'it’s about creating awesome things.\n' +
-      'about building what you love.\n' +
-      'about honoring your time, your attention, and your creativity.\n' +
+      'Need to pair with someone quickly? Open a live room — no account required.\n' +
+      'Need a private vault of notes? Hone has that too.\n' +
       '\n' +
-      'if you care about what you build - and how you build it -\n' +
-      'then this is for you.\n' +
+      'If you care about what you build and how you build it, this is for you.\n' +
       '\n' +
-      'welcome to your workspace.\n' +
-      '\n' +
-      '- the builder (just like you).',
+      'Welcome to your workspace.',
     footerCopyright: '© {{year}} Hone. All rights reserved.',
   },
   live: {
@@ -196,7 +192,7 @@ export const en: Messages = {
     newTitle: 'Real-time shared editor',
     newBody:
       'Create a room without signing up — get an invite link for your partner. Sync via Yjs, code runs via sandbox.',
-    newBulletGuest: 'No account — guest access for the session',
+    newBulletGuest: 'No account — create or join as guest',
     newBulletPair: 'Pair programming with participant cursors',
     newBulletRun: '⌘↵ Run — run code in sandbox',
     newCardTitle: 'New room',

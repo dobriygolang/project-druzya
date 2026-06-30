@@ -74,6 +74,11 @@ export function readAccessToken(): string | null {
   return memAccessToken
 }
 
+export function hasValidAccessToken(): boolean {
+  const token = readAccessToken()
+  return !!token && isAccessTokenFresh(token)
+}
+
 export function readRefreshToken(): string | null {
   return safeRead(REFRESH_TOKEN_KEY)
 }

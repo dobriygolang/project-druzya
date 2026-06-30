@@ -1,32 +1,47 @@
 {
   "name": "hone",
   "productName": "Hone",
-  "version": "0.1.0",
-  "description": "Hone — Winter-like focus workspace (Tauri + React)",
+  "version": "0.0.1",
+  "description": "Hone — minimal dark desktop focus cockpit for developers (druz9 ecosystem)",
   "private": true,
-  "type": "module",
   "scripts": {
     "dev": "tauri dev",
     "dev:vite": "vite",
     "build": "tauri build",
     "build:vite": "vite build",
-    "typecheck": "tsc -b --noEmit",
-    "icon": "tauri icon ../web/public/favicon.svg -o src-tauri/icons",
-    "lint": "eslint 'src/**/*.{ts,tsx}'"
+    "lint": "eslint 'src/**/*.{ts,tsx,jsx}'",
+    "typecheck": "node_modules/typescript/bin/tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "1.10.0",
+    "@connectrpc/connect": "^1.4.0",
+    "@connectrpc/connect-web": "^1.4.0",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
     "@tauri-apps/api": "^2.2.0",
+    "marked": "^18.0.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.2.0",
+    "@eslint/js": "^9.39.4",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.17",
     "@types/react-dom": "^18.3.5",
+    "@typescript-eslint/eslint-plugin": "^8.58.2",
+    "@typescript-eslint/parser": "^8.58.2",
+    "@tauri-apps/cli": "^2.2.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.2.5",
+    "globals": "^15.15.0",
+    "happy-dom": "^15.11.7",
     "typescript": "^5.7.2",
-    "vite": "^6.0.3"
+    "vite": "^6.0.3",
+    "vitest": "^2.1.9"
   }
 }

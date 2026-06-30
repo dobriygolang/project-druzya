@@ -18,7 +18,7 @@ When working on a service, **open only that service folder** and read its local 
 | **focus** | [services/focus/AGENTS.md](services/focus/AGENTS.md) | pomodoro, streaks, focus stats (WIP) |
 | ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | LLM gateway (not in prod stack) |
 
-**Desktop app:** [apps/hone/README.md](apps/hone/README.md) — Tauri focus workspace (Winter-like). Legacy Electron: [apps/hone-legacy/](apps/hone-legacy/).
+**Desktop app:** [apps/hone/README.md](apps/hone/README.md) — Tauri focus workspace (Winter-like).
 
 **Web companion:** [apps/web/](apps/web/) — welcome, billing, `/live/new` guest rooms.
 

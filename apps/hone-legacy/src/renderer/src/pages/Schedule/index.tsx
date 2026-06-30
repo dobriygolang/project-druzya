@@ -1,1 +1,0 @@
-export { SchedulePage } from './SchedulePage';

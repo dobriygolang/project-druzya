@@ -6,9 +6,10 @@ import { Eyebrow } from '@/components/brand/Eyebrow'
 import { PageContent } from '@/components/PageContent'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
-import { readAccessToken, formatApiError } from '@/lib/apiClient'
 import { getBillingMe, getBillingPlans } from '@/lib/api/billing'
 import { getMe } from '@/lib/api/auth'
+import { formatApiError, hasValidAccessToken } from '@/lib/apiClient'
+import { siteAwareClasses } from '@/lib/site/publicClasses'
 import { useI18n } from '@/lib/i18n'
 
 export default function CheckoutPage() {
@@ -16,7 +17,8 @@ export default function CheckoutPage() {
   const { planSlug: paramSlug } = useParams<{ planSlug?: string }>()
   const [searchParams] = useSearchParams()
   const planSlug = (paramSlug ?? searchParams.get('plan') ?? 'pro_monthly').trim()
-  const isAuthed = !!readAccessToken()
+  const isAuthed = hasValidAccessToken()
+  const c = siteAwareClasses(isAuthed)
   const returnUrl = `${window.location.origin}/billing/welcome`
 
   const plansQ = useQuery({
@@ -49,9 +51,9 @@ export default function CheckoutPage() {
     <PublicOrAuthedShell publicNav={{ centerLinks: [{ href: '/pricing', label: t('common.pricing') }] }}>
       <PageContent>
         <header className="text-center">
-          <Eyebrow>{t('checkout.eyebrow')}</Eyebrow>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">{t('checkout.title')}</h1>
-          <p className="mx-auto mt-3 max-w-lg text-sm text-text-secondary">{t('checkout.subtitle')}</p>
+          <Eyebrow className={c.muted}>{t('checkout.eyebrow')}</Eyebrow>
+          <h1 className={`mt-2 text-3xl font-semibold tracking-tight ${c.text}`}>{t('checkout.title')}</h1>
+          <p className={`mx-auto mt-3 max-w-lg text-sm ${c.secondary}`}>{t('checkout.subtitle')}</p>
         </header>
 
         {plansQ.isError ? (
@@ -59,26 +61,26 @@ export default function CheckoutPage() {
         ) : null}
 
         {plansQ.isLoading ? (
-          <p className="text-center text-sm text-text-muted">{t('common.loading')}</p>
+          <p className={`text-center text-sm ${c.muted}`}>{t('common.loading')}</p>
         ) : null}
 
         {plan ? (
-          <article className="mx-auto max-w-md rounded-2xl border border-border bg-surface-1 p-7">
-            <h2 className="text-xl font-semibold">{plan.name}</h2>
-            <p className="mt-1 text-sm text-text-secondary">{plan.tagline}</p>
+          <article className={`mx-auto max-w-md p-7 ${c.card}`}>
+            <h2 className={`text-xl font-semibold ${c.text}`}>{plan.name}</h2>
+            <p className={`mt-1 text-sm ${c.secondary}`}>{plan.tagline}</p>
             <ul className="mt-5 space-y-2">
               {plan.highlights.slice(0, 4).map((line) => (
-                <li key={line} className="flex gap-2 text-sm text-text-secondary">
-                  <span>✓</span>
+                <li key={line} className={`flex gap-2 text-sm ${c.secondary}`}>
+                  <span className={c.text}>✓</span>
                   <span>{line}</span>
                 </li>
               ))}
             </ul>
 
             {!hasTelegram ? (
-              <p className="mt-6 text-center text-xs text-text-secondary">
+              <p className={`mt-6 text-center text-xs ${c.secondary}`}>
                 {t('pricing.linkTelegramFirst')}{' '}
-                <Link to="/login" className="underline underline-offset-2">
+                <Link to="/login" className={c.link}>
                   {t('pricing.linkTelegramAction')}
                 </Link>
               </p>
@@ -100,20 +102,20 @@ export default function CheckoutPage() {
                 </a>
               ) : null}
               {!hasCheckout ? (
-                <p className="text-center text-xs text-text-muted">{t('pricing.checkoutUnavailable')}</p>
+                <p className={`text-center text-xs ${c.muted}`}>{t('pricing.checkoutUnavailable')}</p>
               ) : null}
             </div>
 
-            <p className="mt-4 text-center text-[11px] text-text-muted">
+            <p className={`mt-4 text-center text-[11px] ${c.muted}`}>
               {t('checkout.returnHint', { url: returnUrl })}
             </p>
           </article>
         ) : plansQ.isSuccess ? (
-          <p className="text-center text-sm text-text-muted">{t('checkout.planNotFound')}</p>
+          <p className={`text-center text-sm ${c.muted}`}>{t('checkout.planNotFound')}</p>
         ) : null}
 
         <p className="text-center text-sm">
-          <Link to="/pricing" className="text-text-secondary underline underline-offset-2 hover:text-text-primary">
+          <Link to="/pricing" className={c.link}>
             {t('checkout.backToPricing')}
           </Link>
         </p>

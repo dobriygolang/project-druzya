@@ -6,7 +6,7 @@ export const LIVE_LANGS = [
 ] as const
 
 export const LIVE_ROOM_MODES = [
-  { id: 'code', roomType: 'interview', language: 'go' },
+  { id: 'code', roomType: 'practice', language: 'go' },
   { id: 'diagram', roomType: 'system_design', language: 'diagram' },
 ] as const
 

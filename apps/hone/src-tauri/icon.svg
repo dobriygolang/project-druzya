@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!--
+    Hone app icon  minimal parity A Cue.
+    Apple HIG: ~12% padding 2>:@C3 squircle (breathing room + shadow).
+    Squircle 800�800 inside 1024 canvas, offset 112, rx=176 (~22% @048CA).
+    48= 15;K9 blade A round terminals.
+  -->
+
+  <!-- Squircle (A padding 4;O macOS dock breathing room) -->
+  <rect x="112" y="112" width="800" height="800" rx="176" fill="#000"/>
+
+  <!-- 48= F5=B@0;L=K9 15;K9 blade -->
+  <rect x="496" y="400" width="32" height="224" rx="16" fill="#fff"/>
+</svg>

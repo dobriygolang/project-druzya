@@ -15,6 +15,16 @@ export default {
           muted: '#a1a1aa',
           accent: '#ffffff',
         },
+        site: {
+          bg: 'rgb(var(--site-bg) / <alpha-value>)',
+          surface: 'rgb(var(--site-surface) / <alpha-value>)',
+          card: 'rgb(var(--site-card) / <alpha-value>)',
+          border: 'rgb(var(--site-border) / <alpha-value>)',
+          text: 'rgb(var(--site-text) / <alpha-value>)',
+          muted: 'rgb(var(--site-muted) / <alpha-value>)',
+          accent: 'rgb(var(--site-accent) / <alpha-value>)',
+          'accent-fg': 'rgb(var(--site-accent-fg) / <alpha-value>)',
+        },
         bg: 'rgb(var(--color-bg) / <alpha-value>)',
         surface: {
           1: 'rgb(var(--color-surface-1) / <alpha-value>)',
