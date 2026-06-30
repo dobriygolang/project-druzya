@@ -17,10 +17,13 @@ jobs:
         include:
           - platform: macos-latest
             args: '--target aarch64-apple-darwin'
+            os: macos
           - platform: macos-latest
             args: '--target x86_64-apple-darwin'
+            os: macos
           - platform: windows-latest
             args: ''
+            os: windows
 
     runs-on: ${{ matrix.platform }}
 
@@ -35,11 +38,58 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.os == 'macos' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
           workspaces: apps/hone/src-tauri -> target
+
+      - name: Import Apple Developer certificate
+        if: matrix.os == 'macos'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/hone-signing.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+          security import /tmp/hone-signing.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          security find-identity -v -p codesigning build.keychain
+          rm -f /tmp/hone-signing.p12
+
+      - name: Prepare App Store Connect API key
+        if: matrix.os == 'macos'
+        env:
+          APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          echo "$APPLE_API_KEY_BASE64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8"
+          echo "APPLE_API_KEY_PATH=$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Import Windows code signing certificate
+        if: matrix.os == 'windows'
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          New-Item -ItemType directory -Force -Path certificate | Out-Null
+          Set-Content -Path certificate/tempCert.txt -Value $env:WINDOWS_CERTIFICATE
+          certutil -decode certificate/tempCert.txt certificate/certificate.pfx
+          Remove-Item certificate/tempCert.txt
+          Import-PfxCertificate `
+            -FilePath certificate/certificate.pfx `
+            -CertStoreLocation Cert:\CurrentUser\My `
+            -Password (ConvertTo-SecureString -String $env:WINDOWS_CERTIFICATE_PASSWORD -Force -AsPlainText)
+          Remove-Item certificate/certificate.pfx
+          Get-ChildItem Cert:\CurrentUser\My | Format-Table Subject, Thumbprint, NotAfter
 
       - name: Install frontend dependencies
         working-directory: apps/hone
@@ -47,6 +97,7 @@ jobs:
 
       - name: Resolve release tag
         id: release
+        shell: bash
         run: |
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
@@ -55,6 +106,25 @@ jobs:
             echo "tag=hone-v${version}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Write code signing overlay config
+        working-directory: apps/hone
+        shell: bash
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          WINDOWS_CERTIFICATE_THUMBPRINT: ${{ secrets.WINDOWS_CERTIFICATE_THUMBPRINT }}
+        run: node scripts/write-signing-config.mjs
+
+      - name: Resolve tauri build args
+        id: tauri_args
+        working-directory: apps/hone
+        shell: bash
+        run: |
+          args="${{ matrix.args }}"
+          if [[ -f src-tauri/signing.ci.json ]]; then
+            args="$args --config src-tauri/signing.ci.json"
+          fi
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -62,15 +132,19 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           VITE_HONE_DEV_LOGIN: 'false'
           VITE_HONE_LOCAL_ONLY: 'false'
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY_ID }}
         with:
           projectPath: apps/hone
           tagName: ${{ steps.release.outputs.tag }}
           releaseName: Hone ${{ steps.release.outputs.tag }}
           releaseBody: |
-            Desktop builds for macOS (Apple Silicon + Intel) and Windows.
+            Signed desktop builds for macOS (Apple Silicon + Intel) and Windows.
 
             Installers are attached below. Installed apps can update from **Settings → Software → Check for Updates**.
           releaseDraft: false
           prerelease: false
           updaterJsonPreferNsis: true
-          args: ${{ matrix.args }}
+          args: ${{ steps.tauri_args.outputs.args }}

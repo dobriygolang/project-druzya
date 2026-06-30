@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { useT, useLocale, localeToBcp47 } from '@d9-i18n';
+import { useT, useLocale, type Locale } from '@d9-i18n';
 
 import {
   listGoogleCalendarEvents,
@@ -30,6 +30,7 @@ import { listTasks, type TaskCard } from '@features/tasks/api/tasks';
 import { SegmentedControl } from '@pages/Settings/primitives/SegmentedControl';
 import { toDayKey } from '@pages/TaskBoard/lib/dates';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
+import { formatLocaleDate, formatTimeZoneLabel, getUserTimeZone } from '@shared/lib/localeFormat';
 import { zIndex } from '@shared/lib/z-index';
 import { Icon } from '@shared/ui/primitives/Icon';
 import { LOCAL_ONLY } from '@app/config/features';
@@ -44,10 +45,9 @@ interface CalendarModalProps {
 export function CalendarModal({ onClose, closing = false }: CalendarModalProps): JSX.Element {
   const t = useT();
   const [locale] = useLocale();
-  const bcp47 = localeToBcp47(locale);
   const todayKey = toDayKey(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('week');
-  const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(new Date()));
+  const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(new Date(), locale));
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [tasks, setTasks] = useState<TaskCard[]>([]);
   const [googleEvents, setGoogleEvents] = useState<GoogleCalendarEvent[]>([]);
@@ -94,6 +94,10 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
   }, [refreshGoogle]);
 
   useEffect(() => {
+    setWeekStart((prev) => startOfWeekMonday(prev, locale));
+  }, [locale]);
+
+  useEffect(() => {
     const onTasks = () => void refreshTasks();
     const onSync = () => {
       void refreshTasks();
@@ -117,28 +121,39 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
   const yearEntries = useMemo(() => entriesForYear(entries, viewYear), [entries, viewYear]);
   const hours = useMemo(() => calendarHourLabels(), []);
 
-  // Adaptive hour height — fit the full day (6:00–24:00) into the viewport
-  // without scrolling on default window sizes. Falls back to scrolling only
-  // when the window is too short (clamped to a 28px minimum row).
+  const weekScrollRef = useRef<HTMLDivElement>(null);
+
+  // Fit the hour grid exactly into the scroll container — measure the real
+  // flex slot (not window.innerHeight) and drop the old 60px cap that forced
+  // an 18×60 = 1080px grid taller than the modal.
   const gridSpan = CALENDAR_GRID_END_HOUR - CALENDAR_GRID_START_HOUR;
   const [hourHeight, setHourHeight] = useState(CALENDAR_HOUR_HEIGHT_PX);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (viewMode !== 'week') return;
+    const el = weekScrollRef.current;
+    if (!el) return;
     const recompute = () => {
-      // toolbar + day-head + backdrop padding + footnote reserve ≈ 180px
-      const avail = window.innerHeight - 180;
-      const h = Math.floor(avail / gridSpan);
-      setHourHeight(Math.max(28, Math.min(60, h)));
+      const slot = el.clientHeight;
+      if (slot <= 0) return;
+      const h = Math.floor(slot / gridSpan);
+      setHourHeight(Math.max(1, h));
     };
     recompute();
-    window.addEventListener('resize', recompute);
-    return () => window.removeEventListener('resize', recompute);
-  }, [gridSpan]);
+    const ro = new ResizeObserver(recompute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [gridSpan, viewMode]);
   const gridHeight = gridSpan * hourHeight;
 
   const headerLabel =
     viewMode === 'week'
-      ? formatWeekHeaderMonth(weekStart, bcp47)
+      ? formatWeekHeaderMonth(weekStart, locale)
       : String(viewYear);
+
+  const timeZoneLabel = useMemo(
+    () => formatTimeZoneLabel(getUserTimeZone(), locale),
+    [locale],
+  );
 
   const shiftPeriod = (delta: number) => {
     if (viewMode === 'week') {
@@ -225,12 +240,12 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
                   className="hone-calendar-week__dayhead"
                   data-today={dayKey === todayKey ? 'true' : undefined}
                 >
-                  {formatDayHeader(date, bcp47)}
+                  {formatDayHeader(date, locale)}
                 </div>
               ))}
             </div>
 
-            <div className="hone-calendar-week__scroll">
+            <div ref={weekScrollRef} className="hone-calendar-week__scroll">
               <div className="hone-calendar-week__body" style={{ height: gridHeight }}>
                 <div className="hone-calendar-week__times" style={{ height: gridHeight }}>
                   {hours.map((hour) => (
@@ -239,7 +254,7 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
                       className="hone-calendar-week__time"
                       style={{ height: hourHeight }}
                     >
-                      {formatHourLabel(hour, bcp47)}
+                      {formatHourLabel(hour, locale)}
                     </span>
                   ))}
                 </div>
@@ -280,14 +295,17 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
             year={viewYear}
             entries={yearEntries}
             todayKey={todayKey}
-            locale={bcp47}
+            locale={locale}
             onPickMonth={(monthIndex) => {
-              setWeekStart(startOfWeekMonday(new Date(viewYear, monthIndex, 1)));
+              setWeekStart(startOfWeekMonday(new Date(viewYear, monthIndex, 1), locale));
               setViewMode('week');
             }}
           />
         )}
 
+        <p className="hone-calendar-footnote mono">
+          {t('hone.calendar.timezone', { zone: timeZoneLabel })}
+        </p>
         {googleError && !LOCAL_ONLY && (
           <p className="hone-calendar-footnote mono">{googleError}</p>
         )}
@@ -348,23 +366,23 @@ function YearGrid({
   year: number;
   entries: CalendarEntry[];
   todayKey: string;
-  locale: string;
+  locale: Locale;
   onPickMonth: (monthIndex: number) => void;
 }): JSX.Element {
   const months = useMemo(
     () =>
       Array.from({ length: 12 }, (_, monthIndex) => {
         const viewMonth = new Date(year, monthIndex, 1);
-        const grid = buildMonthGrid(viewMonth);
+        const grid = buildMonthGrid(viewMonth, locale);
         return { monthIndex, viewMonth, grid };
       }),
-    [year],
+    [year, locale],
   );
 
   return (
     <div className="hone-calendar-year">
       {months.map(({ monthIndex, viewMonth, grid }) => {
-        const label = viewMonth.toLocaleDateString(locale, { month: 'long' });
+        const label = formatLocaleDate(viewMonth, locale, { month: 'long' });
         return (
           <button
             key={monthIndex}

@@ -82,7 +82,6 @@ WHERE slug = $1 AND archived_at IS NULL`
 }
 
 func NewBoardSlug(title string) string {
-	const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
 	b := strings.Builder{}
 	for _, r := range strings.ToLower(title) {
 		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {

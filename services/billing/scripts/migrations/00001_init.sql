@@ -99,7 +99,7 @@ INSERT INTO plans (id, slug, name, description, priority, is_active, metadata) V
         'Default free tier',
         0,
         true,
-        '{"tagline":"Попробовать без оплаты","highlight":false}'::jsonb
+        '{"tagline":"Для ежедневной продуктивности","highlight":false}'::jsonb
     ),
     (
         'f0000000-0000-4000-8000-000000000002',
@@ -108,29 +108,18 @@ INSERT INTO plans (id, slug, name, description, priority, is_active, metadata) V
         'Paid monthly subscription',
         10,
         true,
-        '{"tagline":"Для плотной подготовки","highlight":true}'::jsonb
+        '{"tagline":"Без лимитов на фокус и заметки","highlight":true}'::jsonb
     );
 
 INSERT INTO plan_entitlements (plan_id, key, value_json) VALUES
-    ('f0000000-0000-4000-8000-000000000001', 'ai_evaluations_per_day', '{"type":"counter","limit":25,"period":"day"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'mock_interviews_per_month', '{"type":"counter","limit":3,"period":"month"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000001', 'code_runs_per_day', '{"type":"counter","limit":50,"period":"day"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'hidden_tests_enabled', '{"type":"bool","value":false}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'company_templates_enabled', '{"type":"bool","value":true}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'recommendations_enabled', '{"type":"bool","value":true}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_per_month', '{"type":"counter","period":"month"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_concurrent', '{"type":"gauge"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'sd_ai_turns_per_month', '{"type":"counter","limit":40,"period":"month"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'ai_evaluations_per_day', '{"type":"counter","limit":100,"period":"day"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'mock_interviews_per_month', '{"type":"counter","limit":30,"period":"month"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'cloud_notes_count', '{"type":"gauge","limit":10}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_per_month', '{"type":"counter","limit":5,"period":"month"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_concurrent', '{"type":"gauge","limit":1}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'code_runs_per_day', '{"type":"counter","limit":500,"period":"day"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'hidden_tests_enabled', '{"type":"bool","value":true}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'company_templates_enabled', '{"type":"bool","value":true}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'recommendations_enabled', '{"type":"bool","value":true}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'advanced_feedback_enabled', '{"type":"bool","value":true}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_per_month', '{"type":"counter","period":"month"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_concurrent', '{"type":"gauge","limit":100}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000002', 'sd_ai_turns_per_month', '{"type":"counter","limit":400,"period":"month"}'::jsonb);
+    ('f0000000-0000-4000-8000-000000000002', 'cloud_notes_count', '{"type":"gauge"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_per_month', '{"type":"counter","limit":30,"period":"month"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000002', 'live_rooms_concurrent', '{"type":"gauge","limit":5}'::jsonb);
 -- +goose StatementEnd
 
 -- +goose Down

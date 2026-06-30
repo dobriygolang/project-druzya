@@ -162,6 +162,8 @@ export const en = {
   'hone.calendar.prev_year': 'Previous year',
   'hone.calendar.next_year': 'Next year',
   'hone.calendar.google_error': 'Google Calendar unavailable — tasks still shown.',
+  'hone.calendar.all_day': 'All day',
+  'hone.calendar.timezone': 'Times in {{zone}}',
   'hone.settings.sign_out': 'Sign out',
   'hone.settings.vault.label': 'End-to-end encryption',
   'hone.settings.vault.hint': 'Off by default — like Obsidian. Enable to encrypt notes before cloud sync.',

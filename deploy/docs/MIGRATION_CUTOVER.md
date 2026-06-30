@@ -1,6 +1,6 @@
 # Database migration cutover (squashed init baseline)
 
-Per-service goose history was consolidated into forward-only `00001_init.sql` (+ billing seeds). This document covers deploy paths for **empty prod** vs **prod with user data**.
+Each active prod service has a single forward-only `00001_init.sql`. Incremental goose history was removed — fresh deploys use `reset-db` + `migrate`.
 
 ## Active databases (2026 stack)
 
@@ -36,19 +36,18 @@ Retired services (`content`, `interview`, `recommendation`) are no longer in the
        psql -U "$POSTGRES_USER" -d "$db" -c "SELECT version_id, is_applied FROM goose_db_version ORDER BY version_id;"
    done
    ```
-3. Compare live schema to current `services/*/scripts/migrations/*.sql`.
+3. Compare live schema to current `services/*/scripts/migrations/00001_init.sql`.
 
 ## Cutover with data (manual)
 
 Goose will **not** re-apply `00001_init` if older migrations are already recorded. Options:
 
-### Option A — schema already matches (incremental history only)
+### Option A — schema already matches
 
-If production schema matches the squashed init files (migrations were applied incrementally before squash):
+If production schema matches the squashed init (migrations were applied incrementally before squash):
 
-1. Deploy new code (same schema, new migration files).
-2. Run `make migrate` — goose sees version 1 applied, applies any newer migrations only.
-3. Apply service-specific forward migrations if not yet applied, e.g. billing `00004`–`00005`, tracker `00007`–`00008`, rooms `00004`, sandbox `00002`, notes `00002`.
+1. Deploy new code (same schema, single init file).
+2. Run `make migrate` — goose sees version ≥ 1 applied, nothing to do.
 
 ### Option B — schema drift (squash adds columns/tables prod lacks)
 
@@ -68,7 +67,7 @@ For small datasets:
 
 1. `make backup`
 2. `make reset-db` + migrate (empty baseline)
-3. Restore **user-generated** rows only (identity users, sessions) via custom SQL — catalog/billing seeds come from init + seed files.
+3. Restore **user-generated** rows only (identity users, sessions) via custom SQL — catalog/billing seeds come from init.
 
 ## Post-cutover verification
 

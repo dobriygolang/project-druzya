@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { useLocale, useT, localeToBcp47 } from '@d9-i18n';
+import { useLocale, useT } from '@d9-i18n';
+
+import { formatLocaleTime } from '@shared/lib/localeFormat';
 
 import { zIndex } from '@shared/lib/z-index';
 import { formatTimeShort } from './lib/dates';
@@ -15,7 +17,6 @@ function buildTimeOptions(
   startHour: number,
   endHour: number,
 ): Array<{ h: number; m: number; label: string }> {
-  const tag = localeToBcp47(locale);
   const out: Array<{ h: number; m: number; label: string }> = [];
   for (let h = startHour; h <= endHour; h++) {
     for (let m = 0; m < 60; m += stepMin) {
@@ -26,7 +27,7 @@ function buildTimeOptions(
       out.push({
         h,
         m,
-        label: d.toLocaleTimeString(tag, { hour: 'numeric', minute: '2-digit' }),
+        label: formatLocaleTime(d, locale),
       });
     }
   }
@@ -41,12 +42,11 @@ function withSelectedTime(
   if (!value) return options;
   const key = `${value.getHours()}:${value.getMinutes()}`;
   if (options.some((o) => `${o.h}:${o.m}` === key)) return options;
-  const tag = localeToBcp47(locale);
   const d = new Date(2000, 0, 1, value.getHours(), value.getMinutes());
   const extra = {
     h: value.getHours(),
     m: value.getMinutes(),
-    label: d.toLocaleTimeString(tag, { hour: 'numeric', minute: '2-digit' }),
+    label: formatLocaleTime(d, locale),
   };
   return [...options, extra].sort((a, b) => a.h * 60 + a.m - (b.h * 60 + b.m));
 }

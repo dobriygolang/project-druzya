@@ -231,6 +231,8 @@ Release flow: bump `src-tauri/tauri.conf.json` version → tag `hone-vX.Y.Z` →
 
 GitHub secret `TAURI_SIGNING_PRIVATE_KEY` must match `plugins.updater.pubkey`. Private key lives in `.tauri/hone.key` (gitignored).
 
+**Code signing (installers):** [`SIGNING.md`](./SIGNING.md) — Apple Developer ID + notarization (API key) + Windows OV cert. CI imports certs and sets `signing.ci.json` overlay via `scripts/write-signing-config.mjs`.
+
 ## Known gaps
 
 | Gap | Status |

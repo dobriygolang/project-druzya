@@ -1,11 +1,18 @@
 import type { GoogleCalendarEvent } from '@features/calendar/api/calendarClient';
 import type { TaskCard } from '@features/tasks/api/tasks';
+import { translate, type Locale } from '@d9-i18n';
+import {
+  formatLocaleDate,
+  formatLocaleHour,
+  formatLocaleTime,
+  monthGridStartOffset,
+  startOfLocaleWeek,
+} from '@shared/lib/localeFormat';
 import {
   buildDefaultScheduleDate,
   defaultDurationMin,
   parseDayKey,
   resolveScheduleStart,
-  startOfLocalDay,
   taskDayKey,
   taskScheduleStart,
   toDayKey,
@@ -32,11 +39,8 @@ export const CALENDAR_HOUR_HEIGHT_PX = 52;
 
 const VISIBLE_TASK_STATUSES = new Set(['todo', 'in_progress', 'in_review', 'done']);
 
-export function startOfWeekMonday(d: Date): Date {
-  const date = startOfLocalDay(d);
-  const diff = (date.getDay() + 6) % 7;
-  date.setDate(date.getDate() - diff);
-  return date;
+export function startOfWeekMonday(d: Date, locale?: Locale): Date {
+  return startOfLocaleWeek(d, locale);
 }
 
 export interface WeekDay {
@@ -230,17 +234,16 @@ export function calendarHourLabels(): number[] {
   return out;
 }
 
-export function formatHourLabel(hour: number, locale: string): string {
-  const d = new Date(2000, 0, 1, hour, 0);
-  return d.toLocaleTimeString(locale, { hour: 'numeric', hour12: true });
+export function formatHourLabel(hour: number, locale?: Locale): string {
+  return formatLocaleHour(hour, locale);
 }
 
-export function formatWeekHeaderMonth(date: Date, locale: string): string {
-  return date.toLocaleDateString(locale, { month: 'short', year: 'numeric' });
+export function formatWeekHeaderMonth(date: Date, locale?: Locale): string {
+  return formatLocaleDate(date, locale, { month: 'short', year: 'numeric' });
 }
 
-export function formatDayHeader(date: Date, locale: string): string {
-  return date.toLocaleDateString(locale, { weekday: 'short', day: 'numeric' });
+export function formatDayHeader(date: Date, locale?: Locale): string {
+  return formatLocaleDate(date, locale, { weekday: 'short', day: 'numeric' });
 }
 
 export function monthRange(viewMonth: Date): { start: Date; end: Date } {
@@ -251,11 +254,14 @@ export function monthRange(viewMonth: Date): { start: Date; end: Date } {
   return { start, end };
 }
 
-export function buildMonthGrid(viewMonth: Date): { dayKey: string; date: Date; inMonth: boolean }[] {
+export function buildMonthGrid(
+  viewMonth: Date,
+  locale?: Locale,
+): { dayKey: string; date: Date; inMonth: boolean }[] {
   const y = viewMonth.getFullYear();
   const m = viewMonth.getMonth();
   const first = new Date(y, m, 1);
-  const startOffset = (first.getDay() + 6) % 7;
+  const startOffset = monthGridStartOffset(first, locale);
   const gridStart = new Date(y, m, 1 - startOffset);
   const cells: { dayKey: string; date: Date; inMonth: boolean }[] = [];
   for (let i = 0; i < 42; i++) {
@@ -266,7 +272,7 @@ export function buildMonthGrid(viewMonth: Date): { dayKey: string; date: Date; i
   return cells;
 }
 
-export function formatEntryTime(entry: CalendarEntry, locale: string): string {
-  if (entry.allDay) return 'All day';
-  return entry.start.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+export function formatEntryTime(entry: CalendarEntry, locale?: Locale): string {
+  if (entry.allDay) return translate('hone.calendar.all_day');
+  return formatLocaleTime(entry.start, locale);
 }

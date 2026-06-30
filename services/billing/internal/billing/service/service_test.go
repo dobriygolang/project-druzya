@@ -198,10 +198,10 @@ func TestCheckAndConsumeUsageIncrements(t *testing.T) {
 		plan:  &model.Plan{ID: "free-id", Slug: model.PlanFree, Name: "Free"},
 		usage: map[string]int{},
 		entitlements: []model.PlanEntitlement{
-			{Key: model.EntitlementAIEvaluationsPerDay, ValueJSON: json.RawMessage(`{"type":"counter","limit":5,"period":"day"}`)},
+			{Key: model.EntitlementCodeRunsPerDay, ValueJSON: json.RawMessage(`{"type":"counter","limit":5,"period":"day"}`)},
 		},
 	}
-	res, err := newTestService(repo).CheckAndConsumeUsage(context.Background(), "user-1", model.EntitlementAIEvaluationsPerDay, 1)
+	res, err := newTestService(repo).CheckAndConsumeUsage(context.Background(), "user-1", model.EntitlementCodeRunsPerDay, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,19 +214,19 @@ func TestCheckAndConsumeUsageRejectsOverLimit(t *testing.T) {
 	t.Parallel()
 	repo := &fakeRepo{
 		plan:  &model.Plan{ID: "free-id", Slug: model.PlanFree, Name: "Free"},
-		usage: map[string]int{model.EntitlementAIEvaluationsPerDay: 5},
+		usage: map[string]int{model.EntitlementCodeRunsPerDay: 5},
 		entitlements: []model.PlanEntitlement{
-			{Key: model.EntitlementAIEvaluationsPerDay, ValueJSON: json.RawMessage(`{"type":"counter","limit":5,"period":"day"}`)},
+			{Key: model.EntitlementCodeRunsPerDay, ValueJSON: json.RawMessage(`{"type":"counter","limit":5,"period":"day"}`)},
 		},
 	}
-	res, err := newTestService(repo).CheckAndConsumeUsage(context.Background(), "user-1", model.EntitlementAIEvaluationsPerDay, 1)
+	res, err := newTestService(repo).CheckAndConsumeUsage(context.Background(), "user-1", model.EntitlementCodeRunsPerDay, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Allowed || res.Reason != "limit_exceeded" {
 		t.Fatalf("unexpected: %+v", res)
 	}
-	if repo.usage[model.EntitlementAIEvaluationsPerDay] != 5 {
+	if repo.usage[model.EntitlementCodeRunsPerDay] != 5 {
 		t.Fatal("must not increment on failure")
 	}
 }
@@ -235,25 +235,25 @@ func TestReleaseUsageDecrementsConsumedQuota(t *testing.T) {
 	t.Parallel()
 	repo := &fakeRepo{
 		plan:  &model.Plan{ID: "free-id", Slug: model.PlanFree, Name: "Free"},
-		usage: map[string]int{model.EntitlementAIEvaluationsPerDay: 3},
+		usage: map[string]int{model.EntitlementCodeRunsPerDay: 3},
 		entitlements: []model.PlanEntitlement{
-			{Key: model.EntitlementAIEvaluationsPerDay, ValueJSON: json.RawMessage(`{"type":"counter","limit":5,"period":"day"}`)},
+			{Key: model.EntitlementCodeRunsPerDay, ValueJSON: json.RawMessage(`{"type":"counter","limit":5,"period":"day"}`)},
 		},
 	}
 	svc := newTestService(repo)
-	res, err := svc.ReleaseUsage(context.Background(), "user-1", model.EntitlementAIEvaluationsPerDay, "attempt-1", 1)
+	res, err := svc.ReleaseUsage(context.Background(), "user-1", model.EntitlementCodeRunsPerDay, "attempt-1", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !res.Released || res.Used != 2 {
 		t.Fatalf("unexpected: %+v", res)
 	}
-	res2, err := svc.ReleaseUsage(context.Background(), "user-1", model.EntitlementAIEvaluationsPerDay, "attempt-1", 1)
+	res2, err := svc.ReleaseUsage(context.Background(), "user-1", model.EntitlementCodeRunsPerDay, "attempt-1", 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !res2.Released || res2.Reason != "already_released" || repo.usage[model.EntitlementAIEvaluationsPerDay] != 2 {
-		t.Fatalf("unexpected duplicate release: %+v usage=%d", res2, repo.usage[model.EntitlementAIEvaluationsPerDay])
+	if !res2.Released || res2.Reason != "already_released" || repo.usage[model.EntitlementCodeRunsPerDay] != 2 {
+		t.Fatalf("unexpected duplicate release: %+v usage=%d", res2, repo.usage[model.EntitlementCodeRunsPerDay])
 	}
 }
 

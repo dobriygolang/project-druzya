@@ -36,7 +36,7 @@ Custom HTTP (not grpc-gateway):
 
 ## Outbox events
 
-Removed — no background consumers; `domain_outbox` dropped in migration `00008`.
+Removed — no background consumers; no outbox table in current schema.
 
 ## Data
 

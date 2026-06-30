@@ -115,7 +115,7 @@ func (h *Handler) findEntitlement(ctx context.Context, planID, key string) (*mod
 func normalizeUsageKey(key string) string {
 	key = strings.TrimSpace(key)
 	if key == "llm_evaluation" {
-		return model.EntitlementAIEvaluationsPerDay
+		return "ai_evaluations_per_day"
 	}
 	return key
 }

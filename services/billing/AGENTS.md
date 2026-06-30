@@ -16,7 +16,7 @@ Does not own: users (identity), tasks (tracker), notes (notes service).
 
 `value_json`: `{"type":"bool","value":true}` or `{"type":"counter","limit":N,"period":"day"|"month"}` or `{"type":"gauge","limit":N}`.
 
-Seeded in `00001_init.sql` + `00002_productivity_entitlements.sql`. Legacy interview/AI keys removed by `00003` and `00004`. Plans: `free`, `pro_monthly`.
+Seeded in `00001_init.sql`. Plans: `free`, `pro_monthly`.
 
 | Key | Type | Free | Pro |
 |-----|------|------|-----|
@@ -25,7 +25,7 @@ Seeded in `00001_init.sql` + `00002_productivity_entitlements.sql`. Legacy inter
 | live_rooms_concurrent | gauge | 1 | 5 |
 | code_runs_per_day | counter/day | 50 | 500 |
 
-**Removed** (migrations `00003`–`00005`, no longer on any plan): `mock_interviews_per_month`, `ai_evaluations_per_day`, `ai_insights_per_day`, `company_templates_enabled`, `recommendations_enabled`, `advanced_feedback_enabled`, `sd_ai_turns_per_month`, `hidden_tests_enabled`.
+**Not seeded** (retired with interview/content/recommendation): `mock_interviews_per_month`, `ai_evaluations_per_day`, `ai_insights_per_day`, `company_templates_enabled`, `recommendations_enabled`, `advanced_feedback_enabled`, `sd_ai_turns_per_month`, `hidden_tests_enabled`.
 
 ## API
 

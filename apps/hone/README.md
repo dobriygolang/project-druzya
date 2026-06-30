@@ -40,11 +40,12 @@ CI: [`.github/workflows/hone-release.yml`](../../.github/workflows/hone-release.
 
 **One-time setup (repo maintainer):**
 
-- Generate updater keys (keep private key secret):  
+- **Code signing (Gatekeeper / SmartScreen):** full guide → [`SIGNING.md`](./SIGNING.md)
+- **Updater signing:** generate keys with  
   `CI=true npx tauri signer generate -w .tauri/hone.key -f -p ""` (from `apps/hone`)
-- GitHub repo secret `TAURI_SIGNING_PRIVATE_KEY` = contents of `.tauri/hone.key`
+- GitHub secret `TAURI_SIGNING_PRIVATE_KEY` = contents of `.tauri/hone.key`
 - Optional `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if the key is password-protected
-- Public key is already in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`)
+- Public updater key is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`)
 
 **Tag rule:** tag must match app version — `hone-v` + semver from `tauri.conf.json` (e.g. `hone-v0.0.1`).
 

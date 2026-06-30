@@ -162,6 +162,8 @@ export const ru = {
   'hone.calendar.prev_year': 'Предыдущий год',
   'hone.calendar.next_year': 'Следующий год',
   'hone.calendar.google_error': 'Google Calendar недоступен — задачи всё равно видны.',
+  'hone.calendar.all_day': 'Весь день',
+  'hone.calendar.timezone': 'Время: {{zone}}',
   'hone.settings.sign_out': 'Выйти',
   'hone.settings.vault.label': 'Сквозное шифрование',
   'hone.settings.vault.hint': 'По умолчанию выкл. — как в Obsidian. Включи, чтобы шифровать заметки перед sync.',

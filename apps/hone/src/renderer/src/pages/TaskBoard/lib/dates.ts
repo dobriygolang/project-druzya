@@ -1,4 +1,5 @@
-import { getLocale, localeToBcp47, type Locale } from '@d9-i18n';
+import { type Locale } from '@d9-i18n';
+import { formatLocaleDate, formatLocaleTime } from '@shared/lib/localeFormat';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -6,10 +7,6 @@ export interface DayKey {
   /** YYYY-MM-DD in local timezone */
   key: string;
   date: Date;
-}
-
-function bcp47(locale?: Locale): string {
-  return localeToBcp47(locale ?? getLocale());
 }
 
 export function startOfLocalDay(d: Date): Date {
@@ -45,7 +42,7 @@ export function buildDayWindow(center: Date, before: number, after: number): Day
 }
 
 export function formatWhenChip(date: Date, locale?: Locale): string {
-  return date.toLocaleDateString(bcp47(locale), { weekday: 'short', month: 'short', day: 'numeric' });
+  return formatLocaleDate(date, locale, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 export function formatColumnHeader(
@@ -53,21 +50,20 @@ export function formatColumnHeader(
   today: Date,
   locale?: Locale,
 ): { weekday: string; label: string; isToday: boolean } {
-  const tag = bcp47(locale);
   const isToday = toDayKey(date) === toDayKey(today);
-  const weekday = date.toLocaleDateString(tag, { weekday: 'long' });
-  const label = date.toLocaleDateString(tag, { month: 'short', day: 'numeric' });
+  const weekday = formatLocaleDate(date, locale, { weekday: 'long' });
+  const label = formatLocaleDate(date, locale, { month: 'short', day: 'numeric' });
   return { weekday, label, isToday };
 }
 
 export function formatTimelineHeader(date: Date, locale?: Locale): string {
-  return date.toLocaleDateString(bcp47(locale), { weekday: 'long', month: 'long', day: 'numeric' });
+  return formatLocaleDate(date, locale, { weekday: 'long', month: 'long', day: 'numeric' });
 }
 
 export function formatWeekdayShort(iso: string, locale?: Locale): string {
   const d = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(bcp47(locale), { weekday: 'short' });
+  return formatLocaleDate(d, locale, { weekday: 'short' });
 }
 
 export function taskDayKey(task: { scheduledStart?: string; createdAt: string }): string {
@@ -167,7 +163,7 @@ export function applyTimeFromDay(targetDay: Date, source: Date): Date {
 }
 
 export function formatTimeShort(d: Date, locale?: Locale): string {
-  return d.toLocaleTimeString(bcp47(locale), { hour: 'numeric', minute: '2-digit' });
+  return formatLocaleTime(d, locale);
 }
 
 export function formatWhenChipWithTime(date: Date, locale?: Locale): string {

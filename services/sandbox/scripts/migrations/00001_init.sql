@@ -5,8 +5,6 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE code_runs (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id         UUID NOT NULL,
-    task_id         UUID,
-    session_task_id UUID,
     language        TEXT NOT NULL,
     code            TEXT NOT NULL,
     stdin           TEXT NOT NULL DEFAULT '',
@@ -28,8 +26,6 @@ CREATE TABLE code_runs (
 );
 
 CREATE INDEX code_runs_user_created_idx ON code_runs (user_id, created_at DESC);
-CREATE INDEX code_runs_task_created_idx ON code_runs (task_id, created_at DESC);
-CREATE INDEX code_runs_session_task_created_idx ON code_runs (session_task_id, created_at DESC);
 CREATE INDEX code_runs_status_created_idx ON code_runs (status, created_at DESC);
 -- +goose StatementEnd
 

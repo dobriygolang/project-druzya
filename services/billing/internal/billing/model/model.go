@@ -21,15 +21,10 @@ const (
 
 	TrialKindPro = "pro_trial"
 
-	// Deprecated: removed from plans (00003). Kept for llm_evaluation metric alias + ai service (CI only).
-	EntitlementAIEvaluationsPerDay = "ai_evaluations_per_day"
 	EntitlementCodeRunsPerDay      = "code_runs_per_day"
 	EntitlementCloudNotesCount     = "cloud_notes_count"
 	EntitlementLiveRoomsPerMonth   = "live_rooms_per_month"
 	EntitlementLiveRoomsConcurrent     = "live_rooms_concurrent"
-
-	// Legacy alias kept for callers migrating from llm_evaluation metric.
-	MetricLLMEvaluation = EntitlementAIEvaluationsPerDay
 )
 
 // Plan is a billable tier.

@@ -453,7 +453,7 @@ html.birthday .hone-palette-panel {
 .hone-calendar-week__scroll {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
 }
 .hone-calendar-week__body {
   display: grid;
