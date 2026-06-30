@@ -11,8 +11,9 @@ const out = path.join(root, 'src-tauri', 'signing.ci.json');
 const bundle = {};
 const onCi = process.env.CI === 'true';
 const runnerOs = process.env.RUNNER_OS ?? '';
+const codeSigning = process.env.HONE_CODE_SIGNING === 'true';
 
-const winThumb = process.env.WINDOWS_CERTIFICATE_THUMBPRINT?.trim();
+const winThumb = codeSigning ? process.env.WINDOWS_CERTIFICATE_THUMBPRINT?.trim() : '';
 if (winThumb) {
   bundle.windows = {
     certificateThumbprint: winThumb,
@@ -21,11 +22,10 @@ if (winThumb) {
   };
 }
 
-const appleIdentity = process.env.APPLE_SIGNING_IDENTITY?.trim();
+const appleIdentity = codeSigning ? process.env.APPLE_SIGNING_IDENTITY?.trim() : '';
 if (appleIdentity) {
   bundle.macOS = { signingIdentity: appleIdentity };
 } else if (onCi && runnerOs === 'macOS') {
-  // Required on macOS runners — empty identity fails codesign.
   bundle.macOS = { signingIdentity: '-' };
 }
 
