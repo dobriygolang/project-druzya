@@ -20,6 +20,20 @@ declare module '@tauri-apps/plugin-process' {
 }
 
 declare module '@tauri-apps/plugin-updater' {
-  export type DownloadEvent = unknown;
-  export function check(): Promise<unknown>;
+  export interface DownloadEvent {
+    event: string;
+    data: {
+      contentLength?: number | null;
+      chunkLength?: number;
+    };
+  }
+
+  export interface Update {
+    version: string;
+    downloadAndInstall(onEvent: (event: DownloadEvent) => void): Promise<void>;
+  }
+
+  export function check(): Promise<Update | null>;
 }
+
+export {};
