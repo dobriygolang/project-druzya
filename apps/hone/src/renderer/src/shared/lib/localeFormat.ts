@@ -13,11 +13,38 @@ function tag(locale?: Locale): string {
   return localeToBcp47(locale ?? getLocale());
 }
 
-/** Localized time — hour cycle follows locale (24h ru-RU, 12h en-US). */
+/**
+ * Whether the OS clock prefers 24-hour time, independent of the app's UI
+ * language. macOS/Windows "24-Hour Time" is exposed through the runtime's
+ * default `hourCycle`; we honor it so an English UI still shows 23:55 when the
+ * machine is set to 24-hour. Returns `undefined` when it can't be determined
+ * (then the locale's own convention is used).
+ */
+function systemPrefers24Hour(): boolean | undefined {
+  try {
+    const hourCycle = new Intl.DateTimeFormat(undefined, {
+      hour: 'numeric',
+    }).resolvedOptions().hourCycle;
+    if (hourCycle === 'h23' || hourCycle === 'h24') return true;
+    if (hourCycle === 'h11' || hourCycle === 'h12') return false;
+  } catch {
+    /* fall through */
+  }
+  return undefined;
+}
+
+/** `hour12` override that follows the OS clock setting (undefined = leave to locale). */
+function hour12Override(): boolean | undefined {
+  const pref = systemPrefers24Hour();
+  return pref === undefined ? undefined : !pref;
+}
+
+/** Localized time — language follows the app locale, 12/24h follows the OS clock. */
 export function formatLocaleTime(date: Date, locale?: Locale): string {
   return date.toLocaleTimeString(tag(locale), {
     hour: 'numeric',
     minute: '2-digit',
+    hour12: hour12Override(),
     timeZone: getUserTimeZone(),
   });
 }
@@ -27,6 +54,7 @@ export function formatLocaleHour(hour: number, locale?: Locale): string {
   const d = new Date(2000, 0, 1, hour, 0);
   return d.toLocaleTimeString(tag(locale), {
     hour: 'numeric',
+    hour12: hour12Override(),
     timeZone: getUserTimeZone(),
   });
 }

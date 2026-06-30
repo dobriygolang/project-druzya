@@ -45,7 +45,7 @@ jobs:
           workspaces: apps/hone/src-tauri -> target
 
       - name: Import Apple Developer certificate
-        if: matrix.os == 'macos'
+        if: matrix.os == 'macos' && vars.HONE_CODE_SIGNING == 'true'
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -63,7 +63,7 @@ jobs:
           rm -f /tmp/hone-signing.p12
 
       - name: Prepare App Store Connect API key
-        if: matrix.os == 'macos'
+        if: matrix.os == 'macos' && vars.HONE_CODE_SIGNING == 'true'
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
@@ -74,7 +74,7 @@ jobs:
           echo "APPLE_API_KEY_PATH=$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY_ID}.p8" >> "$GITHUB_ENV"
 
       - name: Import Windows code signing certificate
-        if: matrix.os == 'windows'
+        if: matrix.os == 'windows' && vars.HONE_CODE_SIGNING == 'true'
         shell: pwsh
         env:
           WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
@@ -107,6 +107,7 @@ jobs:
           fi
 
       - name: Write code signing overlay config
+        if: vars.HONE_CODE_SIGNING == 'true'
         working-directory: apps/hone
         shell: bash
         env:

@@ -103,6 +103,11 @@ export function formatDurationShort(totalMin: number): string {
   return `${h}h ${m}m`;
 }
 
+/** Snap a minutes-of-day value to the nearest step (default 5 min). */
+export function snapMinutes(totalMin: number, step = 5): number {
+  return Math.round(totalMin / step) * step;
+}
+
 export function roundToNearestMin(d: Date, step = 5): Date {
   const out = new Date(d);
   out.setMinutes(Math.round(out.getMinutes() / step) * step, 0, 0);

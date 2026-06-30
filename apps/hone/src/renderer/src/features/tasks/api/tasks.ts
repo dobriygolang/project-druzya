@@ -75,6 +75,23 @@ export async function moveTaskStatus(taskId: string, status: TaskStatus): Promis
   return task;
 }
 
+/**
+ * Inline title edit, persisted on device immediately. The tracker backend has
+ * no rename/update-title RPC, so this stays local-first only (no outbox push);
+ * wire an `update` outbox op here once a remote endpoint exists.
+ */
+export async function renameTask(taskId: string, title: string): Promise<TaskCard> {
+  const prev = await resolveTask(taskId);
+  if (!prev) throw new Error(`Task not found: ${taskId}`);
+  const task: TaskCard = {
+    ...prev,
+    title,
+    updatedAt: new Date().toISOString(),
+  };
+  await tasksStorePut(task);
+  return task;
+}
+
 export async function scheduleTask(
   taskId: string,
   start: Date | string,

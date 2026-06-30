@@ -15,19 +15,27 @@ import { HONE_EVENTS } from '@shared/lib/custom-events';
 import { SettingRow } from '../primitives/SettingRow';
 import { Toggle } from '../primitives/Toggle';
 
+function InlineSpinner(): JSX.Element {
+  return <span className="hone-inline-spinner" aria-hidden />;
+}
+
 export function GoogleCalendarSection(): JSX.Element | null {
   const t = useT();
   const [settings, setSettings] = useState<TrackerSettings | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (LOCAL_ONLY) return;
+    setLoading(true);
+    setError(null);
     try {
       setSettings(await getTrackerSettings());
-      setError(null);
     } catch {
       setError(t('hone.settings.google.error_load'));
+    } finally {
+      setLoading(false);
     }
   }, [t]);
 
@@ -43,7 +51,7 @@ export function GoogleCalendarSection(): JSX.Element | null {
         void load();
         return;
       }
-      setError(t('hone.settings.google.error_save'));
+      setError(t('hone.settings.google.error_oauth'));
     };
     window.addEventListener(HONE_EVENTS.googleCalendarOAuth, onOAuth);
     return () => window.removeEventListener(HONE_EVENTS.googleCalendarOAuth, onOAuth);
@@ -53,6 +61,7 @@ export function GoogleCalendarSection(): JSX.Element | null {
 
   const connected = settings?.googleCalendarConnected ?? false;
   const syncEnabled = settings?.googleCalendarSyncEnabled ?? false;
+  const controlsDisabled = loading || busy;
 
   const setSync = async (enabled: boolean) => {
     setBusy(true);
@@ -91,6 +100,12 @@ export function GoogleCalendarSection(): JSX.Element | null {
     }
   };
 
+  const statusLabel = loading
+    ? t('hone.settings.google.loading')
+    : connected
+      ? t('hone.settings.google.connected')
+      : t('hone.settings.google.not_connected');
+
   return (
     <>
       <SettingRow label={t('hone.settings.google.sync_label')} hint={t('hone.settings.google.sync_hint')}>
@@ -98,25 +113,63 @@ export function GoogleCalendarSection(): JSX.Element | null {
           value={syncEnabled}
           onChange={(v) => void setSync(v)}
           label={syncEnabled ? t('hone.settings.google.sync_on') : t('hone.settings.google.sync_off')}
+          disabled={controlsDisabled}
         />
       </SettingRow>
 
       <SettingRow label={t('hone.settings.google.account_label')} hint={t('hone.settings.google.account_hint')}>
-        <div className="hone-settings-google-actions">
-          <span className="mono hone-settings-google-status">
-            {connected ? t('hone.settings.google.connected') : t('hone.settings.google.not_connected')}
+        <div className="hone-settings-google-actions" aria-busy={controlsDisabled}>
+          <span className="mono hone-settings-google-status" data-loading={loading ? 'true' : undefined}>
+            {loading ? <InlineSpinner /> : null}
+            {statusLabel}
           </span>
           {connected ? (
-            <button type="button" className="hone-settings-vault-btn" disabled={busy} onClick={() => void disconnect()}>
-              {t('hone.settings.google.disconnect')}
+            <button
+              type="button"
+              className="hone-settings-vault-btn"
+              disabled={controlsDisabled}
+              onClick={() => void disconnect()}
+            >
+              {busy ? (
+                <>
+                  <InlineSpinner />
+                  {t('hone.vault.cta.working')}
+                </>
+              ) : (
+                t('hone.settings.google.disconnect')
+              )}
             </button>
           ) : (
-            <button type="button" className="hone-settings-vault-btn" disabled={busy} onClick={() => void connect()}>
-              {t('hone.settings.google.connect')}
+            <button
+              type="button"
+              className="hone-settings-vault-btn"
+              disabled={controlsDisabled}
+              onClick={() => void connect()}
+            >
+              {busy ? (
+                <>
+                  <InlineSpinner />
+                  {t('hone.settings.google.connecting')}
+                </>
+              ) : (
+                t('hone.settings.google.connect')
+              )}
             </button>
           )}
-          <button type="button" className="hone-settings-vault-btn" disabled={busy} onClick={() => void load()}>
-            {t('hone.settings.google.refresh')}
+          <button
+            type="button"
+            className="hone-settings-vault-btn"
+            disabled={controlsDisabled}
+            onClick={() => void load()}
+          >
+            {loading ? (
+              <>
+                <InlineSpinner />
+                {t('hone.settings.google.loading')}
+              </>
+            ) : (
+              t('hone.settings.google.refresh')
+            )}
           </button>
         </div>
       </SettingRow>

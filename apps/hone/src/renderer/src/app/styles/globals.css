@@ -454,6 +454,7 @@ html.birthday .hone-palette-panel {
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  padding-top: 8px;
 }
 .hone-calendar-week__body {
   display: grid;
@@ -595,8 +596,37 @@ button.hone-calendar-event:hover {
   gap: 8px;
 }
 .hone-settings-google-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   color: var(--ink-40);
+}
+.hone-settings-google-status[data-loading='true'] {
+  color: var(--ink-60);
+}
+.hone-inline-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--ink-tint-08);
+  border-top-color: var(--ink-60);
+  border-radius: 50%;
+  animation: hone-inline-spin 0.7s linear infinite;
+}
+@keyframes hone-inline-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.hone-settings-vault-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.hone-settings-vault-btn .hone-inline-spinner {
+  margin-right: 6px;
+  vertical-align: -2px;
 }
 .hone-settings-google-error {
   margin: 0 0 12px;
@@ -1311,6 +1341,10 @@ button.hone-calendar-event:hover {
   justify-content: center;
   background: rgb(0 0 0 / 0.78);
 }
+.hone-palette-scrim[data-closing='true'] {
+  opacity: 0;
+  transition: opacity var(--motion-dur-medium) var(--motion-ease-interactive);
+}
 .hone-palette-panel {
   width: min(540px, 92vw);
   max-height: min(680px, 82vh);
@@ -1318,6 +1352,13 @@ button.hone-calendar-event:hover {
   flex-direction: column;
   overflow: hidden;
   border-radius: 12px;
+}
+.hone-palette-panel[data-closing='true'] {
+  opacity: 0;
+  transform: scale(0.985) translateY(6px);
+  transition:
+    opacity var(--motion-dur-medium) var(--motion-ease-interactive),
+    transform var(--motion-dur-medium) var(--motion-ease-interactive);
 }
 .hone-palette-search {
   display: flex;
@@ -1647,27 +1688,62 @@ html.light .hone-palette-chip {
   opacity: 0;
 }
 
+.hone-bg-poster-host {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+/* На главном экране постер живёт в полосе между шапкой и доком. */
+.hone-canvas-shell .hone-bg-poster-host {
+  top: 56px;
+  bottom: 96px;
+}
+.hone-bg-poster-canvas {
+  display: block;
+  border-radius: 12px;
+}
+
+.hone-app-version {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ink-20);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-40);
+}
+
 .hone-page-layer {
   position: absolute;
   inset: 0;
   min-height: 0;
   z-index: 1;
   opacity: 1;
-  transition: opacity var(--motion-dur-large) var(--motion-ease-interactive);
+  transform: translateY(0) scale(1);
+  transition:
+    opacity var(--motion-dur-large) var(--motion-ease-interactive),
+    transform var(--motion-dur-large) var(--motion-ease-interactive);
+  will-change: opacity, transform;
+  contain: layout style paint;
   pointer-events: auto;
 }
 .hone-page-layer[data-status='leaving'] {
   opacity: 0;
+  transform: translateY(-4px) scale(0.995);
   pointer-events: none;
   z-index: 1;
 }
 .hone-page-layer[data-status='entering'] {
   opacity: 0;
+  transform: translateY(8px) scale(0.995);
   pointer-events: none;
   z-index: 2;
 }
 .hone-page-layer[data-status='active'] {
   opacity: 1;
+  transform: translateY(0) scale(1);
   pointer-events: auto;
   z-index: 2;
 }
@@ -2533,6 +2609,23 @@ html[data-text-scale='xlarge'] {
 .hone-day-column {
   content-visibility: auto;
   contain-intrinsic-size: 254px 480px;
+}
+
+/* Completion checkbox: hidden until the row is hovered/focused; always shown
+   for done tasks. Space stays reserved so the title never shifts. */
+.hone-task-row__check {
+  opacity: 0;
+  transition: opacity 140ms var(--motion-ease-standard, ease);
+}
+.hone-task-row:hover .hone-task-row__check,
+.hone-task-row:focus-within .hone-task-row__check,
+.hone-task-row[data-done='true'] .hone-task-row__check {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hone-task-row__check {
+    transition: none;
+  }
 }
 
 /* ── Settings page ── */

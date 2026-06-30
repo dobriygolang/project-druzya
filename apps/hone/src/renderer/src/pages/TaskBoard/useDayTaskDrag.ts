@@ -57,6 +57,7 @@ function setDragSelectLock(locked: boolean): void {
  *  caller can either move the task to another day or reorder within the same day. */
 export function useDayTaskDrag(
   onDrop: (taskId: string, dayKey: string, targetTaskId: string | null) => void,
+  onTap?: (taskId: string) => void,
 ) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropDay, setDropDay] = useState<string | null>(null);
@@ -64,6 +65,8 @@ export function useDayTaskDrag(
   const sessionRef = useRef<DragSession | null>(null);
   const onDropRef = useRef(onDrop);
   onDropRef.current = onDrop;
+  const onTapRef = useRef(onTap);
+  onTapRef.current = onTap;
 
   const cleanup = useCallback(() => {
     const s = sessionRef.current;
@@ -139,12 +142,16 @@ export function useDayTaskDrag(
     const onUp = (e: PointerEvent) => {
       const s = sessionRef.current;
       if (!s || e.pointerId !== s.pointerId) return;
-      if (s.active) {
+      const wasActive = s.active;
+      const taskId = s.taskId;
+      if (wasActive) {
         const dayKey = dayKeyFromPoint(e.clientX, e.clientY);
         const targetTaskId = taskIdFromPoint(e.clientX, e.clientY);
         if (dayKey) onDropRef.current(s.taskId, dayKey, targetTaskId);
       }
       cleanup();
+      // Press without movement = tap → let the caller act (e.g. edit title).
+      if (!wasActive) onTapRef.current?.(taskId);
     };
 
     const onSelectStart = (e: Event) => {

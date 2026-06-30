@@ -44,7 +44,13 @@ export function SoftwareSection() {
       return;
     }
     if (result.kind === 'error') {
-      setStatus(t('hone.settings.update.error', { message: result.message }));
+      if (result.code === 'no_release') {
+        setStatus(t('hone.settings.update.no_release'));
+      } else if (result.code === 'network') {
+        setStatus(t('hone.settings.update.network_error'));
+      } else {
+        setStatus(t('hone.settings.update.error', { message: result.message }));
+      }
       return;
     }
     // relaunch() usually exits before this line runs

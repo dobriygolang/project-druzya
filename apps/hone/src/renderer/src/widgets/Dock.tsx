@@ -1,5 +1,5 @@
 // Dock — persistent bottom timer pill on every page.
-import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { type CSSProperties, type ReactNode } from 'react';
 
 import { useT } from '@d9-i18n';
 
@@ -108,11 +108,9 @@ const DOCK_CSS = `
 
 interface DockProps {
   onMenu: () => void;
-  vol: number;
-  onVol: (v: number) => void;
 }
 
-export function Dock({ onMenu, vol, onVol }: DockProps) {
+export function Dock({ onMenu }: DockProps) {
   return (
     <>
       <style>{DOCK_CSS}</style>
@@ -147,8 +145,6 @@ export function Dock({ onMenu, vol, onVol }: DockProps) {
         </DockBtn>
         <Divider />
         <TimerControls />
-        <Divider />
-        <VolumeBtn vol={vol} onVol={onVol} />
       </div>
       </div>
     </>
@@ -292,185 +288,3 @@ function Divider() {
   );
 }
 
-interface VolumeBtnProps {
-  vol: number;
-  onVol: (v: number) => void;
-}
-
-// VolumeBtn — кнопка + slider, выезжающий справа за пределы dock-pill'а
-// без layout-shift'а. Slider в своём отдельном pill'е (та же эстетика
-// что у dock'а) absolute-positioned: левый край прижат к правому краю
-// volume-кнопки, разворачивается вправо за границу dock'а. Таймер и
-// остальные кнопки не дёргаются.
-const VolumeBtn = memo(VolumeBtnImpl);
-
-function VolumeBtnImpl({ vol, onVol }: VolumeBtnProps) {
-  const [open, setOpen] = useState(false);
-  // preMuteVolRef хранит уровень громкости ПЕРЕД mute'ом — чтобы
-  // un-mute click восстанавливал именно его, а не дефолтный 40%. Если
-  // юзер был на 65%, кликнул mute → 0; кликнул unmute → обратно 65%.
-  const preMuteVolRef = useRef<number>(vol > 0 ? vol : 40);
-  const closeTimer = useRef<number | null>(null);
-
-  // hover-bridge: при mouseleave даём 180 ms на «транзит» через 14-px
-  // gap к slider'у. mouseenter на slider или btn'е cancel'ит таймер.
-  // Без этого slider схлопывается мгновенно когда курсор покидает btn.
-  const armClose = () => {
-    if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => setOpen(false), 180);
-  };
-  const cancelClose = () => {
-    if (closeTimer.current !== null) {
-      window.clearTimeout(closeTimer.current);
-      closeTimer.current = null;
-    }
-    setOpen(true);
-  };
-
-  // Click handler: toggle mute ↔ unmute. Раньше click открывал слайдер,
-  // юзер ожидал mute-toggle (как в YouTube/Spotify/macOS). Теперь:
-  //   - vol > 0 → save current, set to 0 (mute), икон меняется на strike.
-  //   - vol === 0 → restore preMuteVolRef.current, иконка возвращается.
-  // Slider открывается hover'ом (как раньше), не click'ом.
-  const handleClick = () => {
-    if (vol > 0) {
-      preMuteVolRef.current = vol;
-      onVol(0);
-    } else {
-      onVol(preMuteVolRef.current > 0 ? preMuteVolRef.current : 40);
-    }
-  };
-
-  return (
-    <div
-      onMouseLeave={armClose}
-      style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
-    >
-      {/* Custom track + thumb для volume slider'а. Дефолтный accentColor
-          даёт ярко-белую полосу с толстым thumb'ом — юзер хотел тонкую
-          едва-видную полоску (rgba 12%) и компактный белый thumb. */}
-      <style>{`
-        input.hone-vol-slider {
-          -webkit-appearance: none;
-          appearance: none;
-          background: transparent;
-          height: 8px;
-          margin: 0;
-          padding: 0;
-        }
-        input.hone-vol-slider:focus { outline: none; }
-        input.hone-vol-slider::-webkit-slider-runnable-track {
-          height: 2px;
-          background: rgb(var(--ink-rgb) / 0.14);
-          border-radius: 999px;
-        }
-        input.hone-vol-slider::-moz-range-track {
-          height: 2px;
-          background: rgb(var(--ink-rgb) / 0.14);
-          border-radius: 999px;
-          border: none;
-        }
-        input.hone-vol-slider::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          appearance: none;
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #fff;
-          border: none;
-          margin-top: -3px;
-          cursor: pointer;
-        }
-        input.hone-vol-slider::-moz-range-thumb {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          background: #fff;
-          border: none;
-          cursor: pointer;
-        }
-      `}</style>
-      <div onMouseEnter={cancelClose}>
-        <DockBtn
-          onClick={handleClick}
-          title={vol === 0 ? 'Click to unmute' : `Volume ${vol}% · click to mute`}
-          ariaLabel={vol === 0 ? 'Unmute volume' : `Mute volume (currently ${vol} percent)`}
-          ariaPressed={vol === 0}
-          variant="action"
-        >
-          {/* Mute indicator: когда vol=0, иконка меняет цвет на dimmed +
-              рисуется diagonal strike-through через absolute-positioned
-              span. Раньше юзер не видел разницы между «50%» и «mute»,
-              путался почему звука нет. */}
-          <span
-            style={{
-              position: 'relative',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: vol === 0 ? 0.5 : 1,
-              transition: 'opacity var(--motion-dur-medium) var(--motion-ease-standard)',
-            }}
-          >
-            <Icon name="volume" size={13} />
-            {vol === 0 && (
-              <span
-                aria-hidden
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'block',
-                  pointerEvents: 'none',
-                  // Diagonal strike — линия из top-right в bottom-left,
-                  // 1.5px белая через linear-gradient на 14px box'е.
-                  background:
-                    'linear-gradient(45deg, transparent 45%, var(--red) 45%, var(--red) 55%, transparent 55%)',
-                  borderRadius: 2,
-                }}
-              />
-            )}
-          </span>
-        </DockBtn>
-      </div>
-      <div
-        onMouseEnter={cancelClose}
-        style={{
-          position: 'absolute',
-          // 14 px gap от правого края volume-кнопки — slider гарантированно
-          // не наезжает на остальной dock даже при transform-overshoot.
-          left: 'calc(100% + 14px)',
-          top: '50%',
-          transform: `translateY(-50%) translateX(${open ? '0' : '-8px'})`,
-          height: 20,
-          width: open ? 64 : 0,
-          opacity: open ? 1 : 0,
-          padding: open ? '0 6px' : '0',
-          display: 'flex',
-          alignItems: 'center',
-          background: 'transparent',
-          border: 'none',
-          overflow: 'visible',
-          zIndex: 11,
-          transition:
-            'width var(--t-base), opacity var(--t-fast), transform var(--t-fast)',
-          pointerEvents: open ? 'auto' : 'none',
-        }}
-      >
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={vol}
-          onChange={(e) => onVol(parseInt(e.target.value))}
-          tabIndex={open ? 0 : -1}
-          aria-label="Volume"
-          className="hone-vol-slider"
-          style={{
-            width: '100%',
-            cursor: 'pointer',
-          }}
-        />
-      </div>
-    </div>
-  );
-}

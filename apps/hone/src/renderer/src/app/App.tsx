@@ -3,7 +3,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react
 import { translate } from '@d9-i18n';
 
 import { CanvasBg, type ThemeId } from '@widgets/CanvasBg';
-import { Wordmark, HONE_HEADER_H } from '@widgets/Chrome';
+import { Wordmark, AppVersionBadge, HONE_HEADER_H } from '@widgets/Chrome';
 import { TrafficLightsHover } from '@widgets/TrafficLightsHover';
 import { Dock } from '@widgets/Dock';
 import { LoginScreen } from '@widgets/LoginScreen';
@@ -41,6 +41,8 @@ const WhiteboardPage = lazy(() =>
 const Palette = lazy(() =>
   import('@widgets/Palette').then((m) => ({ default: m.Palette })),
 );
+
+const PALETTE_UNMOUNT_DELAY_MS = 260;
 
 export type StartFocusArgs = PomodoroStartArgs;
 
@@ -100,18 +102,15 @@ export default function App() {
   );
 
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteMounted, setPaletteMounted] = useState(false);
+  const [paletteClosing, setPaletteClosing] = useState(false);
   const [paletteTaskDate, setPaletteTaskDate] = useState<Date | null>(null);
   const [theme, setTheme] = useState<ThemeId>(() => readStoredTheme());
-  const [vol, setVol] = useState(40);
   const [vaultGateActive, setVaultGateActive] = useState(false);
 
   useEffect(() => {
     applyTheme(theme);
   }, [theme]);
-
-  useEffect(() => {
-    void import('@features/focus/audio/ambient-music').then((m) => m.setAmbientVolume((vol / 100) * 0.5));
-  }, [vol]);
 
   useEffect(() => {
     void import('@features/focus/audio/ambient-music').then((m) => m.bootstrapAmbient());
@@ -288,6 +287,21 @@ export default function App() {
     setPaletteTaskDate(null);
   }, []);
 
+  useEffect(() => {
+    if (paletteOpen) {
+      setPaletteMounted(true);
+      setPaletteClosing(false);
+      return;
+    }
+    if (!paletteMounted) return;
+    setPaletteClosing(true);
+    const t = window.setTimeout(() => {
+      setPaletteMounted(false);
+      setPaletteClosing(false);
+    }, PALETTE_UNMOUNT_DELAY_MS);
+    return () => window.clearTimeout(t);
+  }, [paletteOpen, paletteMounted]);
+
   const handlePaletteCreateTask = useCallback(
     async (title: string, date: Date) => {
       const dayKey = toDayKey(date);
@@ -417,7 +431,7 @@ export default function App() {
   const signedInShell = (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', overflow: 'hidden' }}>
       <div className="hone-canvas-shell" data-visible={page === 'home' ? 'true' : 'false'}>
-        <CanvasBg mode="full" theme={theme} />
+        <CanvasBg mode={page === 'home' ? 'full' : 'void'} theme={theme} />
       </div>
 
       <div
@@ -436,6 +450,7 @@ export default function App() {
       <TrafficLightsHover />
       <div className="hone-chrome-shell" data-visible={page === 'home' ? 'true' : 'false'}>
         <Wordmark />
+        <AppVersionBadge />
       </div>
 
       <PageStack page={page}>{renderPage}</PageStack>
@@ -445,9 +460,9 @@ export default function App() {
 
       <PomodoroController />
 
-      <Dock onMenu={() => openPalette()} vol={vol} onVol={setVol} />
+      <Dock onMenu={() => openPalette()} />
 
-      {paletteOpen && (
+      {paletteMounted && (
         <Suspense fallback={null}>
           <Palette
             onClose={closePalette}
@@ -457,6 +472,7 @@ export default function App() {
             }}
             taskDate={paletteTaskDate}
             onCreateTask={handlePaletteCreateTask}
+            closing={paletteClosing}
           />
         </Suspense>
       )}

@@ -30,9 +30,11 @@ export const HONE_EXCALIDRAW_UI_OPTIONS = {
   },
 } as const;
 
-/** Map Hone canvas theme → Excalidraw UI theme. Only `light` uses light mode. */
+/** Map Hone canvas theme → Excalidraw UI theme. Light-palette themes use light mode. */
+const LIGHT_EXCALIDRAW_THEMES: ReadonlyArray<ThemeId> = ['drift', 'visor'];
+
 export function honeExcalidrawThemeFor(honeTheme: ThemeId): ExcalidrawThemeMode {
-  return honeTheme === 'light' ? 'light' : 'dark';
+  return LIGHT_EXCALIDRAW_THEMES.includes(honeTheme) ? 'light' : 'dark';
 }
 
 /** initialData.appState — do not set `theme` here; use the `theme` prop instead. */

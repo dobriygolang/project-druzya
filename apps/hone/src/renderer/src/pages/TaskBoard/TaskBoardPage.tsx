@@ -6,7 +6,7 @@ import {
   listTasks,
   moveTaskStatus,
   scheduleTask,
-  deleteTask,
+  renameTask,
   reorderTasks,
   type TaskCard,
 } from '@features/tasks/api/tasks';
@@ -37,6 +37,7 @@ export function TaskBoardPage(): JSX.Element {
     useInfiniteDayScroll(today);
   const [tasks, setTasks] = useState<TaskCard[]>([]);
   const [selectedDay, setSelectedDay] = useState(() => todayKey);
+  const [editRequest, setEditRequest] = useState<{ taskId: string; key: number } | null>(null);
   const didExpandTasksRef = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -184,7 +185,14 @@ export function TaskBoardPage(): JSX.Element {
     [findTaskColumnKey, handleReorder, handleMoveToDay],
   );
 
-  const { draggingId, dropDay, dropTaskId, onPointerDragStart } = useDayTaskDrag(handleDrop);
+  const handleTaskTap = useCallback((taskId: string) => {
+    setEditRequest((prev) => ({ taskId, key: (prev?.key ?? 0) + 1 }));
+  }, []);
+
+  const { draggingId, dropDay, dropTaskId, onPointerDragStart } = useDayTaskDrag(
+    handleDrop,
+    handleTaskTap,
+  );
 
   const openAddTask = useCallback((dayKey: string) => {
     window.dispatchEvent(
@@ -205,11 +213,14 @@ export function TaskBoardPage(): JSX.Element {
     [refresh],
   );
 
-  const handleDelete = useCallback(
-    async (task: TaskCard) => {
-      setTasks((prev) => prev.filter((t) => t.id !== task.id));
+  const handleTitleChange = useCallback(
+    async (task: TaskCard, title: string) => {
+      const next = title.trim();
+      if (!next || next === task.title) return;
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, title: next } : t)));
       try {
-        await deleteTask(task.id);
+        const updated = await renameTask(task.id, next);
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
       } catch {
         void refresh();
       }
@@ -236,26 +247,25 @@ export function TaskBoardPage(): JSX.Element {
     [tasks, refresh],
   );
 
-  const handleTimeChange = useCallback(
-    async (task: TaskCard, start: Date, columnDate: Date) => {
-      const dayKey = toDayKey(columnDate);
+  // Drag-to-reschedule from the calendar / timeline: place the task at the exact
+  // dropped time (no conflict-nudging — the user is positioning it deliberately).
+  const handleReschedule = useCallback(
+    async (task: TaskCard, start: Date) => {
       const duration = Math.max(15, defaultDurationMin(task));
-      const resolved = resolveScheduleStart(dayKey, tasks, start, task.id);
-      const startIso = resolved.toISOString();
-
+      const startIso = start.toISOString();
       setTasks((prev) =>
         prev.map((t) =>
           t.id === task.id ? { ...t, scheduledStart: startIso, scheduledDurationMin: duration } : t,
         ),
       );
       try {
-        const updated = await scheduleTask(task.id, resolved, duration);
+        const updated = await scheduleTask(task.id, start, duration);
         setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
       } catch {
         void refresh();
       }
     },
-    [tasks, refresh],
+    [refresh],
   );
 
   const handleBackToToday = useCallback(() => {
@@ -320,21 +330,25 @@ export function TaskBoardPage(): JSX.Element {
               draggingId={draggingId}
               dropHighlight={dropDay === d.key && draggingId !== null}
               dropTaskId={dropDay === d.key ? dropTaskId : null}
+              editRequest={editRequest}
               tasks={tasksByDay.get(d.key) ?? []}
               selected={selectedDay === d.key}
               onSelect={() => setSelectedDay(d.key)}
               onAddClick={() => openAddTask(d.key)}
               onToggleDone={(task) => void handleToggleDone(task)}
-              onDelete={(task) => void handleDelete(task)}
               onDurationChange={(task, min) => void handleDurationChange(task, min, d.date)}
-              onTimeChange={(task, start) => void handleTimeChange(task, start, d.date)}
+              onTitleChange={(task, title) => void handleTitleChange(task, title)}
               onPointerDragStart={onPointerDragStart}
             />
           ))}
         </div>
       </div>
 
-      <DayTimeline date={selectedDate} tasks={tasks} />
+      <DayTimeline
+        date={selectedDate}
+        tasks={tasks}
+        onReschedule={(task, start) => void handleReschedule(task, start)}
+      />
 
       {showBackToToday && (
         <div className="hone-back-to-today-anchor">

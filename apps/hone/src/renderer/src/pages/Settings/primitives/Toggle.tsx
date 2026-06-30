@@ -43,12 +43,17 @@ export const Toggle = memo(function Toggle({
   value,
   onChange,
   label,
+  disabled = false,
 }: {
   value: boolean;
   onChange: (b: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
-  const handleClick = useCallback(() => onChange(!value), [onChange, value]);
+  const handleClick = useCallback(() => {
+    if (disabled) return;
+    onChange(!value);
+  }, [disabled, onChange, value]);
   return (
     <button
       onClick={handleClick}
@@ -56,8 +61,10 @@ export const Toggle = memo(function Toggle({
       aria-checked={value}
       aria-pressed={value}
       aria-label={label}
+      aria-disabled={disabled}
+      disabled={disabled}
       className="focus-ring"
-      style={btnStyle}
+      style={{ ...btnStyle, opacity: disabled ? 0.55 : 1, cursor: disabled ? 'not-allowed' : 'pointer' }}
     >
       <span style={value ? trackOnStyle : trackOffStyle}>
         <span style={value ? thumbOnStyle : thumbOffStyle} />

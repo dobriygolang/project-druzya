@@ -27,6 +27,7 @@ interface PaletteProps {
   onOpen: (id: PaletteAction) => void;
   taskDate?: Date | null;
   onCreateTask?: (title: string, date: Date) => void;
+  closing?: boolean;
 }
 
 interface NavItem {
@@ -55,7 +56,7 @@ const NAV_ITEMS: Array<{
   { id: 'settings', labelKey: 'hone.palette.nav_settings', icon: 'settings', shortcut: [','] },
 ];
 
-export function Palette({ onClose, onOpen, taskDate, onCreateTask }: PaletteProps) {
+export function Palette({ onClose, onOpen, taskDate, onCreateTask, closing = false }: PaletteProps) {
   const t = useT();
   const [locale] = useLocale();
   const [idx, setIdx] = useState(0);
@@ -146,8 +147,16 @@ export function Palette({ onClose, onOpen, taskDate, onCreateTask }: PaletteProp
   const showWhenChip = Boolean(trimmed || taskDate);
 
   return (
-    <div className="hone-palette-scrim motion-scrim-in" onClick={onClose}>
-      <div className="hone-palette-panel motion-modal-in" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="hone-palette-scrim motion-scrim-in"
+      data-closing={closing ? 'true' : undefined}
+      onClick={onClose}
+    >
+      <div
+        className="hone-palette-panel motion-modal-in"
+        data-closing={closing ? 'true' : undefined}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="hone-palette-search">
           <span className="hone-palette-search__icon" aria-hidden>
             <Icon name="search" size={13} />

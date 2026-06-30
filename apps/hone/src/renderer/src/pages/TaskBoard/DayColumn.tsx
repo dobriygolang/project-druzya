@@ -14,13 +14,13 @@ interface DayColumnProps {
   draggingId: string | null;
   dropHighlight: boolean;
   dropTaskId: string | null;
+  editRequest: { taskId: string; key: number } | null;
   selected: boolean;
   onSelect: () => void;
   onAddClick: () => void;
   onToggleDone: (task: TaskCard) => void;
-  onDelete: (task: TaskCard) => void;
   onDurationChange: (task: TaskCard, minutes: number) => void;
-  onTimeChange: (task: TaskCard, start: Date) => void;
+  onTitleChange: (task: TaskCard, title: string) => void;
   onPointerDragStart: (taskId: string, e: React.PointerEvent) => void;
 }
 
@@ -32,13 +32,13 @@ export function DayColumn({
   draggingId,
   dropHighlight,
   dropTaskId,
+  editRequest,
   selected,
   onSelect,
   onAddClick,
   onToggleDone,
-  onDelete,
   onDurationChange,
-  onTimeChange,
+  onTitleChange,
   onPointerDragStart,
 }: DayColumnProps): JSX.Element {
   const t = useT();
@@ -106,13 +106,12 @@ export function DayColumn({
           <TaskRow
             key={task.id}
             task={task}
-            columnDate={date}
             dragging={draggingId === task.id}
             dropTarget={dropTaskId === task.id && draggingId !== null}
+            editRequestKey={editRequest?.taskId === task.id ? editRequest.key : 0}
             onToggleDone={onToggleDone}
-            onDelete={onDelete}
             onDurationChange={onDurationChange}
-            onTimeChange={onTimeChange}
+            onTitleChange={onTitleChange}
             onPointerDragStart={onPointerDragStart}
           />
         ))}

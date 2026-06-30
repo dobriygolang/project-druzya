@@ -26,16 +26,20 @@ import {
   CALENDAR_HOUR_HEIGHT_PX,
   type CalendarEntry,
 } from '@features/calendar/lib/events';
-import { listTasks, type TaskCard } from '@features/tasks/api/tasks';
+import { listTasks, scheduleTask, type TaskCard } from '@features/tasks/api/tasks';
 import { SegmentedControl } from '@pages/Settings/primitives/SegmentedControl';
-import { toDayKey } from '@pages/TaskBoard/lib/dates';
+import { snapMinutes, toDayKey } from '@pages/TaskBoard/lib/dates';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
 import { formatLocaleDate, formatTimeZoneLabel, getUserTimeZone } from '@shared/lib/localeFormat';
+import { useVerticalDrag } from '@shared/lib/useVerticalDrag';
 import { zIndex } from '@shared/lib/z-index';
 import { Icon } from '@shared/ui/primitives/Icon';
 import { LOCAL_ONLY } from '@app/config/features';
 
 type ViewMode = 'week' | 'year';
+
+/** Top breathing room (label overhang) + bottom slack for the week grid. */
+const WEEK_GRID_RESERVE_PX = 10;
 
 interface CalendarModalProps {
   onClose: () => void;
@@ -133,7 +137,9 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
     const el = weekScrollRef.current;
     if (!el) return;
     const recompute = () => {
-      const slot = el.clientHeight;
+      // Reserve the label overhang (translateY(-6px)) + the grid's 1px top
+      // border so the first "6 AM" row isn't clipped and the last row fits.
+      const slot = el.clientHeight - WEEK_GRID_RESERVE_PX;
       if (slot <= 0) return;
       const h = Math.floor(slot / gridSpan);
       setHourHeight(Math.max(1, h));
@@ -144,6 +150,29 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
     return () => ro.disconnect();
   }, [gridSpan, viewMode]);
   const gridHeight = gridSpan * hourHeight;
+
+  const { dragId, dragTop, start: startDrag } = useVerticalDrag();
+
+  const rescheduleEntry = useCallback(
+    async (entry: CalendarEntry, finalTop: number) => {
+      if (entry.source !== 'task' || !entry.taskId) return;
+      const startH = finalTop / hourHeight + CALENDAR_GRID_START_HOUR;
+      const min = snapMinutes(startH * 60);
+      const next = new Date(entry.start);
+      next.setHours(Math.floor(min / 60), min % 60, 0, 0);
+      const durationMin = Math.max(
+        15,
+        Math.round((entry.end.getTime() - entry.start.getTime()) / 60_000),
+      );
+      try {
+        await scheduleTask(entry.taskId, next, durationMin);
+        window.dispatchEvent(new CustomEvent(HONE_EVENTS.tasksChanged));
+      } catch {
+        /* keep current view; next refresh reconciles */
+      }
+    },
+    [hourHeight],
+  );
 
   const headerLabel =
     viewMode === 'week'
@@ -274,12 +303,33 @@ export function CalendarModal({ onClose, closing = false }: CalendarModalProps):
                         .map((entry) => {
                           const layout = eventBlockLayout(entry, hourHeight);
                           if (!layout) return null;
+                          const maxTop = Math.max(0, gridHeight - layout.height);
+                          const isDragging = dragId === entry.id;
+                          const top = Math.max(
+                            0,
+                            Math.min(isDragging ? dragTop : layout.top, maxTop),
+                          );
+                          const draggable = entry.source === 'task' && Boolean(entry.taskId);
                           return (
                             <CalendarEventBlock
                               key={entry.id}
                               entry={entry}
-                              top={layout.top}
+                              top={top}
                               height={layout.height}
+                              dragging={isDragging}
+                              onPointerDown={
+                                draggable
+                                  ? (e) =>
+                                      startDrag(e, {
+                                        id: entry.id,
+                                        baseTop: layout.top,
+                                        min: 0,
+                                        max: maxTop,
+                                        onCommit: (ft) => void rescheduleEntry(entry, ft),
+                                        onClick: () => entry.taskId && openTask(entry.taskId),
+                                      })
+                                  : undefined
+                              }
                               onOpenTask={openTask}
                             />
                           );
@@ -318,15 +368,27 @@ function CalendarEventBlock({
   entry,
   top,
   height,
+  dragging,
+  onPointerDown,
   onOpenTask,
 }: {
   entry: CalendarEntry;
   top: number;
   height: number;
+  dragging?: boolean;
+  onPointerDown?: (e: React.PointerEvent) => void;
   onOpenTask: (taskId: string) => void;
 }): JSX.Element {
   const done = entry.taskStatus === 'done';
-  const style = { top, height };
+  const style: React.CSSProperties = {
+    top,
+    height,
+    zIndex: dragging ? 5 : undefined,
+    boxShadow: dragging ? '0 10px 28px rgb(0 0 0 / 0.5)' : undefined,
+    cursor: onPointerDown ? (dragging ? 'grabbing' : 'grab') : undefined,
+    touchAction: onPointerDown ? 'none' : undefined,
+    userSelect: 'none',
+  };
 
   if (entry.source === 'task' && entry.taskId) {
     return (
@@ -336,7 +398,18 @@ function CalendarEventBlock({
         data-source="task"
         data-done={done ? 'true' : undefined}
         style={style}
-        onClick={() => onOpenTask(entry.taskId!)}
+        onPointerDown={onPointerDown}
+        onClick={onPointerDown ? undefined : () => onOpenTask(entry.taskId!)}
+        onKeyDown={
+          onPointerDown
+            ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onOpenTask(entry.taskId!);
+                }
+              }
+            : undefined
+        }
         title={entry.title}
       >
         <span className="hone-calendar-event__title">{entry.title}</span>

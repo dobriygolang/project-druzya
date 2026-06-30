@@ -44,22 +44,20 @@ export { clampInt };
 
 export function themeLabelKey(id: string): string {
   switch (id) {
-    case 'light':
-      return 'hone.theme.light';
-    case 'birthday':
-      return 'hone.theme.birthday';
+    case 'drift':
+      return 'hone.theme.drift';
+    case 'visor':
+      return 'hone.theme.visor';
     case 'winter':
       return 'hone.theme.winter';
-    case 'aurora':
-      return 'hone.theme.aurora';
-    case 'grid-rain':
-      return 'hone.theme.grid_rain';
+    case 'birthday':
+      return 'hone.theme.birthday';
     case 'particles':
       return 'hone.theme.particles';
-    case 'abyss':
-      return 'hone.theme.abyss';
-    case 'cosmic':
-      return 'hone.theme.cosmic';
+    case 'debris':
+      return 'hone.theme.debris';
+    case 'launch':
+      return 'hone.theme.launch';
     default:
       return 'hone.theme.winter';
   }

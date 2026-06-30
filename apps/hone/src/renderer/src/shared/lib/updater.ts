@@ -13,11 +13,29 @@ export async function readAppVersion(): Promise<string> {
 
 export type UpdatePhase = 'idle' | 'checking' | 'downloading' | 'installing' | 'relaunching';
 
+export type UpdateErrorCode = 'no_release' | 'network' | 'unknown';
+
 export type UpdateCheckResult =
   | { kind: 'unavailable' }
   | { kind: 'up_to_date' }
   | { kind: 'installed'; version: string }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; code: UpdateErrorCode; message: string };
+
+export function classifyUpdateError(message: string): UpdateErrorCode {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes('valid release json') ||
+    lower.includes('404') ||
+    lower.includes('not found') ||
+    lower.includes('failed to fetch')
+  ) {
+    return 'no_release';
+  }
+  if (lower.includes('network') || lower.includes('timeout') || lower.includes('connection')) {
+    return 'network';
+  }
+  return 'unknown';
+}
 
 export async function checkForUpdate(
   onPhase: (phase: UpdatePhase) => void,
@@ -48,6 +66,6 @@ export async function checkForUpdate(
   } catch (err) {
     onPhase('idle');
     const message = err instanceof Error ? err.message : String(err);
-    return { kind: 'error', message };
+    return { kind: 'error', code: classifyUpdateError(message), message };
   }
 }

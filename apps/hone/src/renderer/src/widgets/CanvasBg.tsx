@@ -1,19 +1,18 @@
 // CanvasBg — медитативный фон Hone'а.
 //
-// Themes (5):
+// Themes (7):
+//   - drift (light): line-art astronaut drifting near a capsule on white
+//   - visor (light): line-art astronaut portrait with Earth reflected in visor
 //   - winter (default): grid + stars float/twinkle + waves drift + 2 rotating squares
-//   - aurora: diagonal gradient stripes drifting at different speeds, hue shift,
-//     occasional shooting star crossing the screen
-//   - grid-rain: matrix-style vertical streams of falling 0/1 chars, plus a faint
-//     perspective grid receding to a vanishing point
+//   - birthday: festive illustrated scene (cake, gifts, balloons, confetti)
 //   - particles: dense floating particles with proximity lines (canvas2D),
 //     line opacity pulses with sine wave, mouse parallax
-//   - abyss: huge slowly-rotating polygon in centre with breathing scale,
-//     surrounded by ambient swirling concentric arcs rotating at different rates
+//   - debris (dark): manga ink scene — astronaut drifting through a debris field
+//   - launch (dark): manga ink portrait — visor reflecting a rocket launch
 //
-// Mode-axis (full / quiet / void) сохранён, но применяется только к winter,
-// у других тем — full всегда (там нет "тихого" варианта). void пустой везде.
-import { useEffect, useMemo, useRef } from 'react';
+// Mode-axis (full / quiet / void) сохранён. full — полная сцена, quiet — приглушённая,
+// void — пусто. У image-тем quiet просто снижает opacity.
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const GRID_STEP_PX = 64;
 
@@ -34,24 +33,22 @@ const WAVES = [
 
 export type CanvasMode = 'full' | 'quiet' | 'void';
 export type ThemeId =
-  | 'light'
-  | 'birthday'
+  | 'drift'
+  | 'visor'
   | 'winter'
-  | 'aurora'
-  | 'grid-rain'
+  | 'birthday'
   | 'particles'
-  | 'abyss'
-  | 'cosmic';
+  | 'debris'
+  | 'launch';
 
 export const THEME_IDS: ThemeId[] = [
-  'light',
-  'birthday',
+  'drift',
+  'visor',
   'winter',
-  'aurora',
-  'grid-rain',
+  'birthday',
   'particles',
-  'abyss',
-  'cosmic',
+  'debris',
+  'launch',
 ];
 
 interface CanvasBgProps {
@@ -62,107 +59,287 @@ interface CanvasBgProps {
 export function CanvasBg({ mode = 'full', theme = 'winter' }: CanvasBgProps) {
   if (mode === 'void') return null;
   switch (theme) {
-    case 'light':
-      return <LightBg mode={mode} />;
+    case 'drift':
+      return <ImageBg mode={mode} src="/backgrounds/drift.png" />;
+    case 'visor':
+      return <ImageBg mode={mode} src="/backgrounds/visor.png" />;
+    case 'debris':
+      return <ImageBg mode={mode} src="/backgrounds/debris.png" />;
+    case 'launch':
+      return <ImageBg mode={mode} src="/backgrounds/launch.png" />;
     case 'birthday':
       return <BirthdayBg mode={mode} />;
-    case 'aurora':
-      return <AuroraBg mode={mode} />;
-    case 'grid-rain':
-      return <GridRainBg mode={mode} />;
     case 'particles':
       return <ParticlesBg mode={mode} />;
-    case 'abyss':
-      return <AbyssBg mode={mode} />;
-    case 'cosmic':
-      return <CosmicBg mode={mode} />;
     case 'winter':
     default:
       return <WinterBg mode={mode} />;
   }
 }
 
-// ─── Light — warm daytime scene (matches apps/web sdvg.io aesthetic) ───
-function LightBg({ mode }: { mode: CanvasMode }) {
-  const dim = mode === 'full' ? 1 : 0.6;
+// ─── Image — manga-ink scene as a wide rippling background ───────────────
+// Фон живёт в полосе между шапкой и доком (см. .hone-bg-poster-host в CSS),
+// заполняя её по cover. Анимация — WebGL fragment-shader с плавным UV-displacement
+// (паттерн: Codrops "wavy shader" / JS Monkey ripple). Смещение попиксельное
+// в UV-пространстве => нет столбцов и "плющения", картинка колышется как ткань.
+// Тень складки = |cos(phase)| * uShadow, движется вместе с волной.
+const CURTAIN_AMP = 0.0035; // UV-единицы (~0.35% размера)
+const CURTAIN_WAVES = 1.0;
+const CURTAIN_SPEED = 0.22; // рад в секунду
+const CURTAIN_SHADOW = 0.045; // макс. альфа тени складки
+
+const POSTER_VERT = `
+attribute vec2 aPos;
+varying vec2 vUv;
+void main() {
+  vUv = aPos * 0.5 + 0.5;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+
+const POSTER_FRAG = `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform float uTime;
+uniform float uAmp;
+uniform float uSpeed;
+uniform float uWaves;
+uniform float uShadow;
+uniform float uAmpMul;
+
+void main() {
+  vec2 uv = vUv;
+  float t = uTime * uSpeed;
+  float phase = uv.x * 6.2831853 * uWaves;
+  float wave = sin(phase + t) + 0.3 * sin(phase * 0.5 + t * 0.7);
+  // Вертикальное смещение (флаг) + лёгкий горизонтальный повод (ткань).
+  vec2 d = vec2(
+    sin(uv.y * 6.2831853 * uWaves * 0.5 + t * 0.8) * uAmp * 0.4,
+    wave * uAmp
+  ) * uAmpMul;
+  vec3 col = texture2D(uTex, uv + d).rgb;
+  // Тень на краю складки (крутизна волны), движется с волной.
+  float slope = abs(cos(phase + t));
+  col *= 1.0 - slope * uShadow * uAmpMul;
+  gl_FragColor = vec4(col, 1.0);
+}`;
+
+function compileShader(gl: WebGLRenderingContext, type: number, src: string): WebGLShader | null {
+  const sh = gl.createShader(type);
+  if (!sh) return null;
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+    gl.deleteShader(sh);
+    return null;
+  }
+  return sh;
+}
+
+function ImageBg({ mode, src }: { mode: CanvasMode; src: string }) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [fallback, setFallback] = useState(false);
+  const dim = mode === 'full' ? 1 : 0.55;
+  const ampMul = mode === 'full' ? 1 : 0.5;
+
+  useEffect(() => {
+    if (fallback) return;
+    const host = hostRef.current;
+    const cv = canvasRef.current;
+    if (!host || !cv) return;
+
+    const gl = cv.getContext('webgl', {
+      antialias: false,
+      premultipliedAlpha: false,
+      alpha: true,
+    }) as WebGLRenderingContext | null;
+    if (!gl) {
+      setFallback(true);
+      return;
+    }
+
+    const vert = compileShader(gl, gl.VERTEX_SHADER, POSTER_VERT);
+    const frag = compileShader(gl, gl.FRAGMENT_SHADER, POSTER_FRAG);
+    if (!vert || !frag) {
+      setFallback(true);
+      return;
+    }
+    const prog = gl.createProgram()!;
+    gl.attachShader(prog, vert);
+    gl.attachShader(prog, frag);
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+      setFallback(true);
+      return;
+    }
+    gl.useProgram(prog);
+
+    const quad = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(gl.ARRAY_BUFFER, quad, gl.STATIC_DRAW);
+    const aPos = gl.getAttribLocation(prog, 'aPos');
+    gl.enableVertexAttribArray(aPos);
+    gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+    const uTime = gl.getUniformLocation(prog, 'uTime');
+    const uAmp = gl.getUniformLocation(prog, 'uAmp');
+    const uSpeed = gl.getUniformLocation(prog, 'uSpeed');
+    const uWaves = gl.getUniformLocation(prog, 'uWaves');
+    const uShadow = gl.getUniformLocation(prog, 'uShadow');
+    const uAmpMul = gl.getUniformLocation(prog, 'uAmpMul');
+    gl.uniform1f(uAmp, CURTAIN_AMP);
+    gl.uniform1f(uSpeed, CURTAIN_SPEED);
+    gl.uniform1f(uWaves, CURTAIN_WAVES);
+    gl.uniform1f(uShadow, CURTAIN_SHADOW);
+    gl.uniform1f(uAmpMul, ampMul);
+
+    const tex = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+
+    const off = document.createElement('canvas');
+    const offCtx = off.getContext('2d');
+    if (!offCtx) {
+      setFallback(true);
+      return;
+    }
+
+    const img = new Image();
+    img.decoding = 'async';
+    let imgAspect = 16 / 9;
+    let ready = false;
+    let lastCssW = 0;
+    let lastCssH = 0;
+    let lastBw = 0;
+    let lastBh = 0;
+    let textureUploaded = false;
+
+    const syncLayout = () => {
+      const hostW = host.clientWidth;
+      const hostH = host.clientHeight;
+      if (hostW === 0 || hostH === 0) return;
+      const w = Math.max(1, Math.round(hostW));
+      const h = Math.max(1, Math.round(hostH));
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const bw = Math.max(1, Math.round(w * dpr));
+      const bh = Math.max(1, Math.round(h * dpr));
+
+      if (w === lastCssW && h === lastCssH && bw === lastBw && bh === lastBh) {
+        if (!textureUploaded) uploadTexture();
+        return;
+      }
+      lastCssW = w;
+      lastCssH = h;
+      lastBw = bw;
+      lastBh = bh;
+      textureUploaded = false;
+
+      cv.style.width = `${w}px`;
+      cv.style.height = `${h}px`;
+      cv.width = bw;
+      cv.height = bh;
+      off.width = bw;
+      off.height = bh;
+      gl.viewport(0, 0, bw, bh);
+      uploadTexture();
+    };
+
+    const uploadTexture = () => {
+      if (!ready || !img.complete || img.naturalWidth === 0) return;
+      const canvasAspect = off.width / off.height;
+      let sx = 0;
+      let sy = 0;
+      let sw = img.naturalWidth;
+      let sh = img.naturalHeight;
+      if (canvasAspect > imgAspect) {
+        sh = Math.round(sw / canvasAspect);
+        sy = Math.round((img.naturalHeight - sh) / 2);
+      } else {
+        sw = Math.round(sh * canvasAspect);
+        sx = Math.round((img.naturalWidth - sw) / 2);
+      }
+      offCtx.clearRect(0, 0, off.width, off.height);
+      offCtx.drawImage(img, sx, sy, sw, sh, 0, 0, off.width, off.height);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, off);
+      textureUploaded = true;
+    };
+
+    const ro = new ResizeObserver(() => syncLayout());
+    ro.observe(host);
+    window.addEventListener('resize', syncLayout);
+
+    img.onload = () => {
+      if (img.naturalWidth > 0) imgAspect = img.naturalWidth / img.naturalHeight;
+      ready = true;
+      syncLayout();
+    };
+    img.src = src;
+
+    let raf = 0;
+    const t0 = performance.now();
+    const render = () => {
+      raf = requestAnimationFrame(render);
+      if (!ready) return;
+      syncLayout();
+      gl.uniform1f(uTime, (performance.now() - t0) / 1000);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    };
+    raf = requestAnimationFrame(render);
+
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+      } else if (!raf) {
+        raf = requestAnimationFrame(render);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('resize', syncLayout);
+      document.removeEventListener('visibilitychange', onVisibility);
+      gl.deleteProgram(prog);
+      gl.deleteShader(vert);
+      gl.deleteShader(frag);
+      gl.deleteBuffer(buf);
+      gl.deleteTexture(tex);
+      const loseExt = gl.getExtension('WEBGL_lose_context');
+      loseExt?.loseContext();
+    };
+  }, [src, ampMul, fallback]);
+
+  if (fallback) {
+    return (
+      <div style={{ ...BG_CONTAINER, background: 'var(--bg)', opacity: dim }}>
+        <div className="hone-bg-poster-host" ref={hostRef}>
+          <img
+            src={src}
+            alt=""
+            aria-hidden="true"
+            className="hone-bg-poster-canvas"
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ ...BG_CONTAINER, background: 'var(--bg)', opacity: dim }}>
-      {/* Soft warm sky gradient */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'linear-gradient(180deg, #fff7ec 0%, #fafaf8 38%, #f3efe6 100%)',
-        }}
-      />
-      {/* Sun with gentle rays */}
-      <svg
-        viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMin slice"
-        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-        aria-hidden
-      >
-        <defs>
-          <radialGradient id="hone-light-sun" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#fff3d6" />
-            <stop offset="60%" stopColor="#ffe0a8" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#ffe0a8" stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <circle cx="78" cy="20" r="22" fill="url(#hone-light-sun)" opacity="0.85" />
-        <circle cx="78" cy="20" r="6" fill="#ffd98a" opacity="0.9" />
-        {Array.from({ length: 12 }, (_, i) => {
-          const a = (i / 12) * Math.PI * 2;
-          const x1 = 78 + Math.cos(a) * 9;
-          const y1 = 20 + Math.sin(a) * 9;
-          const x2 = 78 + Math.cos(a) * 13;
-          const y2 = 20 + Math.sin(a) * 13;
-          return (
-            <line
-              key={i}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
-              stroke="#ffd98a"
-              strokeWidth="0.7"
-              strokeLinecap="round"
-              opacity="0.7"
-            />
-          );
-        })}
-        {/* Soft drifting clouds */}
-        <g fill="#ffffff" opacity="0.92">
-          <ellipse cx="22" cy="26" rx="9" ry="4.4" />
-          <ellipse cx="28" cy="24" rx="7" ry="4" />
-          <ellipse cx="17" cy="25" rx="5" ry="3.2" />
-        </g>
-        <g fill="#ffffff" opacity="0.78">
-          <ellipse cx="48" cy="40" rx="7" ry="3.4" />
-          <ellipse cx="53" cy="39" rx="5" ry="3" />
-        </g>
-        {/* Rolling hills at the horizon */}
-        <path
-          d="M0 78 Q 18 70, 36 78 T 72 78 T 108 78 L 108 100 L 0 100 Z"
-          fill="#eee7d8"
-          opacity="0.9"
-        />
-        <path
-          d="M0 86 Q 22 78, 44 86 T 88 86 T 116 86 L 116 100 L 0 100 Z"
-          fill="#e3dcc9"
-          opacity="0.95"
-        />
-        {/* Faint grid for app structure */}
-        <g stroke="rgb(15 15 15 / 0.045)" strokeWidth="0.25">
-          {Array.from({ length: 14 }, (_, i) => (
-            <line key={`v${i}`} x1={i * 8} y1="0" x2={i * 8} y2="100" />
-          ))}
-          {Array.from({ length: 14 }, (_, i) => (
-            <line key={`h${i}`} x1="0" y1={i * 8} x2="100" y2={i * 8} />
-          ))}
-        </g>
-      </svg>
+      <div className="hone-bg-poster-host" ref={hostRef}>
+        <canvas ref={canvasRef} aria-hidden="true" className="hone-bg-poster-canvas" />
+      </div>
     </div>
   );
 }
@@ -318,138 +495,6 @@ function BirthdayBg({ mode }: { mode: CanvasMode }) {
   );
 }
 
-// ─── Cosmic — parallax space scene ──────────────────────────────────────
-function CosmicBg({ mode }: { mode: CanvasMode }) {
-  const stars1 = useMemo(() => makeStars(120, 7777), []);
-  const stars2 = useMemo(() => makeStars(50, 8888), []);
-  const stars3 = useMemo(() => makeStars(20, 9999), []);
-  const layer1Ref = useRef<HTMLDivElement>(null);
-  const layer2Ref = useRef<HTMLDivElement>(null);
-  const layer3Ref = useRef<HTMLDivElement>(null);
-  const planetRef = useRef<HTMLDivElement>(null);
-  const mxRef = useRef(0);
-  const myRef = useRef(0);
-  const rafRef = useRef(0);
-
-  useEffect(() => {
-    if (mode !== 'full') return;
-    const applyParallax = () => {
-      rafRef.current = 0;
-      const mx = mxRef.current;
-      const my = myRef.current;
-      if (layer1Ref.current) {
-        layer1Ref.current.style.transform = `translate3d(${mx * 8}px,${my * 8}px,0)`;
-      }
-      if (layer2Ref.current) {
-        layer2Ref.current.style.transform = `translate3d(${mx * 18}px,${my * 18}px,0)`;
-      }
-      if (layer3Ref.current) {
-        layer3Ref.current.style.transform = `translate3d(${mx * 32}px,${my * 32}px,0)`;
-      }
-      if (planetRef.current) {
-        planetRef.current.style.left = `calc(50% + ${mx * 14}px)`;
-        planetRef.current.style.bottom = `calc(-30% + ${my * 7}px)`;
-      }
-    };
-    const onMove = (e: MouseEvent) => {
-      mxRef.current = e.clientX / window.innerWidth - 0.5;
-      myRef.current = e.clientY / window.innerHeight - 0.5;
-      if (!rafRef.current) rafRef.current = requestAnimationFrame(applyParallax);
-    };
-    window.addEventListener('mousemove', onMove, { passive: true });
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [mode]);
-
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        overflow: 'hidden',
-        pointerEvents: 'none',
-        background: 'var(--bg)',
-      }}
-    >
-      <div ref={layer1Ref} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
-        {stars1.map((s, i) => (
-          <span
-            key={i}
-            style={{
-              position: 'absolute',
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: s.size * 0.6,
-              height: s.size * 0.6,
-              borderRadius: '50%',
-              background: 'rgb(var(--ink-rgb) / 0.55)',
-              opacity: s.baseOp * 0.65,
-              boxShadow: '0 0 2px rgb(var(--ink-rgb) / 0.4)',
-            }}
-          />
-        ))}
-      </div>
-      <div ref={layer2Ref} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
-        {stars2.map((s, i) => (
-          <span
-            key={i}
-            style={{
-              position: 'absolute',
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: s.size,
-              height: s.size,
-              borderRadius: '50%',
-              background: 'rgba(220,230,255,0.85)',
-              opacity: s.baseOp,
-              boxShadow: '0 0 4px rgba(180,200,255,0.6)',
-            }}
-          />
-        ))}
-      </div>
-      <div ref={layer3Ref} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
-        {stars3.map((s, i) => (
-          <span
-            key={i}
-            style={{
-              position: 'absolute',
-              left: `${s.x}%`,
-              top: `${s.y}%`,
-              width: s.size * 1.6,
-              height: s.size * 1.6,
-              borderRadius: '50%',
-              background: 'rgb(var(--ink-rgb) / 0.95)',
-              opacity: s.baseOp + 0.2,
-              boxShadow: '0 0 8px rgb(var(--ink-rgb) / 0.85)',
-            }}
-          />
-        ))}
-      </div>
-      {mode === 'full' && (
-        <div
-          ref={planetRef}
-          style={{
-            position: 'absolute',
-            left: '50%',
-            bottom: '-30%',
-            transform: 'translateX(-50%)',
-            width: 'min(90vmin, 1200px)',
-            height: 'min(90vmin, 1200px)',
-            borderRadius: '50%',
-            background:
-              'radial-gradient(circle at 35% 30%, rgba(120,90,180,0.32) 0%, rgba(60,40,110,0.22) 35%, rgba(20,10,40,0.10) 65%, transparent 100%)',
-            boxShadow:
-              'inset -50px -80px 120px rgba(0,0,0,0.55), 0 0 80px rgba(80,60,140,0.18)',
-            willChange: 'left, bottom',
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
 // ─── Winter (default, original) ─────────────────────────────────────────
 function WinterBg({ mode }: { mode: CanvasMode }) {
   const stars = useMemo(() => makeStars(32, 1337), []);
@@ -546,107 +591,11 @@ function WinterBg({ mode }: { mode: CanvasMode }) {
   );
 }
 
-// ─── Aurora ─────────────────────────────────────────────────────────────
-function AuroraBg({ mode }: { mode: CanvasMode }) {
-  // 4 диагональных gradient-полосы, разные speed/delay.
-  // Плюс одна "shooting star" каждые ~12 сек по диагонали.
-  const dim = mode === 'full' ? 1 : 0.4;
-  return (
-    <div style={BG_CONTAINER}>
-      {/* Backdrop hue rotation — медленный shift всей сцены */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          animation: 'aurora-hue 60s linear infinite',
-          opacity: dim,
-        }}
-      >
-        <div className="aurora-stripe" style={{ animationDuration: '22s', top: '-30%', opacity: 0.55 }} />
-        <div
-          className="aurora-stripe aurora-stripe-2"
-          style={{ animationDuration: '34s', animationDelay: '-8s', top: '10%', opacity: 0.45 }}
-        />
-        <div
-          className="aurora-stripe aurora-stripe-3"
-          style={{ animationDuration: '46s', animationDelay: '-15s', top: '40%', opacity: 0.4 }}
-        />
-        <div
-          className="aurora-stripe"
-          style={{ animationDuration: '29s', animationDelay: '-19s', top: '70%', opacity: 0.35 }}
-        />
-      </div>
-      {/* Shooting stars */}
-      <span className="aurora-shoot" style={{ animationDelay: '-2s', top: '18%', opacity: dim }} />
-      <span className="aurora-shoot" style={{ animationDelay: '-9s', top: '54%', opacity: dim }} />
-    </div>
-  );
-}
-
-// ─── Grid Rain ──────────────────────────────────────────────────────────
-function GridRainBg({ mode }: { mode: CanvasMode }) {
-  // 28 колонок цифрового дождя; каждая со своим delay/duration/x.
-  const columns = useMemo(() => {
-    const rng = mulberry32(7349);
-    const out: { x: number; dur: number; delay: number; chars: string }[] = [];
-    const COLS = 28;
-    for (let i = 0; i < COLS; i++) {
-      let s = '';
-      const len = 14 + Math.floor(rng() * 12);
-      for (let j = 0; j < len; j++) s += rng() < 0.5 ? '0' : '1';
-      out.push({
-        x: (i / COLS) * 100,
-        dur: 6 + rng() * 8,
-        delay: -rng() * 8,
-        chars: s,
-      });
-    }
-    return out;
-  }, []);
-  const dim = mode === 'full' ? 1 : 0.4;
-
-  return (
-    <div style={BG_CONTAINER}>
-      {/* Perspective grid (faint) */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage:
-            'linear-gradient(var(--ink-tint-04) 1px, transparent 1px),' +
-            'linear-gradient(90deg, var(--ink-tint-04) 1px, transparent 1px)',
-          backgroundSize: '48px 48px',
-          transform: 'perspective(700px) rotateX(58deg) translateY(28%) scale(1.6)',
-          transformOrigin: 'center bottom',
-          maskImage: 'linear-gradient(to bottom, transparent 0%, black 60%)',
-          WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 60%)',
-          opacity: 0.85 * dim,
-        }}
-      />
-      {/* Falling streams */}
-      <div className="mono" style={{ position: 'absolute', inset: 0, opacity: dim }}>
-        {columns.map((c, i) => (
-          <div
-            key={i}
-            className="rain-col"
-            style={{
-              left: `${c.x}%`,
-              animation: `rain-fall ${c.dur}s linear ${c.delay}s infinite`,
-            }}
-          >
-            {c.chars.split('').map((ch, j) => (
-              <span key={j} style={{ opacity: 1 - j / c.chars.length }}>
-                {ch}
-              </span>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ─── Particles (canvas2D) ───────────────────────────────────────────────
+// NOTE: canvas2D stroke/fill styles cannot resolve CSS custom properties, so
+// `rgb(var(--ink-rgb) / X)` silently falls back to black and renders invisible
+// on a dark background. We resolve --ink-rgb to a concrete rgb triplet via
+// getComputedStyle on every frame (cheap, and reacts to theme switches).
 function ParticlesBg({ mode }: { mode: CanvasMode }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const dim = mode === 'full' ? 1 : 0.4;
@@ -657,7 +606,7 @@ function ParticlesBg({ mode }: { mode: CanvasMode }) {
     const ctx = cv.getContext('2d');
     if (!ctx) return;
 
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     let W = cv.clientWidth;
     let H = cv.clientHeight;
     const resize = () => {
@@ -687,7 +636,7 @@ function ParticlesBg({ mode }: { mode: CanvasMode }) {
     window.addEventListener('mousemove', onMove);
 
     let raf = 0;
-    let t0 = performance.now();
+    const t0 = performance.now();
     const DIST = 110;
 
     const loop = (now: number) => {
@@ -703,18 +652,19 @@ function ParticlesBg({ mode }: { mode: CanvasMode }) {
         if (p.x < 0 || p.x > W) p.vx *= -1;
         if (p.y < 0 || p.y > H) p.vy *= -1;
       }
+      const [ir, ig, ib] = readInkRgb();
       // Lines first (under), then dots.
       const pulse = 0.5 + 0.5 * Math.sin(t * 0.8);
       for (let i = 0; i < N; i++) {
         for (let j = i + 1; j < N; j++) {
-          const a = pts[i];
-          const b = pts[j];
+          const a = pts[i]!;
+          const b = pts[j]!;
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const d = Math.sqrt(dx * dx + dy * dy);
           if (d < DIST) {
             const op = (1 - d / DIST) * 0.35 * (0.5 + 0.5 * pulse) * dim;
-            ctx.strokeStyle = `rgb(var(--ink-rgb) / ${op})`;
+            ctx.strokeStyle = `rgba(${ir}, ${ig}, ${ib}, ${op})`;
             ctx.lineWidth = 0.6;
             ctx.beginPath();
             ctx.moveTo(a.x + px, a.y + py);
@@ -723,20 +673,33 @@ function ParticlesBg({ mode }: { mode: CanvasMode }) {
           }
         }
       }
-      ctx.fillStyle = `rgb(var(--ink-rgb) / ${0.65 * dim})`;
+      ctx.fillStyle = `rgba(${ir}, ${ig}, ${ib}, ${0.65 * dim})`;
       for (const p of pts) {
         ctx.beginPath();
         ctx.arc(p.x + px, p.y + py, p.r, 0, Math.PI * 2);
         ctx.fill();
       }
-      raf = requestAnimationFrame(loop);
+      if (!document.hidden) raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0;
+        return;
+      }
+      if (!raf) {
+        raf = requestAnimationFrame(loop);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
     return () => {
-      cancelAnimationFrame(raf);
+      if (raf) cancelAnimationFrame(raf);
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', onMove);
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [dim]);
 
@@ -754,108 +717,6 @@ function ParticlesBg({ mode }: { mode: CanvasMode }) {
         }}
       />
       <canvas ref={ref} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-    </div>
-  );
-}
-
-// ─── Abyss ──────────────────────────────────────────────────────────────
-function AbyssBg({ mode }: { mode: CanvasMode }) {
-  const dim = mode === 'full' ? 1 : 0.4;
-  // 12-угольник (большой) + 3 окружающих arc-кольца.
-  const polyPoints = useMemo(() => {
-    const N = 12;
-    const R = 220;
-    const arr: string[] = [];
-    for (let i = 0; i < N; i++) {
-      const a = (i / N) * Math.PI * 2 - Math.PI / 2;
-      arr.push(`${(Math.cos(a) * R).toFixed(2)},${(Math.sin(a) * R).toFixed(2)}`);
-    }
-    return arr.join(' ');
-  }, []);
-
-  return (
-    <div style={BG_CONTAINER}>
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background:
-            'radial-gradient(circle at 50% 50%, rgba(20,20,30,0.65), rgba(0,0,0,0.95) 70%)',
-          opacity: dim,
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          left: '50%',
-          top: '50%',
-          width: 560,
-          height: 560,
-          transform: 'translate(-50%,-50%)',
-          opacity: 0.75 * dim,
-        }}
-      >
-        {/* Breathing rotating polygon — wrap two divs so rotate + scale don't fight on one transform */}
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            animation: 'abyss-breathe 8s ease-in-out infinite',
-          }}
-        >
-          <svg
-            width="560"
-            height="560"
-            viewBox="-280 -280 560 560"
-            style={{
-              position: 'absolute',
-              inset: 0,
-              animation: 'abyss-rotate 90s linear infinite',
-            }}
-          >
-            <polygon points={polyPoints} fill="none" stroke="rgb(var(--ink-rgb) / 0.55)" strokeWidth="1" />
-            <polygon
-              points={polyPoints}
-              fill="none"
-              stroke="rgb(var(--ink-rgb) / 0.18)"
-              strokeWidth="1"
-              transform="scale(0.7)"
-            />
-            <polygon
-              points={polyPoints}
-              fill="none"
-              stroke="rgb(var(--ink-rgb) / 0.1)"
-              strokeWidth="1"
-              transform="scale(0.4)"
-            />
-          </svg>
-        </div>
-        {/* Counter-rotating arc ring */}
-        <svg
-          width="560"
-          height="560"
-          viewBox="-280 -280 560 560"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            animation: 'abyss-rotate-rev 140s linear infinite',
-          }}
-        >
-          <circle cx="0" cy="0" r="260" fill="none" stroke="rgb(var(--ink-rgb) / 0.05)" strokeWidth="1" />
-          <path
-            d="M -260 0 A 260 260 0 0 1 0 -260"
-            fill="none"
-            stroke="rgb(var(--ink-rgb) / 0.25)"
-            strokeWidth="1"
-          />
-          <path
-            d="M 200 0 A 200 200 0 0 1 0 200"
-            fill="none"
-            stroke="rgb(var(--ink-rgb) / 0.18)"
-            strokeWidth="1"
-          />
-        </svg>
-      </div>
     </div>
   );
 }
@@ -893,6 +754,17 @@ function makeStars(count: number, seed: number): Star[] {
     });
   }
   return out;
+}
+
+/** Resolve the current `--ink-rgb` token (e.g. "255 255 255") to a concrete triplet. */
+function readInkRgb(): [number, number, number] {
+  if (typeof window === 'undefined') return [255, 255, 255];
+  const raw = getComputedStyle(document.documentElement).getPropertyValue('--ink-rgb').trim();
+  const parts = raw.split(/[\s,]+/).map((p) => parseInt(p, 10));
+  const r = Number.isFinite(parts[0]) ? parts[0]! : 255;
+  const g = Number.isFinite(parts[1]) ? parts[1]! : 255;
+  const b = Number.isFinite(parts[2]) ? parts[2]! : 255;
+  return [r, g, b];
 }
 
 function mulberry32(seed: number): () => number {

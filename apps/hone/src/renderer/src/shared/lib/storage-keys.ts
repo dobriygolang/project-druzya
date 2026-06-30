@@ -5,7 +5,7 @@ export const STORAGE_KEYS = {
   deviceId: 'hone:device-id',
   /** Settings JSON blob (pomodoro / dailyGoal / volume / notifications). */
   settings: 'hone:settings',
-  /** Theme id ('winter' | 'aurora' | ...). */
+  /** Theme id ('winter' | 'drift' | 'visor' | 'debris' | 'launch' | 'birthday' | 'particles'). */
   theme: 'hone:theme',
   /** UI locale ('en' | 'ru'). */
   locale: 'hone:locale',
