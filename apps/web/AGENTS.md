@@ -131,7 +131,7 @@ Room types in prod UI: `practice`, `system_design` only.
 | `VITE_HONE_DOWNLOAD_MAC` | — | Override landing macOS download URL |
 | `VITE_HONE_DOWNLOAD_WIN` | — | Override landing Windows download URL |
 
-Landing download: `lib/landing/honeRelease.ts` fetches [GitHub latest hone release](https://github.com/dobriygolang/project-druzya/releases/latest) (`.dmg` / `-setup.exe`). Cached 15m in `sessionStorage`. Manifesto CTA: `/welcome#download`.
+Landing download: `lib/landing/honeRelease.ts` fetches [GitHub latest hone release](https://github.com/dobriygolang/project-druzya/releases/latest) (`.dmg` / `-setup.exe`). Cached 15m in `sessionStorage`. Hero + header CTA; short link `/download`.
 | `VITE_HONE_HERO_VIDEO` | — | Landing hero video |
 
 ## Commands

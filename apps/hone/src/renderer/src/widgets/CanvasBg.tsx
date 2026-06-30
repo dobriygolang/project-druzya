@@ -1,10 +1,11 @@
 // CanvasBg — медитативный фон Hone'а.
 //
-// Themes (7):
+// Themes (8):
 //   - drift (light): line-art astronaut drifting near a capsule on white
 //   - visor (light): line-art astronaut portrait with Earth reflected in visor
 //   - winter (default): grid + stars float/twinkle + waves drift + 2 rotating squares
-//   - birthday: festive illustrated scene (cake, gifts, balloons, confetti)
+//   - birthday (dark): manga ink scene — astronaut holding a birthday cake in space,
+//   - birthday-light: line-art birthday scene — cake, gift, balloons on white
 //   - particles: dense floating particles with proximity lines (canvas2D),
 //     line opacity pulses with sine wave, mouse parallax
 //   - debris (dark): manga ink scene — astronaut drifting through a debris field
@@ -37,6 +38,7 @@ export type ThemeId =
   | 'visor'
   | 'winter'
   | 'birthday'
+  | 'birthday-light'
   | 'particles'
   | 'debris'
   | 'launch';
@@ -46,6 +48,7 @@ export const THEME_IDS: ThemeId[] = [
   'visor',
   'winter',
   'birthday',
+  'birthday-light',
   'particles',
   'debris',
   'launch',
@@ -68,7 +71,9 @@ export function CanvasBg({ mode = 'full', theme = 'winter' }: CanvasBgProps) {
     case 'launch':
       return <ImageBg mode={mode} src="/backgrounds/launch.png" />;
     case 'birthday':
-      return <BirthdayBg mode={mode} />;
+      return <ImageBg mode={mode} src="/backgrounds/birthday.png" />;
+    case 'birthday-light':
+      return <ImageBg mode={mode} src="/backgrounds/birthday-light.png" />;
     case 'particles':
       return <ParticlesBg mode={mode} />;
     case 'winter':
@@ -340,157 +345,6 @@ function ImageBg({ mode, src }: { mode: CanvasMode; src: string }) {
       <div className="hone-bg-poster-host" ref={hostRef}>
         <canvas ref={canvasRef} aria-hidden="true" className="hone-bg-poster-canvas" />
       </div>
-    </div>
-  );
-}
-
-// ─── Birthday — festive illustrated scene for a special day ─────────────
-function BirthdayBg({ mode }: { mode: CanvasMode }) {
-  const dim = mode === 'full' ? 1 : 0.55;
-  const confetti = useMemo(() => {
-    const rng = mulberry32(20260630);
-    const colors = ['#ffd166', '#ff85a8', '#fff5f7', '#c4a1ff', '#ffb3c6'];
-    return Array.from({ length: 40 }, (_, i) => ({
-      left: rng() * 100,
-      delay: -rng() * 14,
-      dur: 8 + rng() * 10,
-      rot: rng() * 360,
-      color: colors[Math.floor(rng() * colors.length)]!,
-      w: 5 + rng() * 4,
-      h: 8 + rng() * 6,
-      i,
-    }));
-  }, []);
-  const balloons = useMemo(
-    () => [
-      { left: '8%', color: '#ff85a8', delay: '0s', dur: '11s' },
-      { left: '22%', color: '#ffd166', delay: '-2s', dur: '13s' },
-      { left: '78%', color: '#c4a1ff', delay: '-4s', dur: '12s' },
-      { left: '90%', color: '#ffb3c6', delay: '-1s', dur: '14s' },
-    ],
-    [],
-  );
-  const sparkles = useMemo(() => {
-    const rng = mulberry32(31415);
-    return Array.from({ length: 22 }, (_, i) => ({
-      left: rng() * 100,
-      top: rng() * 100,
-      dur: 2 + rng() * 3,
-      delay: -rng() * 4,
-      size: 2 + rng() * 3,
-      i,
-    }));
-  }, []);
-
-  return (
-    <div className="hone-birthday-bg" style={{ ...BG_CONTAINER, opacity: dim }}>
-      <div className="hone-birthday-bg__glow" aria-hidden />
-
-      {/* Main illustrated SVG scene — bunting, cake, gifts, text */}
-      <svg
-        className="hone-birthday-scene"
-        viewBox="0 0 100 100"
-        preserveAspectRatio="xMidYMax slice"
-        aria-hidden
-      >
-        {/* Bunting banner across the top */}
-        <path
-          d="M0 12 Q 25 22, 50 12 T 100 12"
-          fill="none"
-          stroke="rgb(var(--ink-rgb) / 0.22)"
-          strokeWidth="0.3"
-        />
-        {Array.from({ length: 11 }, (_, i) => {
-          const x = 5 + i * 9;
-          const y = 13 + Math.sin((i / 11) * Math.PI) * 4;
-          const colors = ['#ffd166', '#ff85a8', '#c4a1ff', '#ffb3c6'];
-          const c = colors[i % colors.length]!;
-          return <polygon key={i} points={`${x},${y} ${x + 4},${y} ${x + 2},${y + 4}`} fill={c} opacity="0.9" />;
-        })}
-
-        {/* Birthday cake */}
-        <g transform="translate(50 78)">
-          {/* plate */}
-          <rect x="-16" y="0" width="32" height="2" rx="1" fill="rgb(var(--ink-rgb) / 0.18)" />
-          {/* bottom layer */}
-          <rect x="-14" y="-12" width="28" height="12" rx="2" fill="#3a1a26" />
-          {/* top layer */}
-          <rect x="-11" y="-22" width="22" height="10" rx="2" fill="#4a2230" />
-          {/* frosting drips */}
-          <path
-            d="M-11 -22 Q -9 -18, -7 -20 Q -5 -17, -3 -20 Q -1 -17, 1 -20 Q 3 -17, 5 -20 Q 7 -17, 9 -20 Q 11 -18, 11 -22 Z"
-            fill="#fff5f7"
-            opacity="0.95"
-          />
-          {/* candle */}
-          <rect x="-0.8" y="-28" width="1.6" height="6" rx="0.6" fill="#ffd166" />
-          {/* flame */}
-          <ellipse className="hone-birthday-cake__flame-svg" cx="0" cy="-30" rx="1.2" ry="2" fill="#ffd166" />
-        </g>
-
-        {/* Two little gift boxes beside the cake */}
-        <g transform="translate(26 80)" opacity="0.95">
-          <rect x="-5" y="-7" width="10" height="7" rx="1" fill="#ff85a8" />
-          <rect x="-5" y="-4" width="10" height="1.4" fill="#ffd166" />
-          <rect x="-0.7" y="-7" width="1.4" height="7" fill="#ffd166" />
-        </g>
-        <g transform="translate(74 82)" opacity="0.95">
-          <rect x="-5" y="-7" width="10" height="7" rx="1" fill="#c4a1ff" />
-          <rect x="-5" y="-4" width="10" height="1.4" fill="#fff5f7" />
-          <rect x="-0.7" y="-7" width="1.4" height="7" fill="#fff5f7" />
-        </g>
-      </svg>
-
-      {/* "С днём рождения!" headline, gently shimmering */}
-      <div className="hone-birthday-title" aria-hidden>
-        <span className="hone-birthday-title__text">С днём рождения!</span>
-      </div>
-
-      {/* Twinkling sparkles scattered across the scene */}
-      {sparkles.map((s) => (
-        <span
-          key={s.i}
-          className="hone-birthday-sparkle"
-          style={{
-            left: `${s.left}%`,
-            top: `${s.top}%`,
-            width: s.size,
-            height: s.size,
-            animationDuration: `${s.dur}s`,
-            animationDelay: `${s.delay}s`,
-          }}
-        />
-      ))}
-
-      {confetti.map((c) => (
-        <span
-          key={c.i}
-          className="hone-birthday-confetti"
-          style={{
-            left: `${c.left}%`,
-            width: c.w,
-            height: c.h,
-            background: c.color,
-            animationDuration: `${c.dur}s`,
-            animationDelay: `${c.delay}s`,
-            transform: `rotate(${c.rot}deg)`,
-          }}
-        />
-      ))}
-      {balloons.map((b, i) => (
-        <div
-          key={i}
-          className="hone-birthday-balloon"
-          style={{
-            left: b.left,
-            animationDuration: b.dur,
-            animationDelay: b.delay,
-          }}
-        >
-          <span className="hone-birthday-balloon__orb" style={{ background: b.color }} />
-          <span className="hone-birthday-balloon__string" />
-        </div>
-      ))}
     </div>
   );
 }

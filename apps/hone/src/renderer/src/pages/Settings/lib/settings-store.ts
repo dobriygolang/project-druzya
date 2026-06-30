@@ -52,6 +52,8 @@ export function themeLabelKey(id: string): string {
       return 'hone.theme.winter';
     case 'birthday':
       return 'hone.theme.birthday';
+    case 'birthday-light':
+      return 'hone.theme.birthday-light';
     case 'particles':
       return 'hone.theme.particles';
     case 'debris':

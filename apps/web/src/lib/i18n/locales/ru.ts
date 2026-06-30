@@ -164,6 +164,7 @@ export const ru = {
     version: '0.0.1',
     pill: 'РАННИЙ ДОСТУП',
     navPhilosophy: 'Философия',
+    navDownload: 'скачать',
     heroLine1: 'Глубокий фокус.',
     heroLine2: 'Красивый дизайн.',
     heroLine3: 'Для тех, кто строит.',
@@ -199,10 +200,6 @@ export const ru = {
     downloadCta: 'Скачать приложение',
     downloadCtaVersion: 'Скачать приложение v{{version}}',
     downloadStarted: 'Загрузка началась',
-    manifestoDownloadTitle: 'Возьми Friends с собой',
-    manifestoDownloadHint: 'Desktop для macOS и Windows — всегда последний релиз',
-    manifestoDownloadHintVersion: 'macOS и Windows · актуальная v{{version}}',
-    allReleases: 'Все версии на GitHub',
     philosophyTitle: 'Наша философия',
     philosophyBody:
       'Friends — не ещё одна вкладка в браузере.\n' +

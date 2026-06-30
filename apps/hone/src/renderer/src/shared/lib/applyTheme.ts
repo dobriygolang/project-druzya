@@ -7,6 +7,7 @@ const THEME_PALETTE: Record<ThemeId, Palette> = {
   visor: 'light',
   winter: 'dark',
   birthday: 'birthday',
+  'birthday-light': 'light',
   particles: 'dark',
   debris: 'dark',
   launch: 'dark',
@@ -16,6 +17,7 @@ const THEME_COLOR: Partial<Record<ThemeId, string>> = {
   drift: '#fafaf8',
   visor: '#fafaf8',
   birthday: '#140810',
+  'birthday-light': '#fafaf8',
 };
 
 /** Sync `<html>` palette class + meta theme-color with the selected canvas theme. */

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Logo } from '@/components/brand/Logo'
 import { SiteThemeToggle } from '@/components/brand/SiteThemeToggle'
+import { SiteLocaleToggle } from '@/components/brand/SiteLocaleToggle'
 import { LandingDownloadButton } from '@/components/landing/LandingDownloadButton'
 import { cn } from '@/lib/cn'
 import { useI18n } from '@/lib/i18n'
@@ -30,8 +31,9 @@ export function SiteHeader({ centerLinks, right, className }: SiteHeaderProps) {
 
   const defaultRight = (
     <>
+      <SiteLocaleToggle compact className="hidden sm:inline-flex" />
       <SiteThemeToggle theme={theme} onToggle={toggleTheme} compact className="hidden sm:inline-flex" />
-      <LandingDownloadButton compact className="hidden sm:inline-flex" />
+      <LandingDownloadButton variant="text" />
     </>
   )
 
@@ -64,6 +66,7 @@ export function SiteHeader({ centerLinks, right, className }: SiteHeaderProps) {
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <SiteLocaleToggle compact className="sm:hidden" />
           <SiteThemeToggle theme={theme} onToggle={toggleTheme} compact className="sm:hidden" />
           {right ?? defaultRight}
         </div>

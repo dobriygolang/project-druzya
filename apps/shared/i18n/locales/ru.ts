@@ -275,6 +275,7 @@ export const ru = {
   'hone.theme.active_badge': 'Активна',
   'hone.theme.aria_label': 'Тема: {{name}}',
   'hone.theme.birthday': 'День рождения',
+  'hone.theme.birthday-light': 'День рождения (светлая)',
   'hone.theme.debris': 'Обломки',
   'hone.theme.drift': 'Дрейф',
   'hone.theme.launch': 'Старт',

@@ -165,6 +165,7 @@ export const en: Messages = {
     version: '0.0.1',
     pill: 'EARLY ACCESS',
     navPhilosophy: 'Philosophy',
+    navDownload: 'download',
     heroLine1: 'Deep focus.',
     heroLine2: 'Beautiful design.',
     heroLine3: 'Made for builders.',
@@ -200,10 +201,6 @@ export const en: Messages = {
     downloadCta: 'Download app',
     downloadCtaVersion: 'Download app v{{version}}',
     downloadStarted: 'Download started',
-    manifestoDownloadTitle: 'Take Friends with you',
-    manifestoDownloadHint: 'Desktop for macOS and Windows — always the latest release',
-    manifestoDownloadHintVersion: 'macOS & Windows · latest v{{version}}',
-    allReleases: 'All versions on GitHub',
     philosophyTitle: 'Our philosophy',
     philosophyBody:
       'Friends is not another tab in your browser.\n' +

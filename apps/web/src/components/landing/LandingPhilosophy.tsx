@@ -1,13 +1,10 @@
 import { Fragment } from 'react'
-import { LandingDownloadButton } from '@/components/landing/LandingDownloadButton'
-import { useLandingDownload } from '@/lib/landing/useLandingDownload'
 import { useI18n } from '@/lib/i18n'
 import { useSiteTheme } from '@/lib/site/useSiteTheme'
 
 export function LandingPhilosophy() {
   const { t } = useI18n()
   const { theme } = useSiteTheme()
-  const { releasePageUrl, version } = useLandingDownload()
   const isDark = theme === 'dark'
   const lines = t('welcome.philosophyBody').split('\n')
 
@@ -37,31 +34,6 @@ export function LandingPhilosophy() {
               </Fragment>
             ))}
           </p>
-        </div>
-
-        <div
-          id="download"
-          className="mt-14 flex scroll-mt-24 flex-col items-start gap-4 rounded-xl border border-site-border bg-site-card/50 p-6 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div>
-            <p className="m-0 text-base font-medium text-site-text">{t('welcome.manifestoDownloadTitle')}</p>
-            <p className="mt-1 mb-0 text-sm text-site-muted">
-              {version
-                ? t('welcome.manifestoDownloadHintVersion', { version })
-                : t('welcome.manifestoDownloadHint')}
-            </p>
-          </div>
-          <div className="flex flex-col items-stretch gap-2 sm:items-end">
-            <LandingDownloadButton />
-            <a
-              href={releasePageUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-center text-xs text-site-muted underline underline-offset-4 transition-colors hover:text-site-text"
-            >
-              {t('welcome.allReleases')}
-            </a>
-          </div>
         </div>
       </div>
     </section>
