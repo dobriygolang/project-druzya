@@ -239,6 +239,7 @@ export function Palette({ onClose, onOpen, taskDate, onCreateTask, closing = fal
                 key={it.id}
                 type="button"
                 className="hone-palette-row hone-palette-option"
+                data-hone-demo-target={`palette-${it.id}`}
                 data-active={active ? 'true' : 'false'}
                 onMouseEnter={() => setIdx(i)}
                 onClick={() => runRow(row)}

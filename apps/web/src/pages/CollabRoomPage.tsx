@@ -33,7 +33,6 @@ import {
   persistGuestToken,
   readGuestToken,
 } from '@/lib/api/rooms'
-import { markInviteCopied, readInviteCopied } from '@/lib/live/useCreateLiveRoom'
 import { readGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { liveWsStatusLabel, useI18n } from '@/lib/i18n'
 
@@ -59,7 +58,6 @@ export default function CollabRoomPage() {
   const codeEditorRef = useRef<CollabCodeEditorHandle>(null)
   const diagramEditorRef = useRef<CollabExcalidrawHandle>(null)
   const [copied, setCopied] = useState(false)
-  const [showInviteBanner, setShowInviteBanner] = useState(false)
   const [wsStatus, setWsStatus] = useState<import('@/lib/ws/collabEditor').EditorWsStatus>('connecting')
   const [guestName, setGuestName] = useState(() => readGuestDisplayName())
   const [guestToken, setGuestToken] = useState(() => readGuestToken(roomId))
@@ -99,9 +97,7 @@ export default function CollabRoomPage() {
     mutationFn: () => createInvite(roomId),
     onSuccess: async (invite) => {
       await navigator.clipboard.writeText(invite.url)
-      markInviteCopied(roomId)
       setCopied(true)
-      setShowInviteBanner(true)
       window.setTimeout(() => setCopied(false), 2000)
     },
   })
@@ -119,14 +115,16 @@ export default function CollabRoomPage() {
 
   useEffect(() => {
     document.documentElement.classList.add('light')
-    if (readInviteCopied(roomId)) {
-      setShowInviteBanner(true)
-      setCopied(true)
-    }
     return () => {
       document.documentElement.classList.remove('light')
     }
-  }, [roomId])
+  }, [])
+
+  useEffect(() => {
+    if (!fmt.formatError) return
+    const id = window.setTimeout(() => fmt.clearFormatError(), 6000)
+    return () => window.clearTimeout(id)
+  }, [fmt.formatError, fmt.clearFormatError])
 
   if (!roomId.trim()) {
     return (
@@ -257,23 +255,7 @@ export default function CollabRoomPage() {
         expiresAt={room.expires_at}
       />
 
-      {isOwner && showInviteBanner ? (
-        <div
-          className="flex shrink-0 items-center justify-between gap-3 border-b bg-surface-2 px-4 py-2 text-[13px] text-text-secondary sm:px-5"
-          style={{ borderColor: brand.hair }}
-        >
-          <span>{t('live.inviteBanner')}</span>
-          <button
-            type="button"
-            onClick={() => setShowInviteBanner(false)}
-            className="shrink-0 text-text-muted hover:text-text-primary"
-          >
-            {t('live.hide')}
-          </button>
-        </div>
-      ) : null}
-
-      <div className={['relative min-h-0 flex-1', designRoom ? 'bg-bg' : 'bg-[#1e1e1e]'].join(' ')}>
+      <div className={['relative min-h-0 flex-1', designRoom ? 'bg-bg' : 'bg-white'].join(' ')}>
         {designRoom ? (
           <CollabExcalidrawEditor
             ref={diagramEditorRef}
@@ -304,8 +286,19 @@ export default function CollabRoomPage() {
             />
 
             {fmt.formatError ? (
-              <div className="pointer-events-none absolute left-4 top-4 z-[25] rounded-lg border border-danger/30 bg-surface-1 px-3 py-2 text-xs text-danger shadow-sm">
-                {fmt.formatError}
+              <div
+                role="alert"
+                className="absolute left-4 top-4 z-[25] flex max-w-md items-start gap-2 rounded-lg border border-danger/30 bg-white px-3 py-2 text-xs text-danger shadow-md"
+              >
+                <span className="min-w-0 flex-1 leading-relaxed">{fmt.formatError}</span>
+                <button
+                  type="button"
+                  onClick={() => fmt.clearFormatError()}
+                  className="shrink-0 rounded p-0.5 text-danger/70 hover:bg-danger/10 hover:text-danger"
+                  aria-label={t('live.dismissError')}
+                >
+                  ×
+                </button>
               </div>
             ) : null}
 

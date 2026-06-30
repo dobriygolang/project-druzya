@@ -119,6 +119,23 @@ export function NotesPage({ initialSelectedId, onConsumeInitial }: NotesPageProp
   }, [loadList]);
 
   useEffect(() => {
+    const onSet = (e: Event) => {
+      const body = (e as CustomEvent<{ body?: string }>).detail?.body;
+      if (typeof body === 'string') setDraftBody(body);
+    };
+    const onAppend = (e: Event) => {
+      const char = (e as CustomEvent<{ char?: string }>).detail?.char;
+      if (typeof char === 'string') setDraftBody((prev) => prev + char);
+    };
+    window.addEventListener(HONE_EVENTS.demoNoteSetBody, onSet);
+    window.addEventListener(HONE_EVENTS.demoNoteAppend, onAppend);
+    return () => {
+      window.removeEventListener(HONE_EVENTS.demoNoteSetBody, onSet);
+      window.removeEventListener(HONE_EVENTS.demoNoteAppend, onAppend);
+    };
+  }, []);
+
+  useEffect(() => {
     const unsub = subscribeVault(() => {
       loadList();
       const id = selectedIdRef.current;

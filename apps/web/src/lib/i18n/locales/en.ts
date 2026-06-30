@@ -179,6 +179,7 @@ export const en: Messages = {
     inviteBanner:
       'Send the invite link to your partner — they can join without signing up and edit code together.',
     hide: 'Hide',
+    dismissError: 'Dismiss',
     guestTitle: 'Join as guest',
     guestDescription: 'Display name in the editor. Access lasts for the session only.',
     accessTitle: 'Access required',

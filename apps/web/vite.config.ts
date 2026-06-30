@@ -22,6 +22,9 @@ const CM_ALIASES = [
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'import.meta.env.VITE_HONE_LOCAL_ONLY': JSON.stringify('true'),
+  },
   optimizeDeps: {
     include: ['zustand', 'zustand/react', '@excalidraw/excalidraw'],
   },

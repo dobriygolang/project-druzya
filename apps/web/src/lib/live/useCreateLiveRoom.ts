@@ -3,24 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { createGuestRoom, persistGuestToken } from '@/lib/api/rooms'
 import { persistGuestDisplayName, readGuestDisplayName } from '@/lib/live/guestDisplayName'
 
-const inviteCopiedKey = (roomId: string) => `druzya_invite_copied_${roomId}`
-
-export function markInviteCopied(roomId: string) {
-  try {
-    sessionStorage.setItem(inviteCopiedKey(roomId), '1')
-  } catch {
-    /* noop */
-  }
-}
-
-export function readInviteCopied(roomId: string): boolean {
-  try {
-    return sessionStorage.getItem(inviteCopiedKey(roomId)) === '1'
-  } catch {
-    return false
-  }
-}
-
 export function useCreateLiveRoom() {
   const navigate = useNavigate()
 
@@ -48,7 +30,6 @@ export function useCreateLiveRoom() {
       if (inviteUrl) {
         try {
           await navigator.clipboard.writeText(inviteUrl)
-          markInviteCopied(room.id)
         } catch {
           /* clipboard blocked */
         }

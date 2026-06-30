@@ -1,7 +1,7 @@
 /**
  * Real Hone signed-in shell for the marketing embed — same UI as desktop, local-only (IndexedDB).
  */
-import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { CanvasBg, type ThemeId } from '@widgets/CanvasBg';
 import { Wordmark } from '@widgets/Chrome';
@@ -31,6 +31,8 @@ import { ErrorBoundary } from '@shared/ui/ErrorBoundary';
 import { DEMO_USER_ID } from './constants';
 import { seedDemoData } from './seedDemoData';
 import { DemoEmbedFrame } from './DemoEmbedFrame';
+import { DemoShowcase } from './showcase/DemoShowcase';
+import type { ShowcaseActions } from './showcase/runShowcase';
 
 const TaskBoardPage = lazy(() => import('@pages/TaskBoard').then((m) => ({ default: m.TaskBoardPage })));
 const NotesPage = lazy(() => import('@pages/Notes').then((m) => ({ default: m.NotesPage })));
@@ -48,6 +50,10 @@ export interface HoneDemoAppProps {
   compact?: boolean;
   /** Maps web site light/dark to Hone canvas theme when set. */
   siteTheme?: 'dark' | 'light';
+  /** Landing embed — local IndexedDB only, static bg, lazy page loads. */
+  embedded?: boolean;
+  /** Autoplay cursor tour (landing hero). Pauses on hover. */
+  showcase?: boolean;
 }
 
 function bootstrapDemoSession(): void {
@@ -57,13 +63,26 @@ function bootstrapDemoSession(): void {
   });
 }
 
+function themeForEmbed(siteTheme: 'dark' | 'light' | undefined): ThemeId {
+  return siteTheme === 'light' ? 'drift' : 'debris';
+}
+
 function themeForSite(siteTheme: 'dark' | 'light' | undefined, stored: ThemeId): ThemeId {
   if (!siteTheme) return stored;
   if (siteTheme === 'light') return stored === 'debris' || stored === 'launch' ? stored : 'drift';
   return stored === 'winter' || stored === 'particles' ? stored : 'particles';
 }
 
-function HoneDemoShell({ siteTheme }: { siteTheme?: 'dark' | 'light' }) {
+function HoneDemoShell({
+  siteTheme,
+  embedded = false,
+  showcase = false,
+}: {
+  siteTheme?: 'dark' | 'light';
+  embedded?: boolean;
+  showcase?: boolean;
+}) {
+  const shellRef = useRef<HTMLDivElement>(null);
   const [page, setPageRaw] = useState<PageId>('home');
   const [statsOpen, setStatsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -71,7 +90,9 @@ function HoneDemoShell({ siteTheme }: { siteTheme?: 'dark' | 'light' }) {
   const [paletteMounted, setPaletteMounted] = useState(false);
   const [paletteClosing, setPaletteClosing] = useState(false);
   const [paletteTaskDate, setPaletteTaskDate] = useState<Date | null>(null);
-  const [theme, setTheme] = useState<ThemeId>(() => themeForSite(siteTheme, readStoredTheme()));
+  const [theme, setTheme] = useState<ThemeId>(() =>
+    embedded ? themeForEmbed(siteTheme) : themeForSite(siteTheme, readStoredTheme()),
+  );
   const [ready, setReady] = useState(false);
 
   const setPage = useCallback((next: PageId | ((p: PageId) => PageId)) => {
@@ -99,8 +120,8 @@ function HoneDemoShell({ siteTheme }: { siteTheme?: 'dark' | 'light' }) {
 
   useEffect(() => {
     if (siteTheme === undefined) return;
-    setTheme((cur) => themeForSite(siteTheme, cur));
-  }, [siteTheme]);
+    setTheme((cur) => (embedded ? themeForEmbed(siteTheme) : themeForSite(siteTheme, cur)));
+  }, [siteTheme, embedded]);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,15 +130,16 @@ function HoneDemoShell({ siteTheme }: { siteTheme?: 'dark' | 'light' }) {
       await seedDemoData();
       if (cancelled) return;
       setReady(true);
-      void import('@pages/TaskBoard');
-      void import('@pages/Notes');
-      void import('@pages/Settings');
-      void import('@pages/Whiteboard');
+      if (showcase) {
+        void import('@widgets/Palette');
+        void import('@pages/Notes');
+        void import('@pages/TaskBoard');
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [showcase]);
 
   const startFocus = useCallback(
     (args?: StartFocusArgs) => {
@@ -238,6 +260,16 @@ function HoneDemoShell({ siteTheme }: { siteTheme?: 'dark' | 'light' }) {
     open: (id) => openImpl(id),
   });
 
+  const showcaseActions = useMemo<ShowcaseActions>(
+    () => ({
+      openPalette,
+      closePalette,
+      navigate: (id) => openImpl(id),
+      goHome,
+    }),
+    [openPalette, closePalette, openImpl, goHome],
+  );
+
   const renderPage = useMemo(
     () =>
       function renderPage(id: PageId) {
@@ -283,7 +315,12 @@ function HoneDemoShell({ siteTheme }: { siteTheme?: 'dark' | 'light' }) {
   }
 
   return (
-    <div className="hone-demo-shell" style={{ position: 'absolute', inset: 0, background: 'var(--bg)', overflow: 'hidden' }}>
+    <div
+      ref={shellRef}
+      className="hone-demo-shell"
+      data-showcase={showcase ? 'true' : undefined}
+      style={{ position: 'absolute', inset: 0, background: 'var(--bg)', overflow: 'hidden' }}
+    >
       <div className="hone-canvas-shell" data-visible={page === 'home' ? 'true' : 'false'}>
         <CanvasBg mode={page === 'home' ? 'full' : 'void'} theme={theme} />
       </div>
@@ -315,15 +352,23 @@ function HoneDemoShell({ siteTheme }: { siteTheme?: 'dark' | 'light' }) {
           />
         </Suspense>
       )}
+      {showcase && (
+        <DemoShowcase enabled={showcase} rootRef={shellRef} actions={showcaseActions} />
+      )}
     </div>
   );
 }
 
-export function HoneDemoApp({ compact = false, siteTheme }: HoneDemoAppProps) {
+export function HoneDemoApp({
+  compact = false,
+  siteTheme,
+  embedded = false,
+  showcase = false,
+}: HoneDemoAppProps) {
   return (
     <ErrorBoundary section="Hone demo">
       <DemoEmbedFrame compact={compact}>
-        <HoneDemoShell siteTheme={siteTheme} />
+        <HoneDemoShell siteTheme={siteTheme} embedded={embedded} showcase={showcase && embedded} />
       </DemoEmbedFrame>
     </ErrorBoundary>
   );

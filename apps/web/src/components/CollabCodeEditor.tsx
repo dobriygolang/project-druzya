@@ -10,7 +10,7 @@ import { editorAssistExtensions } from '@/lib/codemirror/editorAssist'
 import { collabUserColors } from '@/lib/codemirror/collabColors'
 import { peersFromAwareness, type CollabPeer } from '@/lib/codemirror/collabPresence'
 import { bytesToB64, applyWsEnvelope, useEditorWs, type EditorWsEnvelope } from '@/lib/ws/collabEditor'
-import { vscodeEditorExtensions } from '@/lib/codemirror/vscodeTheme'
+import { vscodeLightEditorExtensions } from '@/lib/codemirror/vscodeTheme'
 
 export type CollabCodeEditorHandle = {
   getCode: () => string
@@ -200,7 +200,7 @@ export const CollabCodeEditor = forwardRef<CollabCodeEditorHandle, Props>(functi
         keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
         cmLanguageExt(language),
         editorAssistExtensions,
-        ...vscodeEditorExtensions,
+        ...vscodeLightEditorExtensions,
         fontSizeCompartment.current.of(
           EditorView.theme({
             '&': { fontSize: `${fontSize}px` },

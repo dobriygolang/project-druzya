@@ -29,21 +29,29 @@ export function DemoEmbedFrame({ compact = false, children }: DemoEmbedFrameProp
     return () => ro.disconnect();
   }, []);
 
+  const scaledW = REF_W * scale;
+  const scaledH = REF_H * scale;
+
   return (
     <div
       ref={hostRef}
       className={`hone-embed-frame${compact ? ' hone-embed-frame--compact' : ''}`}
     >
       <div
-        className="hone-embed-frame__stage"
-        style={{
-          width: REF_W,
-          height: REF_H,
-          transform: `scale(${scale})`,
-          transformOrigin: 'center center',
-        }}
+        className="hone-embed-frame__viewport"
+        style={{ width: scaledW, height: scaledH }}
       >
-        {children}
+        <div
+          className="hone-embed-frame__stage"
+          style={{
+            width: REF_W,
+            height: REF_H,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

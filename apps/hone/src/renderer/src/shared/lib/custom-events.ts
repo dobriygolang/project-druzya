@@ -21,4 +21,8 @@ export const HONE_EVENTS = {
   navOpenTask: 'hone:nav-open-task',
   /** OAuth callback → Settings: Google Calendar connected/error. */
   googleCalendarOAuth: 'hone:google-calendar-oauth',
+  /** Landing demo autoplay — replace note body. */
+  demoNoteSetBody: 'hone:demo-note-set-body',
+  /** Landing demo autoplay — append one character. */
+  demoNoteAppend: 'hone:demo-note-append',
 } as const;

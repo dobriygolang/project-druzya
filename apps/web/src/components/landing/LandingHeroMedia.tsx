@@ -6,7 +6,7 @@ export function LandingHeroMedia() {
   const poster = heroPosterUrl()
 
   return (
-    <div className="relative aspect-video overflow-hidden rounded-xl border border-site-border bg-site-card shadow-2xl">
+    <div className="relative aspect-[16/10] overflow-hidden rounded-xl border border-site-border bg-site-card shadow-2xl">
       {videoSrc ? (
         <video
           src={videoSrc}
