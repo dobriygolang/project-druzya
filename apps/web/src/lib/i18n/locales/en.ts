@@ -31,6 +31,56 @@ export const en: Messages = {
     themeLight: 'Light',
     themeDark: 'Dark',
   },
+  seo: {
+    defaultTitle: 'Calm workspace for builders',
+    defaultDescription:
+      'Friends on druz9.online — notes, daily plan, pomodoro, and browser live collab rooms for people who build.',
+    keywords:
+      'Friends, druz9, workspace, notes, tasks, pomodoro, live coding, collaboration, focus, builders',
+    ogImageAlt: 'Friends workspace preview',
+    madeWith: 'Made with Friends',
+    goHome: 'Go to Friends',
+    pages: {
+      welcome: {
+        title: 'Calm workspace for builders',
+        description:
+          'Friends — notes, daily plan, and pomodoro in one desktop workspace, plus guest live collab rooms in the browser. druz9.online',
+      },
+      pricing: {
+        title: 'Plans & limits',
+        description: 'Free and Pro limits for Friends — notes, live rooms, code runs, and focus stats.',
+      },
+      legalTerms: {
+        title: 'Terms of Service',
+        description: 'Terms of use for Friends (druz9.online) — workspace, billing, and live collaboration.',
+      },
+      legalPrivacy: {
+        title: 'Privacy Policy',
+        description: 'How Friends (druz9.online) processes personal data — account, billing, and live rooms.',
+      },
+      liveNew: {
+        title: 'Live collab rooms',
+        description:
+          'Create a guest live coding or whiteboard room on Friends — no account required. Pair in real time.',
+      },
+      liveRoom: {
+        title: 'Live room',
+        description: 'Real-time shared editor on Friends — code or whiteboard with your partner.',
+      },
+      download: {
+        title: 'Download desktop app',
+        description: 'Get the latest Friends desktop app for macOS or Windows.',
+      },
+      publishedNote: {
+        title: '{{title}}',
+        description: 'Published note on Friends (druz9.online).',
+      },
+      publishedBoard: {
+        title: '{{title}}',
+        description: 'Published whiteboard on Friends (druz9.online).',
+      },
+    },
+  },
   shell: {
     profile: 'Profile',
     pricing: 'Pricing',
@@ -63,11 +113,11 @@ export const en: Messages = {
   },
   profile: {
     eyebrow: 'Profile',
-    memberSince: 'Hone member since {{date}}',
+    memberSince: 'Friends member since {{date}}',
     quickLinks: {
       eyebrow: 'Workspace',
       title: 'Quick links',
-      downloadLabel: 'Download Hone',
+      downloadLabel: 'Download desktop app',
       downloadHint: 'Desktop app for macOS and Windows',
       liveLabel: 'Live rooms',
       liveHint: 'Guest code and whiteboard sessions',
@@ -95,9 +145,9 @@ export const en: Messages = {
   pricing: {
     eyebrow: 'Pricing',
     title: 'Plans & limits',
-    subtitle: 'What changes between Free and Pro in the Hone desktop app.',
+    subtitle: 'What changes between Free and Pro in the Friends desktop app.',
     limitColumn: 'Limit',
-    desktopNote: 'Subscriptions are managed in the Hone desktop app — this page is for reference only.',
+    desktopNote: 'Subscriptions are managed in the desktop app — this page is for reference only.',
   },
   checkout: {
     eyebrow: 'Checkout',
@@ -124,7 +174,7 @@ export const en: Messages = {
     heroPreviewLine1: 'Today · 3 tasks scheduled',
     heroPreviewLine2: 'Notes · weekly plan synced',
     heroPreviewLine3: 'Focus · 25:00 · streak 4',
-    demoAriaLabel: 'Interactive preview of the Hone focus workspace',
+    demoAriaLabel: 'Preview of the Friends workspace',
     demoHint: 'Try the timer',
     demoMenu: 'Menu',
     demoPlay: 'Start timer',
@@ -147,37 +197,37 @@ export const en: Messages = {
     demoTask2: 'Pair on live room flow',
     demoTask3: 'Morning focus block',
     preparingDownload: 'Preparing download',
-    downloadCta: 'Download Hone',
-    downloadCtaVersion: 'Download Hone v{{version}}',
+    downloadCta: 'Download app',
+    downloadCtaVersion: 'Download app v{{version}}',
     downloadStarted: 'Download started',
-    manifestoDownloadTitle: 'Take Hone with you',
+    manifestoDownloadTitle: 'Take Friends with you',
     manifestoDownloadHint: 'Desktop for macOS and Windows — always the latest release',
     manifestoDownloadHintVersion: 'macOS & Windows · latest v{{version}}',
     allReleases: 'All versions on GitHub',
     philosophyTitle: 'Our philosophy',
     philosophyBody:
-      'Hone is not another tab in your browser.\n' +
+      'Friends is not another tab in your browser.\n' +
       'It is a workspace for people who build — notes, tasks, and focus in one place.\n' +
       '\n' +
       'You should not jump between Notion, a task app, a timer, and a music player just to start working.\n' +
       'We kept planning, writing, and focus together so getting started takes one keystroke.\n' +
       '\n' +
-      'Most tools compete for your attention. Hone is built to protect it.\n' +
+      'Most tools compete for your attention. Friends is built to protect it.\n' +
       'We removed what does not help you ship and kept flow, clarity, and calm.\n' +
       '\n' +
-      'When you open Hone, the goal is simple:\n' +
+      'When you open Friends, the goal is simple:\n' +
       'feel ready, stay oriented, and finish what matters today.\n' +
       '\n' +
       'Need to pair with someone quickly? Open a live room — no account required.\n' +
-      'Need a private vault of notes? Hone has that too.\n' +
+      'Need a private vault of notes? Friends has that too.\n' +
       '\n' +
       'If you care about what you build and how you build it, this is for you.\n' +
       '\n' +
       'Welcome to your workspace.',
-    footerCopyright: '© {{year}} Hone. All rights reserved.',
+    footerCopyright: '© {{year}} Friends. All rights reserved.',
   },
   live: {
-    brand: 'Hone live',
+    brand: 'Friends live',
     loadingRoom: 'Loading room…',
     roomNotFound: 'Room not found',
     createNew: 'Create new',

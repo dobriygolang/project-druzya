@@ -15,10 +15,10 @@ export const legalEn: LegalMessages = {
     title: 'Terms of Service',
     updated: 'June 29, 2026',
     navPrivacy: 'Privacy',
-    footer: '© Hone',
+    footer: '© Friends',
     s1Title: '1. Service and operator',
     s1Body:
-      'Hone (the “Service”) is a productivity workspace: a desktop app for notes, daily planning, and focus, plus a web companion for account management, billing, and live collaboration rooms. The operator is the Hone project administration (druz9.online). By using the Service, you confirm that you have read and accept these Terms and the Privacy Policy.',
+      'Friends (the “Service”) is a productivity workspace: a desktop app for notes, daily planning, and focus, plus a web companion for account management, billing, and live collaboration rooms. The operator is the Friends project administration (druz9.online). By using the Service, you confirm that you have read and accept these Terms and the Privacy Policy.',
     s2Title: '2. Registration and account',
     s2Body:
       'Some features require sign-in via Telegram or Yandex ID. Live rooms can be created without an account (guest access). You must keep your identity-provider account secure and not share credentials. One person — one account unless otherwise agreed in writing with support.',
@@ -29,7 +29,7 @@ export const legalEn: LegalMessages = {
     s3Li4: 'Do not attempt to bypass technical limits, plan quotas, or security measures.',
     s4Title: '4. Content and intellectual property',
     s4Body:
-      'Hone software, branding, and default materials belong to the operator or rights holders. Notes, tasks, and code you create remain yours; you grant the operator a non-exclusive license to process that content as needed to run the Service (sync, storage, collaboration). Optional encrypted vault content is processed according to your vault settings.',
+      'Friends software, branding, and default materials belong to the operator or rights holders. Notes, tasks, and code you create remain yours; you grant the operator a non-exclusive license to process that content as needed to run the Service (sync, storage, collaboration). Optional encrypted vault content is processed according to your vault settings.',
     s5Title: '5. Plans, trial, and payment',
     s5BodyBefore: 'Free and Pro plan details, usage limits, and trial terms are on the',
     s5PricingLink: 'pricing page',
@@ -51,10 +51,10 @@ export const legalEn: LegalMessages = {
     title: 'Privacy Policy',
     updated: 'June 29, 2026',
     navTerms: 'Terms',
-    footer: '© Hone',
+    footer: '© Friends',
     s1Title: '1. Operator and scope',
     s1Body:
-      'This Policy describes how Hone (operator: druz9.online administration) processes users’ personal data under applicable data-protection law. It applies to the web companion, account services, billing, and live collaboration features.',
+      'This Policy describes how Friends (operator: druz9.online administration) processes users’ personal data under applicable data-protection law. It applies to the web companion, account services, billing, and live collaboration features.',
     s2Title: '2. Data we process',
     s2Li1: 'Account data: username, avatar, Telegram and/or Yandex ID, registration date.',
     s2Li2: 'Workspace data (when synced): notes, tasks, focus sessions, and related metadata.',

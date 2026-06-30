@@ -7,6 +7,8 @@ import {
   publishedNoteDisplayTitle,
   type PublishedNote,
 } from '@/lib/api/publicNotes'
+import { applyDocumentMeta } from '@/lib/site/documentMeta'
+import { useI18n } from '@/lib/i18n'
 
 function NoteBody({ bodyMd }: { bodyMd: string }) {
   const blocks = useMemo(() => {
@@ -36,6 +38,7 @@ function NoteBody({ bodyMd }: { bodyMd: string }) {
 
 export default function PublishedNotePage() {
   const { slug = '' } = useParams<{ slug: string }>()
+  const { t } = useI18n()
   const [state, setState] = useState<
     { kind: 'loading' } | { kind: 'ok'; note: PublishedNote } | { kind: 'error'; status: number }
   >({ kind: 'loading' })
@@ -65,12 +68,20 @@ export default function PublishedNotePage() {
     state.kind === 'ok' ? publishedNoteDisplayTitle(state.note.title) : 'Note not found'
 
   useEffect(() => {
-    document.title = state.kind === 'ok' ? `${title} | Hone` : 'Note | Hone'
     document.documentElement.classList.add('dark')
+    applyDocumentMeta({
+      title:
+        state.kind === 'ok'
+          ? t('seo.pages.publishedNote.title', { title })
+          : 'Note not found',
+      description: t('seo.pages.publishedNote.description'),
+      keywords: t('seo.keywords'),
+      path: slug ? `/notes/${slug}` : '/notes',
+    })
     return () => {
       document.documentElement.classList.remove('dark')
     }
-  }, [state.kind, title])
+  }, [state.kind, title, slug, t])
 
   if (state.kind === 'loading') {
     return (
@@ -102,11 +113,11 @@ export default function PublishedNotePage() {
               to="/welcome"
               className="inline-flex text-sm text-zinc-300 underline underline-offset-4 hover:text-white"
             >
-              Go to Hone
+              {t('seo.goHome')}
             </Link>
           </div>
         </main>
-        <MadeWithHoneBadge />
+        <MadeWithBadge />
       </div>
     )
   }
@@ -126,12 +137,13 @@ export default function PublishedNotePage() {
           </article>
         </div>
       </main>
-      <MadeWithHoneBadge />
+      <MadeWithBadge />
     </div>
   )
 }
 
-function MadeWithHoneBadge() {
+function MadeWithBadge() {
+  const { t } = useI18n()
   return (
     <Link
       to="/welcome"
@@ -145,7 +157,7 @@ function MadeWithHoneBadge() {
         className="w-4 h-4 rounded-sm opacity-80 group-hover:opacity-100 transition-opacity"
         draggable={false}
       />
-      <span>Made with Hone</span>
+      <span>{t('seo.madeWith')}</span>
     </Link>
   )
 }

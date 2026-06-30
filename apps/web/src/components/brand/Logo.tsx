@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/cn'
+import { SITE_NAME } from '@/lib/site/brand'
 
 type Props = {
   to?: string
@@ -23,14 +24,14 @@ export function Logo({ to = '/welcome', size = 'md', showText = true, className 
         draggable={false}
       />
       {showText ? (
-        <span className={cn('font-semibold tracking-[-0.03em] text-site-text', nameSize)}>Hone</span>
+        <span className={cn('font-semibold tracking-[-0.03em] text-site-text', nameSize)}>{SITE_NAME}</span>
       ) : null}
     </span>
   )
 
   if (!to) return inner
   return (
-    <Link to={to} className="no-underline transition-opacity hover:opacity-80" aria-label="Hone home">
+    <Link to={to} className="no-underline transition-opacity hover:opacity-80" aria-label={`${SITE_NAME} home`}>
       {inner}
     </Link>
   )

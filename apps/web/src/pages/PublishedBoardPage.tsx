@@ -15,6 +15,8 @@ import {
   EXCALIDRAW_UI_OPTIONS,
   excalidrawSiteAppState,
 } from '@/lib/collab/excalidrawTheme'
+import { applyDocumentMeta } from '@/lib/site/documentMeta'
+import { useI18n } from '@/lib/i18n'
 
 function parseScene(raw: string): { elements: unknown[]; files: Record<string, unknown> } {
   if (!raw.trim()) return { elements: [], files: {} }
@@ -31,6 +33,7 @@ function parseScene(raw: string): { elements: unknown[]; files: Record<string, u
 
 export default function PublishedBoardPage() {
   const { slug = '' } = useParams<{ slug: string }>()
+  const { t } = useI18n()
   const [state, setState] = useState<
     { kind: 'loading' } | { kind: 'ok'; board: PublishedBoard } | { kind: 'error'; status: number }
   >({ kind: 'loading' })
@@ -60,12 +63,20 @@ export default function PublishedBoardPage() {
     state.kind === 'ok' ? publishedBoardDisplayTitle(state.board.title) : 'Board not found'
 
   useEffect(() => {
-    document.title = state.kind === 'ok' ? `${title} | Hone` : 'Board | Hone'
     document.documentElement.classList.add('dark')
+    applyDocumentMeta({
+      title:
+        state.kind === 'ok'
+          ? t('seo.pages.publishedBoard.title', { title })
+          : 'Board not found',
+      description: t('seo.pages.publishedBoard.description'),
+      keywords: t('seo.keywords'),
+      path: slug ? `/board/${slug}` : '/board',
+    })
     return () => {
       document.documentElement.classList.remove('dark')
     }
-  }, [state.kind, title])
+  }, [state.kind, title, slug, t])
 
   const scene = useMemo(
     () => (state.kind === 'ok' ? parseScene(state.board.sceneJson) : { elements: [], files: {} }),
@@ -87,7 +98,7 @@ export default function PublishedBoardPage() {
           {state.status === 404 ? 'Board not found' : 'Could not load board'}
         </h1>
         <Link to="/welcome" className="text-sm text-zinc-300 underline underline-offset-4">
-          Go to Hone
+          {t('seo.goHome')}
         </Link>
       </div>
     )
@@ -114,7 +125,7 @@ export default function PublishedBoardPage() {
         to="/welcome"
         className="fixed bottom-6 right-6 flex items-center gap-2 px-2 py-2 rounded-md border border-white/10 bg-black text-xs text-zinc-400 hover:text-white z-50"
       >
-        Made with Hone
+        {t('seo.madeWith')}
       </Link>
     </div>
   )

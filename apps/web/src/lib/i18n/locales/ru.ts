@@ -30,6 +30,56 @@ export const ru = {
     themeLight: 'Светлая',
     themeDark: 'Тёмная',
   },
+  seo: {
+    defaultTitle: 'Спокойный workspace для тех, кто строит',
+    defaultDescription:
+      'Friends на druz9.online — заметки, план на день, pomodoro и live-комнаты в браузере для тех, кто создаёт продукты.',
+    keywords:
+      'Friends, druz9, workspace, заметки, задачи, pomodoro, live coding, коллаборация, фокус',
+    ogImageAlt: 'Превью workspace Friends',
+    madeWith: 'Сделано в Friends',
+    goHome: 'Перейти на Friends',
+    pages: {
+      welcome: {
+        title: 'Спокойный workspace для тех, кто строит',
+        description:
+          'Friends — заметки, план на день и pomodoro в desktop-приложении, плюс guest live-комнаты в браузере. druz9.online',
+      },
+      pricing: {
+        title: 'Тарифы и лимиты',
+        description: 'Free и Pro для Friends — заметки, live-комнаты, запуски кода и focus-статистика.',
+      },
+      legalTerms: {
+        title: 'Условия использования',
+        description: 'Условия использования Friends (druz9.online) — workspace, биллинг и live-коллаборация.',
+      },
+      legalPrivacy: {
+        title: 'Политика конфиденциальности',
+        description: 'Как Friends (druz9.online) обрабатывает персональные данные — аккаунт, биллинг и live-комнаты.',
+      },
+      liveNew: {
+        title: 'Live-комнаты',
+        description:
+          'Создай guest live-комнату для кода или whiteboard на Friends — без регистрации. Работайте вместе в реальном времени.',
+      },
+      liveRoom: {
+        title: 'Live-комната',
+        description: 'Общий редактор в реальном времени на Friends — код или whiteboard с напарником.',
+      },
+      download: {
+        title: 'Скачать desktop-приложение',
+        description: 'Последняя версия desktop-приложения Friends для macOS и Windows.',
+      },
+      publishedNote: {
+        title: '{{title}}',
+        description: 'Опубликованная заметка на Friends (druz9.online).',
+      },
+      publishedBoard: {
+        title: '{{title}}',
+        description: 'Опубликованная доска на Friends (druz9.online).',
+      },
+    },
+  },
   shell: {
     profile: 'Профиль',
     pricing: 'Тарифы',
@@ -62,11 +112,11 @@ export const ru = {
   },
   profile: {
     eyebrow: 'Профиль',
-    memberSince: 'В Hone с {{date}}',
+    memberSince: 'В Friends с {{date}}',
     quickLinks: {
       eyebrow: 'Workspace',
       title: 'Быстрые ссылки',
-      downloadLabel: 'Скачать Hone',
+      downloadLabel: 'Скачать приложение',
       downloadHint: 'Desktop для macOS и Windows',
       liveLabel: 'Live-комнаты',
       liveHint: 'Guest-сессии кода и whiteboard',
@@ -94,9 +144,9 @@ export const ru = {
   pricing: {
     eyebrow: 'Тарифы',
     title: 'Планы и лимиты',
-    subtitle: 'Чем Free отличается от Pro в десктопном Hone.',
+    subtitle: 'Чем Free отличается от Pro в desktop-приложении Friends.',
     limitColumn: 'Лимит',
-    desktopNote: 'Подписка оформляется в десктопном Hone — эта страница только для справки.',
+    desktopNote: 'Подписка оформляется в desktop-приложении — эта страница только для справки.',
   },
   checkout: {
     eyebrow: 'Оплата',
@@ -123,7 +173,7 @@ export const ru = {
     heroPreviewLine1: 'Сегодня · 3 задачи в плане',
     heroPreviewLine2: 'Заметки · недельный план синхронизирован',
     heroPreviewLine3: 'Фокус · 25:00 · streak 4',
-    demoAriaLabel: 'Интерактивный превью workspace Hone',
+    demoAriaLabel: 'Превью workspace Friends',
     demoHint: 'Попробуйте таймер',
     demoMenu: 'Меню',
     demoPlay: 'Запустить таймер',
@@ -146,37 +196,37 @@ export const ru = {
     demoTask2: 'Разобрать live room flow',
     demoTask3: 'Утренний focus block',
     preparingDownload: 'Готовим загрузку',
-    downloadCta: 'Скачать Hone',
-    downloadCtaVersion: 'Скачать Hone v{{version}}',
+    downloadCta: 'Скачать приложение',
+    downloadCtaVersion: 'Скачать приложение v{{version}}',
     downloadStarted: 'Загрузка началась',
-    manifestoDownloadTitle: 'Возьми Hone с собой',
+    manifestoDownloadTitle: 'Возьми Friends с собой',
     manifestoDownloadHint: 'Desktop для macOS и Windows — всегда последний релиз',
     manifestoDownloadHintVersion: 'macOS и Windows · актуальная v{{version}}',
     allReleases: 'Все версии на GitHub',
     philosophyTitle: 'Наша философия',
     philosophyBody:
-      'Hone — не ещё одна вкладка в браузере.\n' +
+      'Friends — не ещё одна вкладка в браузере.\n' +
       'Это workspace для тех, кто строит: заметки, задачи и фокус в одном месте.\n' +
       '\n' +
       'Не нужно прыгать между Notion, таск-трекером, таймером и музыкой, чтобы просто начать работу.\n' +
       'Мы собрали планирование, writing и focus вместе — старт в одно нажатие.\n' +
       '\n' +
-      'Большинство инструментов борются за ваше внимание. Hone защищает его.\n' +
+      'Большинство инструментов борются за ваше внимание. Friends защищает его.\n' +
       'Мы убрали лишнее и оставили поток, ясность и спокойствие.\n' +
       '\n' +
-      'Когда вы открываете Hone, цель простая:\n' +
+      'Когда вы открываете Friends, цель простая:\n' +
       'быть готовым, держать ориентир и закрывать важное сегодня.\n' +
       '\n' +
       'Нужно быстро поработать в паре? Откройте live-комнату — аккаунт не нужен.\n' +
-      'Нужен личный vault заметок? В Hone он тоже есть.\n' +
+      'Нужен личный vault заметок? В Friends он тоже есть.\n' +
       '\n' +
       'Если вам важно, что вы строите и как вы это делаете — это для вас.\n' +
       '\n' +
       'Добро пожаловать в ваш workspace.',
-    footerCopyright: '© {{year}} Hone. Все права защищены.',
+    footerCopyright: '© {{year}} Friends. Все права защищены.',
   },
   live: {
-    brand: 'Hone live',
+    brand: 'Friends live',
     loadingRoom: 'Загрузка комнаты…',
     roomNotFound: 'Комната не найдена',
     createNew: 'Создать новую',

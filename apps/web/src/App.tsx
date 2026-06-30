@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes, useParams } from 'react-router-dom'
+import { RouteDocumentMeta } from '@/lib/site/documentMeta'
 import { RouteLoader } from '@/components/RouteLoader'
 
 const WelcomePage = lazy(() => import('@/pages/WelcomePage'))
@@ -24,6 +25,7 @@ function LegacyNoteSlugRedirect() {
 export default function App() {
   return (
     <Suspense fallback={<RouteLoader />}>
+      <RouteDocumentMeta />
       <Routes>
         <Route path="/" element={<Navigate to="/welcome" replace />} />
         <Route path="/welcome" element={<WelcomePage />} />
