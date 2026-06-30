@@ -19,9 +19,7 @@ type Config struct {
 	GRPCHost           string
 	PostgresDSN        string
 	JWTPublicKeyPEM    []byte
-	ContentGRPCAddr    string
-	InterviewGRPCAddr  string
-	BillingGRPCAddr    string
+	BillingGRPCAddr   string
 	InternalAPIToken   string
 	RunnerMode         string
 	MaxOutputBytes     int
@@ -117,9 +115,7 @@ func Load() (*Config, error) {
 		GRPCHost:           grpcListenHost(),
 		PostgresDSN:        getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5439/druzya_sandbox?sslmode=disable"),
 		JWTPublicKeyPEM:    publicKey,
-		ContentGRPCAddr:    getEnv("CONTENT_GRPC_ADDR", ""),
-		InterviewGRPCAddr:  getEnv("INTERVIEW_GRPC_ADDR", ""),
-		BillingGRPCAddr:    getEnv("BILLING_GRPC_ADDR", ""),
+		BillingGRPCAddr:   getEnv("BILLING_GRPC_ADDR", ""),
 		InternalAPIToken:   os.Getenv("INTERNAL_API_TOKEN"),
 		RunnerMode:         runnerMode,
 		MaxOutputBytes:     maxOutput,

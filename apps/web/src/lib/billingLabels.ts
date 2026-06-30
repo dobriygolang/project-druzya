@@ -15,7 +15,6 @@ export const COUNTER_DISPLAY_ORDER = [
   'live_rooms_per_month',
   'live_rooms_concurrent',
   'focus_stats_history_days',
-  'ai_insights_per_day',
 ] as const
 
 type TFn = (key: string, vars?: Record<string, string | number>) => string

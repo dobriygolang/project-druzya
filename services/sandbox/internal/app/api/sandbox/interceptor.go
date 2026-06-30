@@ -9,11 +9,9 @@ import (
 )
 
 var protectedMethods = map[string]struct{}{
-	sandboxv1.SandboxService_RunCode_FullMethodName:                  {},
-	sandboxv1.SandboxService_GetCodeRun_FullMethodName:               {},
-	sandboxv1.SandboxService_ListCodeRuns_FullMethodName:             {},
-	sandboxv1.SandboxService_SubmitAttemptFromCodeRun_FullMethodName: {},
-	sandboxv1.SandboxService_FormatCode_FullMethodName:               {},
+	sandboxv1.SandboxService_RunCode_FullMethodName:    {},
+	sandboxv1.SandboxService_GetCodeRun_FullMethodName: {},
+	sandboxv1.SandboxService_FormatCode_FullMethodName: {},
 }
 
 // AuthInterceptor validates Bearer JWT for user-facing RPC methods.

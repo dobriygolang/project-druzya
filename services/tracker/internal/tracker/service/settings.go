@@ -6,13 +6,11 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/model"
 )
 
 type UpdateSettingsParams struct {
-	SmartParseEnabled         *bool
 	GoogleCalendarSyncEnabled *bool
 }
 
@@ -26,48 +24,7 @@ func (s *trackerService) GetSettings(ctx context.Context, userID string) (*model
 }
 
 func (s *trackerService) UpdateSettings(ctx context.Context, userID string, in UpdateSettingsParams) (*model.UserSettingsView, error) {
-	settings, err := s.repo.UpsertUserSettings(ctx, userID, in.SmartParseEnabled, in.GoogleCalendarSyncEnabled)
-	if err != nil {
-		return nil, err
-	}
-	view := settings.View()
-	return &view, nil
-}
-
-func (s *trackerService) UpdateEpicSprintScope(ctx context.Context, userID, epicID string, deferred bool) (*model.UserSettingsView, error) {
-	board, err := s.ensureDefaultBoard(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	var epicName string
-	for _, e := range board.Epics {
-		if e.ID == epicID {
-			epicName = e.Name
-			break
-		}
-	}
-	if epicName == "" {
-		return nil, fmt.Errorf("%w: epic not found", model.ErrInvalidArgument)
-	}
-	current, err := s.repo.GetUserSettings(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-	next := append([]string{}, current.DeferredSprintEpicNames...)
-	if deferred {
-		if !model.IsEpicDeferredForSprint(epicName, next) {
-			next = append(next, epicName)
-		}
-	} else {
-		filtered := make([]string, 0, len(next))
-		for _, name := range next {
-			if !strings.EqualFold(strings.TrimSpace(name), epicName) {
-				filtered = append(filtered, name)
-			}
-		}
-		next = filtered
-	}
-	settings, err := s.repo.SetDeferredSprintEpicNames(ctx, userID, next)
+	settings, err := s.repo.UpsertUserSettings(ctx, userID, in.GoogleCalendarSyncEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -110,33 +67,6 @@ func (s *trackerService) HandleGoogleCallback(ctx context.Context, code, state s
 	return s.callbackRedirect("connected", ""), nil
 }
 
-func (s *trackerService) GetUserSettings(ctx context.Context, userID string) (*model.UserSettingsView, error) {
-	return s.GetSettings(ctx, userID)
-}
-
-func (s *trackerService) PatchTaskMetadata(ctx context.Context, userID, taskID string, patch map[string]any) (*model.Task, error) {
-	if taskID == "" {
-		return nil, fmt.Errorf("%w: task_id required", model.ErrInvalidArgument)
-	}
-	if patch == nil {
-		patch = map[string]any{}
-	}
-	before, err := s.repo.GetTask(ctx, taskID, userID)
-	if err != nil {
-		return nil, err
-	}
-	task, err := s.repo.PatchTaskMetadata(ctx, taskID, userID, patch)
-	if err != nil {
-		return nil, err
-	}
-	task, err = s.maybeAssignEpicFromHint(ctx, userID, task)
-	if err != nil {
-		return nil, err
-	}
-	s.syncGoogleCalendarOnChange(ctx, userID, before, task)
-	return task, nil
-}
-
 func (s *trackerService) DisconnectGoogleCalendar(ctx context.Context, userID string) (*model.UserSettingsView, error) {
 	if err := s.repo.ClearGoogleRefreshToken(ctx, userID); err != nil {
 		return nil, err
@@ -146,8 +76,10 @@ func (s *trackerService) DisconnectGoogleCalendar(ctx context.Context, userID st
 }
 
 func (s *trackerService) callbackRedirect(status, detail string) string {
-	base := strings.TrimRight(s.frontendURL, "/")
-	u, _ := url.Parse(base + "/tasks")
+	u, err := url.Parse(s.honeCallbackURL)
+	if err != nil || u.Scheme == "" {
+		u, _ = url.Parse("hone://settings")
+	}
 	q := u.Query()
 	q.Set("google_calendar", status)
 	if detail != "" {

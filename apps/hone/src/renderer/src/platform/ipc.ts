@@ -26,6 +26,11 @@ export interface HoneAPI {
   tray: {
     update: (title: string, tooltip: string) => Promise<void>;
   };
+  vault?: {
+    passLoad: (userId: string) => Promise<string | null>;
+    passSave: (userId: string, passphrase: string) => Promise<void>;
+    passClear: (userId: string) => Promise<void>;
+  };
   on: <K extends keyof typeof eventChannels>(
     channel: K,
     listener: (payload: EventPayload[K]) => void,
@@ -56,6 +61,7 @@ export interface PomodoroSnapshot {
   remainSec: number;
   running: boolean;
   savedAt: number;
+  mode?: 'pomodoro' | 'stopwatch';
 }
 
 export interface EventPayload {

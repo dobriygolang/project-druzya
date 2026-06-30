@@ -4,7 +4,7 @@ import { formatCode } from '@/lib/api/sandbox'
 import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
 import { useI18n } from '@/lib/i18n'
 
-export function useFormatCode() {
+export function useFormatCode(accessToken?: string | null) {
   const { t } = useI18n()
   const [formatting, setFormatting] = useState(false)
   const [formatError, setFormatError] = useState<string | null>(null)
@@ -19,7 +19,7 @@ export function useFormatCode() {
       setFormatting(true)
       setFormatError(null)
       try {
-        const res = await formatCode({ language, code })
+        const res = await formatCode({ language, code }, accessToken)
         return res.code
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) {
@@ -32,7 +32,7 @@ export function useFormatCode() {
         setFormatting(false)
       }
     },
-    [t],
+    [accessToken, t],
   )
 
   return { format, formatting, formatError, clearFormatError: () => setFormatError(null) }

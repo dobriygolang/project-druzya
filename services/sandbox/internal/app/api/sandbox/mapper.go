@@ -20,13 +20,7 @@ func toProtoCodeRun(run *model.CodeRun) *sandboxv1.CodeRun {
 		TestsPassed:  int32(run.TestsPassed),
 		TestResults:  toProtoTestResults(run.TestResults),
 		CreatedAt:    timestamppb.New(run.CreatedAt),
-		UpdatedAt:    timestamppb.New(run.UpdatedAt),
-	}
-	if run.TaskID != nil {
-		out.TaskId = run.TaskID
-	}
-	if run.SessionTaskID != nil {
-		out.SessionTaskId = run.SessionTaskID
+		UpdatedAt:   timestamppb.New(run.UpdatedAt),
 	}
 	if run.Stdout != nil {
 		out.Stdout = run.Stdout

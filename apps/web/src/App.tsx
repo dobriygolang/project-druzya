@@ -1,8 +1,10 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { RouteLoader } from '@/components/RouteLoader'
 
 const WelcomePage = lazy(() => import('@/pages/WelcomePage'))
+const PublishedNotePage = lazy(() => import('@/pages/PublishedNotePage'))
+const PublishedBoardPage = lazy(() => import('@/pages/PublishedBoardPage'))
 const CollabRoomPage = lazy(() => import('@/pages/CollabRoomPage'))
 const PricingPage = lazy(() => import('@/pages/PricingPage'))
 const LegalTermsPage = lazy(() => import('@/pages/LegalTermsPage'))
@@ -12,12 +14,20 @@ function RetiredRedirect() {
   return <Navigate to="/welcome" replace />
 }
 
+function LegacyNoteSlugRedirect() {
+  const { slug } = useParams<{ slug: string }>()
+  return <Navigate to={`/notes/${slug ?? ''}`} replace />
+}
+
 export default function App() {
   return (
     <Suspense fallback={<RouteLoader />}>
       <Routes>
         <Route path="/" element={<Navigate to="/welcome" replace />} />
         <Route path="/welcome" element={<WelcomePage />} />
+        <Route path="/notes/:slug" element={<PublishedNotePage />} />
+        <Route path="/board/:slug" element={<PublishedBoardPage />} />
+        <Route path="/n/:slug" element={<LegacyNoteSlugRedirect />} />
         <Route path="/live/new" element={<CollabRoomPage />} />
         <Route path="/live/:roomId" element={<CollabRoomPage />} />
         <Route path="/pricing" element={<PricingPage />} />

@@ -49,16 +49,6 @@ services:
       timeout: 3s
       retries: 10
 
-  nats:
-    image: nats:2.10-alpine
-    restart: unless-stopped
-    command: ["-js", "-m", "8222"]
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8222/healthz"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   migrate:
     build:
       context: ..
@@ -177,8 +167,7 @@ services:
       POSTGRES_DSN: ${TRACKER_POSTGRES_DSN}
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
-      FRONTEND_URL: ${FRONTEND_URL}
-      IDENTITY_GRPC_ADDR: identity:9090
+      HONE_CALLBACK_URL: ${HONE_CALLBACK_URL:-hone://settings}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
@@ -283,6 +272,7 @@ services:
       JWT_PUBLIC_KEY_FILE: /run/secrets/jwt/public.pem
       BILLING_GRPC_ADDR: billing:9095
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL}
     volumes:
       - ./secrets/jwt:/run/secrets/jwt:ro
     healthcheck:

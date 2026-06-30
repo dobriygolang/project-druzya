@@ -77,24 +77,11 @@ docker compose -f docker-compose.prod.yml --profile monitoring up -d prometheus 
 
 Grafana: https://grafana.druz9.online — configure alert notification channels for rules in `prometheus-alerts.yml`.
 
-Key metrics: `outbox_lag_seconds`, `llm_calls_total`, `http_requests_total`.
+Key metrics: `up`, `http_requests_total`, `http_request_duration_seconds`. AI LLM metrics apply to CI-only `ai` service only.
 
-## LLM (prod)
+## LLM (optional — ai service, CI only)
 
-Free users → `LLM_FREE_CHAIN_ORDER`; Pro → `LLM_PAID_CHAIN_ORDER`. Separate API keys per tier.
-
-Billing limits (seed `00001_init.sql`): Free 25 eval/day, 3 mock/month; Pro 100/30.
-
-```bash
-LLM_FREE_CHAIN_ORDER=groq,cloudflare,openrouter
-GROQ_API_KEY=...
-LLM_PAID_CHAIN_ORDER=deepseek,groq
-DEEPSEEK_API_KEY=...
-GROQ_PAID_API_KEY=...
-EVAL_WORKER_CONCURRENCY=20
-```
-
-Details: [services/ai/AGENTS.md](../services/ai/AGENTS.md).
+The `ai` evaluation service is **not deployed in prod**. LLM env vars in `.env.example` are for local/CI runs of `services/ai` only.
 
 ## Rooms scale
 

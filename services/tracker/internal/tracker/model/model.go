@@ -6,157 +6,22 @@ import (
 )
 
 var (
-	ErrInvalidArgument        = errors.New("invalid argument")
-	ErrNotFound               = errors.New("not found")
-	ErrForbidden              = errors.New("forbidden")
+	ErrInvalidArgument = errors.New("invalid argument")
+	ErrNotFound        = errors.New("not found")
+	ErrForbidden       = errors.New("forbidden")
 )
 
-const (
-	EventTaskCreated   = "tracker.task_created"
-	EventTaskCompleted = "tracker.task_completed"
-
-	DefaultProjectName = "Board"
-	DefaultSprintName  = "This week"
-
-	// SprintCalendarDays: two-week sprint window shown in UI countdown.
-	SprintCalendarDays = 14
-	// SprintCapacityDays: 14 calendar days ≈ 10 focused work days (2 × Mon–Fri).
-	SprintCapacityDays      = 10.0
-	DefaultTaskEstimateDays = 1.0
-	MinTaskEstimateDays     = 0.5
-	MaxTaskEstimateDays     = 5.0
-)
-
-type EpicStatus string
-
-const (
-	EpicStatusOpen EpicStatus = "open"
-	EpicStatusDone EpicStatus = "done"
-)
-
-type SprintStatus string
-
-const (
-	SprintStatusActive   SprintStatus = "active"
-	SprintStatusArchived SprintStatus = "archived"
-)
-
-type TaskSource string
-
-const (
-	TaskSourceUser             TaskSource = "user"
-	TaskSourceRecommendation   TaskSource = "recommendation"
-	TaskSourceEnrichment       TaskSource = "enrichment"
-)
-
-type Project struct {
-	ID        string
-	UserID    string
-	Name      string
-	Position  int
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-type Epic struct {
-	ID          string
-	ProjectID   string
-	Name        string
-	Position    int
-	Status      EpicStatus
-	HoldOpen    bool
-	DoneCount   int
-	TotalCount  int
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	CompletedAt *time.Time
-}
-
-type Sprint struct {
+type WorkTask struct {
 	ID                   string
-	ProjectID            string
-	Name                 string
-	Goal                 string
-	Status               SprintStatus
-	Position             int
-	DoneCount            int
-	TotalCount           int
-	EstimateDaysUsed     float64
-	EstimateDaysCapacity float64
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
-	ArchivedAt           *time.Time
-}
-
-type Task struct {
-	ID                   string
-	SprintID             string
-	EpicID               *string
+	UserID               string
+	Status               string
+	Kind                 string
 	Title                string
-	Done                 bool
-	Position             int
-	EstimateDays         float64
-	Source               TaskSource
-	Metadata             map[string]any
-	DedupKey             *string
-	BoardStatus          string
-	ScheduledStart       *time.Time
-	ScheduledDurationMin *int
-	ArchivedAt           *time.Time
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
 	CompletedAt          *time.Time
-}
-
-type Board struct {
-	Project         *Project
-	Epics           []Epic
-	ActiveSprint    *Sprint
-	Tasks           []Task
-	ArchivedSprints []Sprint
-}
-
-type OutboxMessage struct {
-	ID         string
-	EventName  string
-	Payload    map[string]any
-	Status     string
-	LockedUntil *time.Time
-	RetryCount int
-	LastError  *string
-	CreatedAt  time.Time
-	ProcessedAt *time.Time
-}
-
-type LearningBoard struct {
-	ProjectID string
-	SprintID  string
-}
-
-type TodayReasonCode string
-
-const (
-	TodayReasonRetry   TodayReasonCode = "retry"
-	TodayReasonReview  TodayReasonCode = "review"
-	TodayReasonSkill   TodayReasonCode = "skill"
-	TodayReasonMock    TodayReasonCode = "mock"
-	TodayReasonLearning TodayReasonCode = "learning"
-	TodayReasonUser    TodayReasonCode = "user"
-)
-
-type TodayTaskEntry struct {
-	Task        Task
-	ReasonCode  TodayReasonCode
-	EpicName    string
-	ActionPath  string
-}
-
-type TodayView struct {
-	TodayTasks     []TodayTaskEntry
-	LaterTasks     []TodayTaskEntry
-	BudgetUsed     float64
-	BudgetCapacity float64
-	LocalDate      string
-	ActiveSprint   *Sprint
-	Epics          []Epic
+	ScheduledStart       *time.Time
+	ScheduledDurationMin *int
+	GoogleEventID        *string
+	ArchivedAt           *time.Time
 }

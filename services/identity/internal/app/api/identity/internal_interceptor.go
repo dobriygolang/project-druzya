@@ -20,8 +20,6 @@ var internalMethods = map[string]struct{}{
 	identityv1.IdentityService_GetUserByTelegramID_FullMethodName:  {},
 	identityv1.IdentityService_ValidateToken_FullMethodName:           {},
 	identityv1.IdentityService_MintScopedAccessToken_FullMethodName: {},
-	identityv1.IdentityService_GetUserStats_FullMethodName:          {},
-	identityv1.IdentityService_GetOpsStats_FullMethodName:           {},
 }
 
 // InternalAuthInterceptor enforces the internal token on service-to-service RPCs.

@@ -3,157 +3,11 @@ syntax = "proto3";
 package tracker.v1;
 
 import "google/api/annotations.proto";
-import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/sedorofeevd/project-druzya/services/tracker/pkg/api/tracker/v1;trackerv1";
 
-enum SprintStatus {
-  SPRINT_STATUS_UNSPECIFIED = 0;
-  SPRINT_STATUS_ACTIVE = 1;
-  SPRINT_STATUS_ARCHIVED = 2;
-}
-
-enum TaskSource {
-  TASK_SOURCE_UNSPECIFIED = 0;
-  TASK_SOURCE_USER = 1;
-  TASK_SOURCE_RECOMMENDATION = 2;
-  TASK_SOURCE_ENRICHMENT = 3;
-}
-
-enum EpicStatus {
-  EPIC_STATUS_UNSPECIFIED = 0;
-  EPIC_STATUS_OPEN = 1;
-  EPIC_STATUS_DONE = 2;
-}
-
-message Project {
-  string id = 1;
-  string name = 2;
-  int32 position = 3;
-}
-
-message Epic {
-  string id = 1;
-  string project_id = 2;
-  string name = 3;
-  int32 position = 4;
-  EpicStatus status = 5;
-  int32 done_count = 6;
-  int32 total_count = 7;
-}
-
-message Sprint {
-  string id = 1;
-  string project_id = 2;
-  string name = 3;
-  string goal = 4;
-  SprintStatus status = 5;
-  int32 position = 6;
-  int32 done_count = 7;
-  int32 total_count = 8;
-  google.protobuf.Timestamp created_at = 9;
-  google.protobuf.Timestamp archived_at = 10;
-  float estimate_days_used = 11;
-  float estimate_days_capacity = 12;
-}
-
-message Task {
-  string id = 1;
-  string sprint_id = 2;
-  optional string epic_id = 3;
-  string title = 4;
-  bool done = 5;
-  int32 position = 6;
-  TaskSource source = 7;
-  google.protobuf.Struct metadata = 8;
-  google.protobuf.Timestamp created_at = 9;
-  google.protobuf.Timestamp updated_at = 10;
-  optional google.protobuf.Timestamp completed_at = 11;
-  float estimate_days = 12;
-}
-
-message Board {
-  optional Project project = 1;
-  repeated Epic epics = 2;
-  optional Sprint active_sprint = 3;
-  repeated Task tasks = 4;
-  repeated Sprint archived_sprints = 5;
-}
-
 service TrackerService {
-  rpc GetBoard(GetBoardRequest) returns (GetBoardResponse) {
-    option (google.api.http) = {get: "/v1/tracker/board"};
-  }
-
-  rpc GetToday(GetTodayRequest) returns (GetTodayResponse) {
-    option (google.api.http) = {get: "/v1/tracker/today"};
-  }
-
-  rpc CreateProject(CreateProjectRequest) returns (CreateProjectResponse) {
-    option (google.api.http) = {
-      post: "/v1/tracker/projects"
-      body: "*"
-    };
-  }
-
-  rpc CreateEpic(CreateEpicRequest) returns (CreateEpicResponse) {
-    option (google.api.http) = {
-      post: "/v1/tracker/epics"
-      body: "*"
-    };
-  }
-
-  rpc ReopenEpic(ReopenEpicRequest) returns (ReopenEpicResponse) {
-    option (google.api.http) = {
-      post: "/v1/tracker/epics/{id}/reopen"
-      body: "*"
-    };
-  }
-
-  rpc UpdateEpicSprintScope(UpdateEpicSprintScopeRequest) returns (UpdateSettingsResponse) {
-    option (google.api.http) = {
-      patch: "/v1/tracker/epics/{id}/sprint_scope"
-      body: "*"
-    };
-  }
-
-  rpc CreateSprint(CreateSprintRequest) returns (CreateSprintResponse) {
-    option (google.api.http) = {
-      post: "/v1/tracker/sprints"
-      body: "*"
-    };
-  }
-
-  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
-    option (google.api.http) = {
-      post: "/v1/tracker/tasks"
-      body: "*"
-    };
-  }
-
-  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse) {
-    option (google.api.http) = {
-      patch: "/v1/tracker/tasks/{id}"
-      body: "*"
-    };
-  }
-
-  rpc ListSprintTasks(ListSprintTasksRequest) returns (ListSprintTasksResponse) {
-    option (google.api.http) = {get: "/v1/tracker/sprints/{sprint_id}/tasks"};
-  }
-
-  rpc ArchiveSprint(ArchiveSprintRequest) returns (ArchiveSprintResponse) {
-    option (google.api.http) = {
-      post: "/v1/tracker/sprints/{id}/archive"
-      body: "*"
-    };
-  }
-
-  rpc ExportBoard(ExportBoardRequest) returns (ExportBoardResponse) {
-    option (google.api.http) = {get: "/v1/tracker/export"};
-  }
-
   rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse) {
     option (google.api.http) = {get: "/v1/tracker/settings"};
   }
@@ -176,7 +30,10 @@ service TrackerService {
     };
   }
 
-  // Hone work board (kanban + schedule view on active sprint tasks).
+  rpc ListGoogleCalendarEvents(ListGoogleCalendarEventsRequest) returns (ListGoogleCalendarEventsResponse) {
+    option (google.api.http) = {get: "/v1/tracker/integrations/google/events"};
+  }
+
   rpc ListWorkTasks(ListWorkTasksRequest) returns (ListWorkTasksResponse) {
     option (google.api.http) = {get: "/v1/tracker/work/tasks"};
   }
@@ -212,153 +69,13 @@ service TrackerService {
       body: "*"
     };
   }
-
-  rpc UpdateWorkTaskKind(UpdateWorkTaskKindRequest) returns (UpdateWorkTaskKindResponse) {
-    option (google.api.http) = {
-      post: "/v1/tracker/work/tasks/{id}/kind"
-      body: "*"
-    };
-  }
-}
-
-message GetBoardRequest {
-  optional string project_id = 1;
-}
-
-message GetBoardResponse {
-  Board board = 1;
-}
-
-enum TodayReasonCode {
-  TODAY_REASON_UNSPECIFIED = 0;
-  TODAY_REASON_RETRY = 1;
-  TODAY_REASON_REVIEW = 2;
-  TODAY_REASON_SKILL = 3;
-  TODAY_REASON_MOCK = 4;
-  TODAY_REASON_LEARNING = 5;
-  TODAY_REASON_USER = 6;
-}
-
-message TodayTask {
-  Task task = 1;
-  TodayReasonCode reason_code = 2;
-  optional string epic_name = 3;
-  optional string action_path = 4;
-}
-
-message GetTodayRequest {
-  optional string local_date = 1;
-  optional string timezone = 2;
-}
-
-message GetTodayResponse {
-  repeated TodayTask today_tasks = 1;
-  repeated TodayTask later_tasks = 2;
-  float budget_used = 3;
-  float budget_capacity = 4;
-  optional Sprint active_sprint = 5;
-  repeated Epic epics = 6;
-  string local_date = 7;
-}
-
-message CreateProjectRequest {
-  string name = 1;
-}
-
-message CreateProjectResponse {
-  Project project = 1;
-}
-
-message CreateEpicRequest {
-  string project_id = 1;
-  string name = 2;
-}
-
-message CreateEpicResponse {
-  Epic epic = 1;
-}
-
-message ReopenEpicRequest {
-  string id = 1;
-}
-
-message ReopenEpicResponse {
-  Epic epic = 1;
-}
-
-message UpdateEpicSprintScopeRequest {
-  string id = 1;
-  bool deferred = 2;
-}
-
-message CreateSprintRequest {
-  string project_id = 1;
-  optional string name = 2;
-  optional string goal = 3;
-}
-
-message CreateSprintResponse {
-  Sprint sprint = 1;
-}
-
-message CreateTaskRequest {
-  string sprint_id = 1;
-  string title = 2;
-  optional string epic_id = 3;
-  optional TaskSource source = 4;
-  optional google.protobuf.Struct metadata = 5;
-  optional string dedup_key = 6;
-  optional float estimate_days = 7;
-}
-
-message CreateTaskResponse {
-  Task task = 1;
-}
-
-message UpdateTaskRequest {
-  string id = 1;
-  optional string title = 2;
-  optional bool done = 3;
-  optional string epic_id = 4;
-  optional int32 position = 5;
-  optional string goal = 6;
-  optional bool archived = 7;
-  optional float estimate_days = 8;
-}
-
-message UpdateTaskResponse {
-  Task task = 1;
-}
-
-message ListSprintTasksRequest {
-  string sprint_id = 1;
-}
-
-message ListSprintTasksResponse {
-  repeated Task tasks = 1;
-}
-
-message ArchiveSprintRequest {
-  string id = 1;
-}
-
-message ArchiveSprintResponse {
-  Sprint sprint = 1;
-}
-
-message ExportBoardRequest {
-  optional string project_id = 1;
-}
-
-message ExportBoardResponse {
-  string markdown = 1;
 }
 
 message UserSettings {
-  bool smart_parse_enabled = 1;
+  reserved 1;
+  reserved "user_id";
   bool google_calendar_sync_enabled = 2;
   bool google_calendar_connected = 3;
-  repeated string deferred_sprint_epic_names = 4;
 }
 
 message GetSettingsRequest {}
@@ -368,7 +85,6 @@ message GetSettingsResponse {
 }
 
 message UpdateSettingsRequest {
-  optional bool smart_parse_enabled = 1;
   optional bool google_calendar_sync_enabled = 2;
 }
 
@@ -388,22 +104,34 @@ message DisconnectGoogleCalendarResponse {
   UserSettings settings = 1;
 }
 
+message ListGoogleCalendarEventsRequest {
+  google.protobuf.Timestamp time_min = 1;
+  google.protobuf.Timestamp time_max = 2;
+}
+
+message GoogleCalendarEvent {
+  string id = 1;
+  string title = 2;
+  google.protobuf.Timestamp start = 3;
+  google.protobuf.Timestamp end = 4;
+  bool all_day = 5;
+}
+
+message ListGoogleCalendarEventsResponse {
+  repeated GoogleCalendarEvent events = 1;
+}
+
 message WorkTask {
   string id = 1;
   string status = 2;
   string kind = 3;
-  string source = 4;
-  string title = 5;
-  string brief_md = 6;
-  string skill_key = 7;
-  string deep_link = 8;
-  int32 priority = 9;
-  google.protobuf.Timestamp created_at = 10;
-  google.protobuf.Timestamp updated_at = 11;
-  optional google.protobuf.Timestamp completed_at = 12;
-  bool manual_kind_override = 13;
-  optional google.protobuf.Timestamp scheduled_start = 14;
-  optional int32 scheduled_duration_min = 15;
+  string title = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  optional google.protobuf.Timestamp completed_at = 7;
+  optional google.protobuf.Timestamp scheduled_start = 8;
+  optional int32 scheduled_duration_min = 9;
+  optional string google_event_id = 10;
 }
 
 message ListWorkTasksRequest {}
@@ -415,9 +143,6 @@ message ListWorkTasksResponse {
 message CreateWorkTaskRequest {
   string kind = 1;
   string title = 2;
-  string brief_md = 3;
-  string skill_key = 4;
-  string deep_link = 5;
 }
 
 message CreateWorkTaskResponse {
@@ -455,109 +180,4 @@ message UnscheduleWorkTaskRequest {
 
 message UnscheduleWorkTaskResponse {
   WorkTask task = 1;
-}
-
-message UpdateWorkTaskKindRequest {
-  string id = 1;
-  string kind = 2;
-  bool manual_override = 3;
-}
-
-message UpdateWorkTaskKindResponse {
-  WorkTask task = 1;
-}
-
-// Internal API for recommendation-service and other workers.
-
-message OutboxEvent {
-  string id = 1;
-  string event_name = 2;
-  google.protobuf.Struct payload = 3;
-  google.protobuf.Timestamp occurred_at = 4;
-}
-
-service TrackerInternalService {
-  rpc ClaimOutboxEvents(ClaimOutboxEventsRequest) returns (ClaimOutboxEventsResponse);
-  rpc AckOutboxEvents(AckOutboxEventsRequest) returns (AckOutboxEventsResponse);
-  rpc FailOutboxEvent(FailOutboxEventRequest) returns (FailOutboxEventResponse);
-
-  rpc EnsureLearningBoard(EnsureLearningBoardRequest) returns (EnsureLearningBoardResponse);
-  rpc CreateTaskInternal(CreateTaskInternalRequest) returns (CreateTaskInternalResponse);
-  rpc GetSprintPreview(GetSprintPreviewRequest) returns (GetSprintPreviewResponse);
-  rpc GetUserSettings(GetUserSettingsRequest) returns (GetUserSettingsResponse);
-  rpc PatchTaskMetadata(PatchTaskMetadataRequest) returns (PatchTaskMetadataResponse);
-}
-
-message ClaimOutboxEventsRequest {
-  int32 limit = 1;
-  optional string event_name = 2;
-}
-
-message ClaimOutboxEventsResponse {
-  repeated OutboxEvent events = 1;
-}
-
-message AckOutboxEventsRequest {
-  repeated string event_ids = 1;
-}
-
-message AckOutboxEventsResponse {}
-
-message FailOutboxEventRequest {
-  string event_id = 1;
-  string error = 2;
-}
-
-message FailOutboxEventResponse {}
-
-message EnsureLearningBoardRequest {
-  string user_id = 1;
-}
-
-message EnsureLearningBoardResponse {
-  string project_id = 1;
-  string sprint_id = 2;
-}
-
-message CreateTaskInternalRequest {
-  string user_id = 1;
-  string title = 2;
-  TaskSource source = 3;
-  google.protobuf.Struct metadata = 4;
-  optional string dedup_key = 5;
-  optional string epic_name = 6;
-  optional float estimate_days = 7;
-}
-
-message CreateTaskInternalResponse {
-  Task task = 1;
-  bool created = 2;
-}
-
-message GetSprintPreviewRequest {
-  string user_id = 1;
-  int32 limit = 2;
-}
-
-message GetSprintPreviewResponse {
-  repeated Task tasks = 1;
-  optional Sprint sprint = 2;
-}
-
-message GetUserSettingsRequest {
-  string user_id = 1;
-}
-
-message GetUserSettingsResponse {
-  UserSettings settings = 1;
-}
-
-message PatchTaskMetadataRequest {
-  string user_id = 1;
-  string task_id = 2;
-  google.protobuf.Struct metadata = 3;
-}
-
-message PatchTaskMetadataResponse {
-  Task task = 1;
 }

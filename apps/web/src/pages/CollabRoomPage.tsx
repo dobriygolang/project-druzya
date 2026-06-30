@@ -55,7 +55,6 @@ export default function CollabRoomPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const inviteToken = searchParams.get('invite') ?? undefined
-  const sessionTaskId = searchParams.get('sessionTaskId') ?? undefined
   const qc = useQueryClient()
   const codeEditorRef = useRef<CollabCodeEditorHandle>(null)
   const diagramEditorRef = useRef<CollabExcalidrawHandle>(null)
@@ -69,6 +68,14 @@ export default function CollabRoomPage() {
   const [peers, setPeers] = useState<CollabPeer[]>([])
   const isNew = roomId === 'new'
   const hasSession = !!guestToken
+
+  useEffect(() => {
+    if (isNew) {
+      setGuestToken(null)
+      return
+    }
+    setGuestToken(readGuestToken(roomId))
+  }, [roomId, isNew])
 
   const roomQ = useQuery({
     queryKey: ['room', roomId, inviteToken],
@@ -112,8 +119,8 @@ export default function CollabRoomPage() {
   })
 
   const wsToken = guestToken ?? ''
-  const run = useSandboxRun()
-  const fmt = useFormatCode()
+  const run = useSandboxRun(wsToken || null)
+  const fmt = useFormatCode(wsToken || null)
 
   useEffect(() => {
     if (isNew) return
@@ -169,7 +176,7 @@ export default function CollabRoomPage() {
       ? {
           id: roomId,
           owner_id: jwtSubject(guestToken) ?? '',
-          room_type: 'interview',
+          room_type: 'practice',
           language: 'go',
           is_frozen: false,
           visibility: 'shared',
@@ -197,7 +204,7 @@ export default function CollabRoomPage() {
   const sessionUserId = wsToken ? jwtSubject(wsToken) : null
   const myRole = room.participants.find((p) => p.user_id === sessionUserId)?.role
   const isOwner = sessionUserId === room.owner_id
-  const canFreeze = myRole === 'owner' || myRole === 'interviewer' || isOwner
+  const canFreeze = isOwner || myRole === 'owner' || myRole === 'interviewer'
   const canRun = !!hasSession
   const closeTo = '/welcome'
   const designRoom = isDesignRoom(room)
@@ -229,11 +236,8 @@ export default function CollabRoomPage() {
     if (!code.trim()) return
     run.setPanelOpen(true)
     void run.executeRun({
-      taskId: room.task_id,
-      sessionTaskId,
       language: room.language,
       code,
-      runType: room.task_id ? 'sample' : 'custom',
     })
   }
 

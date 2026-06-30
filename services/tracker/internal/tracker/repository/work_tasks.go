@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -12,37 +11,40 @@ import (
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/model"
 )
 
+const workTaskSelectCols = `id, user_id, status, kind, title, created_at, updated_at, completed_at,
+	scheduled_start, scheduled_duration_min, google_event_id, archived_at`
+
 type WorkTaskPatch struct {
 	Title                *string
-	BoardStatus          *string
+	Status               *string
+	Kind                 *string
 	Done                 *bool
-	Metadata             map[string]any
 	ScheduledStart       *time.Time
 	ScheduledDurationMin *int
+	GoogleEventID        *string
 	ClearSchedule        bool
+	ClearGoogleEventID   bool
 	Archived             bool
 }
 
-func (r *Repository) ListWorkTasksByUser(ctx context.Context, userID string) ([]model.Task, error) {
+func (r *Repository) ListWorkTasksByUser(ctx context.Context, userID string) ([]model.WorkTask, error) {
 	uid, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user_id: %w", err)
 	}
 	rows, err := r.conn(ctx).Query(ctx, `
-		SELECT `+taskSelectCols+`
-		FROM tasks t
-		JOIN sprints s ON s.id = t.sprint_id
-		JOIN projects p ON p.id = s.project_id
-		WHERE p.user_id = $1 AND s.status = 'active' AND t.archived_at IS NULL
-		ORDER BY t.position, t.created_at
+		SELECT `+workTaskSelectCols+`
+		FROM work_tasks
+		WHERE user_id = $1 AND archived_at IS NULL
+		ORDER BY updated_at DESC, created_at DESC
 	`, uid)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []model.Task
+	var out []model.WorkTask
 	for rows.Next() {
-		t, err := scanTask(rows)
+		t, err := scanWorkTask(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -51,8 +53,51 @@ func (r *Repository) ListWorkTasksByUser(ctx context.Context, userID string) ([]
 	return out, rows.Err()
 }
 
-func (r *Repository) PatchWorkTask(ctx context.Context, taskID, userID string, patch WorkTaskPatch) (*model.Task, error) {
-	current, err := r.GetTask(ctx, taskID, userID)
+func (r *Repository) GetWorkTask(ctx context.Context, taskID, userID string) (*model.WorkTask, error) {
+	tid, err := uuid.Parse(taskID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid task_id: %w", err)
+	}
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
+	row := r.conn(ctx).QueryRow(ctx, `
+		SELECT `+workTaskSelectCols+`
+		FROM work_tasks WHERE id = $1 AND user_id = $2
+	`, tid, uid)
+	task, err := scanWorkTask(row)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	return task, err
+}
+
+func (r *Repository) CreateWorkTask(ctx context.Context, userID, kind, title, status string) (*model.WorkTask, error) {
+	uid, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user_id: %w", err)
+	}
+	if status == "" {
+		status = "todo"
+	}
+	if kind == "" {
+		kind = "custom"
+	}
+	id, err := uuid.NewRandom()
+	if err != nil {
+		return nil, err
+	}
+	row := r.conn(ctx).QueryRow(ctx, `
+		INSERT INTO work_tasks (id, user_id, status, kind, title)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING `+workTaskSelectCols+`
+	`, id, uid, status, kind, title)
+	return scanWorkTask(row)
+}
+
+func (r *Repository) PatchWorkTask(ctx context.Context, taskID, userID string, patch WorkTaskPatch) (*model.WorkTask, error) {
+	current, err := r.GetWorkTask(ctx, taskID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,26 +106,34 @@ func (r *Repository) PatchWorkTask(ctx context.Context, taskID, userID string, p
 	if patch.Title != nil {
 		title = *patch.Title
 	}
-	boardStatus := current.BoardStatus
-	if patch.BoardStatus != nil {
-		boardStatus = *patch.BoardStatus
+	status := current.Status
+	if patch.Status != nil {
+		status = *patch.Status
 	}
-	done := current.Done
-	if patch.Done != nil {
-		done = *patch.Done
-	} else if boardStatus == "done" {
-		done = true
-	} else if boardStatus == "todo" || boardStatus == "in_progress" || boardStatus == "in_review" {
-		done = false
+	kind := current.Kind
+	if patch.Kind != nil {
+		kind = *patch.Kind
 	}
 
-	meta := current.Metadata
-	if patch.Metadata != nil {
-		meta = mergeTaskMetadata(meta, patch.Metadata)
-	}
-	metaBytes, err := json.Marshal(meta)
-	if err != nil {
-		return nil, err
+	completedAt := current.CompletedAt
+	if patch.Done != nil {
+		if *patch.Done && current.CompletedAt == nil {
+			now := time.Now().UTC()
+			completedAt = &now
+		}
+		if !*patch.Done {
+			completedAt = nil
+		}
+	} else if patch.Status != nil {
+		switch *patch.Status {
+		case "done":
+			if current.CompletedAt == nil {
+				now := time.Now().UTC()
+				completedAt = &now
+			}
+		case "todo", "in_progress", "in_review", "dismissed":
+			completedAt = nil
+		}
 	}
 
 	scheduledStart := current.ScheduledStart
@@ -96,14 +149,12 @@ func (r *Repository) PatchWorkTask(ctx context.Context, taskID, userID string, p
 		scheduledDur = patch.ScheduledDurationMin
 	}
 
-	var completedAt *time.Time
-	if done && !current.Done {
-		now := time.Now().UTC()
-		completedAt = &now
-	} else if !done {
-		completedAt = nil
-	} else {
-		completedAt = current.CompletedAt
+	googleEventID := current.GoogleEventID
+	if patch.ClearGoogleEventID {
+		googleEventID = nil
+	}
+	if patch.GoogleEventID != nil {
+		googleEventID = patch.GoogleEventID
 	}
 
 	var archivedAt *time.Time
@@ -116,59 +167,33 @@ func (r *Repository) PatchWorkTask(ctx context.Context, taskID, userID string, p
 
 	tid, _ := uuid.Parse(taskID)
 	row := r.conn(ctx).QueryRow(ctx, `
-		UPDATE tasks
-		SET title = $2, done = $3, board_status = $4, metadata = $5,
-		    scheduled_start = $6, scheduled_duration_min = $7, archived_at = $8,
-		    completed_at = $9, updated_at = now()
+		UPDATE work_tasks
+		SET title = $2, status = $3, kind = $4, completed_at = $5,
+		    scheduled_start = $6, scheduled_duration_min = $7, google_event_id = $8,
+		    archived_at = $9, updated_at = now()
 		WHERE id = $1
-		RETURNING `+taskReturningCols+`
-	`, tid, title, done, boardStatus, metaBytes, scheduledStart, scheduledDur, archivedAt, completedAt)
-	task, err := scanTask(row)
+		RETURNING `+workTaskSelectCols+`
+	`, tid, title, status, kind, completedAt, scheduledStart, scheduledDur, googleEventID, archivedAt)
+	task, err := scanWorkTask(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}
 	return task, err
 }
 
-func (r *Repository) CreateWorkTask(ctx context.Context, sprintID, userID, title string, meta map[string]any, boardStatus string) (*model.Task, error) {
-	sid, err := uuid.Parse(sprintID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid sprint_id: %w", err)
-	}
-	uid, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, fmt.Errorf("invalid user_id: %w", err)
-	}
-	var ok bool
-	if err := r.conn(ctx).QueryRow(ctx, `
-		SELECT EXISTS(
-			SELECT 1 FROM sprints s JOIN projects p ON p.id = s.project_id
-			WHERE s.id = $1 AND p.user_id = $2 AND s.status = 'active'
-		)
-	`, sid, uid).Scan(&ok); err != nil {
-		return nil, err
-	}
-	if !ok {
-		return nil, ErrNotFound
-	}
-	if boardStatus == "" {
-		boardStatus = "todo"
-	}
-	if meta == nil {
-		meta = map[string]any{}
-	}
-	metaBytes, err := json.Marshal(meta)
+func scanWorkTask(row pgx.Row) (*model.WorkTask, error) {
+	var t model.WorkTask
+	var uid uuid.UUID
+	var googleEventID *string
+	err := row.Scan(
+		&t.ID, &uid, &t.Status, &t.Kind, &t.Title,
+		&t.CreatedAt, &t.UpdatedAt, &t.CompletedAt,
+		&t.ScheduledStart, &t.ScheduledDurationMin, &googleEventID, &t.ArchivedAt,
+	)
 	if err != nil {
 		return nil, err
 	}
-	id, err := uuid.NewRandom()
-	if err != nil {
-		return nil, err
-	}
-	row := r.conn(ctx).QueryRow(ctx, `
-		INSERT INTO tasks (id, sprint_id, title, done, position, estimate_days, source, metadata, board_status)
-		VALUES ($1, $2, $3, false, COALESCE((SELECT MAX(position)+1 FROM tasks WHERE sprint_id = $2), 0), $4, $5, $6, $7)
-		RETURNING `+taskReturningCols+`
-	`, id, sid, title, model.DefaultTaskEstimateDays, string(model.TaskSourceUser), metaBytes, boardStatus)
-	return scanTask(row)
+	t.UserID = uid.String()
+	t.GoogleEventID = googleEventID
+	return &t, nil
 }

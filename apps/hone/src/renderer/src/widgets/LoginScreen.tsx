@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { useT } from '@d9-i18n';
+
 import { authTelegram, getAuthConfig } from '@features/auth/api/auth';
 import { API_BASE_URL, TELEGRAM_BOT_USERNAME } from '@shared/api/config';
 import { DEV_LOGIN_ENABLED } from '@app/config/features';
@@ -29,6 +31,7 @@ async function persistSession(session: {
 }
 
 export function LoginScreen(): JSX.Element {
+  const t = useT();
   const [code, setCode] = useState('');
   const [botUsername, setBotUsername] = useState(TELEGRAM_BOT_USERNAME);
   const [busy, setBusy] = useState(false);
@@ -62,7 +65,7 @@ export function LoginScreen(): JSX.Element {
 
     if (!trimmed) {
       if (!botLink) {
-        setError('Бот не настроен');
+        setError(t('hone.login.bot_not_configured'));
         return;
       }
       setError(null);
@@ -81,7 +84,7 @@ export function LoginScreen(): JSX.Element {
         expiresAt: auth.expiresAt,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Не удалось войти');
+      setError(err instanceof Error ? err.message : t('hone.login.error_sign_in'));
     } finally {
       setBusy(false);
     }
@@ -101,8 +104,8 @@ export function LoginScreen(): JSX.Element {
       if (!resp.ok) {
         setError(
           resp.status === 404
-            ? 'DEV_AUTH not enabled on backend'
-            : `Dev login failed (${resp.status})`,
+            ? t('hone.login.error_dev_auth')
+            : t('hone.login.error_dev_failed', { status: resp.status }),
         );
         return;
       }
@@ -133,9 +136,7 @@ export function LoginScreen(): JSX.Element {
 
         <form className="login-form" onSubmit={(e) => void onSubmit(e)}>
           <p className="login-hint">
-            {botLink
-              ? 'Открой бота, получи код и вставь его сюда.'
-              : 'Открой Telegram-бота, отправь /start login и введи код.'}
+            {botLink ? t('hone.login.hint_with_link') : t('hone.login.hint_no_link')}
           </p>
 
           <input
@@ -143,10 +144,10 @@ export function LoginScreen(): JSX.Element {
             className="login-code-input"
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="ABCD1234"
+            placeholder={t('hone.login.code_placeholder')}
             autoComplete="one-time-code"
             maxLength={16}
-            aria-label="Код из Telegram"
+            aria-label={t('hone.login.code_aria')}
             disabled={busy}
           />
 
@@ -154,7 +155,7 @@ export function LoginScreen(): JSX.Element {
             type="submit"
             className="login-tg-btn"
             disabled={busy}
-            aria-label={hasCode ? 'Войти с кодом' : 'Открыть Telegram-бота'}
+            aria-label={hasCode ? t('hone.login.sign_in_aria') : t('hone.login.open_bot_aria')}
           >
             <TelegramIcon />
           </button>
@@ -175,12 +176,12 @@ export function LoginScreen(): JSX.Element {
             className="login-dev-input"
             value={devUsername}
             onChange={(e) => setDevUsername(e.target.value)}
-            placeholder="username"
-            aria-label="Dev username"
+            placeholder={t('hone.login.dev_username_placeholder')}
+            aria-label={t('hone.login.dev_username_aria')}
             autoComplete="username"
           />
           <button type="submit" className="login-dev-btn" disabled={devBusy}>
-            {devBusy ? '…' : 'Dev'}
+            {devBusy ? '…' : t('hone.login.dev_btn')}
           </button>
         </form>
       )}

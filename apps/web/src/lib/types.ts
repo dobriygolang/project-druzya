@@ -68,8 +68,6 @@ export interface TestResult {
 export interface CodeRun {
   id: string
   user_id: string
-  task_id?: string
-  session_task_id?: string
   language: string
   status: string
   run_type: string

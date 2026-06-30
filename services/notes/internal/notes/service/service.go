@@ -20,26 +20,19 @@ type Service interface {
 	InitVault(ctx context.Context, userID string) (saltB64 string, initialized bool, err error)
 	GetVaultSalt(ctx context.Context, userID string) (saltB64 string, err error)
 
-	ListNotes(ctx context.Context, userID string, limit int, cursor string, folderID *string) ([]notesmodel.NoteSummary, string, error)
+	ListNotes(ctx context.Context, userID string, limit int, cursor string) ([]notesmodel.NoteSummary, string, error)
 	GetNote(ctx context.Context, userID, id string) (*notesmodel.Note, error)
-	CreateNote(ctx context.Context, userID, title, body string, folderID *string) (*notesmodel.Note, error)
+	CreateNote(ctx context.Context, userID, title, body string) (*notesmodel.Note, error)
 	UpdateNote(ctx context.Context, userID, id, title, body string) (*notesmodel.Note, error)
 	DeleteNote(ctx context.Context, userID, id string) error
-	MoveNote(ctx context.Context, userID, noteID string, folderID *string) (*notesmodel.Note, error)
-	GetNotesMeta(ctx context.Context, userID string) ([]notesmodel.NoteMeta, error)
 
 	EncryptNote(ctx context.Context, userID, noteID, ciphertext string) error
-	PermanentlyDecryptNote(ctx context.Context, userID, noteID, plaintext string) error
 
-	ListFolders(ctx context.Context, userID string) ([]notesmodel.Folder, error)
-	CreateFolder(ctx context.Context, userID, name string, parentID *string) (*notesmodel.Folder, error)
-	DeleteFolder(ctx context.Context, userID, id string, moveNotesToRoot bool) error
-
-	PublishNote(ctx context.Context, userID, noteID string) (*notesmodel.PublishStatus, error)
 	UnpublishNote(ctx context.Context, userID, noteID string) error
 	GetPublishStatus(ctx context.Context, userID, noteID string) (*notesmodel.PublishStatus, error)
 	ShareNoteToWeb(ctx context.Context, userID, noteID, plaintext string) (*notesmodel.ShareToWebResult, error)
 	MakeNotePrivate(ctx context.Context, userID, noteID, ciphertext string) error
+	GetPublishedNote(ctx context.Context, slug string) (*notesmodel.PublishedNote, error)
 }
 
 type notesService struct {
@@ -92,13 +85,12 @@ func (s *notesService) ListNotes(
 	userID string,
 	limit int,
 	cursor string,
-	folderID *string,
 ) ([]notesmodel.NoteSummary, string, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, "", ErrInvalidArgument
 	}
 	return s.repo.ListNotes(ctx, userID, notesrepo.ListNotesFilter{
-		Limit: limit, Cursor: cursor, FolderID: folderID,
+		Limit: limit, Cursor: cursor,
 	})
 }
 
@@ -112,7 +104,6 @@ func (s *notesService) GetNote(ctx context.Context, userID, id string) (*notesmo
 func (s *notesService) CreateNote(
 	ctx context.Context,
 	userID, title, body string,
-	folderID *string,
 ) (*notesmodel.Note, error) {
 	if strings.TrimSpace(userID) == "" {
 		return nil, ErrInvalidArgument
@@ -120,7 +111,7 @@ func (s *notesService) CreateNote(
 	if err := s.ensureCloudNotesQuota(ctx, userID); err != nil {
 		return nil, err
 	}
-	return s.repo.CreateNote(ctx, userID, strings.TrimSpace(title), body, folderID)
+	return s.repo.CreateNote(ctx, userID, strings.TrimSpace(title), body)
 }
 
 func (s *notesService) UpdateNote(ctx context.Context, userID, id, title, body string) (*notesmodel.Note, error) {
@@ -137,60 +128,11 @@ func (s *notesService) DeleteNote(ctx context.Context, userID, id string) error 
 	return s.repo.DeleteNote(ctx, userID, id)
 }
 
-func (s *notesService) MoveNote(ctx context.Context, userID, noteID string, folderID *string) (*notesmodel.Note, error) {
-	if strings.TrimSpace(userID) == "" || strings.TrimSpace(noteID) == "" {
-		return nil, ErrInvalidArgument
-	}
-	return s.repo.MoveNote(ctx, userID, noteID, folderID)
-}
-
-func (s *notesService) GetNotesMeta(ctx context.Context, userID string) ([]notesmodel.NoteMeta, error) {
-	if strings.TrimSpace(userID) == "" {
-		return nil, ErrInvalidArgument
-	}
-	return s.repo.GetNotesMeta(ctx, userID)
-}
-
 func (s *notesService) EncryptNote(ctx context.Context, userID, noteID, ciphertext string) error {
 	if strings.TrimSpace(userID) == "" || strings.TrimSpace(noteID) == "" || ciphertext == "" {
 		return ErrInvalidArgument
 	}
 	return s.repo.EncryptNote(ctx, userID, noteID, ciphertext)
-}
-
-func (s *notesService) PermanentlyDecryptNote(ctx context.Context, userID, noteID, plaintext string) error {
-	if strings.TrimSpace(userID) == "" || strings.TrimSpace(noteID) == "" {
-		return ErrInvalidArgument
-	}
-	return s.repo.PermanentlyDecryptNote(ctx, userID, noteID, plaintext)
-}
-
-func (s *notesService) ListFolders(ctx context.Context, userID string) ([]notesmodel.Folder, error) {
-	if strings.TrimSpace(userID) == "" {
-		return nil, ErrInvalidArgument
-	}
-	return s.repo.ListFolders(ctx, userID)
-}
-
-func (s *notesService) CreateFolder(ctx context.Context, userID, name string, parentID *string) (*notesmodel.Folder, error) {
-	if strings.TrimSpace(userID) == "" || strings.TrimSpace(name) == "" {
-		return nil, ErrInvalidArgument
-	}
-	return s.repo.CreateFolder(ctx, userID, strings.TrimSpace(name), parentID)
-}
-
-func (s *notesService) DeleteFolder(ctx context.Context, userID, id string, moveNotesToRoot bool) error {
-	if strings.TrimSpace(userID) == "" || strings.TrimSpace(id) == "" {
-		return ErrInvalidArgument
-	}
-	return s.repo.DeleteFolder(ctx, userID, id, moveNotesToRoot)
-}
-
-func (s *notesService) PublishNote(ctx context.Context, userID, noteID string) (*notesmodel.PublishStatus, error) {
-	if strings.TrimSpace(userID) == "" || strings.TrimSpace(noteID) == "" {
-		return nil, ErrInvalidArgument
-	}
-	return s.repo.PublishNote(ctx, userID, noteID, s.publicBaseURL)
 }
 
 func (s *notesService) UnpublishNote(ctx context.Context, userID, noteID string) error {
@@ -219,6 +161,13 @@ func (s *notesService) MakeNotePrivate(ctx context.Context, userID, noteID, ciph
 		return ErrInvalidArgument
 	}
 	return s.repo.MakeNotePrivate(ctx, userID, noteID, ciphertext)
+}
+
+func (s *notesService) GetPublishedNote(ctx context.Context, slug string) (*notesmodel.PublishedNote, error) {
+	if strings.TrimSpace(slug) == "" {
+		return nil, ErrInvalidArgument
+	}
+	return s.repo.GetPublishedNoteBySlug(ctx, slug)
 }
 
 func IsNotFound(err error) bool {

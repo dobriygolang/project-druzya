@@ -41,7 +41,6 @@ type Service interface {
 	Logout(ctx context.Context, refreshToken string) error
 	GetMe(ctx context.Context, userID string) (*model.User, error)
 	UpdateMe(ctx context.Context, userID string, timezone *string) (*model.User, error)
-	LinkYandex(ctx context.Context, userID, code string) (*model.User, error)
 	GetUser(ctx context.Context, id string) (*model.User, error)
 	GetUserByTelegramID(ctx context.Context, telegramID int64) (*model.User, error)
 	ValidateToken(ctx context.Context, accessToken string) (string, error)
@@ -290,14 +289,6 @@ func (s *service) UpdateMe(ctx context.Context, userID string, timezone *string)
 	}
 	user.Timezone = tz
 	return s.users.Update(ctx, user)
-}
-
-func (s *service) LinkYandex(ctx context.Context, userID, code string) (*model.User, error) {
-	profile, err := s.yandex.ExchangeCode(ctx, code)
-	if err != nil {
-		return nil, err
-	}
-	return s.linkYandexProfile(ctx, userID, profile)
 }
 
 func (s *service) GetUser(ctx context.Context, id string) (*model.User, error) {

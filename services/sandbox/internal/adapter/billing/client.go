@@ -6,8 +6,7 @@ import (
 )
 
 const (
-	EntitlementCodeRunsPerDay     = "code_runs_per_day"
-	EntitlementHiddenTestsEnabled = "hidden_tests_enabled"
+	EntitlementCodeRunsPerDay = "code_runs_per_day"
 )
 
 var (

@@ -1,17 +1,28 @@
 import { PREFS_KEYS, clampInt } from '@shared/model/prefs';
 
+export type TextScale = 'normal' | 'large' | 'xlarge';
+
 export interface HoneSettings {
   pomodoroMinutes: number;
   notifications: boolean;
+  textScale: TextScale;
 }
 
 export const SETTINGS_KEY = PREFS_KEYS.SETTINGS_KEY;
 export const THEME_KEY = PREFS_KEYS.THEME_KEY;
 
+export const TEXT_SCALES: TextScale[] = ['normal', 'large', 'xlarge'];
+
 export const DEFAULTS: HoneSettings = {
   pomodoroMinutes: 25,
   notifications: true,
+  textScale: 'normal',
 };
+
+function parseTextScale(v: unknown): TextScale {
+  if (v === 'large' || v === 'xlarge') return v;
+  return 'normal';
+}
 
 export function readSettings(): HoneSettings {
   if (typeof window === 'undefined') return DEFAULTS;
@@ -22,6 +33,7 @@ export function readSettings(): HoneSettings {
     return {
       pomodoroMinutes: clampInt(parsed?.pomodoroMinutes, 5, 90, DEFAULTS.pomodoroMinutes),
       notifications: typeof parsed?.notifications === 'boolean' ? parsed.notifications : DEFAULTS.notifications,
+      textScale: parseTextScale(parsed?.textScale),
     };
   } catch {
     return DEFAULTS;
@@ -30,21 +42,25 @@ export function readSettings(): HoneSettings {
 
 export { clampInt };
 
-export function labelFor(id: string): string {
+export function themeLabelKey(id: string): string {
   switch (id) {
+    case 'light':
+      return 'hone.theme.light';
+    case 'birthday':
+      return 'hone.theme.birthday';
     case 'winter':
-      return 'Winter';
+      return 'hone.theme.winter';
     case 'aurora':
-      return 'Aurora';
+      return 'hone.theme.aurora';
     case 'grid-rain':
-      return 'Grid rain';
+      return 'hone.theme.grid_rain';
     case 'particles':
-      return 'Particles';
+      return 'hone.theme.particles';
     case 'abyss':
-      return 'Abyss';
+      return 'hone.theme.abyss';
     case 'cosmic':
-      return 'Cosmic';
+      return 'hone.theme.cosmic';
     default:
-      return id;
+      return 'hone.theme.winter';
   }
 }

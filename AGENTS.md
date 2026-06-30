@@ -14,15 +14,15 @@ When working on a service, **open only that service folder** and read its local 
 | sandbox | [services/sandbox/AGENTS.md](services/sandbox/AGENTS.md) | code execution + LSP (live rooms) |
 | **rooms** | [services/rooms/AGENTS.md](services/rooms/AGENTS.md) | live coding collab, WS + Yjs |
 | **tracker** | [services/tracker/AGENTS.md](services/tracker/AGENTS.md) | task board, sprint/epic, Google Calendar |
-| **notes** | [services/notes/AGENTS.md](services/notes/AGENTS.md) | Obsidian-like notes, E2EE vault (WIP) |
-| **focus** | [services/focus/AGENTS.md](services/focus/AGENTS.md) | pomodoro, streaks, focus stats (WIP) |
-| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | LLM gateway (not in prod stack) |
+| **notes** | [services/notes/AGENTS.md](services/notes/AGENTS.md) | notes, E2EE vault, publish-to-web |
+| **focus** | [services/focus/AGENTS.md](services/focus/AGENTS.md) | pomodoro sessions, focus stats |
+| ai | [services/ai/AGENTS.md](services/ai/AGENTS.md) | **ARCHIVED — CI only, not prod** |
 
-**Desktop app:** [apps/hone/README.md](apps/hone/README.md) — Tauri focus workspace (Winter-like).
+**Desktop app:** [apps/hone/AGENTS.md](apps/hone/AGENTS.md) — Tauri focus workspace (notes, tasks, whiteboard, sync).
 
-**Web companion:** [apps/web/](apps/web/) — welcome, billing, `/live/new` guest rooms.
+**Web companion:** [apps/web/AGENTS.md](apps/web/AGENTS.md) — landing, guest live collab, pricing, published notes/boards.
 
-**Retired (removed):** content, interview, recommendation, admin.
+**Retired (removed):** content, interview, recommendation, admin — see [docs/onboarding/README.md](docs/onboarding/README.md#retired-services).
 
 Prod deploy: [deploy/PRODUCTION_CHECKLIST.md](deploy/PRODUCTION_CHECKLIST.md), [deploy/RUNBOOK.md](deploy/RUNBOOK.md)
 
@@ -34,7 +34,7 @@ Root `go.work` is optional. Services build with `GOWORK=off`.
 
 ## Service template (canonical)
 
-Pattern from **search-performance** + **identity** + **content**. **Start new services by copying `services/template/`.**
+Pattern from **identity** + **template**. **Start new services by copying `services/template/`.**
 
 > **Target architecture (CQRS + DDD + Clean Architecture):** see
 > [.cursor/rules/architecture-standard.mdc](.cursor/rules/architecture-standard.mdc).

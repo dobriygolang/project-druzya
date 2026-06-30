@@ -13,7 +13,6 @@ const LAYERS = {
 const PEER_ALIASES = {
   '@bufbuild/protobuf': resolve(__dirname, 'node_modules/@bufbuild/protobuf'),
   '@connectrpc/connect': resolve(__dirname, 'node_modules/@connectrpc/connect'),
-  '@connectrpc/connect-web': resolve(__dirname, 'node_modules/@connectrpc/connect-web'),
 };
 const SHARED_ALIASES = {
   '@d9-i18n': resolve(__dirname, '../shared/i18n'),
@@ -33,6 +32,7 @@ export default defineConfig(({ mode }) => {
         '/v1/tracker': { target: 'http://localhost:8089', changeOrigin: true },
         '/v1/notes': { target: 'http://localhost:8090', changeOrigin: true },
         '/v1/focus': { target: 'http://localhost:8091', changeOrigin: true },
+        '/v1/rooms': { target: 'http://localhost:8087', changeOrigin: true },
       }
     : {
         '/healthz': { target: prodApi, changeOrigin: true },
@@ -42,6 +42,7 @@ export default defineConfig(({ mode }) => {
         '/v1/tracker': { target: prodApi, changeOrigin: true },
         '/v1/notes': { target: prodApi, changeOrigin: true },
         '/v1/focus': { target: prodApi, changeOrigin: true },
+        '/v1/rooms': { target: prodApi, changeOrigin: true },
       };
 
   return {
@@ -51,7 +52,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     clearScreen: false,
     optimizeDeps: {
-      include: ['zustand', 'zustand/react'],
+      include: ['zustand', 'zustand/react', '@excalidraw/excalidraw'],
     },
     server: {
       port: 5173,

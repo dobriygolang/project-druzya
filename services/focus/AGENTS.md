@@ -6,7 +6,7 @@ Module: `github.com/sedorofeevd/project-druzya/services/focus`
 
 ## Purpose
 
-Pomodoro timer and focus statistics for Hone Electron:
+Pomodoro timer and focus statistics for Hone (Tauri desktop):
 
 - `StartFocusSession` / `EndFocusSession` — JWT-protected
 - `GetStats` — streaks, heatmap, last 7 days, total focused seconds

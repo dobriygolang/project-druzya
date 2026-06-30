@@ -12,9 +12,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ConnectError, Code } from '@connectrpc/connect';
 
-import { useT } from '@d9-i18n';
+import { useT, useLocale, type TFunc } from '@d9-i18n';
 
 import { getStats, padToSevenDays, type HoneStats, type FocusDay } from '@features/focus/api/focusClient';
+import { formatWeekdayShort } from '@pages/TaskBoard/lib/dates';
 import { readDailyGoalMin } from '@shared/model/prefs';
 
 interface FetchState {
@@ -40,6 +41,8 @@ const BASELINE_ROW: React.CSSProperties = {
 };
 
 export function StatsOverlayCards({ onClose: _onClose, closing = false }: { onClose: () => void; closing?: boolean }) {
+  const t = useT();
+  const [locale] = useLocale();
   const [state, setState] = useState<FetchState>(INITIAL);
   void _onClose;
 
@@ -102,7 +105,7 @@ export function StatsOverlayCards({ onClose: _onClose, closing = false }: { onCl
         {/* 1. Focus Activity */}
         <div className={closing ? 'slide-to-right' : 'slide-from-right'} style={{ animationDelay: closing ? '120ms' : '0ms' }}>
           <BigCard>
-            <CardHead title="Focus Activity" right={<HeatmapLegend />} />
+            <CardHead title={t('hone.stats.focus_activity')} right={<HeatmapLegend />} />
             <ReferenceHeatmap days={data?.heatmap ?? []} />
           </BigCard>
         </div>
@@ -110,7 +113,7 @@ export function StatsOverlayCards({ onClose: _onClose, closing = false }: { onCl
         {/* 2. Current Streak */}
         <div className={closing ? 'slide-to-right' : 'slide-from-right'} style={{ animationDelay: closing ? '80ms' : '80ms' }}>
           <BigCard>
-            <CardHead title="Current Streak" />
+            <CardHead title={t('hone.stats.current_streak')} />
             <div
               style={{
                 display: 'grid',
@@ -133,10 +136,10 @@ export function StatsOverlayCards({ onClose: _onClose, closing = false }: { onCl
                   >
                     {data?.currentStreakDays ?? 0}
                   </span>
-                  <span style={{ fontSize: 11, color: 'var(--ink-40)' }}>days</span>
+                  <span style={{ fontSize: 11, color: 'var(--ink-40)' }}>{t('hone.stats.days')}</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--ink-40)' }}>
-                  Longest:{' '}
+                  {t('hone.stats.longest')}{' '}
                   <span style={{ color: 'var(--ink-90)' }}>{data?.longestStreakDays ?? 0}</span>
                 </div>
               </div>
@@ -148,35 +151,28 @@ export function StatsOverlayCards({ onClose: _onClose, closing = false }: { onCl
         {/* 3. Focused Time */}
         <div className={closing ? 'slide-to-right' : 'slide-from-right'} style={{ animationDelay: closing ? '40ms' : '160ms' }}>
           <BigCard>
-            <CardHead title="Focused Time" right={<MetaLabel>LAST 7 DAYS</MetaLabel>} />
-            <ReferenceBars days={lastSeven} />
+            <CardHead
+              title={t('hone.stats.focused_time')}
+              right={<MetaLabel>{t('hone.stats.last_7_days').toUpperCase()}</MetaLabel>}
+            />
+            <ReferenceBars days={lastSeven} locale={locale} />
           </BigCard>
         </div>
 
         {/* 4. Insights */}
         <div className={closing ? 'slide-to-right' : 'slide-from-right'} style={{ animationDelay: closing ? '0ms' : '240ms' }}>
           <BigCard>
-            <CardHead title="Insights" />
-            <InsightsGrid data={data} />
+            <CardHead title={t('hone.stats.insights')} />
+            <InsightsGrid data={data} t={t} />
           </BigCard>
         </div>
 
         {state.status === 'error' && state.errorCode === Code.Unauthenticated && (
           <div
-            className={`mono ${closing ? 'slide-to-right' : 'slide-from-right'}`}
-            style={{
-              animationDelay: closing ? '0ms' : '320ms',
-              padding: '10px 14px',
-              background: 'rgb(var(--ink-rgb) / 0.03)',
-              border: '1px solid var(--hair)',
-              borderRadius: 10,
-              fontSize: 11,
-              letterSpacing: '0.08em',
-              color: 'var(--ink-40)',
-              textAlign: 'center',
-            }}
+            className={`mono hone-stats-card hone-stats-notice ${closing ? 'slide-to-right' : 'slide-from-right'}`}
+            style={{ animationDelay: closing ? '0ms' : '320ms' }}
           >
-            SIGN IN TO SEE FULL STATS
+            {t('hone.stats.sign_in_required').toUpperCase()}
           </div>
         )}
       </aside>
@@ -188,20 +184,7 @@ export function StatsOverlayCards({ onClose: _onClose, closing = false }: { onCl
 // ─── Layout primitives ────────────────────────────────────────────────────
 
 function BigCard({ children }: { children: React.ReactNode }) {
-  return (
-    <section
-      style={{
-        background: 'rgba(28,28,30,0.85)',
-        backdropFilter: 'blur(28px)',
-        WebkitBackdropFilter: 'blur(28px)',
-        border: '1px solid var(--hair)',
-        borderRadius: 16,
-        padding: 14,
-      }}
-    >
-      {children}
-    </section>
-  );
+  return <section className="hone-stats-card">{children}</section>;
 }
 
 function CardHead({ title, right }: { title: string; right?: React.ReactNode }) {
@@ -400,7 +383,7 @@ function StreakCurve({ points }: { points: number[] }) {
 
 // ─── Reference Bars ──────────────────────────────────────────────────────
 
-function ReferenceBars({ days }: { days: FocusDay[] }) {
+function ReferenceBars({ days, locale }: { days: FocusDay[]; locale: 'en' | 'ru' }) {
   // Mount-anim: bars стартуют на 0 и растут до final-height после первого
   // paint'а. Mirror «mountain motion» style как у StreakCurve, только тут
   // эффект — растущие колонки. Без этого bars появляются instantly и
@@ -461,7 +444,7 @@ function ReferenceBars({ days }: { days: FocusDay[] }) {
                   color: isToday ? 'var(--ink)' : 'var(--ink-60)',
                 }}
               >
-                {weekdayLabel(d.date)}
+                {formatWeekdayShort(d.date, locale)}
               </span>
               <span style={{ fontSize: 10.5, color: 'var(--ink-40)' }}>
                 {dayOfMonth(d.date)}
@@ -472,13 +455,6 @@ function ReferenceBars({ days }: { days: FocusDay[] }) {
       })}
     </div>
   );
-}
-
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
-function weekdayLabel(iso: string): string {
-  const d = new Date(`${iso}T00:00:00Z`);
-  return WEEKDAY_LABELS[d.getUTCDay()] ?? '';
 }
 
 function dayOfMonth(iso: string): string {
@@ -501,7 +477,7 @@ function dayOfMonth(iso: string): string {
 // Pure-client computation — heavy work уже сделана reader'ом, тут только
 // derive'аем из существующего HoneStats.
 
-function InsightsGrid({ data }: { data: HoneStats | null }) {
+function InsightsGrid({ data, t }: { data: HoneStats | null; t: TFunc }) {
   // ── Streak ring: goal 14 days (free-tier soft target)
   const STREAK_GOAL = 14;
   // Daily goal: localStorage settable, default 2h (120min). readDailyGoalMin
@@ -580,14 +556,18 @@ function InsightsGrid({ data }: { data: HoneStats | null }) {
         marginTop: 2,
       }}
     >
-      <StreakRingCell streakDays={data?.currentStreakDays ?? 0} pct={streakPct} goal={STREAK_GOAL} />
-      <CompareWeekCell thisHrs={thisWeekSec / 3600} prevHrs={prevWeekSec / 3600} deltaPct={weekDeltaPct} />
-      <GoalMeterCell todayMin={todayMin} goalMin={dailyGoalMin} pct={goalPct} />
+      <StreakRingCell streakDays={data?.currentStreakDays ?? 0} pct={streakPct} goal={STREAK_GOAL} t={t} />
+      <CompareWeekCell thisHrs={thisWeekSec / 3600} prevHrs={prevWeekSec / 3600} deltaPct={weekDeltaPct} t={t} />
+      <GoalMeterCell todayMin={todayMin} goalMin={dailyGoalMin} pct={goalPct} t={t} />
       <SimpleStatCell
         value={String(avgSessionMin)}
         unit="min"
-        label="Avg session length"
-        sub={totalSessionsAll > 0 ? `${totalSessionsAll} sessions total` : 'no data yet'}
+        label={t('hone.stats.avg_session')}
+        sub={
+          totalSessionsAll > 0
+            ? t('hone.stats.sessions_total', { n: totalSessionsAll })
+            : t('hone.stats.no_data_yet')
+        }
       />
     </div>
   );
@@ -595,8 +575,17 @@ function InsightsGrid({ data }: { data: HoneStats | null }) {
 
 // ─── Streak ring (SVG circular progress) ─────────────────────────────────
 
-function StreakRingCell({ streakDays, pct, goal }: { streakDays: number; pct: number; goal: number }) {
-  const t = useT();
+function StreakRingCell({
+  streakDays,
+  pct,
+  goal,
+  t,
+}: {
+  streakDays: number;
+  pct: number;
+  goal: number;
+  t: TFunc;
+}) {
   const SIZE = 56;
   const STROKE = 4;
   const R = (SIZE - STROKE) / 2;
@@ -638,7 +627,7 @@ function StreakRingCell({ streakDays, pct, goal }: { streakDays: number; pct: nu
           <span style={BIG_NUMBER_STYLE}>
             {streakDays}
           </span>
-          <span style={{ fontSize: 10, color: 'var(--ink-40)' }}>/ {goal} days</span>
+          <span style={{ fontSize: 10, color: 'var(--ink-40)' }}>{t('hone.stats.days_of_goal', { goal })}</span>
         </div>
         <div style={{ fontSize: 10, color: 'var(--ink-40)' }}>{t('hone.stats.streak_goal')}</div>
       </div>
@@ -648,7 +637,17 @@ function StreakRingCell({ streakDays, pct, goal }: { streakDays: number; pct: nu
 
 // ─── Compare with last week ──────────────────────────────────────────────
 
-function CompareWeekCell({ thisHrs, prevHrs, deltaPct }: { thisHrs: number; prevHrs: number; deltaPct: number }) {
+function CompareWeekCell({
+  thisHrs,
+  prevHrs,
+  deltaPct,
+  t,
+}: {
+  thisHrs: number;
+  prevHrs: number;
+  deltaPct: number;
+  t: TFunc;
+}) {
   const isUp = deltaPct >= 0;
   const tone = isUp ? 'var(--ink)' : 'var(--red)';
   return (
@@ -657,13 +656,13 @@ function CompareWeekCell({ thisHrs, prevHrs, deltaPct }: { thisHrs: number; prev
         <span style={BIG_NUMBER_STYLE}>
           {thisHrs.toFixed(1)}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--ink-40)' }}>hrs</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-40)' }}>{t('hone.stats.hrs')}</span>
         <span style={{ fontSize: 11, fontWeight: 600, color: tone, marginLeft: 4 }}>
           {isUp ? '↑' : '↓'} {Math.abs(deltaPct)}%
         </span>
       </div>
       <div style={{ fontSize: 10, color: 'var(--ink-40)' }}>
-        vs {prevHrs.toFixed(1)} h last week
+        {t('hone.stats.vs_last_week', { hrs: prevHrs.toFixed(1) })}
       </div>
     </div>
   );
@@ -671,8 +670,17 @@ function CompareWeekCell({ thisHrs, prevHrs, deltaPct }: { thisHrs: number; prev
 
 // ─── Daily goal meter ────────────────────────────────────────────────────
 
-function GoalMeterCell({ todayMin, goalMin, pct }: { todayMin: number; goalMin: number; pct: number }) {
-  const t = useT();
+function GoalMeterCell({
+  todayMin,
+  goalMin,
+  pct,
+  t,
+}: {
+  todayMin: number;
+  goalMin: number;
+  pct: number;
+  t: TFunc;
+}) {
   const reached = pct >= 100;
   const tone = reached ? 'var(--ink)' : 'rgb(var(--ink-rgb) / 0.85)';
   const [animTick, setAnimTick] = useState(0);
@@ -687,7 +695,7 @@ function GoalMeterCell({ todayMin, goalMin, pct }: { todayMin: number; goalMin: 
         <span style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: tone }}>
           {todayMin}
         </span>
-        <span style={{ fontSize: 10, color: 'var(--ink-40)' }}>/ {goalMin} min today</span>
+        <span style={{ fontSize: 10, color: 'var(--ink-40)' }}>{t('hone.stats.min_today', { goal: goalMin })}</span>
       </div>
       <div
         aria-hidden

@@ -41,107 +41,67 @@ func New(pg *Pool) *Repository {
 	return &Repository{pg: pg}
 }
 
-func (r *Repository) CreateRoom(ctx context.Context, room model.Room) (model.Room, error) {
-	const q = `
-INSERT INTO code_rooms (owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, is_guest_created)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, created_at, is_guest_created`
+const roomReturning = `
+RETURNING id, owner_id, room_type, language, is_frozen, visibility, expires_at, created_at, is_guest_created`
 
+func scanRoom(row pgx.Row) (model.Room, error) {
 	var out model.Room
-	var taskID *uuid.UUID
 	var roomType, lang, vis string
-	err := r.pg.QueryRow(ctx, q,
-		room.OwnerID, room.Type.String(), room.TaskID, room.Language.String(),
-		room.IsFrozen, room.Visibility, room.ExpiresAt, room.IsGuestCreated,
-	).Scan(
-		&out.ID, &out.OwnerID, &roomType, &taskID, &lang,
+	if err := row.Scan(
+		&out.ID, &out.OwnerID, &roomType, &lang,
 		&out.IsFrozen, &vis, &out.ExpiresAt, &out.CreatedAt, &out.IsGuestCreated,
-	)
-	if err != nil {
-		return model.Room{}, fmt.Errorf("CreateRoom: %w", err)
+	); err != nil {
+		return model.Room{}, err
 	}
 	out.Type = model.RoomType(roomType)
 	out.Language = model.Language(lang)
 	out.Visibility = model.Visibility(vis)
-	out.TaskID = taskID
 	return out, nil
 }
 
 func (r *Repository) CreateRoomWithID(ctx context.Context, id uuid.UUID, room model.Room) (model.Room, error) {
 	const q = `
-INSERT INTO code_rooms (id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, is_guest_created)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, created_at, is_guest_created`
+INSERT INTO code_rooms (id, owner_id, room_type, language, is_frozen, visibility, expires_at, is_guest_created)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)` + roomReturning
 
-	var out model.Room
-	var taskID *uuid.UUID
-	var roomType, lang, vis string
-	err := r.pg.QueryRow(ctx, q,
-		id, room.OwnerID, room.Type.String(), room.TaskID, room.Language.String(),
+	out, err := scanRoom(r.pg.QueryRow(ctx, q,
+		id, room.OwnerID, room.Type.String(), room.Language.String(),
 		room.IsFrozen, room.Visibility, room.ExpiresAt, room.IsGuestCreated,
-	).Scan(
-		&out.ID, &out.OwnerID, &roomType, &taskID, &lang,
-		&out.IsFrozen, &vis, &out.ExpiresAt, &out.CreatedAt, &out.IsGuestCreated,
-	)
+	))
 	if err != nil {
 		return model.Room{}, fmt.Errorf("CreateRoomWithID: %w", err)
 	}
-	out.Type = model.RoomType(roomType)
-	out.Language = model.Language(lang)
-	out.Visibility = model.Visibility(vis)
-	out.TaskID = taskID
 	return out, nil
 }
 
 func (r *Repository) GetRoom(ctx context.Context, id uuid.UUID) (model.Room, error) {
 	const q = `
-SELECT id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, created_at, is_guest_created
+SELECT id, owner_id, room_type, language, is_frozen, visibility, expires_at, created_at, is_guest_created
 FROM code_rooms
 WHERE id = $1 AND archived_at IS NULL`
 
-	var out model.Room
-	var roomType, lang, vis string
-	var taskID *uuid.UUID
-	err := r.pg.QueryRow(ctx, q, id).Scan(
-		&out.ID, &out.OwnerID, &roomType, &taskID, &lang,
-		&out.IsFrozen, &vis, &out.ExpiresAt, &out.CreatedAt, &out.IsGuestCreated,
-	)
+	out, err := scanRoom(r.pg.QueryRow(ctx, q, id))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.Room{}, ErrNotFound
 		}
 		return model.Room{}, fmt.Errorf("GetRoom: %w", err)
 	}
-	out.Type = model.RoomType(roomType)
-	out.Language = model.Language(lang)
-	out.Visibility = model.Visibility(vis)
-	out.TaskID = taskID
 	return out, nil
 }
 
 func (r *Repository) UpdateFreeze(ctx context.Context, id uuid.UUID, frozen bool) (model.Room, error) {
 	const q = `
 UPDATE code_rooms SET is_frozen = $2, updated_at = now()
-WHERE id = $1 AND archived_at IS NULL
-RETURNING id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, created_at, is_guest_created`
+WHERE id = $1 AND archived_at IS NULL` + roomReturning
 
-	var out model.Room
-	var roomType, lang, vis string
-	var taskID *uuid.UUID
-	err := r.pg.QueryRow(ctx, q, id, frozen).Scan(
-		&out.ID, &out.OwnerID, &roomType, &taskID, &lang,
-		&out.IsFrozen, &vis, &out.ExpiresAt, &out.CreatedAt, &out.IsGuestCreated,
-	)
+	out, err := scanRoom(r.pg.QueryRow(ctx, q, id, frozen))
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.Room{}, ErrNotFound
 		}
 		return model.Room{}, fmt.Errorf("UpdateFreeze: %w", err)
 	}
-	out.Type = model.RoomType(roomType)
-	out.Language = model.Language(lang)
-	out.Visibility = model.Visibility(vis)
-	out.TaskID = taskID
 	return out, nil
 }
 
@@ -222,7 +182,7 @@ func IsExpired(room model.Room, now time.Time) bool {
 
 func (r *Repository) ListActiveByOwner(ctx context.Context, ownerID uuid.UUID) ([]model.Room, error) {
 	const q = `
-SELECT id, owner_id, room_type, task_id, language, is_frozen, visibility, expires_at, created_at, is_guest_created
+SELECT id, owner_id, room_type, language, is_frozen, visibility, expires_at, created_at, is_guest_created
 FROM code_rooms
 WHERE owner_id = $1 AND archived_at IS NULL AND expires_at > now()
 ORDER BY created_at DESC`
@@ -237,9 +197,8 @@ ORDER BY created_at DESC`
 	for rows.Next() {
 		var room model.Room
 		var roomType, lang, vis string
-		var taskID *uuid.UUID
 		if err := rows.Scan(
-			&room.ID, &room.OwnerID, &roomType, &taskID, &lang,
+			&room.ID, &room.OwnerID, &roomType, &lang,
 			&room.IsFrozen, &vis, &room.ExpiresAt, &room.CreatedAt, &room.IsGuestCreated,
 		); err != nil {
 			return nil, fmt.Errorf("ListActiveByOwner scan: %w", err)
@@ -247,7 +206,6 @@ ORDER BY created_at DESC`
 		room.Type = model.RoomType(roomType)
 		room.Language = model.Language(lang)
 		room.Visibility = model.Visibility(vis)
-		room.TaskID = taskID
 		out = append(out, room)
 	}
 	return out, rows.Err()

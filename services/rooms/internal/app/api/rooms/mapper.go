@@ -32,42 +32,11 @@ func toProtoRoom(view *roomservice.RoomView) *roomsv1.Room {
 		CreatedAt:      timestamppb.New(room.CreatedAt),
 		IsGuestCreated: room.IsGuestCreated,
 	}
-	if room.TaskID != nil {
-		taskID := room.TaskID.String()
-		out.TaskId = &taskID
-	}
 	for _, p := range view.Participants {
 		out.Participants = append(out.Participants, &roomsv1.Participant{
 			UserId:   p.UserID.String(),
 			Role:     p.Role.String(),
 			JoinedAt: timestamppb.New(p.JoinedAt),
-		})
-	}
-	return out
-}
-
-func toProtoListMyActiveRooms(view *roomservice.ActiveRoomsView) *roomsv1.ListMyActiveRoomsResponse {
-	if view == nil {
-		return &roomsv1.ListMyActiveRoomsResponse{}
-	}
-	out := &roomsv1.ListMyActiveRoomsResponse{
-		ActiveCount:         int32(view.ActiveCount),
-		ConcurrentUnlimited: view.ConcurrentUnlimited,
-	}
-	if view.ConcurrentLimit != nil {
-		limit := int32(*view.ConcurrentLimit)
-		out.ConcurrentLimit = &limit
-	}
-	for _, roomView := range view.Rooms {
-		room := roomView.Room
-		out.Rooms = append(out.Rooms, &roomsv1.ActiveRoomSummary{
-			Id:             room.ID.String(),
-			RoomType:       room.Type.String(),
-			Language:       room.Language.String(),
-			CreatedAt:      timestamppb.New(room.CreatedAt),
-			ExpiresAt:      timestamppb.New(room.ExpiresAt),
-			IsGuestCreated: room.IsGuestCreated,
-			WsUrl:          roomView.WSURL,
 		})
 	}
 	return out
@@ -109,7 +78,7 @@ func defaultLanguage(lang string) model.Language {
 
 func defaultRoomType(t string) model.RoomType {
 	if t == "" {
-		return model.RoomTypeInterview
+		return model.RoomTypePractice
 	}
 	return model.RoomType(t)
 }

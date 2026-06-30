@@ -15,10 +15,12 @@ import {
   migrateLegacySceneText,
   observeSceneChanges,
   readSceneFromYjs,
+  sceneHasContent,
   sceneToJSON,
   writeSceneToYjs,
   type ScenePayload,
 } from '@/lib/collab/excalidrawYjsDoc'
+import { fetchInitialScene } from '@/lib/api/rooms'
 import {
   applyWsEnvelope,
   bytesToB64,
@@ -149,6 +151,23 @@ export const CollabExcalidrawEditor = forwardRef<CollabExcalidrawHandle, Props>(
       awarenessRef.current = awareness
 
       migrateLegacySceneText(ydoc)
+
+      void fetchInitialScene(roomId)
+        .then((raw) => {
+          if (!raw.trim() || sceneHasContent(ydoc)) return
+          try {
+            const parsed = JSON.parse(raw) as {
+              elements?: unknown[]
+              files?: Record<string, unknown>
+            }
+            writeSceneToYjs(ydoc, parsed.elements ?? [], parsed.files ?? {}, 'seed')
+          } catch {
+            /* ignore corrupt seed */
+          }
+        })
+        .catch(() => {
+          /* optional seed */
+        })
 
       const label = displayName ?? userId?.slice(0, 8) ?? 'you'
       const colors = collabUserColors(userId ?? roomId)

@@ -150,6 +150,95 @@ func (c *Client) UpdateEventFromSchedule(ctx context.Context, refreshToken, even
 	return nil
 }
 
+// CalendarEvent is a normalized Google Calendar event for the tracker API.
+type CalendarEvent struct {
+	ID     string
+	Title  string
+	Start  time.Time
+	End    time.Time
+	AllDay bool
+}
+
+// ListEvents returns primary-calendar events in [timeMin, timeMax).
+func (c *Client) ListEvents(ctx context.Context, refreshToken string, timeMin, timeMax time.Time) ([]CalendarEvent, error) {
+	if !c.Configured() {
+		return nil, fmt.Errorf("google calendar not configured")
+	}
+	svc, err := calendar.NewService(ctx, option.WithTokenSource(c.TokenSource(ctx, refreshToken)))
+	if err != nil {
+		return nil, fmt.Errorf("calendar service: %w", err)
+	}
+	call := svc.Events.List("primary").Context(ctx).ShowDeleted(false).SingleEvents(true).OrderBy("startTime")
+	if !timeMin.IsZero() {
+		call = call.TimeMin(timeMin.UTC().Format(time.RFC3339))
+	}
+	if !timeMax.IsZero() {
+		call = call.TimeMax(timeMax.UTC().Format(time.RFC3339))
+	}
+	resp, err := call.Do()
+	if err != nil {
+		return nil, fmt.Errorf("list calendar events: %w", err)
+	}
+	out := make([]CalendarEvent, 0, len(resp.Items))
+	for _, item := range resp.Items {
+		if item == nil {
+			continue
+		}
+		ev, ok := calendarEventFromAPI(item)
+		if !ok {
+			continue
+		}
+		out = append(out, ev)
+	}
+	return out, nil
+}
+
+func calendarEventFromAPI(item *calendar.Event) (CalendarEvent, bool) {
+	title := strings.TrimSpace(item.Summary)
+	if title == "" {
+		title = "(No title)"
+	}
+	if item.Start != nil && item.Start.Date != "" {
+		start, err := time.Parse("2006-01-02", item.Start.Date)
+		if err != nil {
+			return CalendarEvent{}, false
+		}
+		end := start.Add(24 * time.Hour)
+		if item.End != nil && item.End.Date != "" {
+			if parsed, err := time.Parse("2006-01-02", item.End.Date); err == nil {
+				end = parsed
+			}
+		}
+		return CalendarEvent{
+			ID:     item.Id,
+			Title:  title,
+			Start:  start,
+			End:    end,
+			AllDay: true,
+		}, true
+	}
+	if item.Start == nil || item.Start.DateTime == "" {
+		return CalendarEvent{}, false
+	}
+	start, err := time.Parse(time.RFC3339, item.Start.DateTime)
+	if err != nil {
+		return CalendarEvent{}, false
+	}
+	end := start.Add(time.Hour)
+	if item.End != nil && item.End.DateTime != "" {
+		if parsed, err := time.Parse(time.RFC3339, item.End.DateTime); err == nil {
+			end = parsed
+		}
+	}
+	return CalendarEvent{
+		ID:     item.Id,
+		Title:  title,
+		Start:  start,
+		End:    end,
+		AllDay: false,
+	}, true
+}
+
 func parseEventWindow(meta map[string]any, now time.Time) (start, end time.Time, allDay bool) {
 	year, month, day := now.Date()
 	if raw, ok := meta["event_date"].(string); ok && raw != "" {

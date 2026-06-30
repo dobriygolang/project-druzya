@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/events"
 	identityadapter "github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/identity"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/providers"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/providers/tribute"
@@ -143,7 +142,6 @@ func (f *fakeRepo) UpdatePlanEntitlement(context.Context, string, string, json.R
 func newTestService(repo *fakeRepo) Service {
 	return New(Deps{
 		Repo:            repo,
-		Events:          events.NoopPublisher{},
 		TierToPlan:      map[string]string{"tribute_pro_monthly": model.PlanProMonthly},
 		ProTrialEnabled: true,
 		ProTrialDays:    14,
@@ -182,10 +180,10 @@ func TestCheckEntitlementBool(t *testing.T) {
 	repo := &fakeRepo{
 		plan: &model.Plan{ID: "free-id", Slug: model.PlanFree, Name: "Free"},
 		entitlements: []model.PlanEntitlement{
-			{Key: model.EntitlementHiddenTestsEnabled, ValueJSON: json.RawMessage(`{"type":"bool","value":false}`)},
+			{Key: "beta_feature", ValueJSON: json.RawMessage(`{"type":"bool","value":false}`)},
 		},
 	}
-	res, err := newTestService(repo).CheckEntitlement(context.Background(), "user-1", model.EntitlementHiddenTestsEnabled)
+	res, err := newTestService(repo).CheckEntitlement(context.Background(), "user-1", "beta_feature")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -283,7 +281,6 @@ func TestTributeWebhookCreatesSubscription(t *testing.T) {
 		Identity:   identity,
 		Providers:  []providers.BillingProvider{provider},
 		TierToPlan: map[string]string{"tribute_pro_monthly": model.PlanProMonthly},
-		Events:     events.NoopPublisher{},
 	})
 	body := []byte(`{
 		"event_id":"evt-1",

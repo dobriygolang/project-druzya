@@ -16,17 +16,16 @@ Does not own: users (identity), tasks (tracker), notes (notes service).
 
 `value_json`: `{"type":"bool","value":true}` or `{"type":"counter","limit":N,"period":"day"|"month"}` or `{"type":"gauge","limit":N}`.
 
-Seeded in `00001_init.sql` + `00002_productivity_entitlements.sql`: `free`, `pro_monthly`.
+Seeded in `00001_init.sql` + `00002_productivity_entitlements.sql`. Legacy interview/AI keys removed by `00003` and `00004`. Plans: `free`, `pro_monthly`.
 
-| Key | Free | Pro |
-|-----|------|-----|
-| cloud_notes_count | 10 | unlimited |
-| ai_insights_per_day | 5 | 50 |
-| live_rooms_per_month | 5 | 30 |
-| live_rooms_concurrent | 1 | 5 |
-| code_runs_per_day | 50 | 500 |
-| ai_evaluations_per_day | 25 | 100 (ai service, CI only) |
-| mock_interviews_per_month | 3 | 30 (legacy seed) |
+| Key | Type | Free | Pro |
+|-----|------|------|-----|
+| cloud_notes_count | gauge | 10 | unlimited |
+| live_rooms_per_month | counter/month | 5 | 30 |
+| live_rooms_concurrent | gauge | 1 | 5 |
+| code_runs_per_day | counter/day | 50 | 500 |
+
+**Removed** (migrations `00003`–`00005`, no longer on any plan): `mock_interviews_per_month`, `ai_evaluations_per_day`, `ai_insights_per_day`, `company_templates_enabled`, `recommendations_enabled`, `advanced_feedback_enabled`, `sd_ai_turns_per_month`, `hidden_tests_enabled`.
 
 ## API
 
@@ -37,7 +36,7 @@ Seeded in `00001_init.sql` + `00002_productivity_entitlements.sql`: `free`, `pro
 | Grant/Revoke subscription | admin HTTP | `x-internal-token` |
 | Tribute webhook | `POST /v1/billing/webhooks/tribute` | `trbt-signature` HMAC-SHA256 hex (API key) |
 
-Consumers: **rooms** (live rooms/month + concurrent), **sandbox** (runs/day, hidden tests), **notes** (cloud_notes_count, future), **ai** (eval/day, CI only).
+Consumers: **rooms** (live rooms/month + concurrent), **sandbox** (code_runs_per_day), **notes** (cloud_notes_count).
 
 ## Invariants
 

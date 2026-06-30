@@ -1,65 +1,121 @@
 # Onboarding — project-druzya
 
-Architecture overview for new team members.
+Architecture overview for the **Hone productivity stack**.
 
-## Diagrams
-
-Open `.excalidraw` files with **Excalidraw** extension in Cursor (not as plain JSON).
-
-| File | Content |
-|------|---------|
-| [00-master-architecture.excalidraw](./00-master-architecture.excalidraw) | Main diagram |
-| 01–05 | Overview, services/data, sync comms, async flows, user journeys |
-
-Regenerate: `python3 docs/onboarding/generate_excalidraw.py`
-
-## Platform (one page)
+## Platform (current)
 
 ```
-Browser → Caddy/Vite → identity | content | interview | ai | recommendation | billing | sandbox | rooms
+Hone (Tauri desktop) ──HTTP──► identity | tracker | notes | focus
+Web (landing + live) ──HTTP/WS──► identity | billing | rooms | sandbox | notes (public)
 ```
 
-**Rule:** each service has its own Postgres. Cross-service data only via gRPC adapters.
+Each service has its own Postgres. Cross-service calls via gRPC adapters only.
 
-Service details: `services/<name>/AGENTS.md`. Ports: [AGENTS.md](../../AGENTS.md#port-allocation-defaults).
+| Client | Docs |
+|--------|------|
+| Hone desktop | [apps/hone/AGENTS.md](../../apps/hone/AGENTS.md) |
+| Web companion | [apps/web/AGENTS.md](../../apps/web/AGENTS.md) |
+| Backend services | [AGENTS.md](../../AGENTS.md) |
+| API usage matrix | [api-usage-matrix.md](../architecture/api-usage-matrix.md) |
 
-## gRPC dependencies
+Ports: [AGENTS.md — port allocation](../../AGENTS.md#port-allocation-defaults).
+
+## Active services (prod)
+
+| Service | Purpose | Clients |
+|---------|---------|---------|
+| identity | Telegram auth, JWT | hone, web (refresh only) |
+| tracker | Work tasks, Google Calendar | hone |
+| notes | Notes CRUD, vault, publish | hone, web (public slug) |
+| focus | Pomodoro sessions, stats | hone |
+| rooms | Live collab, Yjs WS, board publish | web, hone (share) |
+| sandbox | Code run, format | web (live rooms) |
+| billing | Plans, entitlements | web (pricing), notes/rooms (gates) |
+
+**CI only (not prod):** ai — archived interview-era LLM gateway.
+
+## gRPC dependencies (active)
 
 | From | To | Why |
 |------|-----|-----|
-| interview | content, billing, **recommendation** | templates, quota, **task picker hints** |
-| ai | interview, content, billing | outbox, bundle, eval quota |
-| recommendation | interview, content, **tracker** | outbox, articles, **CreateTaskInternal**, mock progress |
-| **tracker** | **recommendation**, **identity** | **GetToday** reconcile + daily plan scoring; profile timezone fallback |
-| sandbox | content, interview, billing | tests, submit, runs |
-| rooms | identity, billing | guest JWT, room quota |
-| billing | identity | telegram → user |
+| notes | billing | `cloud_notes_count` gate on create |
+| rooms | identity | scoped guest JWT mint |
+| rooms | billing | live room quotas |
+| sandbox | billing | code run quotas |
+| tracker | identity | profile timezone fallback (optional) |
 
-## Outbox (interview → async)
+## Cross-app flows
 
-| Event | Consumer |
-|-------|----------|
-| `attempt_submitted` | ai |
-| `attempt_evaluated`, `session_completed`, `retry_item_created`, `task_skipped` | recommendation (skills + **mock progress**) |
+### Hone sync (when `LOCAL_ONLY=false`)
 
-Mock progress & picking: [docs/architecture/mock-progress.md](../architecture/mock-progress.md).
+IndexedDB outbox → notes/tasks/focus HTTP APIs. LWW merge by `updatedAt`. See [hone AGENTS — Sync engine](../../apps/hone/AGENTS.md#sync-engine).
 
-**Today plan:** recommendation syncs learning/review/retry tasks into tracker (epic + estimate); `GET /v1/tracker/today?local_date=&timezone=` returns today slice (~1.5 person-day budget) + later-in-sprint. Web sends browser IANA TZ and persists it via `PATCH /v1/me`; reconcile debounce is scoped per `user_id|local_date` in the user's timezone.
+### Note publish
 
-Each worker claims only its events (not `*`).
+Hone `share-to-web` → notes service stores slug → web `/notes/{slug}` (public, no auth).
+
+### Whiteboard share
+
+- **Live:** hone `share-whiteboard` → rooms service → web `/live/{roomId}`
+- **Publish:** hone `publish-whiteboard` → rooms DB → web `/board/{slug}` read-only
+
+### Live collab (web)
+
+Guest creates room → scoped JWT → WS `/ws/editor/{roomId}`. Code (`practice`) or Excalidraw (`system_design`).
+
+## Retired services
+
+Removed from repo; do not reference in new code.
+
+| Service | Was | Replaced by |
+|---------|-----|-------------|
+| content | Articles, templates | — (removed) |
+| interview | Mock interviews, sessions | — (removed) |
+| recommendation | Task picking, progress | — (removed) |
+| admin | Operator BFF | — (removed) |
+
+Legacy docs archived under [docs/archive/](../archive/).
 
 ## Local dev
 
+**Hone:**
+
+```bash
+cd apps/hone && cp .env.example .env && npm install && npm run dev
+# Optional cloud sync: VITE_HONE_LOCAL_ONLY=false + VITE_HONE_LOCAL_API=true
+```
+
+**Web + live rooms:**
+
 ```bash
 cd services/identity && make start
-cd apps/web && npm install && npm run dev   # :5173
+cd services/billing && make start
+cd services/sandbox && make start
+cd services/rooms && make start
+cd services/notes && make start
+cd apps/web && npm install && npm run dev
+```
+
+**Full hone backend:**
+
+```bash
+# identity, tracker, notes, focus on default ports
+cd services/tracker && make start
+cd services/focus && make start
 ```
 
 Prod ops: [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md).
 
-## First week
+## First week checklist
 
-- [ ] Excalidraw diagrams + this doc
-- [ ] [AGENTS.md](../../AGENTS.md) + [.cursor/rules/architecture-standard.mdc](../../.cursor/rules/architecture-standard.mdc)
-- [ ] Login → mock session → sandbox run → submit attempt → **results outcome badge**
-- [ ] Read `docs/architecture/mock-progress.md` + `services/interview/AGENTS.md` (outbox, picking)
+- [ ] Read [AGENTS.md](../../AGENTS.md) + [architecture-standard.mdc](../../.cursor/rules/architecture-standard.mdc)
+- [ ] Read [apps/hone/AGENTS.md](../../apps/hone/AGENTS.md) or [apps/web/AGENTS.md](../../apps/web/AGENTS.md) for your area
+- [ ] Skim [api-usage-matrix.md](../architecture/api-usage-matrix.md)
+- [ ] Run hone locally; try notes, task board, whiteboard
+- [ ] Run web `/live/new` with local rooms + sandbox
+
+## Diagrams
+
+Open `.excalidraw` files in `docs/onboarding/` with Excalidraw extension. Regenerate: `python3 docs/onboarding/generate_excalidraw.py`.
+
+**Note:** older diagrams may show retired services — treat this README as source of truth.

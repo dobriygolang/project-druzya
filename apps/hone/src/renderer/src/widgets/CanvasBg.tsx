@@ -13,7 +13,7 @@
 //
 // Mode-axis (full / quiet / void) сохранён, но применяется только к winter,
 // у других тем — full всегда (там нет "тихого" варианта). void пустой везде.
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 const GRID_STEP_PX = 64;
 
@@ -33,9 +33,26 @@ const WAVES = [
 ];
 
 export type CanvasMode = 'full' | 'quiet' | 'void';
-export type ThemeId = 'winter' | 'aurora' | 'grid-rain' | 'particles' | 'abyss' | 'cosmic';
+export type ThemeId =
+  | 'light'
+  | 'birthday'
+  | 'winter'
+  | 'aurora'
+  | 'grid-rain'
+  | 'particles'
+  | 'abyss'
+  | 'cosmic';
 
-export const THEME_IDS: ThemeId[] = ['winter', 'aurora', 'grid-rain', 'particles', 'abyss', 'cosmic'];
+export const THEME_IDS: ThemeId[] = [
+  'light',
+  'birthday',
+  'winter',
+  'aurora',
+  'grid-rain',
+  'particles',
+  'abyss',
+  'cosmic',
+];
 
 interface CanvasBgProps {
   mode?: CanvasMode;
@@ -44,16 +61,11 @@ interface CanvasBgProps {
 
 export function CanvasBg({ mode = 'full', theme = 'winter' }: CanvasBgProps) {
   if (mode === 'void') return null;
-  // Decorative canvas (starfield / waves / aurora / grid-rain / particles /
-  // abyss / cosmic) дизайнились под чёрный фон — белые точки/линии на
-  // тёмном небе. В light-теме они либо невидимы (white-on-white), либо
-  // visually noisy (если переключим на чёрные точки). Kill switch проще
-  // и аккуратнее: light-тема просто получает плоский --bg, decoration
-  // возвращается на dark. См styles/globals.css → html.light палитра.
-  if (typeof document !== 'undefined' && document.documentElement.classList.contains('light')) {
-    return null;
-  }
   switch (theme) {
+    case 'light':
+      return <LightBg mode={mode} />;
+    case 'birthday':
+      return <BirthdayBg mode={mode} />;
     case 'aurora':
       return <AuroraBg mode={mode} />;
     case 'grid-rain':
@@ -70,54 +82,286 @@ export function CanvasBg({ mode = 'full', theme = 'winter' }: CanvasBgProps) {
   }
 }
 
+// ─── Light — warm daytime scene (matches apps/web sdvg.io aesthetic) ───
+function LightBg({ mode }: { mode: CanvasMode }) {
+  const dim = mode === 'full' ? 1 : 0.6;
+  return (
+    <div style={{ ...BG_CONTAINER, background: 'var(--bg)', opacity: dim }}>
+      {/* Soft warm sky gradient */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background:
+            'linear-gradient(180deg, #fff7ec 0%, #fafaf8 38%, #f3efe6 100%)',
+        }}
+      />
+      {/* Sun with gentle rays */}
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMin slice"
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        aria-hidden
+      >
+        <defs>
+          <radialGradient id="hone-light-sun" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#fff3d6" />
+            <stop offset="60%" stopColor="#ffe0a8" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#ffe0a8" stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="78" cy="20" r="22" fill="url(#hone-light-sun)" opacity="0.85" />
+        <circle cx="78" cy="20" r="6" fill="#ffd98a" opacity="0.9" />
+        {Array.from({ length: 12 }, (_, i) => {
+          const a = (i / 12) * Math.PI * 2;
+          const x1 = 78 + Math.cos(a) * 9;
+          const y1 = 20 + Math.sin(a) * 9;
+          const x2 = 78 + Math.cos(a) * 13;
+          const y2 = 20 + Math.sin(a) * 13;
+          return (
+            <line
+              key={i}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke="#ffd98a"
+              strokeWidth="0.7"
+              strokeLinecap="round"
+              opacity="0.7"
+            />
+          );
+        })}
+        {/* Soft drifting clouds */}
+        <g fill="#ffffff" opacity="0.92">
+          <ellipse cx="22" cy="26" rx="9" ry="4.4" />
+          <ellipse cx="28" cy="24" rx="7" ry="4" />
+          <ellipse cx="17" cy="25" rx="5" ry="3.2" />
+        </g>
+        <g fill="#ffffff" opacity="0.78">
+          <ellipse cx="48" cy="40" rx="7" ry="3.4" />
+          <ellipse cx="53" cy="39" rx="5" ry="3" />
+        </g>
+        {/* Rolling hills at the horizon */}
+        <path
+          d="M0 78 Q 18 70, 36 78 T 72 78 T 108 78 L 108 100 L 0 100 Z"
+          fill="#eee7d8"
+          opacity="0.9"
+        />
+        <path
+          d="M0 86 Q 22 78, 44 86 T 88 86 T 116 86 L 116 100 L 0 100 Z"
+          fill="#e3dcc9"
+          opacity="0.95"
+        />
+        {/* Faint grid for app structure */}
+        <g stroke="rgb(15 15 15 / 0.045)" strokeWidth="0.25">
+          {Array.from({ length: 14 }, (_, i) => (
+            <line key={`v${i}`} x1={i * 8} y1="0" x2={i * 8} y2="100" />
+          ))}
+          {Array.from({ length: 14 }, (_, i) => (
+            <line key={`h${i}`} x1="0" y1={i * 8} x2="100" y2={i * 8} />
+          ))}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+// ─── Birthday — festive illustrated scene for a special day ─────────────
+function BirthdayBg({ mode }: { mode: CanvasMode }) {
+  const dim = mode === 'full' ? 1 : 0.55;
+  const confetti = useMemo(() => {
+    const rng = mulberry32(20260630);
+    const colors = ['#ffd166', '#ff85a8', '#fff5f7', '#c4a1ff', '#ffb3c6'];
+    return Array.from({ length: 40 }, (_, i) => ({
+      left: rng() * 100,
+      delay: -rng() * 14,
+      dur: 8 + rng() * 10,
+      rot: rng() * 360,
+      color: colors[Math.floor(rng() * colors.length)]!,
+      w: 5 + rng() * 4,
+      h: 8 + rng() * 6,
+      i,
+    }));
+  }, []);
+  const balloons = useMemo(
+    () => [
+      { left: '8%', color: '#ff85a8', delay: '0s', dur: '11s' },
+      { left: '22%', color: '#ffd166', delay: '-2s', dur: '13s' },
+      { left: '78%', color: '#c4a1ff', delay: '-4s', dur: '12s' },
+      { left: '90%', color: '#ffb3c6', delay: '-1s', dur: '14s' },
+    ],
+    [],
+  );
+  const sparkles = useMemo(() => {
+    const rng = mulberry32(31415);
+    return Array.from({ length: 22 }, (_, i) => ({
+      left: rng() * 100,
+      top: rng() * 100,
+      dur: 2 + rng() * 3,
+      delay: -rng() * 4,
+      size: 2 + rng() * 3,
+      i,
+    }));
+  }, []);
+
+  return (
+    <div className="hone-birthday-bg" style={{ ...BG_CONTAINER, opacity: dim }}>
+      <div className="hone-birthday-bg__glow" aria-hidden />
+
+      {/* Main illustrated SVG scene — bunting, cake, gifts, text */}
+      <svg
+        className="hone-birthday-scene"
+        viewBox="0 0 100 100"
+        preserveAspectRatio="xMidYMax slice"
+        aria-hidden
+      >
+        {/* Bunting banner across the top */}
+        <path
+          d="M0 12 Q 25 22, 50 12 T 100 12"
+          fill="none"
+          stroke="rgb(var(--ink-rgb) / 0.22)"
+          strokeWidth="0.3"
+        />
+        {Array.from({ length: 11 }, (_, i) => {
+          const x = 5 + i * 9;
+          const y = 13 + Math.sin((i / 11) * Math.PI) * 4;
+          const colors = ['#ffd166', '#ff85a8', '#c4a1ff', '#ffb3c6'];
+          const c = colors[i % colors.length]!;
+          return <polygon key={i} points={`${x},${y} ${x + 4},${y} ${x + 2},${y + 4}`} fill={c} opacity="0.9" />;
+        })}
+
+        {/* Birthday cake */}
+        <g transform="translate(50 78)">
+          {/* plate */}
+          <rect x="-16" y="0" width="32" height="2" rx="1" fill="rgb(var(--ink-rgb) / 0.18)" />
+          {/* bottom layer */}
+          <rect x="-14" y="-12" width="28" height="12" rx="2" fill="#3a1a26" />
+          {/* top layer */}
+          <rect x="-11" y="-22" width="22" height="10" rx="2" fill="#4a2230" />
+          {/* frosting drips */}
+          <path
+            d="M-11 -22 Q -9 -18, -7 -20 Q -5 -17, -3 -20 Q -1 -17, 1 -20 Q 3 -17, 5 -20 Q 7 -17, 9 -20 Q 11 -18, 11 -22 Z"
+            fill="#fff5f7"
+            opacity="0.95"
+          />
+          {/* candle */}
+          <rect x="-0.8" y="-28" width="1.6" height="6" rx="0.6" fill="#ffd166" />
+          {/* flame */}
+          <ellipse className="hone-birthday-cake__flame-svg" cx="0" cy="-30" rx="1.2" ry="2" fill="#ffd166" />
+        </g>
+
+        {/* Two little gift boxes beside the cake */}
+        <g transform="translate(26 80)" opacity="0.95">
+          <rect x="-5" y="-7" width="10" height="7" rx="1" fill="#ff85a8" />
+          <rect x="-5" y="-4" width="10" height="1.4" fill="#ffd166" />
+          <rect x="-0.7" y="-7" width="1.4" height="7" fill="#ffd166" />
+        </g>
+        <g transform="translate(74 82)" opacity="0.95">
+          <rect x="-5" y="-7" width="10" height="7" rx="1" fill="#c4a1ff" />
+          <rect x="-5" y="-4" width="10" height="1.4" fill="#fff5f7" />
+          <rect x="-0.7" y="-7" width="1.4" height="7" fill="#fff5f7" />
+        </g>
+      </svg>
+
+      {/* "С днём рождения!" headline, gently shimmering */}
+      <div className="hone-birthday-title" aria-hidden>
+        <span className="hone-birthday-title__text">С днём рождения!</span>
+      </div>
+
+      {/* Twinkling sparkles scattered across the scene */}
+      {sparkles.map((s) => (
+        <span
+          key={s.i}
+          className="hone-birthday-sparkle"
+          style={{
+            left: `${s.left}%`,
+            top: `${s.top}%`,
+            width: s.size,
+            height: s.size,
+            animationDuration: `${s.dur}s`,
+            animationDelay: `${s.delay}s`,
+          }}
+        />
+      ))}
+
+      {confetti.map((c) => (
+        <span
+          key={c.i}
+          className="hone-birthday-confetti"
+          style={{
+            left: `${c.left}%`,
+            width: c.w,
+            height: c.h,
+            background: c.color,
+            animationDuration: `${c.dur}s`,
+            animationDelay: `${c.delay}s`,
+            transform: `rotate(${c.rot}deg)`,
+          }}
+        />
+      ))}
+      {balloons.map((b, i) => (
+        <div
+          key={i}
+          className="hone-birthday-balloon"
+          style={{
+            left: b.left,
+            animationDuration: b.dur,
+            animationDelay: b.delay,
+          }}
+        >
+          <span className="hone-birthday-balloon__orb" style={{ background: b.color }} />
+          <span className="hone-birthday-balloon__string" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Cosmic — parallax space scene ──────────────────────────────────────
-//
-// Manga-styled space ambience: глубокий starfield в 3 layers (different
-// drift speeds), огромная planet-disc в нижнем центре, asteroids
-// вокруг неё в slow rotation. Mouse-tracking parallax: cursor движется
-// → layers shift'ятся пропорционально (closer planets — больше offset).
-// Ambient mood — не агрессивно, не distracting.
 function CosmicBg({ mode }: { mode: CanvasMode }) {
-  const stars1 = useMemo(() => makeStars(120, 7777), []); // far layer
-  const stars2 = useMemo(() => makeStars(50, 8888), []); // mid layer
-  const stars3 = useMemo(() => makeStars(20, 9999), []); // near layer (brighter)
-  const [mx, setMx] = useState(0);
-  const [my, setMy] = useState(0);
-  // Mouse-tracking — normalized -0.5..0.5 от viewport center.
+  const stars1 = useMemo(() => makeStars(120, 7777), []);
+  const stars2 = useMemo(() => makeStars(50, 8888), []);
+  const stars3 = useMemo(() => makeStars(20, 9999), []);
+  const layer1Ref = useRef<HTMLDivElement>(null);
+  const layer2Ref = useRef<HTMLDivElement>(null);
+  const layer3Ref = useRef<HTMLDivElement>(null);
+  const planetRef = useRef<HTMLDivElement>(null);
+  const mxRef = useRef(0);
+  const myRef = useRef(0);
+  const rafRef = useRef(0);
+
   useEffect(() => {
     if (mode !== 'full') return;
+    const applyParallax = () => {
+      rafRef.current = 0;
+      const mx = mxRef.current;
+      const my = myRef.current;
+      if (layer1Ref.current) {
+        layer1Ref.current.style.transform = `translate3d(${mx * 8}px,${my * 8}px,0)`;
+      }
+      if (layer2Ref.current) {
+        layer2Ref.current.style.transform = `translate3d(${mx * 18}px,${my * 18}px,0)`;
+      }
+      if (layer3Ref.current) {
+        layer3Ref.current.style.transform = `translate3d(${mx * 32}px,${my * 32}px,0)`;
+      }
+      if (planetRef.current) {
+        planetRef.current.style.left = `calc(50% + ${mx * 14}px)`;
+        planetRef.current.style.bottom = `calc(-30% + ${my * 7}px)`;
+      }
+    };
     const onMove = (e: MouseEvent) => {
-      setMx(e.clientX / window.innerWidth - 0.5);
-      setMy(e.clientY / window.innerHeight - 0.5);
+      mxRef.current = e.clientX / window.innerWidth - 0.5;
+      myRef.current = e.clientY / window.innerHeight - 0.5;
+      if (!rafRef.current) rafRef.current = requestAnimationFrame(applyParallax);
     };
-    window.addEventListener('mousemove', onMove);
-    return () => window.removeEventListener('mousemove', onMove);
-  }, [mode]);
-
-  // Slow drift (idle motion when mouse не двигается).
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (mode !== 'full') return;
-    let raf = 0;
-    let last = performance.now();
-    const loop = (now: number) => {
-      setTick((t) => t + (now - last) * 0.0001);
-      last = now;
-      raf = requestAnimationFrame(loop);
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
   }, [mode]);
-
-  // Parallax depth multipliers: far layer drifts мало, near layer много.
-  const px1 = mx * 8; // far stars
-  const py1 = my * 8;
-  const px2 = mx * 18;
-  const py2 = my * 18;
-  const px3 = mx * 32;
-  const py3 = my * 32;
-  const planetX = mx * 14;
-  const planetY = my * 14;
 
   return (
     <div
@@ -126,21 +370,10 @@ function CosmicBg({ mode }: { mode: CanvasMode }) {
         inset: 0,
         overflow: 'hidden',
         pointerEvents: 'none',
-        // Pure black backdrop — раньше был фиолетовый haze. Юзер просил
-        // чисто чёрный космос, чтобы starfield сильнее контрастил и
-        // соответствовал общему дарк-эстетике Hone'а.
         background: 'var(--bg)',
       }}
     >
-      {/* Star layer 1 — far. Smaller dim stars + slow drift. */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          transform: `translate(${px1}px, ${py1}px)`,
-          transition: 'transform var(--motion-dur-xxlarge) var(--motion-ease-standard)',
-        }}
-      >
+      <div ref={layer1Ref} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         {stars1.map((s, i) => (
           <span
             key={i}
@@ -152,21 +385,13 @@ function CosmicBg({ mode }: { mode: CanvasMode }) {
               height: s.size * 0.6,
               borderRadius: '50%',
               background: 'rgb(var(--ink-rgb) / 0.55)',
-              opacity: 0.3 + Math.sin(tick * 6 + i) * 0.15,
+              opacity: s.baseOp * 0.65,
               boxShadow: '0 0 2px rgb(var(--ink-rgb) / 0.4)',
             }}
           />
         ))}
       </div>
-      {/* Star layer 2 — mid. */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          transform: `translate(${px2}px, ${py2}px)`,
-          transition: 'transform var(--motion-dur-xlarge) var(--motion-ease-standard)',
-        }}
-      >
+      <div ref={layer2Ref} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         {stars2.map((s, i) => (
           <span
             key={i}
@@ -178,21 +403,13 @@ function CosmicBg({ mode }: { mode: CanvasMode }) {
               height: s.size,
               borderRadius: '50%',
               background: 'rgba(220,230,255,0.85)',
-              opacity: 0.5 + Math.sin(tick * 8 + i * 0.7) * 0.25,
+              opacity: s.baseOp,
               boxShadow: '0 0 4px rgba(180,200,255,0.6)',
             }}
           />
         ))}
       </div>
-      {/* Star layer 3 — near. Brightest, biggest, fastest parallax. */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          transform: `translate(${px3}px, ${py3}px)`,
-          transition: 'transform var(--motion-dur-xlarge) var(--motion-ease-standard)',
-        }}
-      >
+      <div ref={layer3Ref} style={{ position: 'absolute', inset: 0, willChange: 'transform' }}>
         {stars3.map((s, i) => (
           <span
             key={i}
@@ -204,20 +421,19 @@ function CosmicBg({ mode }: { mode: CanvasMode }) {
               height: s.size * 1.6,
               borderRadius: '50%',
               background: 'rgb(var(--ink-rgb) / 0.95)',
-              opacity: 0.7 + Math.sin(tick * 12 + i * 1.3) * 0.25,
+              opacity: s.baseOp + 0.2,
               boxShadow: '0 0 8px rgb(var(--ink-rgb) / 0.85)',
             }}
           />
         ))}
       </div>
-      {/* Planet — большая полупрозрачная disc нижним-центром. Inset
-          gradient симулирует sphere illumination. Atmosphere ring снаружи. */}
       {mode === 'full' && (
         <div
+          ref={planetRef}
           style={{
             position: 'absolute',
-            left: `calc(50% + ${planetX}px)`,
-            bottom: `calc(-30% + ${planetY * 0.5}px)`,
+            left: '50%',
+            bottom: '-30%',
             transform: 'translateX(-50%)',
             width: 'min(90vmin, 1200px)',
             height: 'min(90vmin, 1200px)',
@@ -226,7 +442,7 @@ function CosmicBg({ mode }: { mode: CanvasMode }) {
               'radial-gradient(circle at 35% 30%, rgba(120,90,180,0.32) 0%, rgba(60,40,110,0.22) 35%, rgba(20,10,40,0.10) 65%, transparent 100%)',
             boxShadow:
               'inset -50px -80px 120px rgba(0,0,0,0.55), 0 0 80px rgba(80,60,140,0.18)',
-            transition: 'left var(--motion-dur-xxlarge) var(--motion-ease-standard), bottom var(--motion-dur-xxlarge) var(--motion-ease-standard)',
+            willChange: 'left, bottom',
           }}
         />
       )}
@@ -237,20 +453,6 @@ function CosmicBg({ mode }: { mode: CanvasMode }) {
 // ─── Winter (default, original) ─────────────────────────────────────────
 function WinterBg({ mode }: { mode: CanvasMode }) {
   const stars = useMemo(() => makeStars(32, 1337), []);
-
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (mode !== 'full') return;
-    let raf = 0;
-    let last = performance.now();
-    const loop = (now: number) => {
-      setTick((t) => t + (now - last) * 0.0042);
-      last = now;
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [mode]);
 
   const starOpMul = mode === 'full' ? 1 : 0.35;
   const showWaves = mode === 'full';
@@ -321,14 +523,20 @@ function WinterBg({ mode }: { mode: CanvasMode }) {
             opacity: 0.32,
           }}
         >
-          <svg width="280" height="280" viewBox="-140 -140 280 280" style={{ transform: `rotate(${tick}deg)` }}>
-            <rect x={-90} y={-90} width={180} height={180} fill="none" stroke="rgb(var(--ink-rgb) / 0.85)" strokeWidth="1" />
-          </svg>
           <svg
+            className="winter-square"
             width="280"
             height="280"
             viewBox="-140 -140 280 280"
-            style={{ position: 'absolute', inset: 0, transform: `rotate(${tick + 22}deg)` }}
+          >
+            <rect x={-90} y={-90} width={180} height={180} fill="none" stroke="rgb(var(--ink-rgb) / 0.85)" strokeWidth="1" />
+          </svg>
+          <svg
+            className="winter-square winter-square--offset"
+            width="280"
+            height="280"
+            viewBox="-140 -140 280 280"
+            style={{ position: 'absolute', inset: 0 }}
           >
             <rect x={-90} y={-90} width={180} height={180} fill="none" stroke="rgb(var(--ink-rgb) / 0.85)" strokeWidth="1" />
           </svg>

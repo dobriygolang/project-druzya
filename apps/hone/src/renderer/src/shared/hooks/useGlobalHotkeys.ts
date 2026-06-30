@@ -8,16 +8,21 @@ interface GlobalHotkeysDeps {
   page: PageId;
   paletteOpen: boolean;
   statsOpen: boolean;
+  calendarOpen: boolean;
   setPaletteOpen: (next: (p: boolean) => boolean) => void;
   goHome: () => void;
   openStats: () => void;
   closeStats: () => void;
+  openCalendar: () => void;
+  closeCalendar: () => void;
   open: (id: PageId) => void;
 }
 
 const LETTER_HOTKEYS: Record<string, PageId> = {
   KeyT: 'today',
   KeyN: 'notes',
+  KeyB: 'whiteboard',
+  KeyC: 'calendar',
   Comma: 'settings',
 };
 
@@ -52,6 +57,11 @@ export function useGlobalHotkeys(deps: GlobalHotkeysDeps): void {
           d.setPaletteOpen(() => false);
           return;
         }
+        if (d.calendarOpen) {
+          e.preventDefault();
+          d.closeCalendar();
+          return;
+        }
         if (d.statsOpen) {
           e.preventDefault();
           d.closeStats();
@@ -72,8 +82,19 @@ export function useGlobalHotkeys(deps: GlobalHotkeysDeps): void {
         return;
       }
 
+      if (e.code === 'KeyC') {
+        if (d.calendarOpen) d.closeCalendar();
+        else d.openCalendar();
+        return;
+      }
+
       const id = LETTER_HOTKEYS[e.code];
       if (!id) return;
+      if (id === 'calendar') {
+        if (d.calendarOpen) d.closeCalendar();
+        else d.openCalendar();
+        return;
+      }
       if (d.page === id) d.goHome();
       else d.open(id);
     };

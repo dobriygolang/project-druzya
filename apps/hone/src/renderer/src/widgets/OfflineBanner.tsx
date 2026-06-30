@@ -1,11 +1,14 @@
-// Network status banner — online / offline / server unreachable.
+// Network + sync status banner — informative, non-blocking.
 import { memo, useEffect, useRef, useState } from 'react';
 
 import { useT } from '@d9-i18n';
 
+import { LOCAL_ONLY } from '@app/config/features';
 import { useOnlineStatus } from '@shared/hooks/useOnlineStatus';
 import { zIndex } from '@shared/lib/z-index';
 import { HEALTH_CHECK_URL } from '@shared/api/config';
+import { useSyncStore } from '@shared/model/sync';
+import { flushSync } from '@shared/sync/SyncEngine';
 
 type ServerState = 'unknown' | 'ok' | 'degraded' | 'unreachable';
 
@@ -39,12 +42,15 @@ async function probeServer(signal: AbortSignal): Promise<{ state: ServerState; l
 export const OfflineBanner = memo(function OfflineBanner() {
   const t = useT();
   const online = useOnlineStatus();
+  const syncEnabled = !LOCAL_ONLY;
+  const syncStatus = useSyncStore((s) => s.status);
+  const serverReachable = useSyncStore((s) => s.serverReachable);
   const [serverState, setServerState] = useState<ServerState>('unknown');
   const [recovered, setRecovered] = useState<number | null>(null);
   const prevServerStateRef = useRef<ServerState>('unknown');
 
   useEffect(() => {
-    if (!online) {
+    if (!online || syncEnabled) {
       setServerState('unknown');
       return;
     }
@@ -65,15 +71,41 @@ export const OfflineBanner = memo(function OfflineBanner() {
       ctl.abort();
       window.clearInterval(id);
     };
-  }, [online]);
+  }, [online, syncEnabled]);
 
   if (!online) {
     return (
       <BannerStrip tone="danger">
-        {t('hone.offline.banner_no_network')}
+        {t('hone.sync.banner_offline')}
       </BannerStrip>
     );
   }
+
+  if (syncEnabled) {
+    if (syncStatus === 'error') {
+      return (
+        <BannerStrip tone="warn" onRetry={() => flushSync()}>
+          {t('hone.sync.banner_error')}
+        </BannerStrip>
+      );
+    }
+    if (!serverReachable) {
+      return (
+        <BannerStrip tone="warn">
+          {t('hone.sync.banner_unreachable')}
+        </BannerStrip>
+      );
+    }
+    if (recovered !== null && Date.now() - recovered < RECOVERY_WINDOW_MS) {
+      return (
+        <BannerStrip tone="ink" pulse>
+          {t('hone.sync.banner_recovering')}
+        </BannerStrip>
+      );
+    }
+    return null;
+  }
+
   if (serverState === 'unreachable') {
     return (
       <BannerStrip tone="warn">
@@ -128,11 +160,14 @@ const BannerStrip = memo(function BannerStrip({
   tone,
   children,
   pulse = false,
+  onRetry,
 }: {
   tone: BannerTone;
   children: React.ReactNode;
   pulse?: boolean;
+  onRetry?: () => void;
 }) {
+  const t = useT();
   const isWarn = tone === 'warn';
   return (
     <div
@@ -146,10 +181,32 @@ const BannerStrip = memo(function BannerStrip({
         backdropFilter: tone === 'danger' ? 'none' : 'blur(8px)',
         WebkitBackdropFilter: tone === 'danger' ? 'none' : 'blur(8px)',
         borderTop: isWarn ? '1.5px solid #FF3B30' : 'none',
-        pointerEvents: 'none',
+        pointerEvents: onRetry ? 'auto' : 'none',
       }}
     >
       {children}
+      {onRetry && (
+        <>
+          {' · '}
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+              font: 'inherit',
+              letterSpacing: 'inherit',
+              textTransform: 'inherit',
+              padding: 0,
+              textDecoration: 'underline',
+            }}
+          >
+            {t('hone.sync.retry')}
+          </button>
+        </>
+      )}
     </div>
   );
 });

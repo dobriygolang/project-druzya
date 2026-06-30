@@ -21,18 +21,12 @@ const (
 
 	TrialKindPro = "pro_trial"
 
-	EntitlementAIEvaluationsPerDay     = "ai_evaluations_per_day"
-	EntitlementMockInterviewsPerMonth  = "mock_interviews_per_month"
-	EntitlementCodeRunsPerDay          = "code_runs_per_day"
-	EntitlementCloudNotesCount         = "cloud_notes_count"
-	EntitlementAIInsightsPerDay        = "ai_insights_per_day"
-	EntitlementLiveRoomsPerMonth       = "live_rooms_per_month"
+	// Deprecated: removed from plans (00003). Kept for llm_evaluation metric alias + ai service (CI only).
+	EntitlementAIEvaluationsPerDay = "ai_evaluations_per_day"
+	EntitlementCodeRunsPerDay      = "code_runs_per_day"
+	EntitlementCloudNotesCount     = "cloud_notes_count"
+	EntitlementLiveRoomsPerMonth   = "live_rooms_per_month"
 	EntitlementLiveRoomsConcurrent     = "live_rooms_concurrent"
-	EntitlementHiddenTestsEnabled      = "hidden_tests_enabled"
-	EntitlementCompanyTemplatesEnabled = "company_templates_enabled"
-	EntitlementRecommendationsEnabled  = "recommendations_enabled"
-	EntitlementAdvancedFeedbackEnabled = "advanced_feedback_enabled"
-	EntitlementSDAITurnsPerMonth       = "sd_ai_turns_per_month"
 
 	// Legacy alias kept for callers migrating from llm_evaluation metric.
 	MetricLLMEvaluation = EntitlementAIEvaluationsPerDay

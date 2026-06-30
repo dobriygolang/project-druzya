@@ -54,20 +54,3 @@ func (i *Implementation) ExchangeYandexCode(ctx context.Context, req *identityv1
 	}
 	return toAuthResponse(result), nil
 }
-
-// LinkYandex links Yandex account to the authenticated user.
-func (i *Implementation) LinkYandex(ctx context.Context, req *identityv1.LinkYandexRequest) (*identityv1.GetUserResponse, error) {
-	userID, ok := UserIDFromContext(ctx)
-	if !ok {
-		return nil, unauthorized()
-	}
-	if req.GetCode() == "" {
-		return nil, invalidArgument("code is required")
-	}
-
-	user, err := i.service.LinkYandex(ctx, userID, req.GetCode())
-	if err != nil {
-		return nil, mapServiceError(err)
-	}
-	return &identityv1.GetUserResponse{User: toProtoUser(user)}, nil
-}

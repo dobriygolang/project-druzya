@@ -1,119 +1,133 @@
-// REST client for project-druzya focus service (/v1/focus/*).
-import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
-import { useSessionStore } from '@shared/model/session';
+// Local-first focus — sessions in IndexedDB; stats merged from server when sync enabled.
+import { listTasks } from '@features/tasks/api/tasks';
+import { focusStoreGet, focusStorePut, rowFrom } from '@features/focus/repository/focusStore';
+import {
+  padToSevenDays,
+  remoteGetStats,
+  type FocusDay,
+  type FocusSession,
+  type HoneStats,
+  type QueueStats,
+} from '@features/focus/repository/focusRemote';
+import { focusStoreList } from '@features/focus/repository/focusStore';
+import { requireUserId } from '@shared/db/honeDb';
+import { enqueueOutbox } from '@shared/sync/outbox';
+import { scheduleSync } from '@shared/sync/SyncEngine';
+import { canReachNetwork, isSyncEnabled } from '@shared/sync/syncConfig';
 
-export interface FocusDay {
-  date: string;
-  seconds: number;
-  sessions: number;
-}
+export type { FocusDay, FocusSession, HoneStats, QueueStats };
+export { padToSevenDays };
 
-export interface HoneStats {
-  currentStreakDays: number;
-  longestStreakDays: number;
-  totalFocusedSeconds: number;
-  heatmap: FocusDay[];
-  lastSevenDays: FocusDay[];
-  queue: QueueStats;
-}
-
-export interface QueueStats {
-  todayTotal: number;
-  todayDone: number;
-  aiShare: number;
-  userShare: number;
-}
-
-export interface FocusSession {
+interface StoredSession {
   id: string;
   planItemId: string;
   pinnedTitle: string;
-  startedAt: Date | null;
-  endedAt: Date | null;
+  startedAt: string;
+  endedAt: string | null;
   pomodorosCompleted: number;
   secondsFocused: number;
   mode: string;
 }
 
-type JsonSession = {
-  id?: string;
-  mode?: string;
-  pinnedTitle?: string;
-  pinned_title?: string;
-  taskId?: string;
-  task_id?: string;
-  startedAt?: string;
-  started_at?: string;
-  endedAt?: string;
-  ended_at?: string;
-  secondsFocused?: number;
-  seconds_focused?: number;
-  pomodorosCompleted?: number;
-  pomodoros_completed?: number;
-};
-
-type JsonFocusDay = {
-  date?: string;
-  seconds?: number;
-  sessions?: number;
-};
-
-function authHeaders(): HeadersInit {
-  const token = useSessionStore.getState().accessToken ?? DEV_BEARER_TOKEN;
-  const headers: Record<string, string> = { 'content-type': 'application/json' };
-  if (token) headers.authorization = `Bearer ${token}`;
-  return headers;
-}
-
-function parseTs(raw: string | undefined): Date | null {
-  if (!raw) return null;
-  const d = new Date(raw);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function unwrapSession(raw: JsonSession | undefined): FocusSession {
-  const s = raw ?? {};
+function toSession(row: StoredSession): FocusSession {
   return {
-    id: s.id ?? '',
-    planItemId: s.taskId ?? s.task_id ?? '',
-    pinnedTitle: s.pinnedTitle ?? s.pinned_title ?? '',
-    startedAt: parseTs(s.startedAt ?? s.started_at),
-    endedAt: parseTs(s.endedAt ?? s.ended_at),
-    secondsFocused: s.secondsFocused ?? s.seconds_focused ?? 0,
-    pomodorosCompleted: s.pomodorosCompleted ?? s.pomodoros_completed ?? 0,
-    mode: s.mode ?? 'pomodoro',
+    id: row.id,
+    planItemId: row.planItemId,
+    pinnedTitle: row.pinnedTitle,
+    startedAt: row.startedAt ? new Date(row.startedAt) : null,
+    endedAt: row.endedAt ? new Date(row.endedAt) : null,
+    pomodorosCompleted: row.pomodorosCompleted,
+    secondsFocused: row.secondsFocused,
+    mode: row.mode,
   };
 }
 
-function unwrapDay(d: JsonFocusDay): FocusDay {
+function dayKey(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function aggregateDays(sessions: StoredSession[]): Map<string, FocusDay> {
+  const map = new Map<string, FocusDay>();
+  for (const s of sessions) {
+    if (!s.endedAt || s.secondsFocused <= 0) continue;
+    const key = dayKey(new Date(s.endedAt));
+    const cur = map.get(key) ?? { date: key, seconds: 0, sessions: 0 };
+    cur.seconds += s.secondsFocused;
+    cur.sessions += 1;
+    map.set(key, cur);
+  }
+  return map;
+}
+
+function streakFromDays(days: Set<string>, anchor: string): number {
+  let streak = 0;
+  const d = new Date(`${anchor}T12:00:00Z`);
+  for (;;) {
+    const key = dayKey(d);
+    if (!days.has(key)) break;
+    streak += 1;
+    d.setUTCDate(d.getUTCDate() - 1);
+  }
+  return streak;
+}
+
+async function buildQueueStats(): Promise<QueueStats> {
+  const tasks = await listTasks();
+  const today = dayKey(new Date());
+  const todayTasks = tasks.filter((t) => {
+    if (!t.scheduledStart) return false;
+    return dayKey(new Date(t.scheduledStart)) === today;
+  });
+  const done = todayTasks.filter((t) => t.status === 'done').length;
   return {
-    date: d.date ?? '',
-    seconds: d.seconds ?? 0,
-    sessions: d.sessions ?? 0,
+    todayTotal: todayTasks.length,
+    todayDone: done,
+    aiShare: 0,
+    userShare: todayTasks.length ? 1 : 0,
+  };
+}
+
+async function buildLocalStats(upToDate?: string): Promise<HoneStats> {
+  const rows = await focusStoreList();
+  const sessions = rows.filter((s) => s.endedAt) as StoredSession[];
+  const byDay = aggregateDays(sessions);
+  const heatmap = [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date));
+  const anchor = upToDate ?? dayKey(new Date());
+  const lastSevenDays = padToSevenDays(heatmap.filter((d) => d.date <= anchor));
+  const activeDays = new Set(heatmap.filter((d) => d.seconds > 0).map((d) => d.date));
+  const totalFocusedSeconds = sessions.reduce((sum, s) => sum + (s.secondsFocused ?? 0), 0);
+
+  let longest = 0;
+  const sorted = [...activeDays].sort();
+  for (const date of sorted) {
+    longest = Math.max(longest, streakFromDays(activeDays, date));
+  }
+
+  return {
+    currentStreakDays: streakFromDays(activeDays, anchor),
+    longestStreakDays: longest,
+    totalFocusedSeconds,
+    heatmap,
+    lastSevenDays,
+    queue: await buildQueueStats(),
   };
 }
 
 export async function getStats(upToDate?: string): Promise<HoneStats> {
-  const qs = upToDate ? `?up_to_date=${encodeURIComponent(upToDate)}` : '';
-  const resp = await fetch(`${API_BASE_URL}/v1/focus/stats${qs}`, {
-    headers: authHeaders(),
-  });
-  if (!resp.ok) {
-    throw new Error(`getStats failed: ${resp.status}`);
+  const local = await buildLocalStats(upToDate);
+  if (!isSyncEnabled() || !canReachNetwork()) return local;
+  try {
+    const remote = await remoteGetStats(upToDate);
+    return {
+      ...remote,
+      lastSevenDays: remote.lastSevenDays.length
+        ? remote.lastSevenDays
+        : local.lastSevenDays,
+      queue: await buildQueueStats(),
+    };
+  } catch {
+    return local;
   }
-  const j = (await resp.json()) as Record<string, unknown>;
-  const heatmap = (j.heatmap as JsonFocusDay[] | undefined) ?? [];
-  const lastSeven = (j.lastSevenDays as JsonFocusDay[] | undefined)
-    ?? (j.last_seven_days as JsonFocusDay[] | undefined)
-    ?? [];
-  return {
-    currentStreakDays: num(j, 'currentStreakDays', 'current_streak_days'),
-    longestStreakDays: num(j, 'longestStreakDays', 'longest_streak_days'),
-    totalFocusedSeconds: num(j, 'totalFocusedSeconds', 'total_focused_seconds'),
-    heatmap: heatmap.map(unwrapDay),
-    lastSevenDays: lastSeven.map(unwrapDay),
-    queue: { todayTotal: 0, todayDone: 0, aiShare: 0, userShare: 0 },
-  };
 }
 
 export async function startFocusSession(args: {
@@ -121,20 +135,29 @@ export async function startFocusSession(args: {
   pinnedTitle?: string;
   mode?: 'pomodoro' | 'stopwatch';
 }): Promise<FocusSession> {
-  const resp = await fetch(`${API_BASE_URL}/v1/focus/sessions/start`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({
-      mode: args.mode ?? 'pomodoro',
-      pinned_title: args.pinnedTitle ?? '',
-      task_id: args.planItemId ?? '',
-    }),
+  const userId = requireUserId();
+  const id = crypto.randomUUID();
+  const row = rowFrom(userId, {
+    id,
+    planItemId: args.planItemId ?? '',
+    pinnedTitle: args.pinnedTitle ?? '',
+    startedAt: new Date().toISOString(),
+    endedAt: null,
+    pomodorosCompleted: 0,
+    secondsFocused: 0,
+    mode: args.mode ?? 'pomodoro',
+    synced: false,
   });
-  if (!resp.ok) {
-    throw new Error(`startFocusSession failed: ${resp.status}`);
+  await focusStorePut(row);
+  if (isSyncEnabled()) {
+    await enqueueOutbox('focus', 'session_start', id, {
+      planItemId: args.planItemId ?? '',
+      pinnedTitle: args.pinnedTitle ?? '',
+      mode: args.mode ?? 'pomodoro',
+    });
+    scheduleSync();
   }
-  const j = (await resp.json()) as { session?: JsonSession };
-  return unwrapSession(j.session);
+  return toSession(row);
 }
 
 export async function endFocusSession(args: {
@@ -144,44 +167,23 @@ export async function endFocusSession(args: {
   reflection?: string;
 }): Promise<FocusSession> {
   void args.reflection;
-  const resp = await fetch(`${API_BASE_URL}/v1/focus/sessions/${encodeURIComponent(args.sessionId)}/end`, {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify({
-      session_id: args.sessionId,
-      pomodoros_completed: args.pomodorosCompleted,
-      seconds_focused: args.secondsFocused,
-    }),
-  });
-  if (!resp.ok) {
-    throw new Error(`endFocusSession failed: ${resp.status}`);
+  const userId = requireUserId();
+  const prev = await focusStoreGet(args.sessionId, userId);
+  if (!prev) throw new Error(`Session not found: ${args.sessionId}`);
+  const row = {
+    ...prev,
+    endedAt: new Date().toISOString(),
+    pomodorosCompleted: args.pomodorosCompleted,
+    secondsFocused: args.secondsFocused,
+    synced: false,
+  };
+  await focusStorePut(row);
+  if (isSyncEnabled()) {
+    await enqueueOutbox('focus', 'session_end', args.sessionId, {
+      pomodorosCompleted: args.pomodorosCompleted,
+      secondsFocused: args.secondsFocused,
+    });
+    scheduleSync();
   }
-  const j = (await resp.json()) as { session?: JsonSession };
-  return unwrapSession(j.session);
-}
-
-export function padToSevenDays(input: FocusDay[]): FocusDay[] {
-  const byDate = new Map(input.map((d) => [d.date, d]));
-  const out: FocusDay[] = [];
-  const todayISO = (() => {
-    const sortedDates = input.map((d) => d.date).sort();
-    const last = sortedDates[sortedDates.length - 1];
-    if (last !== undefined) {
-      return last;
-    }
-    return new Date().toISOString().slice(0, 10);
-  })();
-  const anchor = new Date(`${todayISO}T00:00:00Z`);
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(anchor);
-    d.setUTCDate(anchor.getUTCDate() - i);
-    const iso = d.toISOString().slice(0, 10);
-    out.push(byDate.get(iso) ?? { date: iso, seconds: 0, sessions: 0 });
-  }
-  return out;
-}
-
-function num(obj: Record<string, unknown>, camel: string, snake: string): number {
-  const v = obj[camel] ?? obj[snake];
-  return typeof v === 'number' ? v : 0;
+  return toSession(row);
 }

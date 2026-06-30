@@ -10,8 +10,6 @@ import (
 	trackerapi "github.com/sedorofeevd/project-druzya/services/tracker/internal/app/api/tracker"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/config"
 	googleadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/google"
-	identityadapter "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/identity"
-	identitygrpc "github.com/sedorofeevd/project-druzya/services/tracker/internal/adapter/identity/grpc"
 	trackerrepo "github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/repository"
 	trackerservice "github.com/sedorofeevd/project-druzya/services/tracker/internal/tracker/service"
 	"github.com/sedorofeevd/project-druzya/services/tracker/internal/tools/logger"
@@ -21,12 +19,11 @@ import (
 )
 
 type App struct {
-	Config       *config.Config
-	Logger       logger.Logger
-	Postgres     *trackerrepo.Pool
-	JWT          *jwt.Validator
-	Service      trackerservice.Service
-	identityConn *identitygrpc.Client
+	Config   *config.Config
+	Logger   logger.Logger
+	Postgres *trackerrepo.Pool
+	JWT      *jwt.Validator
+	Service  trackerservice.Service
 }
 
 func New(ctx context.Context) (*App, error) {
@@ -48,29 +45,15 @@ func New(ctx context.Context) (*App, error) {
 	}
 	repo := trackerrepo.New(pg)
 	googleClient := googleadapter.NewClient(cfg.GoogleClientID, cfg.GoogleClientSecret, cfg.GoogleRedirectURI)
-	var identityClient identityadapter.Client
-	var identityConn *identitygrpc.Client
-	if cfg.IdentityGRPCAddr != "" {
-		identityConn, err = identitygrpc.NewClient(ctx, cfg.IdentityGRPCAddr, cfg.InternalAPIToken)
-		if err != nil {
-			pg.Close()
-			return nil, fmt.Errorf("init identity client: %w", err)
-		}
-		identityClient = identityConn
-	}
 	svc := trackerservice.New(trackerservice.Deps{
-		Repo:        repo,
-		Google:      googleClient,
-		FrontendURL: cfg.FrontendURL,
-		Identity:    identityClient,
+		Repo:            repo,
+		Google:          googleClient,
+		HoneCallbackURL: cfg.HoneCallbackURL,
 	})
-	return &App{Config: cfg, Logger: log, Postgres: pg, JWT: jwtValidator, Service: svc, identityConn: identityConn}, nil
+	return &App{Config: cfg, Logger: log, Postgres: pg, JWT: jwtValidator, Service: svc}, nil
 }
 
 func (a *App) Close() {
-	if a.identityConn != nil {
-		_ = a.identityConn.Close()
-	}
 	if a.Postgres != nil {
 		a.Postgres.Close()
 	}

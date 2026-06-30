@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	contentadapter "github.com/sedorofeevd/project-druzya/services/sandbox/internal/adapter/content"
 	billingadapter "github.com/sedorofeevd/project-druzya/services/sandbox/internal/adapter/billing"
 	billinggrpc "github.com/sedorofeevd/project-druzya/services/sandbox/internal/adapter/billing/grpc"
-	interviewadapter "github.com/sedorofeevd/project-druzya/services/sandbox/internal/adapter/interview"
 	"github.com/sedorofeevd/project-druzya/services/sandbox/internal/adapter/runner"
 	sandboxrepo "github.com/sedorofeevd/project-druzya/services/sandbox/internal/sandbox/repository"
 	sandboxservice "github.com/sedorofeevd/project-druzya/services/sandbox/internal/sandbox/service"
@@ -78,14 +76,9 @@ func New(ctx context.Context) (*App, error) {
 		billingClient = billingConn
 	}
 
-	var contentClient contentadapter.Client
-	var interviewClient interviewadapter.Client
-
 	repo := sandboxrepo.New(pg)
 	svc := sandboxservice.New(sandboxservice.Deps{
 		Repo:          repo,
-		Content:       contentClient,
-		Interview:     interviewClient,
 		Billing:       billingClient,
 		Runner:        codeRunner,
 		TimeoutMS:     cfg.DefaultTimeoutMS,

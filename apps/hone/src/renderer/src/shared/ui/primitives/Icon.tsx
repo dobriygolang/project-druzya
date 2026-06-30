@@ -24,6 +24,7 @@ export type IconName =
   | 'standup'
   | 'search'
   | 'infinity'
+  | 'pomodoro'
   | 'circle'
   | 'rewind'
   | 'reset'
@@ -52,7 +53,8 @@ export type IconName =
   | 'chevron-up'
   | 'plus'
   | 'file'
-  | 'more';
+  | 'more'
+  | 'copy';
 
 interface IconProps {
   name: IconName;
@@ -179,12 +181,16 @@ export function Icon({ name, size = 14, stroke = 'currentColor', strokeWidth = 1
         </svg>
       );
     case 'infinity':
-      // Чистая figure-8: две петли с пересечением в центре. Берём
-      // cubic-bezier'ы вместо одинарного path, чтобы кривая была
-      // симметрична относительно центра.
       return (
         <svg {...p}>
-          <path d="M5.5 12c0-2.2 1.8-4 4-4 1.6 0 2.6 1 3.5 2.2L14 12l1 1.8c.9 1.2 1.9 2.2 3.5 2.2 2.2 0 4-1.8 4-4s-1.8-4-4-4c-1.6 0-2.6 1-3.5 2.2L14 12l-1-1.8c-.9-1.2-1.9-2.2-3.5-2.2-2.2 0-4 1.8-4 4s1.8 4 4 4c1.6 0 2.6-1 3.5-2.2" />
+          <path d="M6 16c5 0 7-8 12-8a4 4 0 0 1 0 8c-5 0-7-8-12-8a4 4 0 1 0 0 8" />
+        </svg>
+      );
+    case 'pomodoro':
+      return (
+        <svg {...p}>
+          <path d="M12 3c-1.5 0-2.5 1-2.5 2.5 0 0 0 0 0 0-2.5 0-4.5 2-4.5 4.5 0 4.5 3 8 7 8s7-3.5 7-8c0-2.5-2-4.5-4.5-4.5 0 0 0 0 0 0C14.5 4 13.5 3 12 3z" />
+          <path d="M12 3v2" />
         </svg>
       );
     case 'circle':
@@ -381,6 +387,13 @@ export function Icon({ name, size = 14, stroke = 'currentColor', strokeWidth = 1
           <circle cx="5" cy="12" r="1.6" />
           <circle cx="12" cy="12" r="1.6" />
           <circle cx="19" cy="12" r="1.6" />
+        </svg>
+      );
+    case 'copy':
+      return (
+        <svg {...p}>
+          <rect x="9" y="9" width="11" height="11" rx="2" />
+          <path d="M5 15V5a2 2 0 0 1 2-2h10" />
         </svg>
       );
   }

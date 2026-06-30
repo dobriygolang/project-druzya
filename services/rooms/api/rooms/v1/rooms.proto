@@ -11,23 +11,9 @@ import "google/protobuf/timestamp.proto";
 // (custom HTTP handler, not grpc-gateway).
 
 service RoomsService {
-  rpc CreateRoom(CreateRoomRequest) returns (CreateRoomResponse) {
-    option (google.api.http) = {
-      post: "/v1/rooms"
-      body: "*"
-    };
-  }
-
   rpc GetRoom(GetRoomRequest) returns (GetRoomResponse) {
     option (google.api.http) = {
       get: "/v1/rooms/{room_id}"
-    };
-  }
-
-  rpc JoinRoom(JoinRoomRequest) returns (JoinRoomResponse) {
-    option (google.api.http) = {
-      post: "/v1/rooms/{room_id}/join"
-      body: "*"
     };
   }
 
@@ -42,12 +28,6 @@ service RoomsService {
     option (google.api.http) = {
       post: "/v1/rooms/{room_id}/invite"
       body: "*"
-    };
-  }
-
-  rpc GetReplay(GetReplayRequest) returns (GetReplayResponse) {
-    option (google.api.http) = {
-      get: "/v1/rooms/{room_id}/replay"
     };
   }
 
@@ -66,16 +46,38 @@ service RoomsService {
     };
   }
 
-  rpc ListMyActiveRooms(ListMyActiveRoomsRequest) returns (ListMyActiveRoomsResponse) {
-    option (google.api.http) = {
-      get: "/v1/rooms/mine/active"
-    };
-  }
-
   rpc CloseRoom(CloseRoomRequest) returns (CloseRoomResponse) {
     option (google.api.http) = {
       post: "/v1/rooms/{room_id}/close"
       body: "*"
+    };
+  }
+
+  // Hone whiteboard live share (JWT). Seeds initial Excalidraw scene on room.
+  rpc ShareWhiteboard(ShareWhiteboardRequest) returns (ShareWhiteboardResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/share-whiteboard"
+      body: "*"
+    };
+  }
+
+  rpc GetInitialScene(GetInitialSceneRequest) returns (GetInitialSceneResponse) {
+    option (google.api.http) = {
+      get: "/v1/rooms/{room_id}/initial-scene"
+    };
+  }
+
+  rpc PublishWhiteboard(PublishWhiteboardRequest) returns (PublishWhiteboardResponse) {
+    option (google.api.http) = {
+      post: "/v1/rooms/publish-whiteboard"
+      body: "*"
+    };
+  }
+
+  // Public read-only published board snapshot.
+  rpc GetPublishedBoard(GetPublishedBoardRequest) returns (GetPublishedBoardResponse) {
+    option (google.api.http) = {
+      get: "/v1/rooms/boards/public/{slug}"
     };
   }
 }
@@ -90,26 +92,14 @@ message Room {
   string id = 1;
   string owner_id = 2;
   string room_type = 3;
-  optional string task_id = 4;
-  string language = 5;
-  bool is_frozen = 6;
-  string visibility = 7;
-  string ws_url = 8;
-  google.protobuf.Timestamp expires_at = 9;
-  repeated Participant participants = 10;
-  google.protobuf.Timestamp created_at = 11;
-  bool is_guest_created = 12;
-}
-
-message CreateRoomRequest {
-  string room_type = 1;
-  optional string task_id = 2;
-  string language = 3;
-  optional string session_id = 4;
-}
-
-message CreateRoomResponse {
-  Room room = 1;
+  string language = 4;
+  bool is_frozen = 5;
+  string visibility = 6;
+  string ws_url = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  repeated Participant participants = 9;
+  google.protobuf.Timestamp created_at = 10;
+  bool is_guest_created = 11;
 }
 
 message GetRoomRequest {
@@ -117,16 +107,6 @@ message GetRoomRequest {
 }
 
 message GetRoomResponse {
-  Room room = 1;
-}
-
-message JoinRoomRequest {
-  string room_id = 1;
-  string role = 2;
-  string invite_token = 3;
-}
-
-message JoinRoomResponse {
   Room room = 1;
 }
 
@@ -151,15 +131,6 @@ message CreateInviteRequest {
 
 message CreateInviteResponse {
   InviteLink invite = 1;
-}
-
-message GetReplayRequest {
-  string room_id = 1;
-}
-
-message GetReplayResponse {
-  bytes payload_jsonl = 1;
-  int32 op_count = 2;
 }
 
 message GuestJoinRequest {
@@ -187,27 +158,49 @@ message CreateGuestRoomResponse {
   InviteLink invite = 4;
 }
 
-message ActiveRoomSummary {
-  string id = 1;
-  string room_type = 2;
-  string language = 3;
-  google.protobuf.Timestamp created_at = 4;
-  google.protobuf.Timestamp expires_at = 5;
-  bool is_guest_created = 6;
-  string ws_url = 7;
-}
-
-message ListMyActiveRoomsRequest {}
-
-message ListMyActiveRoomsResponse {
-  repeated ActiveRoomSummary rooms = 1;
-  int32 active_count = 2;
-  optional int32 concurrent_limit = 3;
-  bool concurrent_unlimited = 4;
-}
-
 message CloseRoomRequest {
   string room_id = 1;
 }
 
 message CloseRoomResponse {}
+
+message ShareWhiteboardRequest {
+  string scene_json = 1;
+  optional string title = 2;
+}
+
+message ShareWhiteboardResponse {
+  string access_token = 1;
+  Room room = 2;
+  int32 expires_in = 3;
+  InviteLink invite = 4;
+}
+
+message GetInitialSceneRequest {
+  string room_id = 1;
+}
+
+message GetInitialSceneResponse {
+  string scene_json = 1;
+}
+
+message PublishWhiteboardRequest {
+  string scene_json = 1;
+  optional string title = 2;
+}
+
+message PublishWhiteboardResponse {
+  string slug = 1;
+  string url = 2;
+  google.protobuf.Timestamp published_at = 3;
+}
+
+message GetPublishedBoardRequest {
+  string slug = 1;
+}
+
+message GetPublishedBoardResponse {
+  string title = 1;
+  string scene_json = 2;
+  google.protobuf.Timestamp published_at = 3;
+}

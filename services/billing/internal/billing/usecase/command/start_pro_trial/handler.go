@@ -22,24 +22,18 @@ type Store interface {
 	UpsertSubscription(ctx context.Context, sub *model.Subscription) error
 }
 
-// EventPublisher emits the subscription-created event.
-type EventPublisher interface {
-	SubscriptionCreated(ctx context.Context, sub *model.Subscription) error
-}
-
 // Handler starts a one-time Pro trial subscription.
 type Handler struct {
 	repo      Store
-	events    EventPublisher
 	trialDays int
 }
 
 // New constructs the start-pro-trial handler.
-func New(repo Store, events EventPublisher, trialDays int) *Handler {
+func New(repo Store, trialDays int) *Handler {
 	if trialDays <= 0 {
 		trialDays = 14
 	}
-	return &Handler{repo: repo, events: events, trialDays: trialDays}
+	return &Handler{repo: repo, trialDays: trialDays}
 }
 
 // Handle executes the command.
@@ -94,6 +88,5 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*model.Subscription,
 	}); err != nil {
 		return nil, err
 	}
-	_ = h.events.SubscriptionCreated(ctx, sub)
 	return sub, nil
 }

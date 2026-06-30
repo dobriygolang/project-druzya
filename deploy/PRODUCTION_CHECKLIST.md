@@ -18,9 +18,9 @@ Before first deploy: fill secrets, then `cd deploy && make up`.
 |----------|-----|
 | `POSTGRES_PASSWORD` | `openssl rand -hex 24` |
 | `INTERNAL_API_TOKEN` | `openssl rand -hex 32` |
-| `ADMIN_API_TOKEN` | `openssl rand -hex 32` |
-| `ADMIN_USER_IDS` | identity user UUIDs |
 | `ROOM_INVITE_SECRET` | `openssl rand -hex 32` |
+| `PUBLIC_BASE_URL` | `https://druz9.online` (notes publish + rooms invite/board links) |
+| `HONE_CALLBACK_URL` | `hone://settings` (Google Calendar OAuth → Hone) |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | BotFather |
 | `YANDEX_*` | OAuth app |
 | `GROQ_API_KEY` (or other LLM) | at least one provider |
@@ -56,8 +56,9 @@ Updates: merge to `main` → CI deploys automatically.
 
 - [ ] `https://api.druz9.ru/healthz`
 - [ ] Yandex login
-- [ ] Mock interview start
-- [ ] Live room WS
+- [ ] Live room guest create + WS
+- [ ] Published note `/notes/{slug}` and board `/board/{slug}`
+- [ ] Hone login (Telegram)
 - [ ] `docker compose ps` — healthy
 
 Ops: [RUNBOOK.md](./RUNBOOK.md)

@@ -1,70 +1,80 @@
-import { useState } from 'react';
+import { useT } from '@d9-i18n';
 
 import type { TaskCard } from '@features/tasks/api/tasks';
-import { defaultDurationMin } from './lib/dates';
+import { defaultDurationMin, taskScheduleStart } from './lib/dates';
 import { DurationPicker } from './DurationPicker';
+import { TimePicker } from './TimePicker';
 
 const COL_W = 254;
 
 interface TaskRowProps {
   task: TaskCard;
+  columnDate: Date;
   dragging: boolean;
+  dropTarget: boolean;
   onToggleDone: (task: TaskCard) => void;
+  onDelete: (task: TaskCard) => void;
   onDurationChange: (task: TaskCard, minutes: number) => void;
+  onTimeChange: (task: TaskCard, start: Date) => void;
   onPointerDragStart: (taskId: string, e: React.PointerEvent) => void;
 }
 
 export function TaskRow({
   task,
+  columnDate,
   dragging,
+  dropTarget,
   onToggleDone,
+  onDelete,
   onDurationChange,
+  onTimeChange,
   onPointerDragStart,
 }: TaskRowProps): JSX.Element {
-  const [hover, setHover] = useState(false);
+  const t = useT();
   const done = task.status === 'done';
+  const scheduled = taskScheduleStart(task);
 
   return (
     <article
+      data-task-row
+      data-task-id={task.id}
+      data-done={done ? 'true' : 'false'}
+      className="hone-task-row"
       onPointerDown={(e) => {
         if (done) return;
         const target = e.target as HTMLElement;
         if (target.closest('button, [data-no-drag]')) return;
         onPointerDragStart(task.id, e);
       }}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       onClick={(e) => e.stopPropagation()}
       style={{
         boxSizing: 'border-box',
         width: COL_W,
         padding: '10px 12px',
         borderRadius: 12,
-        background: done ? 'transparent' : hover ? 'rgb(var(--ink-rgb) / 0.08)' : 'rgb(var(--ink-rgb) / 0.05)',
-        border: '1px solid transparent',
+        background: 'rgb(var(--ink-rgb) / 0.05)',
         display: 'flex',
         alignItems: 'center',
         gap: 8,
         opacity: done ? 0.45 : dragging ? 0.4 : 1,
         cursor: done ? 'default' : dragging ? 'grabbing' : 'grab',
-        transform: dragging ? 'scale(0.98)' : 'none',
         touchAction: 'none',
-        transition:
-          'background-color var(--motion-dur-small) var(--motion-ease-standard), opacity var(--motion-dur-small) var(--motion-ease-standard), transform var(--motion-dur-small) var(--motion-ease-standard)',
+        userSelect: 'none',
+        outline: dropTarget ? '2px solid rgb(var(--ink-rgb) / 0.55)' : 'none',
+        outlineOffset: dropTarget ? 1 : 0,
       }}
     >
       <button
         type="button"
         data-no-drag
-        aria-label={done ? 'Mark incomplete' : 'Mark done'}
+        aria-label={done ? t('hone.taskboard.mark_incomplete') : t('hone.taskboard.mark_done')}
         onClick={() => onToggleDone(task)}
         style={{
           width: 16,
           height: 16,
           borderRadius: 99,
-          border: 'none',
-          background: done ? '#4CB35C' : 'transparent',
-          boxShadow: done ? 'none' : 'inset 0 0 0 1.5px var(--ink-50)',
+          border: done ? 'none' : '1.5px solid var(--ink-60)',
+          background: done ? '#4CB35C' : 'rgb(var(--ink-rgb) / 0.04)',
           flexShrink: 0,
           cursor: 'pointer',
           display: 'grid',
@@ -83,18 +93,44 @@ export function TaskRow({
           style={{
             fontSize: 13,
             lineHeight: '16px',
-            color: done ? 'var(--ink-50)' : 'var(--ink-90)',
+            color: done ? 'var(--ink-40)' : 'var(--ink-90)',
             textDecoration: done ? 'line-through' : 'none',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
         >
-          {task.title || 'Untitled'}
+          {task.title || t('hone.taskboard.untitled')}
         </div>
       </div>
 
-      <div data-no-drag>
+      <div data-no-drag style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <button
+          type="button"
+          aria-label={t('hone.taskboard.delete_task')}
+          onClick={() => onDelete(task)}
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 6,
+            border: 'none',
+            background: 'transparent',
+            color: 'var(--ink-40)',
+            cursor: 'pointer',
+            fontSize: 14,
+            lineHeight: 1,
+            padding: 0,
+            flexShrink: 0,
+          }}
+        >
+          ×
+        </button>
+        <TimePicker
+          value={scheduled}
+          day={columnDate}
+          disabled={done}
+          onChange={(start) => onTimeChange(task, start)}
+        />
         <DurationPicker
           valueMin={defaultDurationMin(task)}
           disabled={done}

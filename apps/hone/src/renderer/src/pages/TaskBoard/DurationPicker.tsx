@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { useT } from '@d9-i18n';
+
 import { zIndex } from '@shared/lib/z-index';
 import { formatDurationShort } from './lib/dates';
 
-export const DURATION_PRESETS_MIN = [10, 15, 20, 30, 45, 60, 120, 180, 240, 360, 480] as const;
+export const DURATION_PRESETS_MIN = [15, 20, 30, 45, 60, 120, 180, 240, 360, 480] as const;
 
 interface DurationPickerProps {
   valueMin: number;
@@ -12,6 +14,7 @@ interface DurationPickerProps {
 }
 
 export function DurationPicker({ valueMin, disabled, onChange }: DurationPickerProps): JSX.Element {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -43,19 +46,12 @@ export function DurationPicker({ valueMin, disabled, onChange }: DurationPickerP
         className="mono"
         style={{
           border: 'none',
-          background: open ? 'rgb(var(--ink-rgb) / 0.1)' : 'transparent',
+          background: open ? 'rgb(var(--ink-rgb) / 0.08)' : 'transparent',
           color: 'var(--ink-40)',
           fontSize: 10,
           padding: '2px 4px',
           borderRadius: 4,
           cursor: disabled ? 'default' : 'pointer',
-          transition: 'background-color var(--motion-dur-small) var(--motion-ease-standard)',
-        }}
-        onMouseEnter={(e) => {
-          if (!disabled && !open) e.currentTarget.style.background = 'rgb(var(--ink-rgb) / 0.06)';
-        }}
-        onMouseLeave={(e) => {
-          if (!open) e.currentTarget.style.background = 'transparent';
         }}
       >
         {formatDurationShort(valueMin)}
@@ -64,7 +60,7 @@ export function DurationPicker({ valueMin, disabled, onChange }: DurationPickerP
       {open && (
         <div
           role="listbox"
-          aria-label="Task duration"
+          aria-label={t('hone.taskboard.duration_aria')}
           style={{
             position: 'absolute',
             top: '100%',
@@ -97,19 +93,12 @@ export function DurationPicker({ valueMin, disabled, onChange }: DurationPickerP
                   display: 'block',
                   width: '100%',
                   border: 'none',
-                  background: active ? 'rgb(var(--ink-rgb) / 0.12)' : 'transparent',
+                  background: active ? 'rgb(var(--ink-rgb) / 0.1)' : 'transparent',
                   color: active ? 'var(--ink)' : 'var(--ink-60)',
                   fontSize: 11,
                   textAlign: 'left',
                   padding: '6px 12px',
                   cursor: 'pointer',
-                  transition: 'background-color var(--motion-dur-micro) var(--motion-ease-standard)',
-                }}
-                onMouseEnter={(e) => {
-                  if (!active) e.currentTarget.style.background = 'rgb(var(--ink-rgb) / 0.08)';
-                }}
-                onMouseLeave={(e) => {
-                  if (!active) e.currentTarget.style.background = 'transparent';
                 }}
               >
                 {formatDurationShort(min)}

@@ -1,3 +1,5 @@
+> **Archived (2026):** Interview/AI SD room was removed from prod. Kept for historical reference only. Live rooms today: code collab + Excalidraw whiteboard via `rooms` service.
+
 # System Design Room
 
 Quality-first mock interview workspace for `system_design` tasks: phased flow, Excalidraw diagram, AI interviewer chat, checkpoint critique, multi-pass final evaluation.

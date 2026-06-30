@@ -59,7 +59,6 @@ export const en: Messages = {
       live_rooms_per_month: 'Live rooms',
       live_rooms_concurrent: 'Concurrent live rooms',
       focus_stats_history_days: 'Focus stats history',
-      ai_insights_per_day: 'AI insights',
     },
   },
   profile: {
@@ -162,7 +161,7 @@ export const en: Messages = {
     guestDescription: 'Display name in the editor. Access lasts for the session only.',
     accessTitle: 'Access required',
     accessDescription:
-      'Open a link with ?invite=… from the host, or sign in if you are a room participant.',
+      'Open the invite link from the host (?invite=…), or create a new room at /live/new.',
     name: 'Name',
     namePlaceholder: 'Candidate',
     joinError: 'Join failed',

@@ -29,23 +29,17 @@ type PlanResolver interface {
 	ResolvePlan(ctx context.Context, userID string) (*model.Plan, error)
 }
 
-// EventPublisher emits the usage-consumed event.
-type EventPublisher interface {
-	UsageConsumed(ctx context.Context, userID, key string, used int) error
-}
-
 // Handler checks and consumes a usage quota.
 type Handler struct {
-	repo   Store
-	plans  PlanResolver
-	ents   PlanEntitlements
-	events EventPublisher
-	now    func() time.Time
+	repo  Store
+	plans PlanResolver
+	ents  PlanEntitlements
+	now   func() time.Time
 }
 
 // New constructs the consume-usage handler.
-func New(repo Store, plans PlanResolver, ents PlanEntitlements, events EventPublisher) *Handler {
-	return &Handler{repo: repo, plans: plans, ents: ents, events: events, now: time.Now}
+func New(repo Store, plans PlanResolver, ents PlanEntitlements) *Handler {
+	return &Handler{repo: repo, plans: plans, ents: ents, now: time.Now}
 }
 
 // Handle executes the command.
@@ -80,7 +74,6 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*model.ConsumeUsageR
 		if err != nil {
 			return nil, err
 		}
-		_ = h.events.UsageConsumed(ctx, cmd.UserID, key, used)
 		return &model.ConsumeUsageResult{Allowed: true, Used: used}, nil
 	}
 
@@ -98,7 +91,6 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*model.ConsumeUsageR
 	if err != nil {
 		return nil, err
 	}
-	_ = h.events.UsageConsumed(ctx, cmd.UserID, key, used)
 	return &model.ConsumeUsageResult{
 		Allowed:   true,
 		Used:      used,

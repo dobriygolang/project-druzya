@@ -1,5 +1,6 @@
 mod auth;
 mod store;
+mod vault;
 mod window_macos;
 
 use auth::{AuthSession, TelegramPollResult, TelegramStart};
@@ -9,6 +10,8 @@ use tauri::{AppHandle, Emitter, Manager};
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_store::Builder::default().build())
@@ -37,6 +40,9 @@ pub fn run() {
             auth_logout,
             auth_tg_start,
             auth_tg_poll,
+            vault_pass_load,
+            vault_pass_save,
+            vault_pass_clear,
             pomodoro_load,
             pomodoro_save,
             shell_open_external,
@@ -79,6 +85,21 @@ async fn auth_tg_start(app: AppHandle) -> Result<TelegramStart, String> {
 #[tauri::command]
 async fn auth_tg_poll(app: AppHandle, code: String) -> Result<TelegramPollResult, String> {
     auth::telegram_poll(&app, &code).await
+}
+
+#[tauri::command]
+fn vault_pass_load(user_id: String) -> Result<Option<String>, String> {
+    vault::load_passphrase(&user_id)
+}
+
+#[tauri::command]
+fn vault_pass_save(user_id: String, passphrase: String) -> Result<(), String> {
+    vault::save_passphrase(&user_id, &passphrase)
+}
+
+#[tauri::command]
+fn vault_pass_clear(user_id: String) -> Result<(), String> {
+    vault::clear_passphrase(&user_id)
 }
 
 #[tauri::command]

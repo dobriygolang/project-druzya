@@ -1,19 +1,8 @@
-// Centralized custom-event names для Hone renderer.
-//
-// Keys, dispatched + listened в 3+ местах. Typo в одной из ссылок →
-// беззвучный no-op (CustomEvent listener никогда не сработает), поэтому
-// держим имена в одном const, а не как inline literals.
-//
-// Single-dispatch events (no co-located listener) остаются inline в их
-// модуле — централизация только для пар dispatch↔listen.
+// Centralized custom-event names for Hone renderer.
 
 export const HONE_EVENTS = {
-  /** EcosystemSection → App: open the identity-intro modal. */
-  openIdentityIntro: 'hone:open-identity-intro',
   /** Sidebar → App: navigate to home. */
   navHome: 'hone:nav-home',
-  /** Outbox/sync → ConflictModal: render a conflict UI. */
-  conflict: 'hone:conflict',
   /** Hotkey → Notes layout: toggle the sidebar. */
   toggleSidebar: 'hone:toggle-sidebar',
   /** Editor → Notes header: pending-write count changed. */
@@ -22,11 +11,14 @@ export const HONE_EVENTS = {
   openTask: 'hone:open-task',
   /** Deeplink → Notes: select note by id. */
   openNote: 'hone:open-note',
+  /** Notes → App: open Settings (vault unlock). */
+  openSettings: 'hone:open-settings',
   /** TaskBoard → App: open palette prefilled for a day. */
   openPaletteAddTask: 'hone:open-palette-add-task',
   /** Palette → TaskBoard: refresh task list after create. */
   tasksChanged: 'hone:tasks-changed',
-  /** Theme module (lib/theme.ts) — theme switched. */
-  themeChanged: 'hone:theme-changed',
+  /** Calendar → App: navigate to task board task. */
+  navOpenTask: 'hone:nav-open-task',
+  /** OAuth callback → Settings: Google Calendar connected/error. */
+  googleCalendarOAuth: 'hone:google-calendar-oauth',
 } as const;
-

@@ -1,0 +1,76 @@
+name: hone-release
+
+on:
+  push:
+    tags:
+      - 'hone-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: '--target aarch64-apple-darwin'
+          - platform: macos-latest
+            args: '--target x86_64-apple-darwin'
+          - platform: windows-latest
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/hone/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/hone/src-tauri -> target
+
+      - name: Install frontend dependencies
+        working-directory: apps/hone
+        run: npm ci
+
+      - name: Resolve release tag
+        id: release
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          else
+            version=$(node -p "require('./apps/hone/src-tauri/tauri.conf.json').version")
+            echo "tag=hone-v${version}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VITE_HONE_DEV_LOGIN: 'false'
+          VITE_HONE_LOCAL_ONLY: 'false'
+        with:
+          projectPath: apps/hone
+          tagName: ${{ steps.release.outputs.tag }}
+          releaseName: Hone ${{ steps.release.outputs.tag }}
+          releaseBody: |
+            Desktop builds for macOS (Apple Silicon + Intel) and Windows.
+
+            Installers are attached below. Installed apps can update from **Settings → Software → Check for Updates**.
+          releaseDraft: false
+          prerelease: false
+          updaterJsonPreferNsis: true
+          args: ${{ matrix.args }}

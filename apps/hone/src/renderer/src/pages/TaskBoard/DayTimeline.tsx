@@ -1,41 +1,44 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
+import { useLocale, useT } from '@d9-i18n';
+
+import { tasksPlannedForDay } from '@features/calendar/lib/events';
 import type { TaskCard } from '@features/tasks/api/tasks';
-import { defaultDurationMin, formatTimelineHeader, toDayKey } from './lib/dates';
+import { defaultDurationMin, formatTimelineHeader, formatTimeShort, toDayKey } from './lib/dates';
 
-const HOUR_START = 8;
+const HOUR_START = 6;
 const HOUR_END = 23;
 const HOUR_PX = 52;
+const GRID_PAD_TOP = 12;
+const GRID_PAD_BOTTOM = 24;
 
 interface DayTimelineProps {
   date: Date;
   tasks: TaskCard[];
 }
 
-function hourLabel(h: number): string {
-  if (h === 0) return '12 AM';
-  if (h < 12) return `${h} AM`;
-  if (h === 12) return '12 PM';
-  return `${h - 12} PM`;
+function hourLabel(h: number, locale: 'en' | 'ru'): string {
+  return formatTimeShort(new Date(2000, 0, 1, h, 0), locale);
 }
 
 export function DayTimeline({ date, tasks }: DayTimelineProps) {
+  const t = useT();
+  const [locale] = useLocale();
+  const scrollRef = useRef<HTMLDivElement>(null);
   const dayKey = toDayKey(date);
   const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const showNow = toDayKey(now) === dayKey;
 
-  const scheduled = useMemo(
-    () =>
-      tasks.filter((t) => {
-        if (!t.scheduledStart) return false;
-        const d = new Date(t.scheduledStart);
-        return !Number.isNaN(d.getTime()) && toDayKey(d) === dayKey;
-      }),
-    [tasks, dayKey],
-  );
+  const planned = useMemo(() => tasksPlannedForDay(dayKey, tasks), [dayKey, tasks]);
 
-  const gridHeight = (HOUR_END - HOUR_START + 1) * HOUR_PX;
+  const hoursHeight = (HOUR_END - HOUR_START + 1) * HOUR_PX;
+  const gridHeight = hoursHeight + GRID_PAD_TOP + GRID_PAD_BOTTOM;
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = 0;
+  }, [dayKey]);
 
   return (
     <aside
@@ -46,20 +49,38 @@ export function DayTimeline({ date, tasks }: DayTimelineProps) {
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
+        overflow: 'hidden',
       }}
     >
       <header style={{ padding: '0 8px 12px', fontSize: 13, fontWeight: 600, color: 'var(--ink-80)' }}>
-        {formatTimelineHeader(date)}
+        {formatTimelineHeader(date, locale)}
       </header>
 
-      <div style={{ position: 'relative', flex: 1, overflowY: 'auto', paddingRight: 8 }}>
-        <div style={{ position: 'relative', height: gridHeight, marginLeft: 44 }}>
+      <div
+        ref={scrollRef}
+        style={{
+          position: 'relative',
+          flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          paddingRight: 8,
+          overscrollBehavior: 'contain',
+        }}
+      >
+        <div
+          style={{
+            position: 'relative',
+            height: gridHeight,
+            marginLeft: 44,
+          }}
+        >
           {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => HOUR_START + i).map((h) => (
             <div
               key={h}
               style={{
                 position: 'absolute',
-                top: (h - HOUR_START) * HOUR_PX,
+                top: GRID_PAD_TOP + (h - HOUR_START) * HOUR_PX,
                 left: 0,
                 right: 0,
                 height: HOUR_PX,
@@ -78,7 +99,7 @@ export function DayTimeline({ date, tasks }: DayTimelineProps) {
                   color: 'var(--ink-40)',
                 }}
               >
-                {hourLabel(h)}
+                {hourLabel(h, locale)}
               </span>
             </div>
           ))}
@@ -87,7 +108,10 @@ export function DayTimeline({ date, tasks }: DayTimelineProps) {
             <div
               style={{
                 position: 'absolute',
-                top: ((now.getHours() - HOUR_START) * HOUR_PX) + (now.getMinutes() / 60) * HOUR_PX,
+                top:
+                  GRID_PAD_TOP +
+                  (now.getHours() - HOUR_START) * HOUR_PX +
+                  (now.getMinutes() / 60) * HOUR_PX,
                 left: -6,
                 right: 0,
                 height: 2,
@@ -110,11 +134,13 @@ export function DayTimeline({ date, tasks }: DayTimelineProps) {
             </div>
           )}
 
-          {scheduled.map((task) => {
-            const start = new Date(task.scheduledStart!);
+          {planned.map(({ task, start }) => {
             const startMin = start.getHours() * 60 + start.getMinutes();
-            const top = ((startMin / 60) - HOUR_START) * HOUR_PX;
+            let top = GRID_PAD_TOP + (startMin / 60 - HOUR_START) * HOUR_PX;
             const height = Math.max(28, (defaultDurationMin(task) / 60) * HOUR_PX);
+            const maxTop = GRID_PAD_TOP + (HOUR_END - HOUR_START + 1) * HOUR_PX - height;
+            top = Math.max(GRID_PAD_TOP, Math.min(top, maxTop));
+            const done = task.status === 'done';
             return (
               <div
                 key={task.id}
@@ -127,12 +153,17 @@ export function DayTimeline({ date, tasks }: DayTimelineProps) {
                   height,
                   borderRadius: 8,
                   padding: '6px 8px',
-                  background: 'rgb(180 120 60 / 0.35)',
-                  border: '1px solid rgb(180 120 60 / 0.5)',
+                  background: done
+                    ? 'rgb(var(--ink-rgb) / 0.08)'
+                    : 'rgb(180 120 60 / 0.35)',
+                  border: done
+                    ? '1px solid var(--ink-tint-08)'
+                    : '1px solid rgb(180 120 60 / 0.5)',
                   fontSize: 11,
-                  color: 'var(--ink-90)',
+                  color: done ? 'var(--ink-40)' : 'var(--ink-90)',
                   overflow: 'hidden',
                   zIndex: 1,
+                  textDecoration: done ? 'line-through' : 'none',
                 }}
               >
                 {task.title}
@@ -141,9 +172,9 @@ export function DayTimeline({ date, tasks }: DayTimelineProps) {
           })}
         </div>
 
-        {scheduled.length === 0 && (
+        {planned.length === 0 && (
           <p style={{ fontSize: 11, color: 'var(--ink-40)', padding: '8px 8px 24px' }}>
-            No scheduled blocks — drag scheduling comes next.
+            {t('hone.taskboard.timeline_empty')}
           </p>
         )}
       </div>

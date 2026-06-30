@@ -1,11 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
-import { getCodeRun, isTerminalRunStatus, runCode, type RunType } from '@/lib/api/sandbox'
+import { getCodeRun, isTerminalRunStatus, runCode } from '@/lib/api/sandbox'
 import { formatSandboxRunError } from '@/lib/sandbox/formatRunError'
 import { useI18n } from '@/lib/i18n'
 import type { CodeRun } from '@/lib/types'
 
-export function useSandboxRun() {
+export function useSandboxRun(accessToken?: string | null) {
   const { t } = useI18n()
   const [runId, setRunId] = useState<string | null>(null)
   const [panelOpen, setPanelOpen] = useState(false)
@@ -13,8 +13,8 @@ export function useSandboxRun() {
   const [runError, setRunError] = useState<string | null>(null)
 
   const runQ = useQuery({
-    queryKey: ['code-run', runId],
-    queryFn: () => getCodeRun(runId!),
+    queryKey: ['code-run', runId, accessToken ?? ''],
+    queryFn: () => getCodeRun(runId!, accessToken),
     enabled: !!runId,
     refetchInterval: (q) => {
       const status = q.state.data?.run.status
@@ -25,12 +25,9 @@ export function useSandboxRun() {
 
   const runM = useMutation({
     mutationFn: (input: {
-      taskId?: string
-      sessionTaskId?: string
       language: string
       code: string
-      runType: RunType
-    }) => runCode(input),
+    }) => runCode(input, accessToken),
     onSuccess: (data) => {
       setRunId(data.run.id)
       setRunError(null)
@@ -55,19 +52,13 @@ export function useSandboxRun() {
 
   const executeRun = useCallback(
     async (input: {
-      taskId?: string
-      sessionTaskId?: string
       language: string
       code: string
-      runType?: RunType
     }) => {
       if (running) return
       setPanelOpen(true)
       setRunError(null)
-      await runM.mutateAsync({
-        ...input,
-        runType: input.runType ?? (input.taskId ? 'sample' : 'custom'),
-      })
+      await runM.mutateAsync(input)
     },
     [runM, running],
   )

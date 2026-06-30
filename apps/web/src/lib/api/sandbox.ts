@@ -1,48 +1,57 @@
-import { api } from '@/lib/apiClient'
+import { api, apiWithBearer } from '@/lib/apiClient'
 import { normalizeCodeRun } from '@/lib/api/normalize'
 import type { CodeRun } from '@/lib/types'
 
-export type RunType = 'custom' | 'sample' | 'submit'
-
-export function runCode(input: {
-  taskId?: string
-  sessionTaskId?: string
-  language: string
-  code: string
-  stdin?: string
-  runType: RunType
-}) {
-  return api<{ run: CodeRun }>('/sandbox/code-runs', {
-    method: 'POST',
-    body: JSON.stringify({
-      task_id: input.taskId,
-      session_task_id: input.sessionTaskId,
-      language: input.language,
-      code: input.code,
-      stdin: input.stdin,
-      run_type: input.runType,
-    }),
-  }).then((res) => ({ run: normalizeCodeRun(res.run) }))
+function sandboxRequest<T>(
+  path: string,
+  init: RequestInit,
+  accessToken?: string | null,
+  options?: { redirectOnUnauthorized?: boolean },
+): Promise<T> {
+  const bearer = accessToken?.trim()
+  if (bearer) {
+    return apiWithBearer<T>(path, init, bearer)
+  }
+  return api<T>(path, init, options)
 }
 
-export function getCodeRun(id: string) {
-  return api<{ run: CodeRun }>(`/sandbox/code-runs/${id}`).then((res) => ({
+export function runCode(
+  input: {
+    language: string
+    code: string
+    stdin?: string
+  },
+  accessToken?: string | null,
+) {
+  return sandboxRequest<{ run: CodeRun }>(
+    '/sandbox/code-runs',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        language: input.language,
+        code: input.code,
+        stdin: input.stdin,
+      }),
+    },
+    accessToken,
+  ).then((res) => ({ run: normalizeCodeRun(res.run) }))
+}
+
+export function getCodeRun(id: string, accessToken?: string | null) {
+  return sandboxRequest<{ run: CodeRun }>(
+    `/sandbox/code-runs/${id}`,
+    {},
+    accessToken,
+  ).then((res) => ({
     run: normalizeCodeRun(res.run),
   }))
 }
 
-export function submitAttemptFromCodeRun(codeRunId: string, sessionTaskId: string) {
-  return api<{ attempt_id: string; status: string }>(
-    `/sandbox/code-runs/${codeRunId}/submit-attempt`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ session_task_id: sessionTaskId }),
-    },
-  )
-}
-
-export function formatCode(input: { language: string; code: string }) {
-  return api<{ code: string }>(
+export function formatCode(
+  input: { language: string; code: string },
+  accessToken?: string | null,
+) {
+  return sandboxRequest<{ code: string }>(
     '/sandbox/format',
     {
       method: 'POST',
@@ -51,6 +60,7 @@ export function formatCode(input: { language: string; code: string }) {
         code: input.code,
       }),
     },
+    accessToken,
     { redirectOnUnauthorized: false },
   )
 }

@@ -58,7 +58,6 @@ export const ru = {
       live_rooms_per_month: 'Live-комнаты',
       live_rooms_concurrent: 'Одновременные live-комнаты',
       focus_stats_history_days: 'История focus-статистики',
-      ai_insights_per_day: 'AI-инсайты',
     },
   },
   profile: {

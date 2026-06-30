@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/events"
 	identityadapter "github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/identity"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/adapter/providers"
 	"github.com/sedorofeevd/project-druzya/services/billing/internal/billing/cache"
@@ -54,7 +53,6 @@ type billingService struct {
 	identity     identityadapter.Client
 	providers    map[string]providers.BillingProvider
 	tierToPlan   map[string]string
-	events       events.Publisher
 	now          func() time.Time
 	plansCache   *cache.Plans
 	entitlements *cache.EntitlementsRedis
@@ -76,7 +74,6 @@ type Deps struct {
 	Identity           identityadapter.Client
 	Providers          []providers.BillingProvider
 	TierToPlan         map[string]string
-	Events             events.Publisher
 	PlansCache         *cache.Plans
 	EntitlementsCache  *cache.EntitlementsRedis
 	ProTrialEnabled    bool
@@ -85,10 +82,6 @@ type Deps struct {
 
 // New constructs billing service.
 func New(deps Deps) Service {
-	pub := deps.Events
-	if pub == nil {
-		pub = events.NoopPublisher{}
-	}
 	providerMap := make(map[string]providers.BillingProvider, len(deps.Providers))
 	for _, p := range deps.Providers {
 		if p != nil {
@@ -100,17 +93,16 @@ func New(deps Deps) Service {
 		identity:        deps.Identity,
 		providers:       providerMap,
 		tierToPlan:      deps.TierToPlan,
-		events:          pub,
 		now:             time.Now,
 		plansCache:      deps.PlansCache,
 		entitlements:    deps.EntitlementsCache,
 		proTrialEnabled: deps.ProTrialEnabled,
 		proTrialDays:    deps.ProTrialDays,
 	}
-	svc.grantSubscription = grant_subscription.New(deps.Repo, pub)
-	svc.startProTrial = start_pro_trial.New(deps.Repo, pub, deps.ProTrialDays)
+	svc.grantSubscription = grant_subscription.New(deps.Repo)
+	svc.startProTrial = start_pro_trial.New(deps.Repo, deps.ProTrialDays)
 	svc.updatePlanEntitlement = update_plan_entitlement.New(deps.Repo)
-	svc.consumeUsage = consume_usage.New(deps.Repo, svc, svc, pub)
+	svc.consumeUsage = consume_usage.New(deps.Repo, svc, svc)
 	svc.releaseUsage = release_usage.New(deps.Repo, svc, svc)
 	return svc
 }
@@ -351,7 +343,6 @@ func (s *billingService) RevokeSubscription(ctx context.Context, userID string) 
 	if err := s.repo.CancelActiveSubscriptions(ctx, userID); err != nil {
 		return err
 	}
-	_ = s.events.SubscriptionCancelled(ctx, &model.Subscription{UserID: userID})
 	if s.entitlements != nil {
 		s.entitlements.Invalidate(ctx, userID)
 	}
@@ -462,11 +453,6 @@ func (s *billingService) activateProviderSubscription(ctx context.Context, userI
 	if err := s.repo.UpsertSubscription(ctx, sub); err != nil {
 		return err
 	}
-	if existing == nil {
-		_ = s.events.SubscriptionCreated(ctx, sub)
-	} else {
-		_ = s.events.SubscriptionUpdated(ctx, sub)
-	}
 	if s.entitlements != nil {
 		s.entitlements.Invalidate(ctx, userID)
 	}
@@ -482,7 +468,6 @@ func (s *billingService) cancelProviderSubscription(ctx context.Context, userID 
 			if err := s.repo.UpsertSubscription(ctx, existing); err != nil {
 				return err
 			}
-			_ = s.events.SubscriptionCancelled(ctx, existing)
 			return nil
 		}
 	}

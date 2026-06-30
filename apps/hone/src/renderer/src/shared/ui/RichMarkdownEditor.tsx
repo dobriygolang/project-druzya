@@ -1,20 +1,13 @@
 // RichMarkdownEditor — Obsidian-like overlay over plain <textarea>.
 //
-// Source-of-truth остаётся markdown-строка (бэкенд хранит body как plain
-// markdown). Мы не подменяем editor — добавляем поверх:
-//   1) floating selection toolbar (B / I / U / S / code / H1-3 / quote /
-//      lists / link / code-block) — wraps выделение markdown-сахаром
-//   2) markdown shortcuts на клавиатуре: bracket-pairs, list continuation,
-//      tab-indent, ⌘B/⌘I/⌘K, triple-backtick fenced block scaffold.
-//
-// Никаких ProseMirror/TipTap — pure textarea + handlers. Toolbar
-// позиционируется через невидимый mirror-div (классический трюк для
-// получения координат caret-а в textarea).
+// Source-of-truth остаётся markdown-строка. Поверх textarea:
+//   1) slash menu (`/`) для вставки блоков
+//   2) checkbox / code-fence overlays
+//   3) markdown shortcuts: ⌘B/⌘I/⌘K, tab-indent, list continuation, …
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { type IconName } from './primitives/Icon';
 import { SlashMenu, type EditorAPI } from './SlashMenu';
-import { FloatingToolbar, type ToolbarOp } from './FloatingToolbar';
 import { zIndex } from '@shared/lib/z-index';
 
 interface RichMarkdownEditorProps {
@@ -261,8 +254,6 @@ export function RichMarkdownEditor({
   // текст после `/` (для фильтра), slashStart — позиция `/` в textarea (нужна
   // чтобы при выборе команды стереть `/query` перед вставкой блока).
   const [slash, setSlash] = useState<{ x: number; y: number; query: string; slashStart: number } | null>(null);
-  // Floating bubble toolbar state — DOMRect выделения (для portal-positioning'а).
-  const [bubbleRect, setBubbleRect] = useState<DOMRect | null>(null);
   // Checkbox overlays — список positions `- [ ]` / `- [x]` строк.
   // Координаты absolute-relative к textarea, рендерим overlay <div> поверх.
   // Click → модифицируем value (toggle `[ ]` ↔ `[x]`).
@@ -274,13 +265,6 @@ export function RichMarkdownEditor({
   // Открытый fence-dropdown: либо null, либо anchor-fence + position.
   const [langDropdown, setLangDropdown] = useState<{ fenceIdx: number } | null>(null);
 
-  // Selection trigger — bubble-toolbar теперь рендерится через
-  // FloatingToolbar (см. updateBubble ниже). Этот callback сохранён для
-  // обратной совместимости с onSelect/useEffect — пустой no-op после того
-  // как legacy inline-toolbar выпилен.
-  const updateToolbar = useCallback(() => {}, []);
-
-  // Apply a toolbar action.
   const apply = useCallback(
     (btn: ToolbarBtn) => {
       const ta = taRef.current;
@@ -293,10 +277,9 @@ export function RichMarkdownEditor({
         if (!ta) return;
         ta.focus();
         ta.setSelectionRange(out.selStart, out.selEnd);
-        updateToolbar();
       });
     },
-    [onChange, updateToolbar],
+    [onChange],
   );
 
   // ─── Slash menu ───────────────────────────────────────────────────────
@@ -383,100 +366,8 @@ export function RichMarkdownEditor({
         // Курсор между fence-строками: after "```javascript\n".
         replaceSlashWith(block, '```javascript\n'.length);
       },
-      insertToggle: () => {
-        const block = '<details>\n<summary>Title</summary>\n\nContent\n</details>\n';
-        // Курсор внутри Title (для редактирования заголовка).
-        replaceSlashWith(block, '<details>\n<summary>'.length);
-      },
-      insertCallout: () => {
-        replaceSlashWith('> **Note:** ');
-      },
     };
   }, [slash, onChange]);
-
-  // ─── Floating bubble toolbar ──────────────────────────────────────────
-  //
-  // Использует window.getSelection — ну, для textarea selection там пусто.
-  // Считаем rect через mirror-div: получаем coords начала и конца selection,
-  // строим прямоугольник.
-
-  const updateBubble = useCallback(() => {
-    const ta = taRef.current;
-    if (!ta || document.activeElement !== ta) {
-      setBubbleRect(null);
-      return;
-    }
-    const { selectionStart: s, selectionEnd: e } = ta;
-    if (s === e) {
-      setBubbleRect(null);
-      return;
-    }
-    // Проверяем что выделение не внутри code-fence строк (` ``` `).
-    const lineStart = ta.value.lastIndexOf('\n', s - 1) + 1;
-    const lineEnd = ta.value.indexOf('\n', s);
-    const lineText = ta.value.slice(lineStart, lineEnd === -1 ? ta.value.length : lineEnd);
-    if (lineText.trimStart().startsWith('```')) {
-      setBubbleRect(null);
-      return;
-    }
-    const startCoords = getCaretCoords(ta, s);
-    const endCoords = getCaretCoords(ta, e);
-    // Прямоугольник: x от min(left), width — расстояние, y — top startа,
-    // height — line-height. Это не точный rect многострочного выделения, но
-    // достаточный для центрирования toolbar'а.
-    const left = Math.min(startCoords.left, endCoords.left);
-    const width = Math.abs(endCoords.left - startCoords.left) || 80;
-    const top = Math.min(startCoords.top, endCoords.top);
-    const height = (endCoords.top - startCoords.top) + 22;
-    const rect = new DOMRect(left, top, width, height);
-    setBubbleRect(rect);
-  }, []);
-
-  // Active ops для bubble toolbar — детектируем wrapping вокруг selection'а.
-  const activeOps: Set<ToolbarOp> = useMemo(() => {
-    const out = new Set<ToolbarOp>();
-    const ta = taRef.current;
-    if (!ta || !bubbleRect) return out;
-    const { selectionStart: s, selectionEnd: e, value: v } = ta;
-    if (s === e) return out;
-    // Bold: text before s ends with **, after e starts with **.
-    if (v.slice(Math.max(0, s - 2), s) === '**' && v.slice(e, e + 2) === '**') out.add('bold');
-    if (
-      (v.slice(Math.max(0, s - 1), s) === '_' && v.slice(e, e + 1) === '_') ||
-      (v.slice(Math.max(0, s - 1), s) === '*' &&
-        v.slice(e, e + 1) === '*' &&
-        v.slice(Math.max(0, s - 2), s) !== '**')
-    ) {
-      out.add('italic');
-    }
-    if (v.slice(Math.max(0, s - 2), s) === '~~' && v.slice(e, e + 2) === '~~') out.add('strike');
-    if (
-      v.slice(Math.max(0, s - 1), s) === '`' &&
-      v.slice(e, e + 1) === '`' &&
-      v.slice(Math.max(0, s - 3), s) !== '```'
-    ) {
-      out.add('inlineCode');
-    }
-    // Heading: line starts with # / ##.
-    const lineStart = v.lastIndexOf('\n', s - 1) + 1;
-    const linePrefix = v.slice(lineStart, lineStart + 4);
-    if (linePrefix.startsWith('# ')) out.add('h1');
-    else if (linePrefix.startsWith('## ')) out.add('h2');
-    return out;
-  }, [bubbleRect]);
-
-  // Bubble-toolbar op handler — wrap/unwrap selection.
-  const onBubbleOp = useCallback(
-    (op: Exclude<ToolbarOp, 'link'>) => {
-      const ta = taRef.current;
-      if (!ta) return;
-      runBubbleOp(ta, op, activeOps, onChange);
-      requestAnimationFrame(() => {
-        updateBubble();
-      });
-    },
-    [activeOps, onChange, updateBubble],
-  );
 
   // ─── Checkbox overlay ────────────────────────────────────────────────
   //
@@ -601,44 +492,17 @@ export function RichMarkdownEditor({
     [onChange, recomputeTodos],
   );
 
-  const onBubbleLink = useCallback(
-    (url: string) => {
-      const ta = taRef.current;
-      if (!ta) return;
-      const { selectionStart: s, selectionEnd: e, value: v } = ta;
-      const sel = v.slice(s, e) || 'link';
-      const insert = `[${sel}](${url})`;
-      const newValue = v.slice(0, s) + insert + v.slice(e);
-      onChange(newValue);
-      requestAnimationFrame(() => {
-        ta.focus();
-        ta.setSelectionRange(s + insert.length, s + insert.length);
-      });
-    },
-    [onChange],
-  );
-
-  // Selection-change effects — placed AFTER all updateXxx callbacks declared
-  // (иначе TS2448: used-before-declaration). Wraps three updaters: legacy
-  // toolbar (still rendered conditionally below), bubble FloatingToolbar,
-  // и slash-menu trigger detection.
   useEffect(() => {
-    const onSel = () => {
-      updateToolbar();
-      updateBubble();
-      updateSlash();
-    };
+    const onSel = () => updateSlash();
     document.addEventListener('selectionchange', onSel);
     return () => document.removeEventListener('selectionchange', onSel);
-  }, [updateToolbar, updateBubble, updateSlash]);
+  }, [updateSlash]);
 
   useLayoutEffect(() => {
-    updateToolbar();
-    updateBubble();
     updateSlash();
     recomputeTodos();
     recomputeFences();
-  }, [value, updateToolbar, updateBubble, updateSlash, recomputeTodos, recomputeFences]);
+  }, [value, updateSlash, recomputeTodos, recomputeFences]);
 
   // ──────────────────────────────────────────────────────────────────
   // Keyboard handler
@@ -835,14 +699,12 @@ export function RichMarkdownEditor({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
-        onSelect={updateToolbar}
+        onSelect={updateSlash}
         placeholder={placeholder}
         rows={20}
         className={plain ? 'mono hone-notes-body' : 'mono focus-ring'}
         style={{
           width: '100%',
-          fontSize: 13,
-          lineHeight: 1.75,
           color: 'var(--ink-90)',
           background: plain ? 'transparent' : 'var(--ink-tint-02)',
           border: plain ? 'none' : '1px solid var(--ink-tint-04)',
@@ -922,28 +784,11 @@ export function RichMarkdownEditor({
             >
               <button
                 type="button"
+                className="hone-fence-chip"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() =>
                   setLangDropdown(langDropdown?.fenceIdx === idx ? null : { fenceIdx: idx })
                 }
-                style={{
-                  fontSize: 10,
-                  fontFamily: 'var(--font-mono, monospace)',
-                  letterSpacing: '0.08em',
-                  color: 'var(--ink-40)',
-                  background: 'var(--hair)',
-                  border: '1px solid var(--hair)',
-                  borderRadius: 4,
-                  padding: '2px 6px',
-                  cursor: 'pointer',
-                  transition: 'color var(--motion-dur-small) var(--motion-ease-standard)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--ink-60)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--ink-40)';
-                }}
               >
                 {f.language || 'plain'} ▾
               </button>
@@ -962,17 +807,6 @@ export function RichMarkdownEditor({
           ))}
         </div>
       )}
-      {/* Новый bubble FloatingToolbar — заменяет inline-toolbar выше.
-       *  Старый toolbar/groups state остался для обратной совместимости с
-       *  legacy hover-effects не рендерятся — если в будущем bubble-toolbar
-       *  решат откатить, верните условие `hasSelection && toolbar && groups.length > 0`. */}
-      <FloatingToolbar
-        rect={bubbleRect}
-        activeOps={activeOps}
-        onOp={onBubbleOp}
-        onLink={onBubbleLink}
-        onDismiss={() => setBubbleRect(null)}
-      />
       {slash && (
         <SlashMenu
           x={slash.x}
@@ -986,90 +820,6 @@ export function RichMarkdownEditor({
   );
 }
 
-// ─── Bubble-toolbar wrap helpers ──────────────────────────────────────────
-//
-// Inline и block ops, применяемые к textarea. Toggle-семантика: если
-// активный wrap уже стоит — снимаем (unwrap), иначе оборачиваем.
-
-function runBubbleOp(
-  ta: HTMLTextAreaElement,
-  op: Exclude<ToolbarOp, 'link'>,
-  active: ReadonlySet<ToolbarOp>,
-  onChange: (next: string) => void,
-): void {
-  const { selectionStart: s, selectionEnd: e, value: v } = ta;
-  // Inline: B / I / S / inlineCode.
-  if (op === 'bold') return wrapToggle(ta, '**', active.has('bold'), onChange);
-  if (op === 'italic') return wrapToggle(ta, '*', active.has('italic'), onChange);
-  if (op === 'strike') return wrapToggle(ta, '~~', active.has('strike'), onChange);
-  if (op === 'inlineCode') return wrapToggle(ta, '`', active.has('inlineCode'), onChange);
-  if (op === 'codeBlock') {
-    const sel = v.slice(s, e);
-    const insert = '```\n' + sel + '\n```';
-    const newValue = v.slice(0, s) + insert + v.slice(e);
-    onChange(newValue);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(s + 4, s + 4 + sel.length);
-    });
-    return;
-  }
-  // H1 / H2 — prefix к началу строки. Если уже стоит — снимаем.
-  if (op === 'h1' || op === 'h2') {
-    const prefix = op === 'h1' ? '# ' : '## ';
-    const lineStart = v.lastIndexOf('\n', s - 1) + 1;
-    const line = v.slice(lineStart, v.indexOf('\n', s) === -1 ? v.length : v.indexOf('\n', s));
-    let newLine: string;
-    let cursorShift: number;
-    if (line.startsWith(prefix)) {
-      newLine = line.slice(prefix.length);
-      cursorShift = -prefix.length;
-    } else {
-      // Снимаем любой другой heading prefix чтобы не дублировать.
-      const stripped = line.replace(/^#{1,6}\s+/, '');
-      newLine = prefix + stripped;
-      cursorShift = newLine.length - line.length;
-    }
-    const newValue =
-      v.slice(0, lineStart) + newLine + v.slice(lineStart + line.length);
-    onChange(newValue);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(s + cursorShift, e + cursorShift);
-    });
-  }
-}
-
-function wrapToggle(
-  ta: HTMLTextAreaElement,
-  marker: string,
-  isActive: boolean,
-  onChange: (next: string) => void,
-): void {
-  const { selectionStart: s, selectionEnd: e, value: v } = ta;
-  const sel = v.slice(s, e);
-  if (isActive) {
-    // Unwrap: убираем marker до и после selection (они снаружи).
-    const newValue =
-      v.slice(0, Math.max(0, s - marker.length)) +
-      sel +
-      v.slice(e + marker.length);
-    onChange(newValue);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(s - marker.length, e - marker.length);
-    });
-  } else {
-    const insert = marker + sel + marker;
-    const newValue = v.slice(0, s) + insert + v.slice(e);
-    onChange(newValue);
-    requestAnimationFrame(() => {
-      ta.focus();
-      ta.setSelectionRange(s + marker.length, e + marker.length);
-    });
-  }
-}
-
 // ─── Fence pill helpers ───────────────────────────────────────────────────
 
 function CopyFenceBtn({ onClick }: { onClick: () => void }) {
@@ -1077,32 +827,13 @@ function CopyFenceBtn({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
+      className="hone-fence-copy"
       title="Copy code"
       onMouseDown={(e) => e.preventDefault()}
       onClick={() => {
         onClick();
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1200);
-      }}
-      style={{
-        fontSize: 10,
-        fontFamily: 'var(--font-mono, monospace)',
-        letterSpacing: '0.08em',
-        color: 'var(--ink-40)',
-        background: 'transparent',
-        border: 'none',
-        padding: '2px 4px',
-        cursor: 'pointer',
-        opacity: 0.6,
-        transition: 'opacity var(--motion-dur-small) var(--motion-ease-standard), color var(--motion-dur-small) var(--motion-ease-standard)',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.opacity = '1';
-        e.currentTarget.style.color = 'var(--ink-60)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.opacity = '0.6';
-        e.currentTarget.style.color = 'var(--ink-40)';
       }}
     >
       {copied ? '✓' : 'copy'}
@@ -1137,17 +868,13 @@ function FenceLangDropdown({
   return (
     <div
       ref={ref}
+      className="hone-floating-menu"
       onMouseDown={(e) => e.preventDefault()}
       style={{
         position: 'absolute',
         top: 22,
         left: 0,
         zIndex: zIndex.dropdown,
-        background: 'rgba(20,20,22,0.96)',
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
-        border: '1px solid var(--hair)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         borderRadius: 10,
         padding: 6,
         minWidth: 160,
@@ -1159,31 +886,10 @@ function FenceLangDropdown({
         <button
           key={lang}
           type="button"
+          className="hone-menu-item"
+          data-current={lang === current ? 'true' : 'false'}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onPick(lang)}
-          style={{
-            display: 'block',
-            width: '100%',
-            padding: '6px 10px',
-            border: 'none',
-            borderRadius: 6,
-            background: 'transparent',
-            color: lang === current ? 'var(--ink)' : 'var(--ink-90)',
-            fontSize: 12,
-            fontFamily: 'var(--font-mono, monospace)',
-            letterSpacing: '0.08em',
-            textAlign: 'left',
-            cursor: 'pointer',
-            transition: 'background-color var(--motion-dur-small) var(--motion-ease-standard)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--hair)';
-            e.currentTarget.style.color = 'var(--ink)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = lang === current ? 'var(--ink)' : 'var(--ink-90)';
-          }}
         >
           {lang}
         </button>

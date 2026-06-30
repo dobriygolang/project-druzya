@@ -9,6 +9,10 @@
 // «not signed in» и «signed in» во время restore.
 import { create } from 'zustand';
 
+import { setDbUserId } from '@shared/db/honeDb';
+import { lockVault } from '@shared/crypto/vault';
+import { clearVaultPrefsCache } from '@shared/crypto/vaultPrefs';
+
 type AuthStatus = 'unknown' | 'guest' | 'signed_in';
 
 // Browser-mode dev fallback persistence. В Electron production session
@@ -111,11 +115,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   bootstrap: async () => {
     const bridge = window.hone;
     if (!bridge) {
-      // Browser-only (Vite preview / dev / e2e) — не Electron, нет keychain.
-      // Priority: localStorage dev-persist (LoginScreen DEV LOGIN кладёт
-      // туда tokens) > VITE_DRUZ9_DEV_TOKEN env > guest.
       const persisted = readBrowserPersist();
       if (persisted) {
+        setDbUserId(persisted.userId);
         set({
           status: 'signed_in',
           userId: persisted.userId,
@@ -128,6 +130,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
       const devToken = import.meta.env.VITE_DRUZ9_DEV_TOKEN?.trim();
       if (devToken) {
+        setDbUserId('dev-preview-user');
         set({
           status: 'signed_in',
           userId: 'dev-preview-user',
@@ -137,21 +140,16 @@ export const useSessionStore = create<SessionState>((set) => ({
         });
         return;
       }
-      // Без токена в browser-mode — экспонируем store на window
-      // как hatch для preview (eval'нуть useSessionStore из DevTools).
       window.__honeSession = useSessionStore;
+      setDbUserId(null);
       set({ status: 'guest' });
       return;
     }
     try {
       const s = await withTimeout(bridge.auth.session(), BOOTSTRAP_IPC_TIMEOUT_MS);
       if (s && s.accessToken) {
-        // Если access-token уже истёк (по локальному expiresAt) — попытка
-        // refresh'нуть его «горячо» через transport interceptor сработает
-        // на первом RPC. Но: если ОБА токена expired (e.g. ноут отлежал
-        // месяц), interceptor force-clear'ит сессию и App переключится на
-        // LoginScreen сам. Доверяем этому flow'у — здесь просто hydrate'им.
         window.__honeSession = useSessionStore;
+        setDbUserId(s.userId);
         set({
           status: 'signed_in',
           userId: s.userId,
@@ -164,14 +162,10 @@ export const useSessionStore = create<SessionState>((set) => ({
     } catch {
       /* swallow — keychain may be locked / unavailable */
     }
-    // Bridge defined но bridge.auth.session() returned null/empty (Hone
-    // Electron в dev — main process не имеет /auth/dev/login flow).
-    // Fallback: localStorage dev-persist. Renderer DEV LOGIN button пишет
-    // туда, bootstrap читает на reload. Production-safe: TG-flow в main
-    // переписывает localStorage value при authChanged event.
     const persisted = readBrowserPersist();
     if (persisted) {
       window.__honeSession = useSessionStore;
+      setDbUserId(persisted.userId);
       set({
         status: 'signed_in',
         userId: persisted.userId,
@@ -181,10 +175,13 @@ export const useSessionStore = create<SessionState>((set) => ({
       });
       return;
     }
+    clearBrowserPersist();
+    setDbUserId(null);
     set({ status: 'guest' });
   },
 
   hydrate: ({ userId, accessToken, refreshToken, expiresAt }) => {
+    setDbUserId(userId);
     set({
       status: 'signed_in',
       userId,
@@ -192,10 +189,6 @@ export const useSessionStore = create<SessionState>((set) => ({
       refreshToken: refreshToken ?? null,
       expiresAt: expiresAt ?? 0,
     });
-    // Persist в localStorage всегда — survives page reload в обеих средах.
-    // Hone Electron: bridge.auth.session() returns null в dev (main-process
-    // не имеет dev/login flow), fallback в bootstrap читает отсюда.
-    // Production TG-flow: main bridge будет overwrite через authChanged event.
     writeBrowserPersist({
       userId,
       accessToken,
@@ -205,6 +198,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
 
   clear: async () => {
+    clearBrowserPersist();
     const bridge = window.hone;
     if (bridge) {
       try {
@@ -212,9 +206,10 @@ export const useSessionStore = create<SessionState>((set) => ({
       } catch {
         /* ignore */
       }
-    } else {
-      clearBrowserPersist();
     }
+    setDbUserId(null);
+    lockVault();
+    clearVaultPrefsCache();
     set({ status: 'guest', userId: null, accessToken: null, refreshToken: null, expiresAt: 0 });
   },
 }));

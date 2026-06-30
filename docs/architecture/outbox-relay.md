@@ -1,8 +1,8 @@
 # Outbox relay (P2-1 design)
 
-> **Implemented (MVP):** interview relay worker publishes to NATS; ai + recommendation subscribe when `NATS_URL` is set and `OUTBOX_POLL_ENABLED=false`. Local dev without NATS keeps polling.
+> **Archived (2026):** Interview/recommendation services were removed from prod. This doc describes the original relay design; polling was the default before retirement. NATS is no longer in prod compose.
 
-## Problem
+## Problem (historical)
 
 Today ai and recommendation poll interview internal API every ~2s:
 

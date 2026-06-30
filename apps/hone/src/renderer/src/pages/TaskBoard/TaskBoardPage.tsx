@@ -1,31 +1,43 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useT } from '@d9-i18n';
+
 import {
   listTasks,
   moveTaskStatus,
   scheduleTask,
+  deleteTask,
+  reorderTasks,
   type TaskCard,
 } from '@features/tasks/api/tasks';
 import { HONE_HEADER_H } from '@widgets/Chrome';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
-import { DayColumn, useDayTaskDrag } from './DayColumn';
+import { DayColumn } from './DayColumn';
+import { useDayTaskDrag } from './useDayTaskDrag';
+import { useInfiniteDayScroll } from './useInfiniteDayScroll';
 import { DayTimeline } from './DayTimeline';
 import {
-  buildDayWindow,
+  applyTimeFromDay,
+  buildDefaultScheduleDate,
   defaultDurationMin,
   parseDayKey,
+  resolveScheduleStart,
   taskDayKey,
+  taskScheduleStart,
   toDayKey,
 } from './lib/dates';
 
 const VISIBLE = new Set(['todo', 'in_progress', 'in_review', 'done']);
 
 export function TaskBoardPage(): JSX.Element {
+  const t = useT();
   const today = useMemo(() => new Date(), []);
-  const days = useMemo(() => buildDayWindow(today, 14, 21), [today]);
+  const todayKey = toDayKey(today);
+  const { days, scrollRef, showBackToToday, scrollToToday, ensureDayVisible, expandRangeForDayKeys } =
+    useInfiniteDayScroll(today);
   const [tasks, setTasks] = useState<TaskCard[]>([]);
-  const [selectedDay, setSelectedDay] = useState(() => toDayKey(today));
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [selectedDay, setSelectedDay] = useState(() => todayKey);
+  const didExpandTasksRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -41,25 +53,30 @@ export function TaskBoardPage(): JSX.Element {
 
   useEffect(() => {
     const onTasksChanged = () => void refresh();
+    const onSync = () => void refresh();
     window.addEventListener(HONE_EVENTS.tasksChanged, onTasksChanged);
-    return () => window.removeEventListener(HONE_EVENTS.tasksChanged, onTasksChanged);
+    window.addEventListener(HONE_EVENTS.syncChanged, onSync);
+    return () => {
+      window.removeEventListener(HONE_EVENTS.tasksChanged, onTasksChanged);
+      window.removeEventListener(HONE_EVENTS.syncChanged, onSync);
+    };
   }, [refresh]);
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const todayIdx = days.findIndex((d) => d.key === toDayKey(today));
-    if (todayIdx < 0) return;
-    const colWidth = 264;
-    el.scrollLeft = Math.max(0, todayIdx * colWidth - el.clientWidth * 0.35);
-  }, [days, today]);
+    if (tasks.length === 0 || didExpandTasksRef.current) return;
+    didExpandTasksRef.current = true;
+    const keys = tasks
+      .filter((task) => VISIBLE.has(task.status))
+      .map((task) => (task.scheduledStart ? taskDayKey(task) : todayKey));
+    expandRangeForDayKeys(keys);
+  }, [tasks, todayKey, expandRangeForDayKeys]);
 
   const tasksByDay = useMemo(() => {
     const map = new Map<string, TaskCard[]>();
     for (const d of days) map.set(d.key, []);
     for (const task of tasks) {
       if (!VISIBLE.has(task.status)) continue;
-      const key = task.scheduledStart ? taskDayKey(task) : toDayKey(today);
+      const key = task.scheduledStart ? taskDayKey(task) : todayKey;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(task);
     }
@@ -68,11 +85,13 @@ export function TaskBoardPage(): JSX.Element {
         const aDone = a.status === 'done' ? 1 : 0;
         const bDone = b.status === 'done' ? 1 : 0;
         if (aDone !== bDone) return aDone - bDone;
-        return 0;
+        const aOrder = a.order ?? taskScheduleStart(a)?.getTime() ?? new Date(a.createdAt).getTime();
+        const bOrder = b.order ?? taskScheduleStart(b)?.getTime() ?? new Date(b.createdAt).getTime();
+        return aOrder - bOrder;
       });
     }
     return map;
-  }, [tasks, days, today]);
+  }, [tasks, days, todayKey]);
 
   const selectedDate = useMemo(
     () => days.find((d) => d.key === selectedDay)?.date ?? today,
@@ -96,9 +115,12 @@ export function TaskBoardPage(): JSX.Element {
       const sourceKey = findTaskColumnKey(taskId);
       if (sourceKey === dayKey) return;
 
-      const start = parseDayKey(dayKey);
-      start.setHours(9, 0, 0, 0);
-      const startIso = start.toISOString();
+      const existing = taskScheduleStart(task);
+      const start = existing
+        ? applyTimeFromDay(parseDayKey(dayKey), existing)
+        : buildDefaultScheduleDate(parseDayKey(dayKey));
+      const resolved = resolveScheduleStart(dayKey, tasks, start, taskId);
+      const startIso = resolved.toISOString();
       const duration = Math.max(15, defaultDurationMin(task));
 
       setTasks((prev) =>
@@ -111,7 +133,7 @@ export function TaskBoardPage(): JSX.Element {
       setSelectedDay(dayKey);
 
       try {
-        const updated = await scheduleTask(task.id, startIso, duration);
+        const updated = await scheduleTask(task.id, resolved, duration);
         setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
       } catch {
         void refresh();
@@ -120,7 +142,49 @@ export function TaskBoardPage(): JSX.Element {
     [tasks, findTaskColumnKey, refresh],
   );
 
-  const { draggingId, dropDay, onPointerDragStart } = useDayTaskDrag(handleMoveToDay);
+  const handleReorder = useCallback(
+    async (taskId: string, targetTaskId: string) => {
+      const sourceKey = findTaskColumnKey(taskId);
+      if (!sourceKey) return;
+      const list = tasksByDay.get(sourceKey);
+      if (!list) return;
+      const fromIdx = list.findIndex((t) => t.id === taskId);
+      const toIdx = list.findIndex((t) => t.id === targetTaskId);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+
+      const next = list.slice();
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved);
+      const reordered = next.map((t, i) => ({ ...t, order: i }));
+
+      setTasks((prev) =>
+        prev.map((t) => {
+          const r = reordered.find((w) => w.id === t.id);
+          return r ? { ...t, order: r.order } : t;
+        }),
+      );
+      try {
+        await reorderTasks(reordered);
+      } catch {
+        void refresh();
+      }
+    },
+    [findTaskColumnKey, tasksByDay, refresh],
+  );
+
+  const handleDrop = useCallback(
+    (taskId: string, dayKey: string, targetTaskId: string | null) => {
+      const sourceKey = findTaskColumnKey(taskId);
+      if (targetTaskId && targetTaskId !== taskId && sourceKey === dayKey) {
+        void handleReorder(taskId, targetTaskId);
+        return;
+      }
+      void handleMoveToDay(taskId, dayKey);
+    },
+    [findTaskColumnKey, handleReorder, handleMoveToDay],
+  );
+
+  const { draggingId, dropDay, dropTaskId, onPointerDragStart } = useDayTaskDrag(handleDrop);
 
   const openAddTask = useCallback((dayKey: string) => {
     window.dispatchEvent(
@@ -141,23 +205,11 @@ export function TaskBoardPage(): JSX.Element {
     [refresh],
   );
 
-  const handleDurationChange = useCallback(
-    async (task: TaskCard, durationMin: number, columnDate: Date) => {
-      const clamped = Math.max(15, durationMin);
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, scheduledDurationMin: clamped } : t)),
-      );
+  const handleDelete = useCallback(
+    async (task: TaskCard) => {
+      setTasks((prev) => prev.filter((t) => t.id !== task.id));
       try {
-        let startIso: string;
-        if (task.scheduledStart) {
-          startIso = task.scheduledStart;
-        } else {
-          const start = new Date(columnDate);
-          start.setHours(9, 0, 0, 0);
-          startIso = start.toISOString();
-        }
-        const updated = await scheduleTask(task.id, startIso, clamped);
-        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+        await deleteTask(task.id);
       } catch {
         void refresh();
       }
@@ -165,16 +217,65 @@ export function TaskBoardPage(): JSX.Element {
     [refresh],
   );
 
+  const handleDurationChange = useCallback(
+    async (task: TaskCard, durationMin: number, columnDate: Date) => {
+      const clamped = Math.max(15, durationMin);
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, scheduledDurationMin: clamped } : t)),
+      );
+      try {
+        const dayKey = toDayKey(columnDate);
+        const start = taskScheduleStart(task) ?? buildDefaultScheduleDate(columnDate);
+        const resolved = resolveScheduleStart(dayKey, tasks, start, task.id);
+        const updated = await scheduleTask(task.id, resolved, clamped);
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+      } catch {
+        void refresh();
+      }
+    },
+    [tasks, refresh],
+  );
+
+  const handleTimeChange = useCallback(
+    async (task: TaskCard, start: Date, columnDate: Date) => {
+      const dayKey = toDayKey(columnDate);
+      const duration = Math.max(15, defaultDurationMin(task));
+      const resolved = resolveScheduleStart(dayKey, tasks, start, task.id);
+      const startIso = resolved.toISOString();
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === task.id ? { ...t, scheduledStart: startIso, scheduledDurationMin: duration } : t,
+        ),
+      );
+      try {
+        const updated = await scheduleTask(task.id, resolved, duration);
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+      } catch {
+        void refresh();
+      }
+    },
+    [tasks, refresh],
+  );
+
+  const handleBackToToday = useCallback(() => {
+    scrollToToday();
+    setSelectedDay(todayKey);
+  }, [scrollToToday, todayKey]);
+
   useEffect(() => {
     const onOpen = (e: Event): void => {
       const taskId = (e as CustomEvent<{ taskId?: string }>).detail?.taskId;
       if (!taskId) return;
-      const task = tasks.find((t) => t.id === taskId);
-      if (task) setSelectedDay(taskDayKey(task));
+      const task = tasks.find((item) => item.id === taskId);
+      if (!task) return;
+      const key = taskDayKey(task);
+      setSelectedDay(key);
+      ensureDayVisible(key);
     };
     window.addEventListener(HONE_EVENTS.openTask, onOpen);
     return () => window.removeEventListener(HONE_EVENTS.openTask, onOpen);
-  }, [tasks]);
+  }, [tasks, ensureDayVisible]);
 
   return (
     <div
@@ -189,41 +290,65 @@ export function TaskBoardPage(): JSX.Element {
       }}
     >
       <div
-        ref={scrollRef}
-        className="hone-hide-scrollbar"
         style={{
           flex: 1,
           minWidth: 0,
           minHeight: 0,
-          height: '100%',
-          overflowX: 'auto',
-          overflowY: 'hidden',
-          display: 'flex',
-          alignItems: 'stretch',
-          gap: 10,
-          scrollSnapType: 'x proximity',
-          WebkitAppRegion: 'no-drag',
         }}
       >
-        {days.map((d) => (
-          <DayColumn
-            key={d.key}
-            dayKey={d.key}
-            date={d.date}
-            today={today}
-            tasks={tasksByDay.get(d.key) ?? []}
-            selected={selectedDay === d.key}
-            dropHighlight={dropDay === d.key && draggingId !== null}
-            onSelect={() => setSelectedDay(d.key)}
-            onAddClick={() => openAddTask(d.key)}
-            onToggleDone={(task) => void handleToggleDone(task)}
-            onDurationChange={(task, min) => void handleDurationChange(task, min, d.date)}
-            onPointerDragStart={(taskId, e) => onPointerDragStart(taskId, e)}
-          />
-        ))}
+        <div
+          ref={scrollRef}
+          className="hone-hide-scrollbar hone-task-board-scroll"
+          style={{
+            width: '100%',
+            height: '100%',
+            minHeight: 0,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            display: 'flex',
+            alignItems: 'stretch',
+            gap: 10,
+            WebkitAppRegion: 'no-drag',
+          }}
+        >
+          {days.map((d) => (
+            <DayColumn
+              key={d.key}
+              dayKey={d.key}
+              date={d.date}
+              today={today}
+              draggingId={draggingId}
+              dropHighlight={dropDay === d.key && draggingId !== null}
+              dropTaskId={dropDay === d.key ? dropTaskId : null}
+              tasks={tasksByDay.get(d.key) ?? []}
+              selected={selectedDay === d.key}
+              onSelect={() => setSelectedDay(d.key)}
+              onAddClick={() => openAddTask(d.key)}
+              onToggleDone={(task) => void handleToggleDone(task)}
+              onDelete={(task) => void handleDelete(task)}
+              onDurationChange={(task, min) => void handleDurationChange(task, min, d.date)}
+              onTimeChange={(task, start) => void handleTimeChange(task, start, d.date)}
+              onPointerDragStart={onPointerDragStart}
+            />
+          ))}
+        </div>
       </div>
 
       <DayTimeline date={selectedDate} tasks={tasks} />
+
+      {showBackToToday && (
+        <div className="hone-back-to-today-anchor">
+          <button
+            type="button"
+            onClick={handleBackToToday}
+            className="mono fadein hone-pill-btn"
+            aria-label={t('hone.taskboard.back_to_today')}
+            style={{ fontSize: 11, WebkitAppRegion: 'no-drag' }}
+          >
+            {t('hone.taskboard.back_to_today')}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

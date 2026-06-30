@@ -19,8 +19,6 @@ type Config struct {
 	GRPCHost    string
 	PostgresDSN string
 
-	InterviewGRPCAddr  string
-	ContentGRPCAddr    string
 	BillingGRPCAddr    string
 	InternalAPIToken   string
 	LLMChainOrder      string
@@ -114,8 +112,6 @@ func Load() (*Config, error) {
 		GRPCPort:           grpcPort,
 		GRPCHost:           grpcListenHost(),
 		PostgresDSN:        getEnv("POSTGRES_DSN", "postgres://postgres:postgres@localhost:5435/druzya_ai?sslmode=disable"),
-		InterviewGRPCAddr:  getEnv("INTERVIEW_GRPC_ADDR", "127.0.0.1:9092"),
-		ContentGRPCAddr:    getEnv("CONTENT_GRPC_ADDR", "127.0.0.1:9091"),
 		BillingGRPCAddr:    os.Getenv("BILLING_GRPC_ADDR"),
 		InternalAPIToken:   internalToken,
 		LLMChainOrder:         getEnv("LLM_CHAIN_ORDER", "groq,cloudflare,openrouter"),

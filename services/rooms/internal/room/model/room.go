@@ -41,11 +41,10 @@ func (v Visibility) IsValid() bool {
 }
 
 type Room struct {
-	ID         uuid.UUID
-	OwnerID    uuid.UUID
-	Type       RoomType
-	TaskID     *uuid.UUID
-	Language   Language
+	ID             uuid.UUID
+	OwnerID        uuid.UUID
+	Type           RoomType
+	Language       Language
 	IsFrozen   bool
 	Visibility Visibility
 	ExpiresAt     time.Time

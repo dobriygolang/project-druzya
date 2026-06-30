@@ -21,19 +21,6 @@ service SandboxService {
     };
   }
 
-  rpc ListCodeRuns(ListCodeRunsRequest) returns (ListCodeRunsResponse) {
-    option (google.api.http) = {
-      get: "/v1/sandbox/code-runs"
-    };
-  }
-
-  rpc SubmitAttemptFromCodeRun(SubmitAttemptFromCodeRunRequest) returns (SubmitAttemptFromCodeRunResponse) {
-    option (google.api.http) = {
-      post: "/v1/sandbox/code-runs/{id}/submit-attempt"
-      body: "*"
-    };
-  }
-
   rpc FormatCode(FormatCodeRequest) returns (FormatCodeResponse) {
     option (google.api.http) = {
       post: "/v1/sandbox/format"
@@ -43,12 +30,13 @@ service SandboxService {
 }
 
 message RunCodeRequest {
-  optional string task_id = 1;
-  optional string session_task_id = 2;
+  reserved 1, 2;
+  reserved "task_id", "session_task_id";
   string language = 3;
   string code = 4;
   optional string stdin = 5;
-  string run_type = 6;
+  reserved 6;
+  reserved "run_type";
 }
 
 message RunCodeResponse {
@@ -63,26 +51,6 @@ message GetCodeRunResponse {
   CodeRun run = 1;
 }
 
-message ListCodeRunsRequest {
-  optional string task_id = 1;
-  optional string session_task_id = 2;
-  int32 limit = 3;
-}
-
-message ListCodeRunsResponse {
-  repeated CodeRun runs = 1;
-}
-
-message SubmitAttemptFromCodeRunRequest {
-  string id = 1;
-  string session_task_id = 2;
-}
-
-message SubmitAttemptFromCodeRunResponse {
-  string attempt_id = 1;
-  string status = 2;
-}
-
 message FormatCodeRequest {
   string language = 1;
   string code = 2;
@@ -95,8 +63,8 @@ message FormatCodeResponse {
 message CodeRun {
   string id = 1;
   string user_id = 2;
-  optional string task_id = 3;
-  optional string session_task_id = 4;
+  reserved 3, 4;
+  reserved "task_id", "session_task_id";
   string language = 5;
   string status = 6;
   string run_type = 7;

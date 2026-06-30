@@ -1,44 +1,54 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 
-import { CanvasBg, type CanvasMode, type ThemeId } from '@widgets/CanvasBg';
+import { translate } from '@d9-i18n';
+
+import { CanvasBg, type ThemeId } from '@widgets/CanvasBg';
 import { Wordmark, HONE_HEADER_H } from '@widgets/Chrome';
 import { TrafficLightsHover } from '@widgets/TrafficLightsHover';
 import { Dock } from '@widgets/Dock';
 import { LoginScreen } from '@widgets/LoginScreen';
 import { AnimatedStatsOverlay } from '@widgets/AnimatedStatsOverlay';
+import { AnimatedCalendarOverlay } from '@widgets/AnimatedCalendarOverlay';
+import { PomodoroController } from '@widgets/PomodoroController';
 import { type PageId, type PaletteAction } from '@widgets/Palette';
 import { OfflineBanner } from '@widgets/OfflineBanner';
-import { createTask, scheduleTask } from '@features/tasks/api/tasks';
-import { parseDayKey, toDayKey } from '@pages/TaskBoard/lib/dates';
+import { VaultUnlockGate } from '@widgets/VaultUnlockGate';
+import { createTask, listTasks, scheduleTask } from '@features/tasks/api/tasks';
+import {
+  parseDayKey,
+  resolveScheduleStart,
+  toDayKey,
+} from '@pages/TaskBoard/lib/dates';
 import { HomePage } from '@pages/Home';
-import { readStoredTheme, readPomodoroSeconds } from '@shared/model/prefs';
+import { readStoredTheme } from '@shared/model/prefs';
+import { applyTheme } from '@shared/lib/applyTheme';
+import { usePomodoroStore, type PomodoroStartArgs } from '@shared/model/pomodoro';
 import { useSessionStore } from '@shared/model/session';
-import { startFocusSession, endFocusSession } from '@features/focus/api/focusClient';
-import { notify } from '@shared/api/notifications';
-import { PageSkeleton } from '@shared/ui/Skeleton';
+import { PageStack } from '@shared/ui/PageStack';
 import { useGlobalHotkeys } from '@shared/hooks/useGlobalHotkeys';
+import { LOCAL_ONLY } from '@app/config/features';
+import { migrateLocalStorageIfNeeded } from '@shared/sync/migrateLocalStorage';
+import { startSyncEngine, stopSyncEngine } from '@shared/sync/SyncEngine';
+import { loadVaultPrefs, isVaultEnabledSync } from '@shared/crypto/vaultPrefs';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
 
 const TaskBoardPage = lazy(() => import('@pages/TaskBoard').then((m) => ({ default: m.TaskBoardPage })));
 const NotesPage = lazy(() => import('@pages/Notes').then((m) => ({ default: m.NotesPage })));
 const SettingsPage = lazy(() => import('@pages/Settings').then((m) => ({ default: m.SettingsPage })));
+const WhiteboardPage = lazy(() =>
+  import('@pages/Whiteboard').then((m) => ({ default: m.WhiteboardPage })),
+);
 const Palette = lazy(() =>
   import('@widgets/Palette').then((m) => ({ default: m.Palette })),
 );
 
-const PageSuspense = ({ children }: { children: React.ReactNode }) => (
-  <Suspense fallback={<PageSkeleton />}>{children}</Suspense>
-);
+export type StartFocusArgs = PomodoroStartArgs;
 
-export interface StartFocusArgs {
-  planItemId?: string;
-  pinnedTitle?: string;
-}
-
-const NAV_PAGES = new Set<PageId>(['home', 'today', 'notes', 'settings']);
+const NAV_PAGES = new Set<PageId>(['home', 'today', 'notes', 'whiteboard', 'settings']);
 
 export default function App() {
   const status = useSessionStore((s) => s.status);
+  const userId = useSessionStore((s) => s.userId);
   const bootstrap = useSessionStore((s) => s.bootstrap);
   const hydrate = useSessionStore((s) => s.hydrate);
   const clear = useSessionStore((s) => s.clear);
@@ -65,31 +75,25 @@ export default function App() {
       return false;
     }
   });
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
   const setPage = useCallback((next: PageId | ((p: PageId) => PageId)) => {
-    const update = () => {
-      setPageRaw((current) => {
-        const resolved = typeof next === 'function' ? next(current) : next;
-        try {
-          window.sessionStorage.setItem(PAGE_STORAGE_KEY, resolved);
-        } catch {
-          /* ignore */
-        }
-        return resolved;
-      });
-    };
-    const doc = document as Document & { startViewTransition?: (cb: () => void) => unknown };
-    if (typeof doc.startViewTransition === 'function') {
-      doc.startViewTransition(update);
-    } else {
-      update();
-    }
+    setPageRaw((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      try {
+        window.sessionStorage.setItem(PAGE_STORAGE_KEY, resolved);
+      } catch {
+        /* ignore */
+      }
+      return resolved;
+    });
   }, []);
 
   const navigateTo = useCallback(
     (id: PageId) => {
       if (id === page) return;
       setStatsOpen(false);
+      setCalendarOpen(false);
       setPage(id);
     },
     [page, setPage],
@@ -98,13 +102,12 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteTaskDate, setPaletteTaskDate] = useState<Date | null>(null);
   const [theme, setTheme] = useState<ThemeId>(() => readStoredTheme());
-  const pomodoroSecsRef = useRef(readPomodoroSeconds());
-  const [remain, setRemain] = useState(pomodoroSecsRef.current);
-  const [running, setRunning] = useState(false);
   const [vol, setVol] = useState(40);
-  const [pinnedTitle, setPinnedTitle] = useState<string | null>(null);
-  const [pinnedPlanItemId, setPinnedPlanItemId] = useState<string | null>(null);
-  const sessionRef = useRef<string | null>(null);
+  const [vaultGateActive, setVaultGateActive] = useState(false);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   useEffect(() => {
     void import('@features/focus/audio/ambient-music').then((m) => m.setAmbientVolume((vol / 100) * 0.5));
@@ -115,24 +118,17 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (status !== 'signed_in') return;
+    const token = useSessionStore.getState().accessToken;
+    if (!token) {
+      void clear();
+    }
+  }, [status, clear]);
+
+  useEffect(() => {
     void bootstrap();
     const bridge = typeof window !== 'undefined' ? window.hone : undefined;
     if (!bridge) return;
-
-    void bridge.pomodoro.load().then((snap) => {
-      if (!snap) return;
-      const elapsedMs = Date.now() - snap.savedAt;
-      if (snap.running && elapsedMs >= snap.remainSec * 1000) {
-        setRemain(0);
-        setRunning(false);
-        return;
-      }
-      const adjusted = snap.running
-        ? Math.max(0, snap.remainSec - Math.floor(elapsedMs / 1000))
-        : snap.remainSec;
-      setRemain(adjusted);
-      setRunning(false);
-    });
 
     const offAuth = bridge.on('authChanged', (session) => {
       if (session) {
@@ -152,10 +148,11 @@ export default function App() {
         const u = new URL(url);
         const host = u.host.toLowerCase();
         if (host === 'focus' || host === 'focus.start') {
-          startFocus({
+          usePomodoroStore.getState().start({
             planItemId: u.searchParams.get('task') ?? undefined,
             pinnedTitle: u.searchParams.get('title') ?? undefined,
           });
+          navigateTo('home');
           return;
         }
         if (host === 'task.open') {
@@ -174,6 +171,18 @@ export default function App() {
             navigateTo('notes');
             window.dispatchEvent(new CustomEvent(HONE_EVENTS.openNote, { detail: { noteId } }));
           }
+          return;
+        }
+        if (host === 'settings') {
+          const calStatus = u.searchParams.get('google_calendar');
+          if (calStatus) {
+            window.dispatchEvent(
+              new CustomEvent(HONE_EVENTS.googleCalendarOAuth, {
+                detail: { status: calStatus, detail: u.searchParams.get('detail') },
+              }),
+            );
+          }
+          navigateTo('settings');
         }
       } catch {
         /* ignore malformed */
@@ -188,6 +197,25 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (status !== 'signed_in' || !userId) {
+      stopSyncEngine();
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      await migrateLocalStorageIfNeeded(userId);
+      await loadVaultPrefs(userId);
+      if (cancelled) return;
+      setVaultGateActive(!LOCAL_ONLY && isVaultEnabledSync());
+      if (!LOCAL_ONLY) startSyncEngine();
+    })();
+    return () => {
+      cancelled = true;
+      stopSyncEngine();
+    };
+  }, [status, userId]);
+
+  useEffect(() => {
     if (status !== 'signed_in') return;
     void import('@shared/api/device').then(({ ensureDevice }) => {
       void ensureDevice({ appVersion: '0.0.1' }).catch(() => {
@@ -197,103 +225,38 @@ export default function App() {
   }, [status]);
 
   useEffect(() => {
-    if (!running) return;
-    const id = window.setInterval(() => {
-      setRemain((r) => Math.max(0, r - 1));
-    }, 1000);
-    return () => window.clearInterval(id);
-  }, [running]);
-
-  const lastSavedRef = useRef(0);
-  useEffect(() => {
-    const bridge = typeof window !== 'undefined' ? window.hone : undefined;
-    if (!bridge) return;
-    const now = Date.now();
-    if (now - lastSavedRef.current < 5000 && remain > 0) return;
-    lastSavedRef.current = now;
-    void bridge.pomodoro.save({ remainSec: remain, running, savedAt: now });
-  }, [remain, running]);
-
-  const lastTrayMinuteRef = useRef<number | null>(null);
-  useEffect(() => {
-    const bridge = typeof window !== 'undefined' ? window.hone : undefined;
-    if (!bridge) return;
-    if (!running) {
-      lastTrayMinuteRef.current = null;
-      void bridge.tray.update('', 'Hone');
-      return;
-    }
-    const m = Math.floor(Math.max(0, remain) / 60);
-    if (lastTrayMinuteRef.current === m) return;
-    lastTrayMinuteRef.current = m;
-    const title = `${String(m).padStart(2, '0')}:00`;
-    const tooltip = pinnedTitle ? `Hone — ${pinnedTitle}` : 'Hone — focus session';
-    void bridge.tray.update(title, tooltip);
-  }, [remain, running, pinnedTitle]);
-
-  useEffect(() => {
-    if (!running || sessionRef.current) return;
-    const planItemId = pinnedPlanItemId ?? undefined;
-    const pinned = pinnedTitle ?? undefined;
-    startFocusSession({ planItemId, pinnedTitle: pinned, mode: 'pomodoro' })
-      .then((s) => {
-        sessionRef.current = s.id;
-      })
-      .catch(() => {
-        /* silent */
-      });
-  }, [running, pinnedPlanItemId, pinnedTitle]);
-
-  const finishSession = useCallback(async () => {
-    const id = sessionRef.current;
-    if (!id) return;
-    const secondsFocused = Math.max(0, pomodoroSecsRef.current - remain);
-    const pomodorosCompleted = remain === 0 ? 1 : 0;
-    sessionRef.current = null;
-    try {
-      await endFocusSession({
-        sessionId: id,
-        pomodorosCompleted,
-        secondsFocused,
-        reflection: '',
-      });
-    } catch {
-      /* silent */
-    }
-  }, [remain]);
-
-  useEffect(() => {
-    if (!running || remain !== 0) return;
-    setRunning(false);
-    void finishSession();
-    void notify('Focus session complete', 'Pomodoro finished — take a break.');
-    setRemain(pomodoroSecsRef.current);
-  }, [remain, running, finishSession]);
-
-  const resetTimer = useCallback(() => {
-    void finishSession();
-    setRunning(false);
-    setRemain(pomodoroSecsRef.current);
-  }, [finishSession]);
+    if (status !== 'signed_in') return;
+    void import('@pages/TaskBoard');
+    void import('@pages/Notes');
+    void import('@pages/Settings');
+    void import('@pages/Whiteboard');
+  }, [status]);
 
   const startFocus = useCallback(
     (args?: StartFocusArgs) => {
-      setPinnedPlanItemId(args?.planItemId ?? null);
-      setPinnedTitle(args?.pinnedTitle ?? null);
-      setRemain(pomodoroSecsRef.current);
-      setRunning(true);
+      usePomodoroStore.getState().start(args);
       navigateTo('home');
     },
     [navigateTo],
   );
 
   const openStats = useCallback(() => {
+    setCalendarOpen(false);
     navigateTo('home');
     setStatsOpen(true);
   }, [navigateTo]);
 
   const closeStats = useCallback(() => {
     setStatsOpen(false);
+  }, []);
+
+  const openCalendar = useCallback(() => {
+    setStatsOpen(false);
+    setCalendarOpen(true);
+  }, []);
+
+  const closeCalendar = useCallback(() => {
+    setCalendarOpen(false);
   }, []);
 
   const openImpl = useCallback(
@@ -306,9 +269,13 @@ export default function App() {
         openStats();
         return;
       }
+      if (id === 'calendar') {
+        openCalendar();
+        return;
+      }
       navigateTo(id as PageId);
     },
-    [startFocus, navigateTo, openStats],
+    [startFocus, navigateTo, openStats, openCalendar],
   );
 
   const openPalette = useCallback((taskDate?: Date | null) => {
@@ -324,14 +291,11 @@ export default function App() {
   const handlePaletteCreateTask = useCallback(
     async (title: string, date: Date) => {
       const dayKey = toDayKey(date);
-      const todayKey = toDayKey(new Date());
       try {
+        const existing = await listTasks();
         let created = await createTask({ title });
-        if (dayKey !== todayKey) {
-          const start = parseDayKey(dayKey);
-          start.setHours(9, 0, 0, 0);
-          created = await scheduleTask(created.id, start.toISOString(), 30);
-        }
+        const start = resolveScheduleStart(dayKey, existing, date);
+        created = await scheduleTask(created.id, start, 30);
         window.dispatchEvent(new CustomEvent(HONE_EVENTS.tasksChanged));
         navigateTo('today');
       } catch {
@@ -344,7 +308,9 @@ export default function App() {
   useEffect(() => {
     const onAddTask = (e: Event) => {
       const dayKey = (e as CustomEvent<{ dayKey?: string }>).detail?.dayKey;
-      const date = dayKey ? parseDayKey(dayKey) : new Date();
+      const todayKey = toDayKey(new Date());
+      const date =
+        dayKey && dayKey !== todayKey ? parseDayKey(dayKey) : new Date();
       openPalette(date);
     };
     window.addEventListener(HONE_EVENTS.openPaletteAddTask, onAddTask);
@@ -353,7 +319,23 @@ export default function App() {
 
   const goHome = useCallback(() => {
     setStatsOpen(false);
+    setCalendarOpen(false);
     navigateTo('home');
+  }, [navigateTo]);
+
+  useEffect(() => {
+    const onNavTask = (e: Event) => {
+      const taskId = (e as CustomEvent<{ taskId?: string }>).detail?.taskId;
+      if (!taskId) return;
+      setCalendarOpen(false);
+      setStatsOpen(false);
+      navigateTo('today');
+      window.setTimeout(() => {
+        window.dispatchEvent(new CustomEvent(HONE_EVENTS.openTask, { detail: { taskId } }));
+      }, 40);
+    };
+    window.addEventListener(HONE_EVENTS.navOpenTask, onNavTask);
+    return () => window.removeEventListener(HONE_EVENTS.navOpenTask, onNavTask);
   }, [navigateTo]);
 
   useEffect(() => {
@@ -362,10 +344,17 @@ export default function App() {
     return () => window.removeEventListener(HONE_EVENTS.navHome, onNavHome);
   }, [goHome]);
 
+  useEffect(() => {
+    const onOpenSettings = () => navigateTo('settings');
+    window.addEventListener(HONE_EVENTS.openSettings, onOpenSettings);
+    return () => window.removeEventListener(HONE_EVENTS.openSettings, onOpenSettings);
+  }, [navigateTo]);
+
   useGlobalHotkeys({
     page,
     paletteOpen,
     statsOpen,
+    calendarOpen,
     setPaletteOpen: (fn) => {
       const next = fn(paletteOpen);
       if (next) openPalette();
@@ -374,31 +363,62 @@ export default function App() {
     goHome,
     openStats,
     closeStats,
+    openCalendar,
+    closeCalendar,
     open: (id) => openImpl(id),
   });
 
-  const canvasMode: CanvasMode = page === 'home' && !statsOpen ? 'full' : 'void';
+  const renderPage = useMemo(
+    () =>
+      function renderPage(id: PageId) {
+        switch (id) {
+          case 'home':
+            return <HomePage />;
+          case 'today':
+            return <TaskBoardPage />;
+          case 'notes':
+            return <NotesPage />;
+          case 'whiteboard':
+            return <WhiteboardPage theme={theme} />;
+          case 'settings':
+            return (
+              <SettingsPage
+                theme={theme}
+                onThemeChange={setTheme}
+                onPomoChange={(secs) => usePomodoroStore.getState().setDurationSec(secs)}
+              />
+            );
+          default:
+            return null;
+        }
+      },
+    [theme],
+  );
 
   if (status === 'unknown') {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', color: 'var(--ink-40)', display: 'grid', placeItems: 'center', fontSize: 13 }}>
-        Hone…
+        {translate('hone.app.loading')}
       </div>
     );
   }
 
   if (status === 'guest') {
     return (
-      <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', overflow: 'hidden' }}>
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden', background: 'var(--bg)' }}>
         <CanvasBg mode="full" theme={theme} />
-        <LoginScreen />
+        <div style={{ position: 'relative', zIndex: 2, height: '100%' }}>
+          <LoginScreen />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}>
-      {page === 'home' && <CanvasBg mode={canvasMode} theme={theme} />}
+  const signedInShell = (
+    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', overflow: 'hidden' }}>
+      <div className="hone-canvas-shell" data-visible={page === 'home' ? 'true' : 'false'}>
+        <CanvasBg mode="full" theme={theme} />
+      </div>
 
       <div
         data-tauri-drag-region
@@ -409,57 +429,23 @@ export default function App() {
           right: 0,
           height: HONE_HEADER_H,
           zIndex: 8,
-          // @ts-expect-error — Tauri/Electron drag region
           WebkitAppRegion: 'drag',
         }}
       />
 
       <TrafficLightsHover />
-      {page === 'home' && <Wordmark />}
+      <div className="hone-chrome-shell" data-visible={page === 'home' ? 'true' : 'false'}>
+        <Wordmark />
+      </div>
 
-      {page === 'home' && (
-        <div key="home" className="hone-page-layer motion-page-in">
-          <HomePage />
-        </div>
-      )}
-      <PageSuspense>
-        {page === 'today' && (
-          <div key="today" className="hone-page-layer motion-page-in">
-            <TaskBoardPage />
-          </div>
-        )}
-        {page === 'notes' && (
-          <div key="notes" className="hone-page-layer motion-page-in">
-            <NotesPage />
-          </div>
-        )}
-      </PageSuspense>
-      <PageSuspense>
-        {page === 'settings' && (
-          <div key="settings" className="hone-page-layer motion-page-in">
-            <SettingsPage
-              theme={theme}
-              onThemeChange={setTheme}
-              onPomoChange={(secs) => {
-                pomodoroSecsRef.current = secs;
-                if (!running) setRemain(secs);
-              }}
-            />
-          </div>
-        )}
-      </PageSuspense>
+      <PageStack page={page}>{renderPage}</PageStack>
 
       {page === 'home' && <AnimatedStatsOverlay open={statsOpen} onClose={closeStats} />}
+      <AnimatedCalendarOverlay open={calendarOpen} onClose={closeCalendar} />
 
-      <Dock
-        onMenu={() => openPalette()}
-        running={running}
-        onToggle={() => setRunning((r) => !r)}
-        remain={remain}
-        onReset={resetTimer}
-        vol={vol}
-        onVol={setVol}
-      />
+      <PomodoroController />
+
+      <Dock onMenu={() => openPalette()} vol={vol} onVol={setVol} />
 
       {paletteOpen && (
         <Suspense fallback={null}>
@@ -477,4 +463,6 @@ export default function App() {
       <OfflineBanner />
     </div>
   );
+
+  return vaultGateActive ? <VaultUnlockGate>{signedInShell}</VaultUnlockGate> : signedInShell;
 }

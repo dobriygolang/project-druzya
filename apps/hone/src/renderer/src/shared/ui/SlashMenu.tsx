@@ -1,4 +1,4 @@
-// SlashMenu — Notion-style block-insert меню. Standalone компонент:
+// SlashMenu — markdown block-insert menu. Standalone компонент:
 // принимает координаты для absolute-position'а, query-фильтр, и
 // callback'и для выбора / закрытия. Сам не следит за caret'ом —
 // решает intеgrator (RichMarkdownEditor / MarkdownEditor).
@@ -6,11 +6,12 @@
 // EditorAPI — узкая прослойка для вставки блоков; реализуется по-разному
 // для textarea (RichMarkdown) и CM6 (MarkdownEditor), но контракт один.
 //
-// Стиль: winter palette + только existing CSS-токены. Никаких новых
-// цветов, hardcoded анимаций кроме `fadein` (см. globals.css).
+// Стиль: winter palette + только existing CSS-токены.
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import { useT, type TFunc } from '@d9-i18n';
 
 import { zIndex } from '@shared/lib/z-index';
 
@@ -21,10 +22,6 @@ export interface EditorAPI {
   insertBlock(prefix: string): void;
   /** Insert ```lang\n\n``` fenced code block; cursor lands inside. */
   insertCodeBlock(): void;
-  /** Insert <details><summary>Title</summary>\n\nContent\n</details>. */
-  insertToggle(): void;
-  /** Insert > **Note:** callout block. */
-  insertCallout(): void;
 }
 
 interface SlashCommand {
@@ -35,67 +32,63 @@ interface SlashCommand {
   action: (editor: EditorAPI) => void;
 }
 
-// Strict список — добавлять новые команды только сюда.
-const SLASH_COMMANDS: SlashCommand[] = [
-  {
-    id: 'h1',
-    label: 'Heading 1',
-    description: 'Large section header',
-    action: (e) => e.insertBlock('# '),
-  },
-  {
-    id: 'h2',
-    label: 'Heading 2',
-    description: 'Medium section header',
-    action: (e) => e.insertBlock('## '),
-  },
-  {
-    id: 'h3',
-    label: 'Heading 3',
-    description: 'Small section header',
-    action: (e) => e.insertBlock('### '),
-  },
-  {
-    id: 'code',
-    label: 'Code block',
-    description: 'Syntax-highlighted code',
-    shortcut: '```',
-    action: (e) => e.insertCodeBlock(),
-  },
-  {
-    id: 'todo',
-    label: 'To-do',
-    description: 'Trackable checkbox item',
-    shortcut: '[]',
-    action: (e) => e.insertBlock('- [ ] '),
-  },
-  {
-    id: 'toggle',
-    label: 'Toggle',
-    description: 'Collapsible content block',
-    action: (e) => e.insertToggle(),
-  },
-  {
-    id: 'callout',
-    label: 'Callout',
-    description: 'Highlighted note or warning',
-    action: (e) => e.insertCallout(),
-  },
-  {
-    id: 'divider',
-    label: 'Divider',
-    description: 'Horizontal rule',
-    shortcut: '---',
-    action: (e) => e.insertBlock('---\n'),
-  },
-  {
-    id: 'quote',
-    label: 'Quote',
-    description: 'Blockquote',
-    shortcut: '>',
-    action: (e) => e.insertBlock('> '),
-  },
-];
+function slashCommands(t: TFunc): SlashCommand[] {
+  return [
+    {
+      id: 'h1',
+      label: t('hone.slash.h1.label'),
+      description: t('hone.slash.h1.desc'),
+      action: (e) => e.insertBlock('# '),
+    },
+    {
+      id: 'h2',
+      label: t('hone.slash.h2.label'),
+      description: t('hone.slash.h2.desc'),
+      action: (e) => e.insertBlock('## '),
+    },
+    {
+      id: 'h3',
+      label: t('hone.slash.h3.label'),
+      description: t('hone.slash.h3.desc'),
+      action: (e) => e.insertBlock('### '),
+    },
+    {
+      id: 'code',
+      label: t('hone.slash.code.label'),
+      description: t('hone.slash.code.desc'),
+      shortcut: '```',
+      action: (e) => e.insertCodeBlock(),
+    },
+    {
+      id: 'bullet',
+      label: t('hone.slash.bullet.label'),
+      description: t('hone.slash.bullet.desc'),
+      shortcut: '-',
+      action: (e) => e.insertBlock('- '),
+    },
+    {
+      id: 'todo',
+      label: t('hone.slash.todo.label'),
+      description: t('hone.slash.todo.desc'),
+      shortcut: '[]',
+      action: (e) => e.insertBlock('- [ ] '),
+    },
+    {
+      id: 'divider',
+      label: t('hone.slash.divider.label'),
+      description: t('hone.slash.divider.desc'),
+      shortcut: '---',
+      action: (e) => e.insertBlock('---\n'),
+    },
+    {
+      id: 'quote',
+      label: t('hone.slash.quote.label'),
+      description: t('hone.slash.quote.desc'),
+      shortcut: '>',
+      action: (e) => e.insertBlock('> '),
+    },
+  ];
+}
 
 interface SlashMenuProps {
   /** Anchor point in viewport coords — обычно caret position. Меню
@@ -114,7 +107,9 @@ interface SlashMenuProps {
 // ─── Component ────────────────────────────────────────────────────────────
 
 export function SlashMenu({ x, y, query, editor, onClose, onBeforeAction }: SlashMenuProps) {
-  const filtered = useMemo(() => filterCommands(query), [query]);
+  const t = useT();
+  const commands = useMemo(() => slashCommands(t), [t]);
+  const filtered = useMemo(() => filterCommands(commands, query), [commands, query]);
   const [active, setActive] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   // Adjusted position — после первого render'а измеряем фактический rect и
@@ -216,38 +211,20 @@ export function SlashMenu({ x, y, query, editor, onClose, onBeforeAction }: Slas
       ref={ref}
       role="listbox"
       aria-label="Insert block"
-      className="fadein"
-      onMouseDown={(e) => e.preventDefault()} // не отбираем focus у редактора
+      className="hone-floating-menu"
+      onMouseDown={(e) => e.preventDefault()}
       style={{
         position: 'fixed',
         left: pos.x,
         top: pos.y,
         zIndex: zIndex.dropdown,
-        background: 'rgba(20,20,22,0.96)',
-        backdropFilter: 'blur(18px)',
-        WebkitBackdropFilter: 'blur(18px)',
-        border: '1px solid var(--ink-tint-08)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         borderRadius: 10,
         padding: 6,
         minWidth: 320,
         maxHeight: 360,
         overflowY: 'auto',
-        animationDuration: 'var(--motion-dur-small)',
       }}
     >
-      <div
-        className="mono"
-        style={{
-          fontSize: 9,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          color: 'var(--ink-40)',
-          padding: '6px 10px 6px',
-        }}
-      >
-        Blocks
-      </div>
       {filtered.map((cmd, idx) => (
         <SlashItem
           key={cmd.id}
@@ -287,28 +264,11 @@ function SlashItem({
       data-slash-idx={idx}
       role="option"
       aria-selected={active}
+      className="hone-slash-item"
       onMouseEnter={onHover}
-      // mousedown — чтобы не потерять focus в editor'е.
       onMouseDown={(e) => {
         e.preventDefault();
         onSelect();
-      }}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        width: '100%',
-        padding: '8px 10px 8px 8px',
-        marginLeft: 0,
-        borderRadius: 6,
-        // Active: левый accent-border + lighter background.
-        borderLeft: active ? '2px solid rgb(var(--ink-rgb) / 0.3)' : '2px solid transparent',
-        background: active ? 'var(--ink-tint-06)' : 'transparent',
-        color: active ? 'var(--ink)' : 'var(--ink-90)',
-        border: 'none',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'background-color var(--motion-dur-small) var(--motion-ease-standard), color var(--motion-dur-small) var(--motion-ease-standard)',
       }}
     >
       <span style={{ fontSize: 13 }}>{cmd.label}</span>
@@ -331,10 +291,10 @@ function SlashItem({
 
 /** Fuzzy-match: нечувствительный к регистру substring-match по label.
  *  Если query пустой — возвращает all. */
-function filterCommands(query: string): SlashCommand[] {
+function filterCommands(commands: SlashCommand[], query: string): SlashCommand[] {
   const q = query.trim().toLowerCase();
-  if (!q) return SLASH_COMMANDS;
-  return SLASH_COMMANDS.filter((c) => {
+  if (!q) return commands;
+  return commands.filter((c) => {
     const lab = c.label.toLowerCase();
     if (lab.startsWith(q)) return true;
     if (lab.includes(q)) return true;

@@ -29,13 +29,6 @@ service NotesService {
     };
   }
 
-  rpc PermanentlyDecryptNote(PermanentlyDecryptNoteRequest) returns (PermanentlyDecryptNoteResponse) {
-    option (google.api.http) = {
-      post: "/v1/notes/vault/notes/{note_id}/decrypt"
-      body: "*"
-    };
-  }
-
   // Notes CRUD
   rpc ListNotes(ListNotesRequest) returns (ListNotesResponse) {
     option (google.api.http) = {
@@ -69,47 +62,7 @@ service NotesService {
     };
   }
 
-  rpc MoveNote(MoveNoteRequest) returns (MoveNoteResponse) {
-    option (google.api.http) = {
-      post: "/v1/notes/{note_id}/move"
-      body: "*"
-    };
-  }
-
-  rpc GetNotesMeta(GetNotesMetaRequest) returns (GetNotesMetaResponse) {
-    option (google.api.http) = {
-      get: "/v1/notes/meta"
-    };
-  }
-
-  // Folders
-  rpc ListFolders(ListFoldersRequest) returns (ListFoldersResponse) {
-    option (google.api.http) = {
-      get: "/v1/notes/folders"
-    };
-  }
-
-  rpc CreateFolder(CreateFolderRequest) returns (CreateFolderResponse) {
-    option (google.api.http) = {
-      post: "/v1/notes/folders"
-      body: "*"
-    };
-  }
-
-  rpc DeleteFolder(DeleteFolderRequest) returns (DeleteFolderResponse) {
-    option (google.api.http) = {
-      delete: "/v1/notes/folders/{id}"
-    };
-  }
-
   // Publish
-  rpc PublishNote(PublishNoteRequest) returns (PublishNoteResponse) {
-    option (google.api.http) = {
-      post: "/v1/notes/{note_id}/publish"
-      body: "*"
-    };
-  }
-
   rpc UnpublishNote(UnpublishNoteRequest) returns (UnpublishNoteResponse) {
     option (google.api.http) = {
       post: "/v1/notes/{note_id}/unpublish"
@@ -136,6 +89,13 @@ service NotesService {
       body: "*"
     };
   }
+
+  // Public — no auth (published plaintext only).
+  rpc GetPublishedNote(GetPublishedNoteRequest) returns (GetPublishedNoteResponse) {
+    option (google.api.http) = {
+      get: "/v1/notes/public/{slug}"
+    };
+  }
 }
 
 message Note {
@@ -145,8 +105,7 @@ message Note {
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
   int32 size_bytes = 6;
-  string folder_id = 7;
-  bool encrypted = 8;
+  bool encrypted = 7;
 }
 
 message NoteSummary {
@@ -154,21 +113,6 @@ message NoteSummary {
   string title = 2;
   google.protobuf.Timestamp updated_at = 3;
   int32 size_bytes = 4;
-  string folder_id = 5;
-}
-
-message NoteMeta {
-  string id = 1;
-  bool encrypted = 2;
-  bool published = 3;
-}
-
-message Folder {
-  string id = 1;
-  string name = 2;
-  string parent_id = 3;
-  google.protobuf.Timestamp created_at = 4;
-  google.protobuf.Timestamp updated_at = 5;
 }
 
 message InitVaultRequest {}
@@ -192,17 +136,9 @@ message EncryptNoteRequest {
 
 message EncryptNoteResponse {}
 
-message PermanentlyDecryptNoteRequest {
-  string note_id = 1;
-  string body_md = 2;
-}
-
-message PermanentlyDecryptNoteResponse {}
-
 message ListNotesRequest {
   int32 limit = 1;
   string cursor = 2;
-  string folder_id = 3;
 }
 
 message ListNotesResponse {
@@ -221,7 +157,6 @@ message GetNoteResponse {
 message CreateNoteRequest {
   string title = 1;
   string body_md = 2;
-  string folder_id = 3;
 }
 
 message CreateNoteResponse {
@@ -243,53 +178,6 @@ message DeleteNoteRequest {
 }
 
 message DeleteNoteResponse {}
-
-message MoveNoteRequest {
-  string note_id = 1;
-  string folder_id = 2;
-}
-
-message MoveNoteResponse {
-  Note note = 1;
-}
-
-message GetNotesMetaRequest {}
-
-message GetNotesMetaResponse {
-  repeated NoteMeta notes = 1;
-}
-
-message ListFoldersRequest {}
-
-message ListFoldersResponse {
-  repeated Folder folders = 1;
-}
-
-message CreateFolderRequest {
-  string name = 1;
-  string parent_id = 2;
-}
-
-message CreateFolderResponse {
-  Folder folder = 1;
-}
-
-message DeleteFolderRequest {
-  string id = 1;
-  bool move_notes_to_root = 2;
-}
-
-message DeleteFolderResponse {}
-
-message PublishNoteRequest {
-  string note_id = 1;
-}
-
-message PublishNoteResponse {
-  string slug = 1;
-  string url = 2;
-  google.protobuf.Timestamp published_at = 3;
-}
 
 message UnpublishNoteRequest {
   string note_id = 1;
@@ -326,3 +214,13 @@ message MakeNotePrivateRequest {
 }
 
 message MakeNotePrivateResponse {}
+
+message GetPublishedNoteRequest {
+  string slug = 1;
+}
+
+message GetPublishedNoteResponse {
+  string title = 1;
+  string body_md = 2;
+  google.protobuf.Timestamp published_at = 3;
+}

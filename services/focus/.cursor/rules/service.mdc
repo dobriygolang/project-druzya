@@ -1,11 +1,11 @@
 ---
-description: focus service — skeleton, not production
+description: focus service — production Hone backend
 alwaysApply: true
 ---
 
-# focus service (skeleton)
+# focus service
 
-Module: `github.com/sedorofeevd/project-druzya/services/focus`. **Copy to create new services** — see `AGENTS.md`.
+Module: `github.com/sedorofeevd/project-druzya/services/focus`. See [AGENTS.md](../AGENTS.md).
 
 ## Layers
 
@@ -15,4 +15,4 @@ internal/app/api/focus/       → gRPC/HTTP (one RPC per file)
 internal/focus/model|repository|service/
 ```
 
-HTTP `:8091`, gRPC `:9101`. Do not deploy as production.
+HTTP `:8091`, gRPC `:9101`. **Prod service** — Hone pomodoro + stats.

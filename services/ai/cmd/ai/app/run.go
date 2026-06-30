@@ -57,16 +57,6 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
-	var interviewClient interviewadapter.Client
-	if cfg.InterviewGRPCAddr != "" {
-		log.Warn("INTERVIEW_GRPC_ADDR is set but interview-service was removed from the monorepo; evaluation worker disabled")
-	}
-
-	var contentClient contentadapter.Client
-	if cfg.ContentGRPCAddr != "" {
-		log.Warn("CONTENT_GRPC_ADDR is set but content-service was removed from the monorepo")
-	}
-
 	var billingClient billingadapter.Client
 	var billingConn *billinggrpc.Client
 	if cfg.BillingGRPCAddr != "" {
@@ -148,8 +138,6 @@ func New(ctx context.Context) (*App, error) {
 	})
 	svc := evaluationservice.New(evaluationservice.Deps{
 		Repo:       repo,
-		Interview:  interviewClient,
-		Content:    contentClient,
 		Billing:    billingClient,
 		Evaluator:  evalClient,
 		MaxRetries: cfg.EvalMaxRetries,
@@ -160,8 +148,6 @@ func New(ctx context.Context) (*App, error) {
 		Logger:          log,
 		Postgres:        pg,
 		Redis:           redisClient,
-		InterviewClient: interviewClient,
-		ContentClient:   contentClient,
 		BillingClient:   billingClient,
 		billingConn:     billingConn,
 		Repo:            repo,

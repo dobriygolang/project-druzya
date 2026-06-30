@@ -24,9 +24,5 @@ export const HEALTH_CHECK_URL = `${API_BASE_URL}/healthz`;
 export const TELEGRAM_BOT_USERNAME =
   (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.trim() || 'druz9_bot';
 
-export const WEB_BASE_URL =
-  (import.meta.env.VITE_DRUZ9_WEB_BASE as string | undefined)?.trim() ||
-  (import.meta.env.DEV ? 'http://localhost:5173' : PROD_API);
-
 export const DEV_BEARER_TOKEN: string | null =
   (import.meta.env.VITE_DRUZ9_DEV_TOKEN ?? '').trim() || null;

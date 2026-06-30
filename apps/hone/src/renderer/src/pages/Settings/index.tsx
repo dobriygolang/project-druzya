@@ -1,17 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { useT } from '@d9-i18n';
+import { useT, useLocale, type Locale } from '@d9-i18n';
 
 import { type ThemeId, THEME_IDS } from '@widgets/CanvasBg';
-import { HONE_HEADER_H } from '@widgets/Chrome';
+import { applyTextScale } from '@shared/model/accessibility';
 import { readPomodoroSeconds as readPomodoroSecondsFromPrefs, readStoredTheme as readStoredThemeFromPrefs } from '@shared/model/prefs';
 import { SignOutSection } from './sections/SignOutSection';
-import { readSettings, SETTINGS_KEY, THEME_KEY, type HoneSettings } from './lib/settings-store';
-import { Section, SectionHead } from './primitives/SectionGroup';
+import { SoftwareSection } from './sections/SoftwareSection';
+import { GoogleCalendarSection } from './sections/GoogleCalendarSection';
+import { VaultSection } from './sections/VaultSection';
+import {
+  readSettings,
+  SETTINGS_KEY,
+  TEXT_SCALES,
+  THEME_KEY,
+  type HoneSettings,
+  type TextScale,
+} from './lib/settings-store';
+import { SettingRow, SettingsGroup } from './primitives/SettingRow';
+import { SegmentedControl } from './primitives/SegmentedControl';
 import { Slider } from './primitives/Slider';
 import { Toggle } from './primitives/Toggle';
 import { ThemeCard } from './primitives/ThemeCard';
-import { LanguageSection } from './sections/LanguageSection';
 
 export const readPomodoroSeconds = readPomodoroSecondsFromPrefs;
 export const readStoredTheme = readStoredThemeFromPrefs;
@@ -22,27 +32,11 @@ interface SettingsPageProps {
   onPomoChange?: (secs: number) => void;
 }
 
-const pageStyle: React.CSSProperties = {
-  position: 'absolute',
-  inset: 0,
-  overflowY: 'auto',
-  padding: `${HONE_HEADER_H}px 48px 80px`,
-};
-const innerStyle: React.CSSProperties = { maxWidth: 760, margin: '0 auto' };
-const headingStyle: React.CSSProperties = {
-  margin: '8px 0 24px',
-  fontSize: 28,
-  fontWeight: 500,
-  letterSpacing: '-0.015em',
-};
-const themeGridStyle: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-  gap: 14,
-};
+const LOCALES: Locale[] = ['ru', 'en'];
 
 export function SettingsPage({ theme, onThemeChange, onPomoChange }: SettingsPageProps) {
   const t = useT();
+  const [locale, setLocale] = useLocale();
   const [settings, setSettings] = useState<HoneSettings>(() => readSettings());
 
   useEffect(() => {
@@ -51,6 +45,7 @@ export function SettingsPage({ theme, onThemeChange, onPomoChange }: SettingsPag
     } catch {
       /* ignore */
     }
+    applyTextScale(settings.textScale);
   }, [settings]);
 
   const setPomo = useCallback(
@@ -60,7 +55,12 @@ export function SettingsPage({ theme, onThemeChange, onPomoChange }: SettingsPag
     },
     [onPomoChange],
   );
+
   const setNotif = useCallback((b: boolean) => setSettings((s) => ({ ...s, notifications: b })), []);
+
+  const setTextScale = useCallback((scale: TextScale) => {
+    setSettings((s) => ({ ...s, textScale: scale }));
+  }, []);
 
   const pickTheme = useCallback(
     (id: ThemeId) => {
@@ -74,49 +74,95 @@ export function SettingsPage({ theme, onThemeChange, onPomoChange }: SettingsPag
     [onThemeChange],
   );
 
-  const sections = useMemo(
-    () => [
-      { title: 'SIGN OUT', hint: 'Clear local session.', render: () => <SignOutSection /> },
-      { title: 'INTERFACE LANGUAGE', hint: 'Local preference.', render: () => <LanguageSection /> },
-      {
-        title: 'BACKGROUND THEME',
-        hint: 'Ambient motion behind your work.',
-        render: () => (
-          <div style={themeGridStyle}>
-            {THEME_IDS.map((id) => (
-              <ThemeCard key={id} id={id} active={theme === id} onPick={() => pickTheme(id)} />
-            ))}
-          </div>
-        ),
-      },
-      {
-        title: 'POMODORO',
-        hint: 'Default focus session length.',
-        render: () => (
-          <Slider min={5} max={90} step={5} value={settings.pomodoroMinutes} onChange={setPomo} unit="min" />
-        ),
-      },
-      {
-        title: 'NOTIFICATIONS',
-        hint: 'System notification when a session ends.',
-        render: () => (
-          <Toggle value={settings.notifications} onChange={setNotif} label={settings.notifications ? 'On' : 'Off'} />
-        ),
-      },
-    ],
-    [theme, pickTheme, settings, setPomo, setNotif],
+  const localeOptions = useMemo(
+    () =>
+      LOCALES.map((l) => ({
+        value: l,
+        label: l === 'ru' ? t('common.lang.ru') : t('common.lang.en'),
+      })),
+    [t],
+  );
+
+  const textScaleOptions = useMemo(
+    () =>
+      TEXT_SCALES.map((scale) => ({
+        value: scale,
+        label:
+          scale === 'normal'
+            ? t('hone.settings.text_scale.normal')
+            : scale === 'large'
+              ? t('hone.settings.text_scale.large')
+              : t('hone.settings.text_scale.xlarge'),
+      })),
+    [t],
   );
 
   return (
-    <div className="slide-from-bottom" style={pageStyle}>
-      <div style={innerStyle}>
-        <SectionHead label="SETTINGS" />
-        <h1 style={headingStyle}>{t('hone.settings.heading')}</h1>
-        {sections.map((s) => (
-          <Section key={s.title} title={s.title} hint={s.hint}>
-            {s.render()}
-          </Section>
-        ))}
+    <div className="hone-settings-page">
+      <div className="hone-settings-page__inner">
+        <p className="hone-settings-page__eyebrow mono">{t('hone.settings.eyebrow').toUpperCase()}</p>
+        <h1 className="hone-settings-page__title">{t('hone.settings.heading')}</h1>
+
+        <SettingsGroup title={t('hone.settings.section.appearance')}>
+          <SettingRow label={t('hone.settings.language.label')} hint={t('hone.settings.language.hint')}>
+            <SegmentedControl
+              ariaLabel={t('hone.settings.language.label')}
+              value={locale}
+              options={localeOptions}
+              onChange={setLocale}
+            />
+          </SettingRow>
+
+          <SettingRow label={t('hone.settings.text_scale.label')} hint={t('hone.settings.text_scale.hint')}>
+            <SegmentedControl
+              ariaLabel={t('hone.settings.text_scale.label')}
+              value={settings.textScale}
+              options={textScaleOptions}
+              onChange={setTextScale}
+            />
+          </SettingRow>
+
+          <SettingRow label={t('hone.settings.theme.label')} hint={t('hone.settings.theme.hint')}>
+            <div className="hone-settings-theme-grid">
+              {THEME_IDS.map((id) => (
+                <ThemeCard key={id} id={id} active={theme === id} onPick={() => pickTheme(id)} />
+              ))}
+            </div>
+          </SettingRow>
+        </SettingsGroup>
+
+        <SettingsGroup title={t('hone.settings.section.focus')}>
+          <SettingRow label={t('hone.settings.pomodoro.label')} hint={t('hone.settings.pomodoro.hint')}>
+            <Slider
+              min={5}
+              max={90}
+              step={5}
+              value={settings.pomodoroMinutes}
+              onChange={setPomo}
+              unit={t('hone.settings.pomodoro.unit')}
+            />
+          </SettingRow>
+
+          <SettingRow label={t('hone.settings.notifications.label')} hint={t('hone.settings.notifications.hint')}>
+            <Toggle
+              value={settings.notifications}
+              onChange={setNotif}
+              label={settings.notifications ? t('hone.settings.notifications.on') : t('hone.settings.notifications.off')}
+            />
+          </SettingRow>
+        </SettingsGroup>
+
+        <SettingsGroup title={t('hone.settings.section.integrations')}>
+          <GoogleCalendarSection />
+        </SettingsGroup>
+
+        <VaultSection />
+
+        <SoftwareSection />
+
+        <SettingsGroup title={t('hone.settings.section.account')}>
+          <SignOutSection />
+        </SettingsGroup>
       </div>
     </div>
   );

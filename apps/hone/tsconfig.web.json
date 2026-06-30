@@ -27,7 +27,7 @@
       "@d9-i18n/*": ["../shared/i18n/*"],
       "@bufbuild/protobuf": ["./node_modules/@bufbuild/protobuf"],
       "@connectrpc/connect": ["./node_modules/@connectrpc/connect"],
-      "@connectrpc/connect-web": ["./node_modules/@connectrpc/connect-web"]
+      "react": ["./node_modules/@types/react/index.d.ts"]
     }
   },
   "include": ["src/renderer/**/*", "src/test/**/*", "../shared/i18n/**/*"],

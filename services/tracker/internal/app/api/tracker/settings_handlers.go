@@ -25,7 +25,6 @@ func (i *Implementation) UpdateSettings(ctx context.Context, req *trackerv1.Upda
 		return nil, err
 	}
 	settings, err := i.svc.UpdateSettings(ctx, userID, trackerservice.UpdateSettingsParams{
-		SmartParseEnabled:         req.SmartParseEnabled,
 		GoogleCalendarSyncEnabled: req.GoogleCalendarSyncEnabled,
 	})
 	if err != nil {

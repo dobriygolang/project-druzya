@@ -1,11 +1,11 @@
 ---
-description: notes service — skeleton, not production
+description: notes service — production Hone backend
 alwaysApply: true
 ---
 
-# notes service (skeleton)
+# notes service
 
-Module: `github.com/sedorofeevd/project-druzya/services/notes`. **Copy to create new services** — see `AGENTS.md`.
+Module: `github.com/sedorofeevd/project-druzya/services/notes`. See [AGENTS.md](../AGENTS.md).
 
 ## Layers
 
@@ -15,4 +15,4 @@ internal/app/api/notes/       → gRPC/HTTP (one RPC per file)
 internal/notes/model|repository|service/
 ```
 
-HTTP `:8090`, gRPC `:9100`. Do not deploy as production.
+HTTP `:8090`, gRPC `:9100`. **Prod service** — Hone notes + vault + publish.

@@ -13,7 +13,7 @@ func toProtoNote(n *notesmodel.Note) *notesv1.Note {
 	if n == nil {
 		return nil
 	}
-	out := &notesv1.Note{
+	return &notesv1.Note{
 		Id:        n.ID,
 		Title:     n.Title,
 		BodyMd:    n.BodyMD,
@@ -22,39 +22,15 @@ func toProtoNote(n *notesmodel.Note) *notesv1.Note {
 		SizeBytes: int32(n.SizeBytes),
 		Encrypted: n.Encrypted,
 	}
-	if n.FolderID != nil {
-		out.FolderId = *n.FolderID
-	}
-	return out
 }
 
 func toProtoNoteSummary(n notesmodel.NoteSummary) *notesv1.NoteSummary {
-	out := &notesv1.NoteSummary{
+	return &notesv1.NoteSummary{
 		Id:        n.ID,
 		Title:     n.Title,
 		UpdatedAt: timestamppb.New(n.UpdatedAt),
 		SizeBytes: int32(n.SizeBytes),
 	}
-	if n.FolderID != nil {
-		out.FolderId = *n.FolderID
-	}
-	return out
-}
-
-func toProtoFolder(f *notesmodel.Folder) *notesv1.Folder {
-	if f == nil {
-		return nil
-	}
-	out := &notesv1.Folder{
-		Id:        f.ID,
-		Name:      f.Name,
-		CreatedAt: timestamppb.New(f.CreatedAt),
-		UpdatedAt: timestamppb.New(f.UpdatedAt),
-	}
-	if f.ParentID != nil {
-		out.ParentId = *f.ParentID
-	}
-	return out
 }
 
 func mapServiceError(err error) error {

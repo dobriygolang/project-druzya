@@ -63,7 +63,7 @@ const PAGE_SKELETON_CARD_FLEX_STYLE: React.CSSProperties = { flex: 1 };
 // spinner'а или text «loading…».
 export const PageSkeleton = memo(function PageSkeleton(): React.ReactElement {
   return (
-    <div style={PAGE_SKELETON_ROOT_STYLE} aria-busy="true" aria-live="polite">
+    <div className="motion-page-in" style={PAGE_SKELETON_ROOT_STYLE} aria-busy="true" aria-live="polite">
       {/* Header strip */}
       <div style={PAGE_SKELETON_HEADER_STYLE}>
         <SkeletonLine width={120} height={14} />

@@ -17,20 +17,14 @@ type Store interface {
 	UpsertSubscription(ctx context.Context, sub *model.Subscription) error
 }
 
-// EventPublisher emits the subscription-created event.
-type EventPublisher interface {
-	SubscriptionCreated(ctx context.Context, sub *model.Subscription) error
-}
-
 // Handler grants an internal subscription.
 type Handler struct {
-	repo   Store
-	events EventPublisher
+	repo Store
 }
 
 // New constructs the grant-subscription handler.
-func New(repo Store, events EventPublisher) *Handler {
-	return &Handler{repo: repo, events: events}
+func New(repo Store) *Handler {
+	return &Handler{repo: repo}
 }
 
 // Handle executes the command.
@@ -65,6 +59,5 @@ func (h *Handler) Handle(ctx context.Context, cmd Command) (*model.Subscription,
 	}); err != nil {
 		return nil, err
 	}
-	_ = h.events.SubscriptionCreated(ctx, sub)
 	return sub, nil
 }

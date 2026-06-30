@@ -19,9 +19,7 @@ type Config struct {
 	GoogleClientID     string
 	GoogleClientSecret string
 	GoogleRedirectURI  string
-	FrontendURL            string
-	RecommendationGRPCAddr string
-	IdentityGRPCAddr       string
+	HoneCallbackURL    string
 }
 
 func Load() (*Config, error) {
@@ -53,9 +51,7 @@ func Load() (*Config, error) {
 		GoogleClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURI:  os.Getenv("GOOGLE_REDIRECT_URI"),
-		FrontendURL:            getEnv("FRONTEND_URL", "http://localhost:5173"),
-		RecommendationGRPCAddr: os.Getenv("RECOMMENDATION_GRPC_ADDR"),
-		IdentityGRPCAddr:       getEnv("IDENTITY_GRPC_ADDR", "127.0.0.1:9090"),
+		HoneCallbackURL:    getEnv("HONE_CALLBACK_URL", "hone://settings"),
 	}, nil
 }
 

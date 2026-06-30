@@ -32,14 +32,10 @@ func (r *Repository) ListNotes(
 
 	args := []any{userID}
 	query := `
-		SELECT id, title, updated_at, size_bytes, folder_id
+		SELECT id, title, updated_at, size_bytes
 		FROM notes
 		WHERE user_id = $1 AND archived_at IS NULL
 	`
-	if f.FolderID != nil {
-		args = append(args, *f.FolderID)
-		query += fmt.Sprintf(" AND folder_id = $%d", len(args))
-	}
 	if f.Cursor != "" {
 		parts := strings.SplitN(f.Cursor, "|", 2)
 		if len(parts) == 2 {
@@ -63,11 +59,9 @@ func (r *Repository) ListNotes(
 	out := make([]notesmodel.NoteSummary, 0, limit)
 	for rows.Next() {
 		var n notesmodel.NoteSummary
-		var folderID *string
-		if err := rows.Scan(&n.ID, &n.Title, &n.UpdatedAt, &n.SizeBytes, &folderID); err != nil {
+		if err := rows.Scan(&n.ID, &n.Title, &n.UpdatedAt, &n.SizeBytes); err != nil {
 			return nil, "", err
 		}
-		n.FolderID = folderID
 		out = append(out, n)
 	}
 	if err := rows.Err(); err != nil {
@@ -85,7 +79,7 @@ func (r *Repository) ListNotes(
 
 func (r *Repository) GetNote(ctx context.Context, userID, id string) (*notesmodel.Note, error) {
 	row := r.pg.QueryRow(ctx, `
-		SELECT id, user_id, folder_id, title, body_md, encrypted, published, publish_slug,
+		SELECT id, user_id, title, body_md, encrypted, published, publish_slug,
 		       published_at, size_bytes, created_at, updated_at
 		FROM notes
 		WHERE id = $1 AND user_id = $2 AND archived_at IS NULL
@@ -96,15 +90,14 @@ func (r *Repository) GetNote(ctx context.Context, userID, id string) (*notesmode
 func (r *Repository) CreateNote(
 	ctx context.Context,
 	userID, title, body string,
-	folderID *string,
 ) (*notesmodel.Note, error) {
 	size := len(body)
 	row := r.pg.QueryRow(ctx, `
-		INSERT INTO notes (user_id, folder_id, title, body_md, size_bytes)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, user_id, folder_id, title, body_md, encrypted, published, publish_slug,
+		INSERT INTO notes (user_id, title, body_md, size_bytes)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, user_id, title, body_md, encrypted, published, publish_slug,
 		          published_at, size_bytes, created_at, updated_at
-	`, userID, folderID, title, body, size)
+	`, userID, title, body, size)
 	return scanNote(row)
 }
 
@@ -117,7 +110,7 @@ func (r *Repository) UpdateNote(
 		UPDATE notes
 		SET title = $3, body_md = $4, size_bytes = $5, updated_at = now()
 		WHERE id = $1 AND user_id = $2 AND archived_at IS NULL
-		RETURNING id, user_id, folder_id, title, body_md, encrypted, published, publish_slug,
+		RETURNING id, user_id, title, body_md, encrypted, published, publish_slug,
 		          published_at, size_bytes, created_at, updated_at
 	`, id, userID, title, body, size)
 	return scanNote(row)
@@ -135,43 +128,6 @@ func (r *Repository) DeleteNote(ctx context.Context, userID, id string) error {
 		return notesmodel.ErrNotFound
 	}
 	return nil
-}
-
-func (r *Repository) MoveNote(
-	ctx context.Context,
-	userID, noteID string,
-	folderID *string,
-) (*notesmodel.Note, error) {
-	row := r.pg.QueryRow(ctx, `
-		UPDATE notes SET folder_id = $3, updated_at = now()
-		WHERE id = $1 AND user_id = $2 AND archived_at IS NULL
-		RETURNING id, user_id, folder_id, title, body_md, encrypted, published, publish_slug,
-		          published_at, size_bytes, created_at, updated_at
-	`, noteID, userID, folderID)
-	return scanNote(row)
-}
-
-func (r *Repository) GetNotesMeta(ctx context.Context, userID string) ([]notesmodel.NoteMeta, error) {
-	rows, err := r.pg.Query(ctx, `
-		SELECT id, encrypted, published
-		FROM notes
-		WHERE user_id = $1 AND archived_at IS NULL
-		ORDER BY updated_at DESC
-	`, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	out := make([]notesmodel.NoteMeta, 0)
-	for rows.Next() {
-		var m notesmodel.NoteMeta
-		if err := rows.Scan(&m.ID, &m.Encrypted, &m.Published); err != nil {
-			return nil, err
-		}
-		out = append(out, m)
-	}
-	return out, rows.Err()
 }
 
 func (r *Repository) CountActiveNotes(ctx context.Context, userID string) (int, error) {
@@ -207,28 +163,12 @@ func (r *Repository) EncryptNote(ctx context.Context, userID, noteID, ciphertext
 	return nil
 }
 
-func (r *Repository) PermanentlyDecryptNote(ctx context.Context, userID, noteID, plaintext string) error {
-	size := len(plaintext)
-	tag, err := r.pg.Exec(ctx, `
-		UPDATE notes
-		SET body_md = $3, encrypted = false, size_bytes = $4, updated_at = now()
-		WHERE id = $1 AND user_id = $2 AND archived_at IS NULL
-	`, noteID, userID, plaintext, size)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() == 0 {
-		return notesmodel.ErrNotFound
-	}
-	return nil
-}
-
 func scanNote(row pgx.Row) (*notesmodel.Note, error) {
 	var n notesmodel.Note
-	var folderID, publishSlug *string
+	var publishSlug *string
 	var publishedAt *time.Time
 	err := row.Scan(
-		&n.ID, &n.UserID, &folderID, &n.Title, &n.BodyMD, &n.Encrypted, &n.Published,
+		&n.ID, &n.UserID, &n.Title, &n.BodyMD, &n.Encrypted, &n.Published,
 		&publishSlug, &publishedAt, &n.SizeBytes, &n.CreatedAt, &n.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -237,10 +177,33 @@ func scanNote(row pgx.Row) (*notesmodel.Note, error) {
 	if err != nil {
 		return nil, err
 	}
-	n.FolderID = folderID
 	n.PublishSlug = publishSlug
 	n.PublishedAt = publishedAt
 	return &n, nil
+}
+
+func (r *Repository) GetPublishedNoteBySlug(ctx context.Context, slug string) (*notesmodel.PublishedNote, error) {
+	slug = strings.TrimSpace(slug)
+	if slug == "" {
+		return nil, notesmodel.ErrInvalidArgument
+	}
+	row := r.pg.QueryRow(ctx, `
+		SELECT title, body_md, published_at
+		FROM notes
+		WHERE publish_slug = $1
+		  AND published = true
+		  AND encrypted = false
+		  AND archived_at IS NULL
+	`, slug)
+	var out notesmodel.PublishedNote
+	err := row.Scan(&out.Title, &out.BodyMD, &out.PublishedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, notesmodel.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &out, nil
 }
 
 func newPublishSlug(title string) string {
@@ -265,5 +228,5 @@ func newPublishSlug(title string) string {
 
 func publishURL(base, slug string) string {
 	base = strings.TrimRight(base, "/")
-	return base + "/n/" + slug
+	return base + "/notes/" + slug
 }

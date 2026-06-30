@@ -1,152 +1,129 @@
-// tasks.ts — REST client for Hone TaskBoard → project-druzya tracker work API.
-import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
-import { useSessionStore } from '@shared/model/session';
-
-const BASE = `${API_BASE_URL}/v1/tracker/work/tasks`;
-
-function authHeaders(): Record<string, string> {
-  const token = useSessionStore.getState().accessToken ?? DEV_BEARER_TOKEN;
-  return token ? { authorization: `Bearer ${token}` } : {};
-}
+// Local-first task board — IndexedDB source of truth; background sync when enabled.
+import { tasksStoreGet, tasksStoreList, tasksStorePut, tasksStoreSoftDelete } from '@features/tasks/repository/tasksStore';
+import { getServerId } from '@shared/sync/idMap';
+import { enqueueOutbox } from '@shared/sync/outbox';
+import { scheduleSync } from '@shared/sync/SyncEngine';
+import { isSyncEnabled } from '@shared/sync/syncConfig';
+import { HONE_EVENTS } from '@shared/lib/custom-events';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done' | 'dismissed';
 export type TaskKind = 'algo' | 'sysdesign' | 'quiz' | 'reflection' | 'reading' | 'ml' | 'custom';
-export type TaskSource = 'ai' | 'user';
 
 export interface TaskCard {
   id: string;
   status: TaskStatus;
   kind: TaskKind;
-  source: TaskSource;
   title: string;
-  briefMd: string;
-  skillKey?: string;
-  deepLink?: string;
-  recommendedReading?: string[];
-  priority: number;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
-  manualKindOverride?: boolean;
   scheduledStart?: string;
   scheduledDurationMin?: number;
+  googleEventId?: string;
+  /** Manual order within a day column. Undefined → derived from schedule/createdAt. */
+  order?: number;
 }
 
-type JsonWorkTask = Record<string, unknown>;
-
-function pickStr(obj: JsonWorkTask, camel: string, snake: string): string {
-  const v = obj[camel] ?? obj[snake];
-  return typeof v === 'string' ? v : '';
-}
-
-function pickNum(obj: JsonWorkTask, camel: string, snake: string): number {
-  const v = obj[camel] ?? obj[snake];
-  return typeof v === 'number' ? v : 0;
-}
-
-function pickBool(obj: JsonWorkTask, camel: string, snake: string): boolean {
-  const v = obj[camel] ?? obj[snake];
-  return v === true;
-}
-
-function pickTs(obj: JsonWorkTask, camel: string, snake: string): string | undefined {
-  const v = obj[camel] ?? obj[snake];
-  if (typeof v === 'string' && v.length > 0) return v;
-  return undefined;
-}
-
-function unwrapWorkTask(raw: JsonWorkTask): TaskCard {
-  return {
-    id: pickStr(raw, 'id', 'id'),
-    status: pickStr(raw, 'status', 'status') as TaskStatus,
-    kind: (pickStr(raw, 'kind', 'kind') || 'custom') as TaskKind,
-    source: (pickStr(raw, 'source', 'source') || 'user') as TaskSource,
-    title: pickStr(raw, 'title', 'title'),
-    briefMd: pickStr(raw, 'briefMd', 'brief_md'),
-    skillKey: pickStr(raw, 'skillKey', 'skill_key') || undefined,
-    deepLink: pickStr(raw, 'deepLink', 'deep_link') || undefined,
-    priority: pickNum(raw, 'priority', 'priority'),
-    createdAt: pickStr(raw, 'createdAt', 'created_at'),
-    updatedAt: pickStr(raw, 'updatedAt', 'updated_at'),
-    completedAt: pickTs(raw, 'completedAt', 'completed_at'),
-    manualKindOverride: pickBool(raw, 'manualKindOverride', 'manual_kind_override'),
-    scheduledStart: pickTs(raw, 'scheduledStart', 'scheduled_start'),
-    scheduledDurationMin: pickNum(raw, 'scheduledDurationMin', 'scheduled_duration_min') || undefined,
-  };
-}
-
-function unwrapTaskResponse(j: unknown): TaskCard {
-  if (!j || typeof j !== 'object') return unwrapWorkTask({});
-  const obj = j as Record<string, unknown>;
-  const nested = (obj.task ?? obj) as JsonWorkTask;
-  return unwrapWorkTask(nested);
+async function resolveTask(id: string): Promise<TaskCard | null> {
+  const direct = await tasksStoreGet(id);
+  if (direct) return direct;
+  const serverId = await getServerId('tasks', id);
+  if (serverId && serverId !== id) return tasksStoreGet(serverId);
+  return null;
 }
 
 export async function listTasks(): Promise<TaskCard[]> {
-  const resp = await fetch(BASE, { headers: authHeaders() });
-  if (!resp.ok) throw new Error(`listTasks: ${resp.status}`);
-  const j = (await resp.json()) as { tasks?: JsonWorkTask[] };
-  return (j.tasks ?? []).map(unwrapWorkTask);
+  return tasksStoreList();
 }
 
-export async function createTask(input: { title: string; briefMd?: string }): Promise<TaskCard> {
-  const resp = await fetch(BASE, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'content-type': 'application/json' },
-    body: JSON.stringify({
-      kind: 'custom',
-      title: input.title,
-      brief_md: input.briefMd ?? '',
-    }),
-  });
-  if (!resp.ok) throw new Error(`createTask: ${resp.status}`);
-  return unwrapTaskResponse(await resp.json());
+export async function createTask(input: { title: string; kind?: TaskKind }): Promise<TaskCard> {
+  const now = new Date().toISOString();
+  const task: TaskCard = {
+    id: crypto.randomUUID(),
+    status: 'todo',
+    kind: input.kind ?? 'custom',
+    title: input.title,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await tasksStorePut(task);
+  if (isSyncEnabled()) {
+    await enqueueOutbox('tasks', 'create', task.id, {
+      title: task.title,
+      kind: task.kind,
+    });
+    scheduleSync();
+  }
+  return task;
 }
 
 export async function moveTaskStatus(taskId: string, status: TaskStatus): Promise<TaskCard> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}/status`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'content-type': 'application/json' },
-    body: JSON.stringify({ id: taskId, status }),
-  });
-  if (!resp.ok) throw new Error(`moveTaskStatus: ${resp.status}`);
-  return unwrapTaskResponse(await resp.json());
-}
-
-export async function deleteTask(taskId: string): Promise<void> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}`, {
-    method: 'DELETE',
-    headers: authHeaders(),
-  });
-  if (!resp.ok) throw new Error(`deleteTask: ${resp.status}`);
+  const prev = await resolveTask(taskId);
+  if (!prev) throw new Error(`Task not found: ${taskId}`);
+  const now = new Date().toISOString();
+  const task: TaskCard = {
+    ...prev,
+    status,
+    updatedAt: now,
+    completedAt: status === 'done' ? now : prev.completedAt,
+  };
+  await tasksStorePut(task);
+  if (isSyncEnabled()) {
+    await enqueueOutbox('tasks', 'status', taskId, { status });
+    scheduleSync();
+  }
+  return task;
 }
 
 export async function scheduleTask(
   taskId: string,
-  startIso: string,
+  start: Date | string,
   durationMin: number,
 ): Promise<TaskCard> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}/schedule`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'content-type': 'application/json' },
-    body: JSON.stringify({
-      id: taskId,
-      scheduledStartIso: startIso,
-      durationMin,
-      scheduled_start_iso: startIso,
-      duration_min: durationMin,
-    }),
-  });
-  if (!resp.ok) throw new Error(`scheduleTask: ${resp.status}`);
-  return unwrapTaskResponse(await resp.json());
+  const prev = await resolveTask(taskId);
+  if (!prev) throw new Error(`Task not found: ${taskId}`);
+  const startIso =
+    typeof start === 'string'
+      ? start
+      : Number.isNaN(start.getTime())
+        ? new Date().toISOString()
+        : start.toISOString();
+  const task: TaskCard = {
+    ...prev,
+    scheduledStart: startIso,
+    scheduledDurationMin: Math.max(15, Math.min(480, durationMin)),
+    updatedAt: new Date().toISOString(),
+  };
+  await tasksStorePut(task);
+  if (isSyncEnabled()) {
+    await enqueueOutbox('tasks', 'schedule', taskId, {
+      startIso,
+      durationMin: task.scheduledDurationMin,
+    });
+    scheduleSync();
+  }
+  return task;
 }
 
-export async function unscheduleTask(taskId: string): Promise<TaskCard> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}/unschedule`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'content-type': 'application/json' },
-    body: JSON.stringify({ id: taskId }),
-  });
-  if (!resp.ok) throw new Error(`unscheduleTask: ${resp.status}`);
-  return unwrapTaskResponse(await resp.json());
+export async function deleteTask(taskId: string): Promise<void> {
+  const prev = await resolveTask(taskId);
+  if (!prev) return;
+  await tasksStoreSoftDelete(taskId);
+  if (isSyncEnabled()) {
+    await enqueueOutbox('tasks', 'delete', taskId, {});
+    scheduleSync();
+  }
+  window.dispatchEvent(new CustomEvent(HONE_EVENTS.tasksChanged));
+}
+
+/**
+ * Persist a manual reordering of tasks within a day column. Reassigns dense
+ * sequential `order` values and stores them locally. Order is a local-first
+ * field — it is not pushed to the backend (tracker has no order column), so
+ * reordering stays intact on-device and across reloads; remote pull preserves
+ * any local `order` already stored.
+ */
+export async function reorderTasks(updated: TaskCard[]): Promise<void> {
+  for (const t of updated) await tasksStorePut(t);
+  window.dispatchEvent(new CustomEvent(HONE_EVENTS.tasksChanged));
 }

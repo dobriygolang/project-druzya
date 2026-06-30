@@ -3,18 +3,17 @@ package model
 import "time"
 
 type Note struct {
-	ID        string
-	UserID    string
-	FolderID  *string
-	Title     string
-	BodyMD    string
-	Encrypted bool
-	Published bool
+	ID          string
+	UserID      string
+	Title       string
+	BodyMD      string
+	Encrypted   bool
+	Published   bool
 	PublishSlug *string
 	PublishedAt *time.Time
-	SizeBytes int
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	SizeBytes   int
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 type NoteSummary struct {
@@ -22,22 +21,6 @@ type NoteSummary struct {
 	Title     string
 	UpdatedAt time.Time
 	SizeBytes int
-	FolderID  *string
-}
-
-type NoteMeta struct {
-	ID        string
-	Encrypted bool
-	Published bool
-}
-
-type Folder struct {
-	ID        string
-	UserID    string
-	Name      string
-	ParentID  *string
-	CreatedAt time.Time
-	UpdatedAt time.Time
 }
 
 type PublishStatus struct {
@@ -52,4 +35,11 @@ type ShareToWebResult struct {
 	URL              string
 	PublishedAt      time.Time
 	AlreadyPublished bool
+}
+
+// PublishedNote is a public read-only view (no auth).
+type PublishedNote struct {
+	Title       string
+	BodyMD      string
+	PublishedAt time.Time
 }

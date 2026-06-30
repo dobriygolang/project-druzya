@@ -1,8 +1,10 @@
-import { memo, useState, type ReactNode } from 'react';
+import { memo } from 'react';
+
+import { useT } from '@d9-i18n';
 
 import { Icon } from '@shared/ui/primitives/Icon';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
-import type { NoteSummary } from '@features/notes/api/notesClient';
+import type { PublishStatus } from '@features/notes/api/notesClient';
 import { NoteRow } from './NoteRow';
 import { type ListState } from './utils';
 
@@ -11,123 +13,59 @@ export interface SidebarProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onCreate: () => void;
+  onPublish: (id: string) => Promise<PublishStatus | void>;
+  onUnpublish: (id: string) => Promise<void>;
+  onRegenerate: (id: string) => Promise<PublishStatus | void>;
+  onDelete: (id: string) => Promise<void>;
 }
 
-function SidebarIconButton({
-  title,
-  onClick,
-  children,
-}: {
-  title: string;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  const [hover, setHover] = useState(false);
+export const Sidebar = memo(function Sidebar({
+  list,
+  selectedId,
+  onSelect,
+  onCreate,
+  onPublish,
+  onUnpublish,
+  onRegenerate,
+  onDelete,
+}: SidebarProps) {
+  const t = useT();
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        width: 26,
-        height: 26,
-        borderRadius: 7,
-        background: hover ? 'rgb(var(--ink-rgb) / 0.08)' : 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        color: hover ? 'var(--ink)' : 'var(--ink-60)',
-        display: 'grid',
-        placeItems: 'center',
-        transition:
-          'background-color var(--motion-dur-small) var(--motion-ease-standard), color var(--motion-dur-small) var(--motion-ease-standard)',
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-export const Sidebar = memo(function Sidebar({ list, selectedId, onSelect, onCreate }: SidebarProps) {
-  return (
-    <aside
-      style={{
-        padding: '8px 12px 24px',
-        overflowY: 'auto',
-        minHeight: 0,
-        alignSelf: 'stretch',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          padding: '4px 4px 16px',
-        }}
-      >
-        <SidebarIconButton
-          title="Back"
+    <aside className="hone-vault-sidebar">
+      <div className="hone-vault-sidebar__toolbar">
+        <button
+          type="button"
+          className="hone-vault-sidebar__btn hone-icon-btn"
+          title={t('hone.notes.back')}
           onClick={() => window.dispatchEvent(new Event(HONE_EVENTS.navHome))}
         >
-          <Icon name="chevron-left" size={14} strokeWidth={1.6} />
-        </SidebarIconButton>
-        <span
-          className="mono"
-          style={{
-            flex: 1,
-            fontSize: 11,
-            fontWeight: 600,
-            letterSpacing: '0.12em',
-            color: 'var(--ink-60)',
-          }}
+          <Icon name="chevron-left" size={16} strokeWidth={1.6} />
+        </button>
+        <span className="hone-vault-sidebar__label">{t('hone.notes.sidebar_title')}</span>
+        <button
+          type="button"
+          className="hone-vault-sidebar__btn hone-icon-btn"
+          title={t('hone.notes.new')}
+          onClick={onCreate}
         >
-          NOTES
-        </span>
-        <SidebarIconButton title="New note" onClick={onCreate}>
-          <Icon name="plus" size={14} strokeWidth={1.8} />
-        </SidebarIconButton>
+          <Icon name="plus" size={16} strokeWidth={1.8} />
+        </button>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div className="hone-vault-sidebar__list">
         {list.notes.map((n) => (
-          <NoteRow key={n.id} note={n} active={selectedId === n.id} onSelect={onSelect} />
+          <NoteRow
+            key={n.id}
+            note={n}
+            active={selectedId === n.id}
+            onSelect={onSelect}
+            onPublish={onPublish}
+            onUnpublish={onUnpublish}
+            onRegenerate={onRegenerate}
+            onDelete={onDelete}
+          />
         ))}
       </div>
     </aside>
   );
 });
-
-export function NotesExpandSidebarButton({ onClick }: { onClick: () => void }) {
-  const [hover, setHover] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="fadein"
-      title="Show notes list"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        position: 'absolute',
-        top: 92,
-        left: 10,
-        width: 28,
-        height: 28,
-        borderRadius: 7,
-        background: hover ? 'rgb(var(--ink-rgb) / 0.08)' : 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        color: hover ? 'var(--ink)' : 'var(--ink-60)',
-        display: 'grid',
-        placeItems: 'center',
-        zIndex: 30,
-        transition:
-          'background-color var(--motion-dur-small) var(--motion-ease-standard), color var(--motion-dur-small) var(--motion-ease-standard)',
-      }}
-    >
-      <Icon name="note" size={14} />
-    </button>
-  );
-}

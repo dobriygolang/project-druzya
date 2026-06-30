@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	billingadapter "github.com/sedorofeevd/project-druzya/services/rooms/internal/adapter/billing"
-	billinggrpc "github.com/sedorofeevd/project-druzya/services/rooms/internal/adapter/billing/grpc"
 	identityadapter "github.com/sedorofeevd/project-druzya/services/rooms/internal/adapter/identity"
 	identitygrpc "github.com/sedorofeevd/project-druzya/services/rooms/internal/adapter/identity/grpc"
 	"github.com/sedorofeevd/project-druzya/services/identity/pkg/jwt"
@@ -24,7 +22,6 @@ type App struct {
 	JWT          *jwt.Validator
 	Hub          *ws.Hub
 	Service      roomservice.Service
-	billingConn  *billinggrpc.Client
 	identityConn *identitygrpc.Client
 }
 
@@ -49,25 +46,11 @@ func New(ctx context.Context) (*App, error) {
 		return nil, fmt.Errorf("init postgres: %w", err)
 	}
 
-	billingClient := billingadapter.Noop()
-	var billingConn *billinggrpc.Client
-	if cfg.BillingGRPCAddr != "" && cfg.InternalAPIToken != "" {
-		billingConn, err = billinggrpc.NewClient(ctx, cfg.BillingGRPCAddr, cfg.InternalAPIToken)
-		if err != nil {
-			pg.Close()
-			return nil, fmt.Errorf("init billing client: %w", err)
-		}
-		billingClient = billingConn
-	}
-
 	var identityClient identityadapter.TokenMinter
 	var identityConn *identitygrpc.Client
 	if cfg.IdentityGRPCAddr != "" && cfg.InternalAPIToken != "" {
 		identityConn, err = identitygrpc.NewClient(ctx, cfg.IdentityGRPCAddr, cfg.InternalAPIToken)
 		if err != nil {
-			if billingConn != nil {
-				_ = billingConn.Close()
-			}
 			pg.Close()
 			return nil, fmt.Errorf("init identity client: %w", err)
 		}
@@ -78,7 +61,6 @@ func New(ctx context.Context) (*App, error) {
 	hub := ws.NewHub(slog.Default())
 	svc := roomservice.New(roomservice.Deps{
 		Repo:          repo,
-		Billing:       billingClient,
 		Identity:      identityClient,
 		PublicBaseURL: cfg.PublicBaseURL,
 		RoomTTL:       cfg.RoomTTL,
@@ -94,7 +76,6 @@ func New(ctx context.Context) (*App, error) {
 		JWT:          jwtValidator,
 		Hub:          hub,
 		Service:      svc,
-		billingConn:  billingConn,
 		identityConn: identityConn,
 	}, nil
 }
@@ -102,9 +83,6 @@ func New(ctx context.Context) (*App, error) {
 func (a *App) Close() {
 	if a.Hub != nil {
 		a.Hub.CloseAll()
-	}
-	if a.billingConn != nil {
-		_ = a.billingConn.Close()
 	}
 	if a.identityConn != nil {
 		_ = a.identityConn.Close()

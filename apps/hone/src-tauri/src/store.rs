@@ -10,6 +10,12 @@ pub struct PomodoroSnapshot {
     pub remain_sec: i64,
     pub running: bool,
     pub saved_at: i64,
+    #[serde(default = "default_timer_mode")]
+    pub mode: String,
+}
+
+fn default_timer_mode() -> String {
+    "pomodoro".to_string()
 }
 
 pub fn load_pomodoro(app: &AppHandle) -> Result<Option<PomodoroSnapshot>, String> {

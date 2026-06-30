@@ -44,6 +44,11 @@ export function installNativeBridge(): void {
     tray: {
       update: (title, tooltip) => invoke('tray_update', { title, tooltip }),
     },
+    vault: {
+      passLoad: (userId) => invoke<string | null>('vault_pass_load', { userId }),
+      passSave: (userId, passphrase) => invoke('vault_pass_save', { userId, passphrase }),
+      passClear: (userId) => invoke('vault_pass_clear', { userId }),
+    },
     on: (channel, listener) => {
       const wire = eventWire(channel);
       let unlisten: UnlistenFn | undefined;

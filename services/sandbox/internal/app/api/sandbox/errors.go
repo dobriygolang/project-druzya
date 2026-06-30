@@ -3,6 +3,7 @@ package sandboxapi
 import (
 	"errors"
 
+	billingadapter "github.com/sedorofeevd/project-druzya/services/sandbox/internal/adapter/billing"
 	sandboxservice "github.com/sedorofeevd/project-druzya/services/sandbox/internal/sandbox/service"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,7 +22,7 @@ func mapServiceError(err error) error {
 		return status.Error(codes.NotFound, err.Error())
 	case errors.Is(err, sandboxservice.ErrQuotaExceeded):
 		return status.Error(codes.FailedPrecondition, "quota exceeded")
-	case errors.Is(err, sandboxservice.ErrFeatureDisabled):
+	case errors.Is(err, billingadapter.ErrFeatureDisabled):
 		return status.Error(codes.FailedPrecondition, "feature not available on current plan")
 	default:
 		return status.Error(codes.Internal, err.Error())

@@ -1,6 +1,9 @@
 // Dock — persistent bottom timer pill on every page.
 import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
+import { useT } from '@d9-i18n';
+
+import { usePomodoroStore } from '@shared/model/pomodoro';
 import { Icon } from '@shared/ui/primitives/Icon';
 
 // Локальный CSS — keyframes для mount-анимации + hover-варианты для
@@ -8,8 +11,8 @@ import { Icon } from '@shared/ui/primitives/Icon';
 // rotate/scale; CSS-driven подход даёт чистый combination.
 const DOCK_CSS = `
 @keyframes hone-dock-enter {
-  from { opacity: 0; transform: translate(-50%, 16px); }
-  to   { opacity: 1; transform: translate(-50%, 0); }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .hone-dock {
@@ -26,29 +29,30 @@ const DOCK_CSS = `
   cursor: pointer;
   padding: 0;
   transition:
-    background-color var(--motion-dur-large) var(--motion-ease-standard),
-    color var(--motion-dur-large) var(--motion-ease-standard),
-    transform var(--motion-dur-large) var(--motion-ease-standard);
+    background-color var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast),
+    opacity var(--t-fast);
 }
 .hone-dock-btn:hover {
   background: rgb(var(--ink-rgb) / 0.1);
   color: var(--ink);
 }
 .hone-dock-btn[data-variant="menu"]:hover {
-  transform: rotate(180deg);
+  opacity: 0.75;
 }
 .hone-dock-btn[data-variant="action"]:hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 .hone-dock-btn[data-variant="action"]:active {
-  transform: scale(0.95);
+  transform: scale(0.98);
 }
 
 .hone-dock-timer {
   position: relative;
   height: 36px;
-  min-width: 92px;
-  padding: 0 12px;
+  min-width: 96px;
+  padding: 0 10px;
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
@@ -61,8 +65,8 @@ const DOCK_CSS = `
   align-items: center;
   justify-content: center;
   transition:
-    opacity var(--motion-dur-xlarge) var(--motion-ease-standard),
-    transform var(--motion-dur-xlarge) var(--motion-ease-standard);
+    opacity var(--t-base),
+    transform var(--t-base);
 }
 
 .hone-dock-timer-layer--time {
@@ -70,14 +74,15 @@ const DOCK_CSS = `
 }
 
 .hone-dock-timer-layer--reset {
+  gap: 4px;
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-6px);
   pointer-events: none;
 }
 
 .hone-dock-timer:hover .hone-dock-timer-layer--time {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(6px);
 }
 
 .hone-dock-timer:hover .hone-dock-timer-layer--reset {
@@ -103,41 +108,28 @@ const DOCK_CSS = `
 
 interface DockProps {
   onMenu: () => void;
-  running: boolean;
-  onToggle: () => void;
-  remain: number;
-  onReset: () => void;
   vol: number;
   onVol: (v: number) => void;
 }
 
-// Dock displays mm:ss so it must re-render every second; memoising the
-// outer Dock itself wouldn't help (remain changes). Instead we wrap
-// VolumeBtn (below) in React.memo so the volume slider's internal
-// useState (open/closeTimer) doesn't tear down on every parent tick.
-// The Dock body is exported normally.
-export function Dock({
-  onMenu,
-  running,
-  onToggle,
-  remain,
-  onReset,
-  vol,
-  onVol,
-}: DockProps) {
-  const mm = String(Math.floor(remain / 60)).padStart(2, '0');
-  const ss = String(remain % 60).padStart(2, '0');
+export function Dock({ onMenu, vol, onVol }: DockProps) {
   return (
     <>
       <style>{DOCK_CSS}</style>
       <div
+        style={{
+          position: 'absolute',
+          bottom: 36,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          WebkitAppRegion: 'no-drag',
+        }}
+      >
+      <div
         className="no-select hone-dock"
         style={
           {
-            position: 'absolute',
-            bottom: 36,
-            left: '50%',
-            transform: 'translateX(-50%)',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
@@ -147,9 +139,6 @@ export function Dock({
             border: '1px solid var(--ink-tint-06)',
             backdropFilter: 'none',
             WebkitBackdropFilter: 'none',
-            zIndex: 10,
-            // Electron CSS extension (no-drag для DOM-региона)
-            WebkitAppRegion: 'no-drag',
           } as CSSProperties
         }
       >
@@ -157,20 +146,53 @@ export function Dock({
           <Icon name="menu" size={14} />
         </DockBtn>
         <Divider />
-        <TimerArea running={running} mm={mm} ss={ss} onReset={onReset} />
-        <Divider />
-        <DockBtn
-          onClick={onToggle}
-          title={running ? 'Pause' : 'Play'}
-          ariaLabel={running ? 'Pause timer' : 'Play timer'}
-          ariaPressed={running}
-          variant="action"
-        >
-          <Icon name={running ? 'pause' : 'play'} size={13} />
-        </DockBtn>
+        <TimerControls />
         <Divider />
         <VolumeBtn vol={vol} onVol={onVol} />
       </div>
+      </div>
+    </>
+  );
+}
+
+function ModeCycleBtn() {
+  const t = useT();
+  const mode = usePomodoroStore((s) => s.mode);
+  const cycleMode = usePomodoroStore((s) => s.cycleMode);
+  const nextMode = mode === 'pomodoro' ? 'stopwatch' : 'pomodoro';
+  const title =
+    nextMode === 'stopwatch' ? t('hone.dock.mode_stopwatch') : t('hone.dock.mode_pomodoro');
+
+  return (
+    <DockBtn onClick={() => cycleMode()} title={title} ariaLabel={title} small variant="action">
+      <Icon name={mode === 'pomodoro' ? 'pomodoro' : 'infinity'} size={14} strokeWidth={2} />
+    </DockBtn>
+  );
+}
+
+function TimerControls() {
+  const mode = usePomodoroStore((s) => s.mode);
+  const remain = usePomodoroStore((s) => s.remain);
+  const elapsed = usePomodoroStore((s) => s.elapsed);
+  const running = usePomodoroStore((s) => s.running);
+  const toggle = usePomodoroStore((s) => s.toggle);
+  const reset = usePomodoroStore((s) => s.reset);
+  const displaySec = mode === 'pomodoro' ? remain : elapsed;
+  const mm = String(Math.floor(displaySec / 60)).padStart(2, '0');
+  const ss = String(displaySec % 60).padStart(2, '0');
+  return (
+    <>
+      <TimerArea running={running} mm={mm} ss={ss} onReset={reset} />
+      <Divider />
+      <DockBtn
+        onClick={toggle}
+        title={running ? 'Pause' : 'Play'}
+        ariaLabel={running ? 'Pause timer' : 'Play timer'}
+        ariaPressed={running}
+        variant="action"
+      >
+        <Icon name={running ? 'pause' : 'play'} size={13} />
+      </DockBtn>
     </>
   );
 }
@@ -184,6 +206,7 @@ interface TimerAreaProps {
 }
 
 function TimerArea({ running, mm, ss, onReset }: TimerAreaProps) {
+  const t = useT();
   return (
     <div className="hone-dock-timer">
       <div className="hone-dock-timer-layer hone-dock-timer-layer--time">
@@ -201,7 +224,14 @@ function TimerArea({ running, mm, ss, onReset }: TimerAreaProps) {
         </span>
       </div>
       <div className="hone-dock-timer-layer hone-dock-timer-layer--reset">
-        <DockBtn onClick={onReset} title="Reset timer" ariaLabel="Reset timer" small variant="action">
+        <ModeCycleBtn />
+        <DockBtn
+          onClick={onReset}
+          title={t('hone.dock.reset_timer')}
+          ariaLabel={t('hone.dock.reset_timer')}
+          small
+          variant="action"
+        >
           <Icon name="reset" size={14} strokeWidth={1.6} />
         </DockBtn>
       </div>
@@ -422,10 +452,7 @@ function VolumeBtnImpl({ vol, onVol }: VolumeBtnProps) {
           overflow: 'visible',
           zIndex: 11,
           transition:
-            'width var(--motion-dur-medium) var(--motion-ease-standard),' +
-            'opacity var(--motion-dur-medium) var(--motion-ease-standard),' +
-            'transform var(--motion-dur-medium) var(--motion-ease-standard),' +
-            'border-color var(--motion-dur-medium) var(--motion-ease-standard)',
+            'width var(--t-base), opacity var(--t-fast), transform var(--t-fast)',
           pointerEvents: open ? 'auto' : 'none',
         }}
       >

@@ -30,8 +30,7 @@ func (i *Implementation) CreateWorkTask(ctx context.Context, req *trackerv1.Crea
 		return nil, err
 	}
 	task, err := i.svc.CreateWorkTask(ctx, userID, trackerservice.CreateWorkTaskParams{
-		Kind: req.GetKind(), Title: req.GetTitle(), BriefMd: req.GetBriefMd(),
-		SkillKey: req.GetSkillKey(), DeepLink: req.GetDeepLink(),
+		Kind: req.GetKind(), Title: req.GetTitle(),
 	})
 	if err != nil {
 		return nil, mapServiceError(err)
@@ -86,23 +85,9 @@ func (i *Implementation) UnscheduleWorkTask(ctx context.Context, req *trackerv1.
 	return &trackerv1.UnscheduleWorkTaskResponse{Task: workTaskToProto(*task)}, nil
 }
 
-func (i *Implementation) UpdateWorkTaskKind(ctx context.Context, req *trackerv1.UpdateWorkTaskKindRequest) (*trackerv1.UpdateWorkTaskKindResponse, error) {
-	userID, err := requireUserID(ctx)
-	if err != nil {
-		return nil, err
-	}
-	task, err := i.svc.UpdateWorkTaskKind(ctx, userID, req.GetId(), req.GetKind(), req.GetManualOverride())
-	if err != nil {
-		return nil, mapServiceError(err)
-	}
-	return &trackerv1.UpdateWorkTaskKindResponse{Task: workTaskToProto(*task)}, nil
-}
-
 func workTaskToProto(t trackerservice.WorkTask) *trackerv1.WorkTask {
 	out := &trackerv1.WorkTask{
-		Id: t.ID, Status: t.Status, Kind: t.Kind, Source: t.Source,
-		Title: t.Title, BriefMd: t.BriefMd, SkillKey: t.SkillKey, DeepLink: t.DeepLink,
-		Priority: int32(t.Priority), ManualKindOverride: t.ManualKindOverride,
+		Id: t.ID, Status: t.Status, Kind: t.Kind, Title: t.Title,
 		CreatedAt: timestamppb.New(t.CreatedAt), UpdatedAt: timestamppb.New(t.UpdatedAt),
 	}
 	if t.CompletedAt != nil {
@@ -114,6 +99,9 @@ func workTaskToProto(t trackerservice.WorkTask) *trackerv1.WorkTask {
 	if t.ScheduledDurationMin != nil {
 		v := int32(*t.ScheduledDurationMin)
 		out.ScheduledDurationMin = &v
+	}
+	if t.GoogleEventID != "" {
+		out.GoogleEventId = &t.GoogleEventID
 	}
 	return out
 }

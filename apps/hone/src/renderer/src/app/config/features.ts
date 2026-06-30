@@ -7,6 +7,13 @@ function readBoolEnv(raw: string | undefined): boolean | undefined {
 }
 
 /**
+ * Local-only data mode — notes/tasks/focus persist on device, no cloud sync.
+ * Auth (login) is unchanged. Set VITE_HONE_LOCAL_ONLY=false for cloud APIs.
+ */
+export const LOCAL_ONLY =
+  readBoolEnv(import.meta.env.VITE_HONE_LOCAL_ONLY) ?? true;
+
+/**
  * Dev username/passwordless login (identity DEV_AUTH=true).
  * Default: on in `vite dev`, off in production builds.
  */

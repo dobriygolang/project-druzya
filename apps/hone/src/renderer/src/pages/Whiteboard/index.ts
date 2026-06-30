@@ -1,0 +1,1 @@
+export { WhiteboardPage } from './WhiteboardPage';

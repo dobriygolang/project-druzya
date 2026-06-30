@@ -174,11 +174,6 @@ jobs:
               exit 1
             fi
 
-            if ! grep -qE '^ADMIN_USER_IDS=.+' deploy/.env || grep -qE '^ADMIN_USER_IDS=(CHANGE_ME|00000000-0000-0000-0000-000000000001)?$' deploy/.env; then
-              echo "ERROR: set ADMIN_USER_IDS in deploy/.env (comma-separated identity user UUIDs)"
-              exit 1
-            fi
-
             if [ ! -f apps/web/dist/index.html ]; then
               echo "ERROR: missing apps/web/dist — SPA upload step failed"
               exit 1
@@ -240,9 +235,8 @@ jobs:
               docker compose -f docker-compose.prod.yml --env-file .env ps
               docker compose -f docker-compose.prod.yml --env-file .env logs identity --tail 80
               docker compose -f docker-compose.prod.yml --env-file .env logs billing --tail 40
-              docker compose -f docker-compose.prod.yml --env-file .env logs interview --tail 40
-              docker compose -f docker-compose.prod.yml --env-file .env logs ai --tail 80
-              docker compose -f docker-compose.prod.yml --env-file .env logs recommendation --tail 80
+              docker compose -f docker-compose.prod.yml --env-file .env logs tracker --tail 40
+              docker compose -f docker-compose.prod.yml --env-file .env logs rooms --tail 40
               docker compose -f docker-compose.prod.yml --env-file .env logs sandbox --tail 40
               docker compose -f docker-compose.prod.yml --env-file .env logs caddy --tail 40
               exit 1

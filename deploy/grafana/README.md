@@ -36,8 +36,8 @@ Import JSON dashboards from `deploy/grafana/dashboards/` via UI or API.
 | Metric | Use |
 |--------|-----|
 | `http_requests_total`, `http_request_duration_seconds` | RPS, latency |
-| `outbox_lag_seconds` | ai / recommendation queue |
-| `llm_calls_total` | LLM health |
+| `up` | service health (see `deploy/prometheus-alerts.yml`) |
+| `llm_calls_total` | LLM health (ai service, CI only) |
 | `node_memory_*` | host RAM (node_exporter) |
 
-User counts / DB size: admin `/admin` dashboard (SQL, not Prometheus).
+Retired services (interview, recommendation, admin) are no longer scraped.

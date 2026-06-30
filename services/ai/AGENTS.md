@@ -1,5 +1,7 @@
 # AGENTS.md — ai service
 
+> **ARCHIVED — CI only, not prod.** Interview evaluation pipeline; retained for CI matrix builds. Do not deploy or wire new product features to this service.
+
 Work from `services/ai/` only. Monorepo: [../../AGENTS.md](../../AGENTS.md).
 
 Module: `github.com/sedorofeevd/project-druzya/services/ai`
@@ -21,7 +23,6 @@ HTTP `8083` | gRPC `9093` | PG `5435` / `druzya_ai`
 ## Workers
 
 - **Outbox** — claim `interview.attempt_submitted` only; poll `WORKER_POLL_INTERVAL` (2s)
-- **Retry** — jobs with `next_retry_at`; reset stuck `running` (10m)
 
 Metrics: `outbox_lag_seconds`, `outbox_handler_duration_seconds`, `llm_*`, `llm_prompt_cache_*`.
 
@@ -36,9 +37,7 @@ Metrics: `outbox_lag_seconds`, `outbox_handler_duration_seconds`, `llm_*`, `llm_
 
 ## API
 
-Internal only (`x-internal-token`): `RunEvaluation`, **`RunSystemDesignInterviewerTurn`**, **`RunSystemDesignCheckpoint`**, admin eval jobs, `GetLLMConfig` / `UpdateLLMConfig`.
-
-`system_design` final eval uses `TaskSysDesignCritique` on JSON dossier (not generic 2-pass judge). Interviewer turns use `TaskSystemDesignSeniorMock`.
+Internal only (`x-internal-token`): `RunEvaluation`, admin eval jobs, `GetLLMConfig` / `UpdateLLMConfig`, `ProbeLLMProviders`.
 
 HTTP admin routes under `/v1/admin/ai/*` (via admin BFF).
 
@@ -55,7 +54,6 @@ make start | gen-proto | gen-mocks | test | lint | build
 | Variable | Notes |
 |----------|-------|
 | INTERNAL_API_TOKEN | required |
-| INTERVIEW_GRPC_ADDR / CONTENT_GRPC_ADDR | `127.0.0.1:9092` / `9091` |
 | BILLING_GRPC_ADDR | optional |
 | LLM_FREE_CHAIN_ORDER / LLM_PAID_CHAIN_ORDER | plan-based routing — see [deploy/RUNBOOK.md](../../deploy/RUNBOOK.md) |
 | GROQ_API_KEY, DEEPSEEK_API_KEY, … | provider keys |

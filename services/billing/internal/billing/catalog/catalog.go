@@ -101,15 +101,8 @@ func toLimitSpec(val entitlement.Value) PlanLimitSpec {
 var highlightOrder = []string{
 	model.EntitlementCloudNotesCount,
 	model.EntitlementCodeRunsPerDay,
-	model.EntitlementAIInsightsPerDay,
 	model.EntitlementLiveRoomsPerMonth,
 	model.EntitlementLiveRoomsConcurrent,
-	model.EntitlementAIEvaluationsPerDay,
-	model.EntitlementMockInterviewsPerMonth,
-	model.EntitlementCompanyTemplatesEnabled,
-	model.EntitlementHiddenTestsEnabled,
-	model.EntitlementRecommendationsEnabled,
-	model.EntitlementAdvancedFeedbackEnabled,
 }
 
 func formatHighlights(planSlug string, parsed map[string]entitlement.Value) []string {
@@ -129,7 +122,6 @@ func formatHighlights(planSlug string, parsed map[string]entitlement.Value) []st
 		}
 	}
 	out = appendLiveRoomHighlights(out, parsed)
-	out = appendCompanyFeatures(out, parsed)
 	return out
 }
 
@@ -149,40 +141,15 @@ func appendLiveRoomHighlights(out []string, parsed map[string]entitlement.Value)
 	return out
 }
 
-func appendCompanyFeatures(out []string, parsed map[string]entitlement.Value) []string {
-	templates, hasTemplates := parsed[model.EntitlementCompanyTemplatesEnabled]
-	hidden, hasHidden := parsed[model.EntitlementHiddenTestsEnabled]
-	if hasTemplates && hasHidden && templates.Type == entitlement.TypeBool && hidden.Type == entitlement.TypeBool &&
-		templates.Value && hidden.Value {
-		return append(out, "Шаблоны компаний и скрытые тесты")
-	}
-	return out
-}
-
 func formatHighlight(planSlug, key string, val entitlement.Value) (string, bool) {
 	switch val.Type {
 	case entitlement.TypeCounter:
 		switch key {
-		case model.EntitlementAIEvaluationsPerDay:
-			if val.Limit == nil {
-				return "AI-оценки без дневного лимита (beta)", true
-			}
-			return fmt.Sprintf("%d AI-оценок в день", *val.Limit), true
-		case model.EntitlementMockInterviewsPerMonth:
-			if val.Limit == nil {
-				return "Mock-интервью без месячного лимита (beta)", true
-			}
-			return fmt.Sprintf("%d mock-интервью в месяц", *val.Limit), true
 		case model.EntitlementCodeRunsPerDay:
 			if val.Limit == nil {
 				return "Запуски кода без дневного лимита (beta)", true
 			}
 			return fmt.Sprintf("%d запусков кода в день", *val.Limit), true
-		case model.EntitlementAIInsightsPerDay:
-			if val.Limit == nil {
-				return "AI-инсайты без дневного лимита (beta)", true
-			}
-			return fmt.Sprintf("%d AI-инсайтов в день", *val.Limit), true
 		default:
 			if val.Limit == nil {
 				return humanizeKey(key) + " без лимита (beta)", true
@@ -206,19 +173,7 @@ func formatHighlight(planSlug, key string, val entitlement.Value) (string, bool)
 		if !val.Value {
 			return "", false
 		}
-		switch key {
-		case model.EntitlementRecommendationsEnabled:
-			if planSlug != model.PlanFree {
-				return "", false
-			}
-			return "Рекомендации и учебный план", true
-		case model.EntitlementAdvancedFeedbackEnabled:
-			return "Расширенный AI-фидбек", true
-		case model.EntitlementCompanyTemplatesEnabled, model.EntitlementHiddenTestsEnabled:
-			return "", false
-		default:
-			return humanizeKey(key), true
-		}
+		return humanizeKey(key), true
 	default:
 		return "", false
 	}
