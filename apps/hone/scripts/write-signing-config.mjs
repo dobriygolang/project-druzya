@@ -9,6 +9,8 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const out = path.join(root, 'src-tauri', 'signing.ci.json');
 const bundle = {};
+const onCi = process.env.CI === 'true';
+const runnerOs = process.env.RUNNER_OS ?? '';
 
 const winThumb = process.env.WINDOWS_CERTIFICATE_THUMBPRINT?.trim();
 if (winThumb) {
@@ -22,11 +24,14 @@ if (winThumb) {
 const appleIdentity = process.env.APPLE_SIGNING_IDENTITY?.trim();
 if (appleIdentity) {
   bundle.macOS = { signingIdentity: appleIdentity };
+} else if (onCi && runnerOs === 'macOS') {
+  // Required on macOS runners — empty identity fails codesign.
+  bundle.macOS = { signingIdentity: '-' };
 }
 
 if (Object.keys(bundle).length === 0) {
   if (fs.existsSync(out)) fs.unlinkSync(out);
-  console.log('write-signing-config: no signing env vars, skipping overlay');
+  console.log('write-signing-config: no signing overlay needed');
   process.exit(0);
 }
 

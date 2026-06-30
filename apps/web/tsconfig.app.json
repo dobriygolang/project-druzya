@@ -17,7 +17,18 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": {
+      "@/*": ["src/*"],
+      "@d9-hone-demo": ["../shared/hone-demo/index.ts"],
+      "@d9-hone-demo/*": ["../shared/hone-demo/*"],
+      "react": ["./node_modules/@types/react"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "@codemirror/state": ["./node_modules/@codemirror/state"],
+      "@codemirror/view": ["./node_modules/@codemirror/view"],
+      "@codemirror/commands": ["./node_modules/@codemirror/commands"],
+      "@codemirror/lang-markdown": ["./node_modules/@codemirror/lang-markdown"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "../shared/hone-demo"]
 }

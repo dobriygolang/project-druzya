@@ -115,10 +115,11 @@ jobs:
           fi
 
       - name: Write code signing overlay config
-        if: vars.HONE_CODE_SIGNING == 'true'
         working-directory: apps/hone
         shell: bash
         env:
+          CI: 'true'
+          RUNNER_OS: ${{ runner.os }}
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           WINDOWS_CERTIFICATE_THUMBPRINT: ${{ secrets.WINDOWS_CERTIFICATE_THUMBPRINT }}
         run: node scripts/write-signing-config.mjs

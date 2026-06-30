@@ -1,11 +1,9 @@
 import { Fragment } from 'react'
+import { LandingHoneDemo } from '@/components/landing/LandingHoneDemo'
 import { useI18n } from '@/lib/i18n'
-import { useSiteTheme } from '@/lib/site/useSiteTheme'
 
 export function LandingPhilosophy() {
   const { t } = useI18n()
-  const { theme } = useSiteTheme()
-  const isDark = theme === 'dark'
   const lines = t('welcome.philosophyBody').split('\n')
 
   return (
@@ -15,18 +13,8 @@ export function LandingPhilosophy() {
           {t('welcome.philosophyTitle')}
         </h2>
 
-        <div className="mb-12 overflow-hidden rounded-xl border border-site-border">
-          <img
-            src={
-              isDark
-                ? '/landing/landing-philosophy-dark.png'
-                : '/landing/landing-philosophy-light.png'
-            }
-            alt=""
-            aria-hidden="true"
-            className="h-full max-h-[420px] w-full object-cover"
-            loading="lazy"
-          />
+        <div className="relative mb-12 aspect-[16/10] overflow-hidden rounded-xl border border-site-border">
+          <LandingHoneDemo mode="showcase" compact showThemePicker={false} />
         </div>
 
         <div className="mx-auto max-w-none text-lg leading-relaxed text-site-muted">

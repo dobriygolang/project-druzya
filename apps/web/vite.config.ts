@@ -8,10 +8,25 @@ const sandbox = process.env.VITE_SANDBOX_URL ?? 'http://localhost:8086'
 const rooms = process.env.VITE_ROOMS_URL ?? 'http://localhost:8087'
 const notes = process.env.VITE_NOTES_URL ?? 'http://localhost:8090'
 
+const CM_ALIASES = [
+  '@codemirror/state',
+  '@codemirror/view',
+  '@codemirror/commands',
+  '@codemirror/lang-markdown',
+  '@codemirror/language',
+].reduce<Record<string, string>>((acc, pkg) => {
+  acc[pkg] = path.resolve(__dirname, 'node_modules', pkg)
+  return acc
+}, {})
+
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: { '@': path.resolve(__dirname, './src') },
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@d9-hone-demo': path.resolve(__dirname, '../shared/hone-demo'),
+      ...CM_ALIASES,
+    },
   },
   server: {
     host: true,

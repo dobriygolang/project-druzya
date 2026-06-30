@@ -1,5 +1,5 @@
 import { heroPosterUrl, heroVideoUrl } from '@/lib/landing/media'
-import { HoneWorkspaceDemo } from '@/components/landing/hone-demo/HoneWorkspaceDemo'
+import { LandingHoneDemo } from '@/components/landing/LandingHoneDemo'
 
 export function LandingHeroMedia() {
   const videoSrc = heroVideoUrl()
@@ -18,7 +18,7 @@ export function LandingHeroMedia() {
           className="h-full w-full object-cover"
         />
       ) : (
-        <HoneWorkspaceDemo />
+        <LandingHoneDemo mode="interactive" showThemePicker />
       )}
     </div>
   )

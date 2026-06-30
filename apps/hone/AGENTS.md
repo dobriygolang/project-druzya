@@ -229,9 +229,9 @@ Local backend: `VITE_HONE_LOCAL_API=true` + `make start` in each service.
 
 Release flow: bump `src-tauri/tauri.conf.json` version → tag `hone-vX.Y.Z` → push tag → CI uploads `.dmg`/`.msi`/`.exe` + signed updater artifacts.
 
-GitHub secret `TAURI_SIGNING_PRIVATE_KEY` must match `plugins.updater.pubkey`. Private key lives in `.tauri/hone.key` (gitignored).
+Default macOS bundle uses ad-hoc signing (`signingIdentity: "-"` in `tauri.conf.json`) so CI works without Apple certs. Set repo variable `HONE_CODE_SIGNING=true` + Apple secrets for Developer ID + notarization (see `SIGNING.md`).
 
-**Code signing (installers):** [`SIGNING.md`](./SIGNING.md) — Apple Developer ID + notarization (API key) + Windows OV cert. CI imports certs and sets `signing.ci.json` overlay via `scripts/write-signing-config.mjs`.
+GitHub secret `TAURI_SIGNING_PRIVATE_KEY` must match `plugins.updater.pubkey`. Private key lives in `.tauri/hone.key` (gitignored).
 
 ## Known gaps
 
