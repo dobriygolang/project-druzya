@@ -142,7 +142,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
           VITE_HONE_DEV_LOGIN: 'false'
           VITE_HONE_LOCAL_ONLY: 'false'
           APPLE_SIGNING_IDENTITY: ${{ matrix.os == 'macos' && (vars.HONE_CODE_SIGNING == 'true' && secrets.APPLE_SIGNING_IDENTITY || '-') || '' }}

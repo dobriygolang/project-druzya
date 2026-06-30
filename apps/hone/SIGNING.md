@@ -20,7 +20,7 @@ Add in **GitHub → Settings → Secrets and variables → Actions**:
 | Secret | Description |
 |--------|-------------|
 | `TAURI_SIGNING_PRIVATE_KEY` | Content of `apps/hone/.tauri/hone.key` |
-| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | Empty string if key has no password |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | **Only** if the key was generated with a password — omit/delete otherwise |
 
 ### macOS — signing + notarization
 

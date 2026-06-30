@@ -44,7 +44,7 @@ CI: [`.github/workflows/hone-release.yml`](../../.github/workflows/hone-release.
 - **Updater signing:** generate keys with  
   `CI=true npx tauri signer generate -w .tauri/hone.key -f -p ""` (from `apps/hone`)
 - GitHub secret `TAURI_SIGNING_PRIVATE_KEY` = contents of `.tauri/hone.key`
-- Optional `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` if the key is password-protected
+- **Do not** add `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` unless you generated the key with a password (our default key has none)
 - Public updater key is in `src-tauri/tauri.conf.json` (`plugins.updater.pubkey`)
 
 **Tag rule:** tag must match app version — `hone-v` + semver from `tauri.conf.json` (e.g. `hone-v0.0.1`).
