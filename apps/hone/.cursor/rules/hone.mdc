@@ -1,0 +1,51 @@
+---
+description: Hone desktop app — HTTP, Tauri shell, renderer conventions
+globs: apps/hone/**/*
+alwaysApply: false
+---
+
+# Hone — renderer HTTP
+
+Packaged Tauri builds cannot rely on WebView `fetch()` to `https://druz9.online` (cross-origin from `tauri://localhost` → "Load failed"). Dev works via Vite same-origin proxy.
+
+## Rule: backend HTTP via `apiFetch` only
+
+All renderer calls to project-druzya REST **must** use `apiFetch` from `src/renderer/src/shared/api/http.ts`.
+
+```typescript
+// ❌ BAD — breaks in release .dmg/.exe
+const resp = await fetch(`${API_BASE_URL}/v1/notes`, { headers: authHeaders() });
+
+// ✅ GOOD
+import { apiFetch } from '@shared/api/http';
+const resp = await apiFetch(`${API_BASE_URL}/v1/notes`, { headers: authHeaders() });
+```
+
+`apiFetch` routing:
+
+| Mode | Transport |
+|------|-----------|
+| `npm run dev` (`import.meta.env.DEV`) | browser `fetch` + Vite proxy (`vite.config.ts`) |
+| `tauri build` (packaged) | `@tauri-apps/plugin-http` → Rust `reqwest` |
+
+Do **not** add per-endpoint Rust HTTP commands for normal REST — extend `apiFetch` / scope instead.
+
+## New API host or path
+
+1. Add URL glob to `src-tauri/capabilities/default.json` under `http:default` → `allow`.
+2. If needed for WebView CSP, extend `connect-src` in `src-tauri/tauri.conf.json` and `src/renderer/index.html`.
+3. Use `API_BASE_URL` from `shared/api/config.ts` (prod: `https://druz9.online`).
+
+## Exceptions (do not use `apiFetch`)
+
+- **App updates** — `tauri-plugin-updater` (`shared/lib/updater.ts`)
+- **Tauri IPC** — keychain session, vault passphrase, pomodoro snapshot (`window.hone` / `platform/ipc.ts`)
+- **Local-only data** — IndexedDB, Tauri store
+- **Static assets** — `img-src` / CDN fonts, not REST
+
+## API base (dev vs prod)
+
+- Dev: `API_BASE_URL` is empty → relative `/v1/*` proxied by Vite to local services or prod.
+- Prod build: `API_BASE_URL` = `https://druz9.online` (override with `VITE_DRUZ9_API_BASE`).
+
+Full endpoint list: [apps/hone/AGENTS.md](../AGENTS.md).

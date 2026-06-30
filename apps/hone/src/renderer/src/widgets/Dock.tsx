@@ -263,13 +263,6 @@ function DockBtn({
       aria-label={ariaLabel ?? title}
       aria-pressed={ariaPressed}
       data-variant={variant}
-      data-hone-demo-target={
-        ariaLabel === 'Open menu'
-          ? 'dock-menu'
-          : ariaLabel === 'Play timer'
-            ? 'dock-play'
-            : undefined
-      }
       className="focus-ring hone-dock-btn"
       style={{
         width: size,

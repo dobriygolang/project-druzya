@@ -1,4 +1,5 @@
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { useSessionStore } from '@shared/model/session';
 
 function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
@@ -32,7 +33,7 @@ export async function remoteShareWhiteboard(
   sceneJson: string,
   title?: string,
 ): Promise<ShareWhiteboardResult> {
-  const resp = await fetch(`${API_BASE_URL}/v1/rooms/share-whiteboard`, {
+  const resp = await apiFetch(`${API_BASE_URL}/v1/rooms/share-whiteboard`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ scene_json: sceneJson, title: title ?? '' }),
@@ -53,7 +54,7 @@ export async function remotePublishWhiteboard(
   sceneJson: string,
   title?: string,
 ): Promise<PublishWhiteboardResult> {
-  const resp = await fetch(`${API_BASE_URL}/v1/rooms/publish-whiteboard`, {
+  const resp = await apiFetch(`${API_BASE_URL}/v1/rooms/publish-whiteboard`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ scene_json: sceneJson, title: title ?? '' }),

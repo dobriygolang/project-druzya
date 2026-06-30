@@ -1,12 +1,9 @@
 import { API_BASE_URL } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 
 export type AuthConfig = {
   telegram_bot_username: string;
 };
-
-function isNativeAuth(): boolean {
-  return typeof window !== 'undefined' && Boolean(window.hone?.auth?.telegram);
-}
 
 function apiPath(path: string): string {
   const base = API_BASE_URL.replace(/\/$/, '');
@@ -14,11 +11,7 @@ function apiPath(path: string): string {
 }
 
 export async function getAuthConfig(): Promise<AuthConfig> {
-  if (isNativeAuth()) {
-    const cfg = await window.hone!.auth.config();
-    return { telegram_bot_username: cfg.telegram_bot_username || '' };
-  }
-  const res = await fetch(apiPath('/v1/auth/config'));
+  const res = await apiFetch(apiPath('/v1/auth/config'));
   if (!res.ok) {
     throw new Error(`auth config ${res.status}`);
   }
@@ -48,19 +41,7 @@ function readJwtExpMs(token: string): number {
 }
 
 export async function authTelegram(code: string): Promise<AuthTelegramResult> {
-  if (isNativeAuth()) {
-    const session = await window.hone!.auth.telegram(code);
-    const expiresAt =
-      session.expiresAt > 0 ? session.expiresAt : readJwtExpMs(session.accessToken) || Date.now() + 15 * 60 * 1000;
-    return {
-      accessToken: session.accessToken,
-      refreshToken: session.refreshToken,
-      userId: session.userId,
-      expiresAt,
-    };
-  }
-
-  const res = await fetch(apiPath('/v1/auth/telegram'), {
+  const res = await apiFetch(apiPath('/v1/auth/telegram'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code: code.trim() }),

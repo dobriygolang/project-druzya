@@ -2,6 +2,8 @@
 
 Work from `apps/hone/` only. Monorepo index: [../../AGENTS.md](../../AGENTS.md). Web companion: [../web/AGENTS.md](../web/AGENTS.md).
 
+Agent rules (HTTP, Tauri): [.cursor/rules/hone.mdc](.cursor/rules/hone.mdc).
+
 ## Purpose
 
 Tauri 2 + React desktop focus workspace: pomodoro timer, notes (E2EE vault), task board with day schedule, local Excalidraw whiteboard, stats/calendar overlays, settings. Local-first IndexedDB; optional cloud sync when signed in and `LOCAL_ONLY=false`.
@@ -15,6 +17,7 @@ Tauri 2 + React desktop focus workspace: pomodoro timer, notes (E2EE vault), tas
 | Local DB | IndexedDB `hone-db` v2 — `shared/db/honeDb.ts` |
 | Sync | `shared/sync/` — outbox push + pull (notes, tasks, focus) |
 | Platform bridge | `platform/ipc.ts`, `platform/native-bridge.ts` → `window.hone` |
+| HTTP (renderer) | `shared/api/http.ts` → `apiFetch()` — dev: browser `fetch` + Vite proxy; release: `tauri-plugin-http` |
 
 ## Pages and navigation
 
@@ -64,18 +67,13 @@ Billing is not called from Hone.
 
 | Method | Path | Client |
 |--------|------|--------|
-| GET | `/v1/auth/config` | `features/auth/api/auth.ts` |
+| GET | `/v1/auth/config` | `features/auth/api/auth.ts` via `apiFetch` |
 | POST | `/v1/auth/telegram` | same |
-| HEAD | `/healthz` | `SyncEngine.ts`, `OfflineBanner.tsx` |
+| HEAD | `/healthz` | `SyncEngine.ts`, `OfflineBanner.tsx` via `apiFetch` |
 
-**Tauri shell (Rust)** — `src-tauri/src/auth.rs` (native HTTP for login in packaged builds):
+**Packaged builds:** all renderer HTTP goes through `apiFetch` → `tauri-plugin-http` (scope in `src-tauri/capabilities/default.json`). Dev (`npm run dev`) keeps browser `fetch` + Vite proxy. **Never add raw `fetch()` for `/v1/*` or `/healthz`** — see [.cursor/rules/hone.mdc](.cursor/rules/hone.mdc).
 
-| Method | Path |
-|--------|------|
-| GET | `/v1/auth/config` |
-| POST | `/v1/auth/telegram` |
-| POST | `/api/v1/auth/telegram/start` (legacy, unused) |
-| POST | `/api/v1/auth/telegram/poll` (legacy, unused) |
+**Tauri shell (Rust)** — `src-tauri/src/auth.rs` (keychain session only; legacy poll commands unused):
 
 **tracker** — `features/tasks/repository/tasksRemote.ts`, `features/calendar/api/calendarClient.ts`
 
@@ -197,8 +195,6 @@ Registered in `src-tauri/src/lib.rs`:
 | `auth_logout` | Clear session |
 | `auth_tg_start` | Telegram login start (legacy poll flow) |
 | `auth_tg_poll` | Telegram login poll (legacy) |
-| `auth_config` | `GET /v1/auth/config` via native HTTP |
-| `auth_telegram` | `POST /v1/auth/telegram` via native HTTP |
 | `vault_pass_load/save/clear` | Vault passphrase keychain |
 | `pomodoro_load/save` | Timer snapshot (Tauri store) |
 | `shell_open_external` | Open URL in browser |

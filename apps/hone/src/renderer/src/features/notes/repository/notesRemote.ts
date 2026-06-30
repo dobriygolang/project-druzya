@@ -1,4 +1,5 @@
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { useSessionStore } from '@shared/model/session';
 
 import type { Note, NoteSummary } from '../api/notesClient';
@@ -61,7 +62,7 @@ function noteToStored(n: Note, userId: string, encrypted = false): StoredNote {
 }
 
 export async function remoteListNotes(): Promise<NoteSummary[]> {
-  const resp = await fetch(`${API_BASE_URL}/v1/notes`, { headers: authHeaders() });
+  const resp = await apiFetch(`${API_BASE_URL}/v1/notes`, { headers: authHeaders() });
   if (!resp.ok) throw new Error(`listNotes: ${resp.status}`);
   const j = (await resp.json()) as { notes?: JsonNote[] };
   return (j.notes ?? []).map((n) => {
@@ -76,7 +77,7 @@ export async function remoteListNotes(): Promise<NoteSummary[]> {
 }
 
 export async function remoteGetNote(id: string): Promise<WireNote> {
-  const resp = await fetch(`${API_BASE_URL}/v1/notes/${encodeURIComponent(id)}`, {
+  const resp = await apiFetch(`${API_BASE_URL}/v1/notes/${encodeURIComponent(id)}`, {
     headers: authHeaders(),
   });
   if (!resp.ok) throw new Error(`getNote: ${resp.status}`);
@@ -85,7 +86,7 @@ export async function remoteGetNote(id: string): Promise<WireNote> {
 }
 
 export async function remoteCreateNote(title: string, bodyMd: string): Promise<WireNote> {
-  const resp = await fetch(`${API_BASE_URL}/v1/notes`, {
+  const resp = await apiFetch(`${API_BASE_URL}/v1/notes`, {
     method: 'POST',
     headers: authHeaders({ 'content-type': 'application/json' }),
     body: JSON.stringify({ title, body_md: bodyMd }),
@@ -100,7 +101,7 @@ export async function remoteUpdateNote(
   title: string,
   bodyMd: string,
 ): Promise<WireNote> {
-  const resp = await fetch(`${API_BASE_URL}/v1/notes/${encodeURIComponent(id)}`, {
+  const resp = await apiFetch(`${API_BASE_URL}/v1/notes/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: authHeaders({ 'content-type': 'application/json' }),
     body: JSON.stringify({ id, title, body_md: bodyMd }),
@@ -111,7 +112,7 @@ export async function remoteUpdateNote(
 }
 
 export async function remoteDeleteNote(id: string): Promise<void> {
-  const resp = await fetch(`${API_BASE_URL}/v1/notes/${encodeURIComponent(id)}`, {
+  const resp = await apiFetch(`${API_BASE_URL}/v1/notes/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });

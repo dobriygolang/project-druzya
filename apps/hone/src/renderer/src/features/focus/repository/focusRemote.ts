@@ -1,4 +1,5 @@
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { useSessionStore } from '@shared/model/session';
 
 export interface FocusDay {
@@ -91,7 +92,7 @@ function num(obj: Record<string, unknown>, camel: string, snake: string): number
 
 export async function remoteGetStats(upToDate?: string): Promise<HoneStats> {
   const qs = upToDate ? `?up_to_date=${encodeURIComponent(upToDate)}` : '';
-  const resp = await fetch(`${API_BASE_URL}/v1/focus/stats${qs}`, { headers: authHeaders() });
+  const resp = await apiFetch(`${API_BASE_URL}/v1/focus/stats${qs}`, { headers: authHeaders() });
   if (!resp.ok) throw new Error(`getStats failed: ${resp.status}`);
   const j = (await resp.json()) as Record<string, unknown>;
   const heatmap = (j.heatmap as JsonFocusDay[] | undefined) ?? [];
@@ -114,7 +115,7 @@ export async function remoteStartFocusSession(args: {
   pinnedTitle?: string;
   mode?: 'pomodoro' | 'stopwatch';
 }): Promise<FocusSession> {
-  const resp = await fetch(`${API_BASE_URL}/v1/focus/sessions/start`, {
+  const resp = await apiFetch(`${API_BASE_URL}/v1/focus/sessions/start`, {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({
@@ -133,7 +134,7 @@ export async function remoteEndFocusSession(args: {
   pomodorosCompleted: number;
   secondsFocused: number;
 }): Promise<FocusSession> {
-  const resp = await fetch(
+  const resp = await apiFetch(
     `${API_BASE_URL}/v1/focus/sessions/${encodeURIComponent(args.sessionId)}/end`,
     {
       method: 'POST',

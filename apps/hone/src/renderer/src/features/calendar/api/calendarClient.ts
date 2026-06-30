@@ -1,4 +1,5 @@
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { useSessionStore } from '@shared/model/session';
 
 const EVENTS_BASE = `${API_BASE_URL}/v1/tracker/integrations/google/events`;
@@ -74,7 +75,7 @@ export async function listGoogleCalendarEvents(
     time_min: timeMin.toISOString(),
     time_max: timeMax.toISOString(),
   });
-  const resp = await fetch(`${EVENTS_BASE}?${params}`, { headers: authHeaders() });
+  const resp = await apiFetch(`${EVENTS_BASE}?${params}`, { headers: authHeaders() });
   if (resp.status === 401) return [];
   if (!resp.ok) throw new Error(`listGoogleCalendarEvents: ${resp.status}`);
   const j = (await resp.json()) as { events?: Record<string, unknown>[] };
@@ -82,7 +83,7 @@ export async function listGoogleCalendarEvents(
 }
 
 export async function getTrackerSettings(): Promise<TrackerSettings> {
-  const resp = await fetch(SETTINGS_BASE, { headers: authHeaders() });
+  const resp = await apiFetch(SETTINGS_BASE, { headers: authHeaders() });
   if (!resp.ok) throw new Error(`getTrackerSettings: ${resp.status}`);
   const j = (await resp.json()) as { settings?: Record<string, unknown> };
   return unwrapSettings(j.settings ?? {});
@@ -95,7 +96,7 @@ export async function updateTrackerSettings(
   if (patch.googleCalendarSyncEnabled !== undefined) {
     body.google_calendar_sync_enabled = patch.googleCalendarSyncEnabled;
   }
-  const resp = await fetch(SETTINGS_BASE, {
+  const resp = await apiFetch(SETTINGS_BASE, {
     method: 'PATCH',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify(body),
@@ -106,7 +107,7 @@ export async function updateTrackerSettings(
 }
 
 export async function getGoogleCalendarAuthURL(): Promise<string> {
-  const resp = await fetch(`${GOOGLE_URL_BASE}/url`, { headers: authHeaders() });
+  const resp = await apiFetch(`${GOOGLE_URL_BASE}/url`, { headers: authHeaders() });
   if (!resp.ok) throw new Error(`getGoogleCalendarAuthURL: ${resp.status}`);
   const j = (await resp.json()) as { url?: string };
   if (!j.url) throw new Error('getGoogleCalendarAuthURL: empty url');
@@ -114,7 +115,7 @@ export async function getGoogleCalendarAuthURL(): Promise<string> {
 }
 
 export async function disconnectGoogleCalendar(): Promise<TrackerSettings> {
-  const resp = await fetch(`${GOOGLE_URL_BASE}/disconnect`, {
+  const resp = await apiFetch(`${GOOGLE_URL_BASE}/disconnect`, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: '{}',

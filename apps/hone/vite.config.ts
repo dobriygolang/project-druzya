@@ -16,7 +16,6 @@ const PEER_ALIASES = {
 };
 const SHARED_ALIASES = {
   '@d9-i18n': resolve(__dirname, '../shared/i18n'),
-  '@d9-hone-demo': resolve(__dirname, '../shared/hone-demo'),
 };
 
 export default defineConfig(({ mode }) => {

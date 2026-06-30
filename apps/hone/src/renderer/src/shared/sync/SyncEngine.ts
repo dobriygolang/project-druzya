@@ -1,4 +1,5 @@
 import { HEALTH_CHECK_URL } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { getDbUserId } from '@shared/db/honeDb';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
 import { useSyncStore } from '@shared/model/sync';
@@ -22,7 +23,7 @@ let started = false;
 async function probeServer(): Promise<boolean> {
   if (!canReachNetwork()) return false;
   try {
-    const resp = await fetch(HEALTH_CHECK_URL, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
+    const resp = await apiFetch(HEALTH_CHECK_URL, { method: 'HEAD', signal: AbortSignal.timeout(5000) });
     return resp.status < 500;
   } catch {
     return false;

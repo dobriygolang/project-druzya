@@ -16,6 +16,17 @@
     "shell:allow-open",
     "deep-link:default",
     "store:default",
-    "allow-hone-commands"
+    "allow-hone-commands",
+    {
+      "identifier": "http:default",
+      "allow": [
+        { "url": "https://druz9.online/**" },
+        { "url": "https://api.druz9.online/**" },
+        { "url": "https://cdn.druz9.online/**" },
+        { "url": "https://druz9.ru/**" },
+        { "url": "http://localhost:8080/**" },
+        { "url": "http://127.0.0.1:8080/**" }
+      ]
+    }
   ]
 }

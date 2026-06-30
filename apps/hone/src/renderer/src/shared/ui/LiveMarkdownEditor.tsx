@@ -163,11 +163,7 @@ export function LiveMarkdownEditor({ value, onChange, placeholder }: LiveMarkdow
 
   return (
     <div className="hone-live-md" data-empty={empty ? 'true' : 'false'} data-placeholder={placeholder ?? ''}>
-      <div
-        ref={mountRef}
-        className="hone-live-md__mount"
-        data-hone-demo-target="note-editor"
-      />
+      <div ref={mountRef} className="hone-live-md__mount" />
       {slash && (
         <SlashMenu
           x={slash.x}

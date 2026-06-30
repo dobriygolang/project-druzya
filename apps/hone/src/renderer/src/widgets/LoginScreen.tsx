@@ -4,6 +4,7 @@ import { useT } from '@d9-i18n';
 
 import { authTelegram, getAuthConfig } from '@features/auth/api/auth';
 import { API_BASE_URL, TELEGRAM_BOT_USERNAME } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { DEV_LOGIN_ENABLED } from '@app/config/features';
 import { useSessionStore } from '@shared/model/session';
 
@@ -109,7 +110,7 @@ export function LoginScreen(): JSX.Element {
   async function devLogin(): Promise<void> {
     setDevBusy(true);
     try {
-      const resp = await fetch(`${API_BASE_URL}/api/v1/auth/dev/login`, {
+      const resp = await apiFetch(`${API_BASE_URL}/api/v1/auth/dev/login`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',

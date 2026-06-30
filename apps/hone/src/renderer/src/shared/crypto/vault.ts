@@ -4,6 +4,7 @@
  */
 import { LOCAL_ONLY } from '@app/config/features';
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { dbGet, dbPut, requireUserId } from '@shared/db/honeDb';
 import { useSessionStore } from '@shared/model/session';
 
@@ -51,7 +52,7 @@ function readSalt(j: SaltResponse): string {
 
 export async function initVault(): Promise<{ saltB64: string; isNewVault: boolean }> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/v1/notes/vault/init`, {
+    const resp = await apiFetch(`${API_BASE_URL}/v1/notes/vault/init`, {
       method: 'POST',
       headers: authHeaders({ 'content-type': 'application/json' }),
       body: '{}',
@@ -90,7 +91,7 @@ async function initLocalVaultSalt(): Promise<{ saltB64: string; isNew: boolean }
 
 export async function fetchVaultSalt(): Promise<string | null> {
   try {
-    const resp = await fetch(`${API_BASE_URL}/v1/notes/vault/salt`, { headers: authHeaders() });
+    const resp = await apiFetch(`${API_BASE_URL}/v1/notes/vault/salt`, { headers: authHeaders() });
     if (resp.status === 404) {
       if (LOCAL_ONLY) {
         const local = await dbGet<{ saltB64: string }>('meta', localSaltKey(requireUserId()));

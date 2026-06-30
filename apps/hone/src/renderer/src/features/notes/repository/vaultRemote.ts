@@ -1,4 +1,5 @@
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { useSessionStore } from '@shared/model/session';
 
 function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
@@ -9,7 +10,7 @@ function authHeaders(extra: Record<string, string> = {}): Record<string, string>
 }
 
 export async function remoteEncryptNoteBody(noteId: string, ciphertextB64: string): Promise<void> {
-  const resp = await fetch(
+  const resp = await apiFetch(
     `${API_BASE_URL}/v1/notes/vault/notes/${encodeURIComponent(noteId)}/encrypt`,
     {
       method: 'POST',

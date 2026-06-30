@@ -1,4 +1,5 @@
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { useSessionStore } from '@shared/model/session';
 
 import type { TaskCard, TaskKind, TaskStatus } from '../api/tasks';
@@ -60,14 +61,14 @@ function unwrapTaskResponse(j: unknown): TaskCard {
 }
 
 export async function remoteListTasks(): Promise<TaskCard[]> {
-  const resp = await fetch(BASE, { headers: authHeaders() });
+  const resp = await apiFetch(BASE, { headers: authHeaders() });
   if (!resp.ok) throw new Error(`listTasks: ${resp.status}`);
   const j = (await resp.json()) as { tasks?: JsonWorkTask[] };
   return (j.tasks ?? []).map(unwrapWorkTask);
 }
 
 export async function remoteCreateTask(input: { title: string; kind?: TaskKind }): Promise<TaskCard> {
-  const resp = await fetch(BASE, {
+  const resp = await apiFetch(BASE, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify({ kind: input.kind ?? 'custom', title: input.title }),
@@ -77,7 +78,7 @@ export async function remoteCreateTask(input: { title: string; kind?: TaskKind }
 }
 
 export async function remoteMoveTaskStatus(taskId: string, status: TaskStatus): Promise<TaskCard> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}/status`, {
+  const resp = await apiFetch(`${BASE}/${encodeURIComponent(taskId)}/status`, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify({ id: taskId, status }),
@@ -87,7 +88,7 @@ export async function remoteMoveTaskStatus(taskId: string, status: TaskStatus): 
 }
 
 export async function remoteDeleteTask(taskId: string): Promise<void> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}`, {
+  const resp = await apiFetch(`${BASE}/${encodeURIComponent(taskId)}`, {
     method: 'DELETE',
     headers: authHeaders(),
   });
@@ -106,7 +107,7 @@ export async function remoteScheduleTask(
         ? new Date().toISOString()
         : start.toISOString();
   const duration = Math.max(15, Math.min(480, durationMin));
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}/schedule`, {
+  const resp = await apiFetch(`${BASE}/${encodeURIComponent(taskId)}/schedule`, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify({ scheduledStartIso: startIso, durationMin: duration }),
@@ -116,7 +117,7 @@ export async function remoteScheduleTask(
 }
 
 export async function remoteUnscheduleTask(taskId: string): Promise<TaskCard> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}/unschedule`, {
+  const resp = await apiFetch(`${BASE}/${encodeURIComponent(taskId)}/unschedule`, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify({ id: taskId }),

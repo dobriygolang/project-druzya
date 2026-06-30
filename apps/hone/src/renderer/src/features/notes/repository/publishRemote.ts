@@ -1,4 +1,5 @@
 import { API_BASE_URL, DEV_BEARER_TOKEN } from '@shared/api/config';
+import { apiFetch } from '@shared/api/http';
 import { useSessionStore } from '@shared/model/session';
 
 export interface PublishStatus {
@@ -38,7 +39,7 @@ function pickBool(obj: Record<string, unknown>, ...keys: string[]): boolean {
 }
 
 export async function remoteGetPublishStatus(noteId: string): Promise<PublishStatus> {
-  const resp = await fetch(
+  const resp = await apiFetch(
     `${API_BASE_URL}/v1/notes/${encodeURIComponent(noteId)}/publish-status`,
     { headers: authHeaders() },
   );
@@ -56,7 +57,7 @@ export async function remoteShareNoteToWeb(
   noteId: string,
   plaintextMd: string,
 ): Promise<ShareToWebResult> {
-  const resp = await fetch(
+  const resp = await apiFetch(
     `${API_BASE_URL}/v1/notes/${encodeURIComponent(noteId)}/share-to-web`,
     {
       method: 'POST',
@@ -75,7 +76,7 @@ export async function remoteShareNoteToWeb(
 }
 
 export async function remoteUnpublishNote(noteId: string): Promise<void> {
-  const resp = await fetch(
+  const resp = await apiFetch(
     `${API_BASE_URL}/v1/notes/${encodeURIComponent(noteId)}/unpublish`,
     {
       method: 'POST',
@@ -90,7 +91,7 @@ export async function remoteMakeNotePrivate(
   noteId: string,
   ciphertextB64: string,
 ): Promise<void> {
-  const resp = await fetch(
+  const resp = await apiFetch(
     `${API_BASE_URL}/v1/notes/${encodeURIComponent(noteId)}/make-private`,
     {
       method: 'POST',
