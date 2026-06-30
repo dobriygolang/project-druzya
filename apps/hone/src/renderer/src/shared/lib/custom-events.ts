@@ -22,6 +22,10 @@ export const HONE_EVENTS = {
   openTask: 'hone:open-task',
   /** Deeplink → Notes: select note by id. */
   openNote: 'hone:open-note',
+  /** TaskBoard → App: open palette prefilled for a day. */
+  openPaletteAddTask: 'hone:open-palette-add-task',
+  /** Palette → TaskBoard: refresh task list after create. */
+  tasksChanged: 'hone:tasks-changed',
   /** Theme module (lib/theme.ts) — theme switched. */
   themeChanged: 'hone:theme-changed',
 } as const;

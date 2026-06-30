@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
-  createTask,
-  deleteTask,
   listTasks,
   moveTaskStatus,
   scheduleTask,
   type TaskCard,
 } from '@features/tasks/api/tasks';
+import { HONE_HEADER_H } from '@widgets/Chrome';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
-import { DayColumn } from './DayColumn';
+import { DayColumn, useDayTaskDrag } from './DayColumn';
 import { DayTimeline } from './DayTimeline';
-import { buildDayWindow, parseDayKey, taskDayKey, toDayKey } from './lib/dates';
+import {
+  buildDayWindow,
+  defaultDurationMin,
+  parseDayKey,
+  taskDayKey,
+  toDayKey,
+} from './lib/dates';
 
-const ACTIVE = new Set(['todo', 'in_progress', 'in_review']);
+const VISIBLE = new Set(['todo', 'in_progress', 'in_review', 'done']);
 
 export function TaskBoardPage(): JSX.Element {
   const today = useMemo(() => new Date(), []);
@@ -35,6 +40,12 @@ export function TaskBoardPage(): JSX.Element {
   }, [refresh]);
 
   useEffect(() => {
+    const onTasksChanged = () => void refresh();
+    window.addEventListener(HONE_EVENTS.tasksChanged, onTasksChanged);
+    return () => window.removeEventListener(HONE_EVENTS.tasksChanged, onTasksChanged);
+  }, [refresh]);
+
+  useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const todayIdx = days.findIndex((d) => d.key === toDayKey(today));
@@ -47,10 +58,18 @@ export function TaskBoardPage(): JSX.Element {
     const map = new Map<string, TaskCard[]>();
     for (const d of days) map.set(d.key, []);
     for (const task of tasks) {
-      if (!ACTIVE.has(task.status)) continue;
+      if (!VISIBLE.has(task.status)) continue;
       const key = task.scheduledStart ? taskDayKey(task) : toDayKey(today);
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(task);
+    }
+    for (const [, list] of map) {
+      list.sort((a, b) => {
+        const aDone = a.status === 'done' ? 1 : 0;
+        const bDone = b.status === 'done' ? 1 : 0;
+        if (aDone !== bDone) return aDone - bDone;
+        return 0;
+      });
     }
     return map;
   }, [tasks, days, today]);
@@ -60,42 +79,91 @@ export function TaskBoardPage(): JSX.Element {
     [days, selectedDay, today],
   );
 
-  const handleCreate = useCallback(
-    async (dayKey: string, title: string) => {
-      try {
-        let created = await createTask({ title });
-        if (dayKey !== toDayKey(today)) {
-          const start = parseDayKey(dayKey);
-          start.setHours(9, 0, 0, 0);
-          created = await scheduleTask(created.id, start.toISOString(), 30);
-        }
-        setTasks((prev) => [created, ...prev]);
-        setSelectedDay(dayKey);
-      } catch {
-        /* silent */
+  const findTaskColumnKey = useCallback(
+    (taskId: string): string | null => {
+      for (const [key, list] of tasksByDay) {
+        if (list.some((t) => t.id === taskId)) return key;
       }
+      return null;
     },
-    [today],
+    [tasksByDay],
   );
 
-  const handleToggleDone = useCallback(async (task: TaskCard) => {
-    const next = task.status === 'done' ? 'todo' : 'done';
-    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
-    try {
-      await moveTaskStatus(task.id, next);
-    } catch {
-      void refresh();
-    }
-  }, [refresh]);
+  const handleMoveToDay = useCallback(
+    async (taskId: string, dayKey: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      const sourceKey = findTaskColumnKey(taskId);
+      if (sourceKey === dayKey) return;
 
-  const handleDelete = useCallback(async (taskId: string) => {
-    setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    try {
-      await deleteTask(taskId);
-    } catch {
-      void refresh();
-    }
-  }, [refresh]);
+      const start = parseDayKey(dayKey);
+      start.setHours(9, 0, 0, 0);
+      const startIso = start.toISOString();
+      const duration = Math.max(15, defaultDurationMin(task));
+
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId
+            ? { ...t, scheduledStart: startIso, scheduledDurationMin: duration }
+            : t,
+        ),
+      );
+      setSelectedDay(dayKey);
+
+      try {
+        const updated = await scheduleTask(task.id, startIso, duration);
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+      } catch {
+        void refresh();
+      }
+    },
+    [tasks, findTaskColumnKey, refresh],
+  );
+
+  const { draggingId, dropDay, onPointerDragStart } = useDayTaskDrag(handleMoveToDay);
+
+  const openAddTask = useCallback((dayKey: string) => {
+    window.dispatchEvent(
+      new CustomEvent(HONE_EVENTS.openPaletteAddTask, { detail: { dayKey } }),
+    );
+  }, []);
+
+  const handleToggleDone = useCallback(
+    async (task: TaskCard) => {
+      const next = task.status === 'done' ? 'todo' : 'done';
+      setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: next } : t)));
+      try {
+        await moveTaskStatus(task.id, next);
+      } catch {
+        void refresh();
+      }
+    },
+    [refresh],
+  );
+
+  const handleDurationChange = useCallback(
+    async (task: TaskCard, durationMin: number, columnDate: Date) => {
+      const clamped = Math.max(15, durationMin);
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? { ...t, scheduledDurationMin: clamped } : t)),
+      );
+      try {
+        let startIso: string;
+        if (task.scheduledStart) {
+          startIso = task.scheduledStart;
+        } else {
+          const start = new Date(columnDate);
+          start.setHours(9, 0, 0, 0);
+          startIso = start.toISOString();
+        }
+        const updated = await scheduleTask(task.id, startIso, clamped);
+        setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+      } catch {
+        void refresh();
+      }
+    },
+    [refresh],
+  );
 
   useEffect(() => {
     const onOpen = (e: Event): void => {
@@ -110,42 +178,48 @@ export function TaskBoardPage(): JSX.Element {
 
   return (
     <div
-      className="fadein"
       style={{
         position: 'absolute',
         inset: 0,
-        padding: '72px 20px 88px',
+        padding: `${HONE_HEADER_H}px 20px 88px`,
         display: 'flex',
         gap: 12,
         minHeight: 0,
+        WebkitAppRegion: 'no-drag',
       }}
     >
       <div
         ref={scrollRef}
+        className="hone-hide-scrollbar"
         style={{
           flex: 1,
           minWidth: 0,
+          minHeight: 0,
+          height: '100%',
           overflowX: 'auto',
           overflowY: 'hidden',
           display: 'flex',
+          alignItems: 'stretch',
           gap: 10,
-          paddingBottom: 8,
           scrollSnapType: 'x proximity',
+          WebkitAppRegion: 'no-drag',
         }}
       >
         {days.map((d) => (
-          <div key={d.key} style={{ scrollSnapAlign: 'start' }}>
-            <DayColumn
-              date={d.date}
-              today={today}
-              tasks={tasksByDay.get(d.key) ?? []}
-              selected={selectedDay === d.key}
-              onSelect={() => setSelectedDay(d.key)}
-              onCreate={(title) => void handleCreate(d.key, title)}
-              onToggleDone={(task) => void handleToggleDone(task)}
-              onDelete={(id) => void handleDelete(id)}
-            />
-          </div>
+          <DayColumn
+            key={d.key}
+            dayKey={d.key}
+            date={d.date}
+            today={today}
+            tasks={tasksByDay.get(d.key) ?? []}
+            selected={selectedDay === d.key}
+            dropHighlight={dropDay === d.key && draggingId !== null}
+            onSelect={() => setSelectedDay(d.key)}
+            onAddClick={() => openAddTask(d.key)}
+            onToggleDone={(task) => void handleToggleDone(task)}
+            onDurationChange={(task, min) => void handleDurationChange(task, min, d.date)}
+            onPointerDragStart={(taskId, e) => onPointerDragStart(taskId, e)}
+          />
         ))}
       </div>
 

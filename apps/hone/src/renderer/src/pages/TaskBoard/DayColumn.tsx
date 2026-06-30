@@ -1,52 +1,73 @@
-import { useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { TaskCard } from '@features/tasks/api/tasks';
-import { defaultDurationMin, formatColumnHeader, formatDuration, sumDurationMin } from './lib/dates';
+import { formatColumnHeader, formatDuration, sumDurationMin } from './lib/dates';
+import { TaskRow } from './TaskRow';
 
 const COL_W = 254;
-const TASKS_MIN_H = 181;
 
 interface DayColumnProps {
+  dayKey: string;
   date: Date;
   today: Date;
   tasks: TaskCard[];
   selected: boolean;
+  dropHighlight: boolean;
   onSelect: () => void;
-  onCreate: (title: string) => void;
+  onAddClick: () => void;
   onToggleDone: (task: TaskCard) => void;
-  onDelete: (taskId: string) => void;
+  onDurationChange: (task: TaskCard, minutes: number) => void;
+  onPointerDragStart: (taskId: string) => void;
+  onPointerDragMove: (dayKey: string) => void;
+  onPointerDrop: (taskId: string, dayKey: string) => void;
+  onPointerDragEnd: () => void;
 }
 
-export function DayColumn({ date, today, tasks, selected, onSelect, onCreate, onToggleDone, onDelete }: DayColumnProps) {
-  const [draft, setDraft] = useState('');
+export function DayColumn({
+  dayKey,
+  date,
+  today,
+  tasks,
+  selected,
+  dropHighlight,
+  onSelect,
+  onAddClick,
+  onToggleDone,
+  onDurationChange,
+  onPointerDragStart,
+}: DayColumnProps): JSX.Element {
   const { weekday, label, isToday } = formatColumnHeader(date, today);
-  const total = formatDuration(sumDurationMin(tasks));
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    const title = draft.trim();
-    if (!title) return;
-    onCreate(title);
-    setDraft('');
-  };
+  const total = formatDuration(sumDurationMin(tasks.filter((t) => t.status !== 'done')));
 
   return (
     <section
+      data-day-key={dayKey}
       onClick={onSelect}
       style={{
         flex: `0 0 ${COL_W}px`,
         width: COL_W,
+        height: '100%',
+        minHeight: '100%',
+        scrollSnapAlign: 'start',
         display: 'flex',
         flexDirection: 'column',
         gap: 10,
-        opacity: selected ? 1 : 0.72,
-        transition: 'opacity var(--motion-dur-small) var(--motion-ease-standard)',
+        padding: dropHighlight ? 8 : 0,
+        margin: dropHighlight ? -8 : 0,
+        borderRadius: 14,
+        background: dropHighlight ? 'rgb(var(--ink-rgb) / 0.07)' : 'transparent',
+        boxShadow: dropHighlight ? 'inset 0 0 0 1px rgb(var(--ink-rgb) / 0.22)' : 'none',
+        opacity: selected ? 1 : dropHighlight ? 0.95 : 0.72,
+        transition:
+          'opacity var(--motion-dur-small) var(--motion-ease-standard), background-color var(--motion-dur-small) var(--motion-ease-standard), box-shadow var(--motion-dur-small) var(--motion-ease-standard)',
       }}
     >
-      <header>
+      <header style={{ flexShrink: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, padding: '0 2px' }}>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ink-90)' }}>{weekday}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: dropHighlight ? 'var(--ink)' : 'var(--ink-90)' }}>
+              {weekday}
+            </div>
             <div style={{ fontSize: 11, color: 'var(--ink-40)', marginTop: 2 }}>
               {label}
               {isToday ? ' · today' : ''}
@@ -58,105 +79,118 @@ export function DayColumn({ date, today, tasks, selected, onSelect, onCreate, on
         </div>
       </header>
 
-      <form onSubmit={submit} onClick={(e) => e.stopPropagation()}>
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add task"
-          style={{
-            boxSizing: 'border-box',
-            width: COL_W,
-            height: 38,
-            padding: '10px',
-            borderRadius: 12,
-            border: '1px solid var(--ink-tint-08)',
-            background: 'rgb(var(--ink-rgb) / 0.03)',
-            color: 'var(--ink-80)',
-            fontSize: 13,
-            lineHeight: '16px',
-            outline: 'none',
-          }}
-        />
-      </form>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onAddClick();
+        }}
+        style={{
+          boxSizing: 'border-box',
+          width: '100%',
+          height: 38,
+          flexShrink: 0,
+          padding: '10px',
+          borderRadius: 12,
+          border: '1px solid var(--ink-tint-08)',
+          background: 'rgb(var(--ink-rgb) / 0.03)',
+          color: 'var(--ink-50)',
+          fontSize: 13,
+          lineHeight: '16px',
+          textAlign: 'left',
+          cursor: 'pointer',
+          transition: 'background-color var(--motion-dur-small) var(--motion-ease-standard), border-color var(--motion-dur-small) var(--motion-ease-standard)',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgb(var(--ink-rgb) / 0.06)';
+          e.currentTarget.style.borderColor = 'var(--ink-tint-12)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgb(var(--ink-rgb) / 0.03)';
+          e.currentTarget.style.borderColor = 'var(--ink-tint-08)';
+        }}
+      >
+        Add task
+      </button>
 
       <div
         style={{
           display: 'flex',
           flexDirection: 'column',
           gap: 8,
-          minHeight: TASKS_MIN_H,
+          flex: 1,
+          minHeight: 0,
         }}
       >
-        {tasks.map((task) => {
-          const done = task.status === 'done';
-          return (
-            <article
-              key={task.id}
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                boxSizing: 'border-box',
-                width: COL_W,
-                padding: '10px 12px',
-                borderRadius: 12,
-                background: done ? 'transparent' : 'rgb(var(--ink-rgb) / 0.06)',
-                border: '1px solid var(--ink-tint-06)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <button
-                type="button"
-                aria-label={done ? 'Mark incomplete' : 'Mark done'}
-                onClick={() => onToggleDone(task)}
-                style={{
-                  width: 14,
-                  height: 14,
-                  borderRadius: 4,
-                  border: `1px solid ${done ? 'var(--ink-40)' : 'var(--ink-60)'}`,
-                  background: done ? 'var(--ink-40)' : 'transparent',
-                  flexShrink: 0,
-                  cursor: 'pointer',
-                }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontSize: 13,
-                    lineHeight: '16px',
-                    color: done ? 'var(--ink-40)' : 'var(--ink-90)',
-                    textDecoration: done ? 'line-through' : 'none',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {task.title || 'Untitled'}
-                </div>
-              </div>
-              <span className="mono" style={{ fontSize: 10, color: 'var(--ink-40)', flexShrink: 0 }}>
-                {formatDuration(defaultDurationMin(task))}
-              </span>
-              <button
-                type="button"
-                aria-label="Delete task"
-                onClick={() => onDelete(task.id)}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  color: 'var(--ink-40)',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  lineHeight: 1,
-                  padding: 0,
-                }}
-              >
-                ×
-              </button>
-            </article>
-          );
-        })}
+        {tasks.map((task) => (
+          <TaskRow
+            key={task.id}
+            task={task}
+            dragging={draggingId === task.id}
+            onToggleDone={onToggleDone}
+            onDurationChange={onDurationChange}
+            onPointerDragStart={onPointerDragStart}
+          />
+        ))}
       </div>
     </section>
   );
+}
+
+/** Pointer-based day drag — works in Tauri/WKWebView where HTML5 drop data is often empty. */
+export function useDayTaskDrag(onMoveToDay: (taskId: string, dayKey: string) => void) {
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropDay, setDropDay] = useState<string | null>(null);
+  const dragRef = useRef<{ taskId: string; pointerId: number } | null>(null);
+
+  const endDrag = useCallback(() => {
+    dragRef.current = null;
+    setDraggingId(null);
+    setDropDay(null);
+    document.body.style.userSelect = '';
+    document.body.style.cursor = '';
+  }, []);
+
+  const onPointerDragStart = useCallback((taskId: string, e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    dragRef.current = { taskId, pointerId: e.pointerId };
+    setDraggingId(taskId);
+    setDropDay(null);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'grabbing';
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  useEffect(() => {
+    if (!draggingId) return;
+
+    const dayKeyFromPoint = (x: number, y: number): string | null => {
+      const el = document.elementFromPoint(x, y);
+      return el?.closest('[data-day-key]')?.getAttribute('data-day-key') ?? null;
+    };
+
+    const onMove = (e: PointerEvent) => {
+      if (!dragRef.current || e.pointerId !== dragRef.current.pointerId) return;
+      const dayKey = dayKeyFromPoint(e.clientX, e.clientY);
+      if (dayKey) setDropDay(dayKey);
+    };
+
+    const onUp = (e: PointerEvent) => {
+      if (!dragRef.current || e.pointerId !== dragRef.current.pointerId) return;
+      const dayKey = dayKeyFromPoint(e.clientX, e.clientY);
+      if (dayKey) onMoveToDay(dragRef.current.taskId, dayKey);
+      endDrag();
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+    };
+  }, [draggingId, onMoveToDay, endDrag]);
+
+  return { draggingId, dropDay, onPointerDragStart };
 }

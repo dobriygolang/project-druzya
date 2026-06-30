@@ -1,4 +1,4 @@
-import { API_BASE, api, apiWithBearer, parseAuthTokens, readAccessToken } from '@/lib/apiClient'
+import { API_BASE, api, apiWithBearer, parseAuthTokens, parseResponse, readAccessToken } from '@/lib/apiClient'
 import { asArray } from '@/lib/api/normalize'
 import { normalizeProtoJson } from '@/lib/protoJson'
 
@@ -97,7 +97,7 @@ export function clearGuestToken(roomId: string): void {
 }
 
 function bearerForRoom(roomId: string): string | null {
-  return readAccessToken() ?? readGuestToken(roomId)
+  return readGuestToken(roomId) ?? readAccessToken()
 }
 
 export async function createRoom(payload: CreateRoomPayload): Promise<CodeRoom> {
@@ -121,7 +121,7 @@ export async function createGuestRoom(input: {
   language?: string
   roomType?: string
 }): Promise<GuestCreateResult> {
-  const res = await fetch(`${API_BASE}/rooms/guest-create`, {
+  const body = await parseResponse<Record<string, unknown>>('/rooms/guest-create', await fetch(`${API_BASE}/rooms/guest-create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -129,12 +129,7 @@ export async function createGuestRoom(input: {
       language: input.language ?? 'go',
       room_type: input.roomType ?? 'practice',
     }),
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(text || `guest create ${res.status}`)
-  }
-  const body = normalizeProtoJson(await res.json()) as Record<string, unknown>
+  }))
   const tokens = parseAuthTokens(body)
   const room = normalizeRoom(body.room as CodeRoom)
   const inviteRaw = body.invite as InviteLink | undefined

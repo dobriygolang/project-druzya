@@ -25,18 +25,15 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { useFormatCode } from '@/hooks/useFormatCode'
 import { useSandboxRun } from '@/hooks/useSandboxRun'
 import { normalizeEditorLang } from '@/lib/codemirror/langExtension'
-import { getMe } from '@/lib/api/auth'
 import {
   closeRoom,
   createInvite,
   freezeRoom,
   getRoom,
   guestJoin,
-  joinRoom,
   persistGuestToken,
   readGuestToken,
 } from '@/lib/api/rooms'
-import { readAccessToken, hasValidAccessToken } from '@/lib/apiClient'
 import { markInviteCopied, readInviteCopied } from '@/lib/live/useCreateLiveRoom'
 import { liveWsStatusLabel, useI18n } from '@/lib/i18n'
 
@@ -71,21 +68,11 @@ export default function CollabRoomPage() {
   const [fontSize, setFontSize] = useState(14)
   const [peers, setPeers] = useState<CollabPeer[]>([])
   const isNew = roomId === 'new'
-  const authed = hasValidAccessToken()
-  const hasSession = authed || !!guestToken
-
-  const meQ = useQuery({ queryKey: ['me'], queryFn: getMe, enabled: authed })
+  const hasSession = !!guestToken
 
   const roomQ = useQuery({
     queryKey: ['room', roomId, inviteToken],
-    queryFn: async () => {
-      try {
-        return await getRoom(roomId)
-      } catch {
-        if (authed) return joinRoom(roomId, { inviteToken })
-        throw new Error('room not found')
-      }
-    },
+    queryFn: () => getRoom(roomId),
     enabled: !!roomId && !isNew && hasSession,
     retry: false,
   })
@@ -124,7 +111,7 @@ export default function CollabRoomPage() {
     },
   })
 
-  const wsToken = guestToken ?? readAccessToken() ?? ''
+  const wsToken = guestToken ?? ''
   const run = useSandboxRun()
   const fmt = useFormatCode()
 
@@ -144,7 +131,7 @@ export default function CollabRoomPage() {
     return <LiveNewPage />
   }
 
-  if (!authed && inviteToken && !guestToken) {
+  if (inviteToken && !guestToken) {
     return (
       <GuestGate
         guestName={guestName}
@@ -152,7 +139,6 @@ export default function CollabRoomPage() {
         error={guestJoinM.error}
         loading={guestJoinM.isPending}
         onJoin={() => guestJoinM.mutate()}
-        loginTo={`/login?next=/live/${roomId}?invite=${encodeURIComponent(inviteToken)}`}
       />
     )
   }
@@ -165,7 +151,6 @@ export default function CollabRoomPage() {
         error={null}
         loading={false}
         onJoin={() => {}}
-        loginTo={`/login?next=/live/${roomId}`}
         title={t('live.accessTitle')}
         description={t('live.accessDescription')}
         hideJoin
@@ -173,7 +158,7 @@ export default function CollabRoomPage() {
     )
   }
 
-  if (roomQ.isLoading || (authed && meQ.isLoading)) {
+  if (roomQ.isLoading) {
     return <EditorShell message={t('live.loadingRoom')} />
   }
 
@@ -209,15 +194,15 @@ export default function CollabRoomPage() {
     )
   }
 
-  const sessionUserId = meQ.data?.id ?? (wsToken ? jwtSubject(wsToken) : null)
+  const sessionUserId = wsToken ? jwtSubject(wsToken) : null
   const myRole = room.participants.find((p) => p.user_id === sessionUserId)?.role
   const isOwner = sessionUserId === room.owner_id
   const canFreeze = myRole === 'owner' || myRole === 'interviewer' || isOwner
   const canRun = !!hasSession
-  const closeTo = authed ? '/profile' : '/welcome'
+  const closeTo = '/welcome'
   const designRoom = isDesignRoom(room)
   const panelHeight = designRoom ? 0 : runPanelHeight(run.panelOpen)
-  const displayName = meQ.data?.username ?? (guestName || t('common.guest'))
+  const displayName = guestName || t('common.guest')
 
   const handleClose = () => {
     if (isOwner) {
@@ -273,7 +258,7 @@ export default function CollabRoomPage() {
         onFreeze={() => freezeM.mutate(!room.is_frozen)}
         wsFailed={wsStatus === 'failed'}
         onReconnect={editorReconnect}
-        timerMode={authed ? 'elapsed' : 'countdown'}
+        timerMode="countdown"
         createdAt={room.created_at}
         expiresAt={room.expires_at}
       />
@@ -395,7 +380,6 @@ function GuestGate({
   error,
   loading,
   onJoin,
-  loginTo,
   title,
   description,
   hideJoin = false,
@@ -405,7 +389,6 @@ function GuestGate({
   error: unknown
   loading: boolean
   onJoin: () => void
-  loginTo: string
   title?: string
   description?: string
   hideJoin?: boolean
@@ -444,25 +427,12 @@ function GuestGate({
               </Button>
             </>
           ) : (
-            <div className="mt-5 flex flex-col gap-2">
-              <Link to={loginTo}>
-                <Button className="w-full">{t('live.loginAccount')}</Button>
-              </Link>
+            <div className="mt-5">
               <Link to="/live/new">
-                <Button variant="ghost" className="w-full">
-                  {t('live.createOwnRoom')}
-                </Button>
+                <Button className="w-full">{t('live.createOwnRoom')}</Button>
               </Link>
             </div>
           )}
-          {!hideJoin ? (
-            <p className="mt-4 text-center text-xs text-site-muted">
-              {t('live.hasAccount')}{' '}
-              <Link to={loginTo} className="text-site-text underline">
-                {t('live.login')}
-              </Link>
-            </p>
-          ) : null}
         </div>
       </main>
     </PublicPageShell>

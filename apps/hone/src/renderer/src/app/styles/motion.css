@@ -52,7 +52,7 @@
 }
 
 .motion-page-in {
-  animation: motion-page-in var(--motion-dur-large) var(--motion-ease-emphasized) both;
+  animation: motion-page-in var(--motion-dur-xlarge) var(--motion-ease-emphasized) both;
 }
 
 .motion-page-out {

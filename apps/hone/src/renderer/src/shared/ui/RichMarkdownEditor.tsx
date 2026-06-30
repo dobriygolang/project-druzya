@@ -21,6 +21,7 @@ interface RichMarkdownEditorProps {
   value: string;
   onChange: (next: string) => void;
   placeholder?: string;
+  variant?: 'default' | 'plain';
 }
 
 // Todo — одна `- [ ]` или `- [x]` позиция в textarea + её координаты для
@@ -248,7 +249,13 @@ const PAIRS: Record<string, string> = {
   '`': '`',
 };
 
-export function RichMarkdownEditor({ value, onChange, placeholder }: RichMarkdownEditorProps) {
+export function RichMarkdownEditor({
+  value,
+  onChange,
+  placeholder,
+  variant = 'default',
+}: RichMarkdownEditorProps) {
+  const plain = variant === 'plain';
   const taRef = useRef<HTMLTextAreaElement>(null);
   // Slash menu state — координаты в viewport для absolute popup'а, query —
   // текст после `/` (для фильтра), slashStart — позиция `/` в textarea (нужна
@@ -822,7 +829,7 @@ export function RichMarkdownEditor({ value, onChange, placeholder }: RichMarkdow
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div style={{ position: 'relative', ...(plain ? { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' } : {}) }}>
       <textarea
         ref={taRef}
         value={value}
@@ -831,19 +838,22 @@ export function RichMarkdownEditor({ value, onChange, placeholder }: RichMarkdow
         onSelect={updateToolbar}
         placeholder={placeholder}
         rows={20}
-        className="mono focus-ring"
+        className={plain ? 'mono hone-notes-body' : 'mono focus-ring'}
         style={{
           width: '100%',
           fontSize: 13,
           lineHeight: 1.75,
           color: 'var(--ink-90)',
-          background: 'var(--ink-tint-02)',
-          border: '1px solid var(--ink-tint-04)',
-          borderRadius: 8,
-          padding: '14px 16px',
+          background: plain ? 'transparent' : 'var(--ink-tint-02)',
+          border: plain ? 'none' : '1px solid var(--ink-tint-04)',
+          borderRadius: plain ? 0 : 8,
+          padding: plain ? 0 : '14px 16px',
           resize: 'none',
-          transition:
-            'background-color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)',
+          outline: 'none',
+          boxShadow: 'none',
+          transition: plain
+            ? 'none'
+            : 'background-color var(--t-fast), border-color var(--t-fast), box-shadow var(--t-fast)',
         }}
       />
       {/* Checkbox overlays — absolute-positioned поверх `[ ]`/`[x]` glyph'ов

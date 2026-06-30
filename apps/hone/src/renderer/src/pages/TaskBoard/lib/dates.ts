@@ -38,6 +38,10 @@ export function buildDayWindow(center: Date, before: number, after: number): Day
   return out;
 }
 
+export function formatWhenChip(date: Date): string {
+  return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
 export function formatColumnHeader(date: Date, today: Date): { weekday: string; label: string; isToday: boolean } {
   const isToday = toDayKey(date) === toDayKey(today);
   const weekday = date.toLocaleDateString(undefined, { weekday: 'long' });
@@ -68,6 +72,16 @@ export function sumDurationMin(tasks: Array<{ scheduledDurationMin?: number }>):
 }
 
 export function formatDuration(totalMin: number): string {
+  if (totalMin <= 0) return '0m';
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+/** Compact label for task row / duration menu (30m, 1h, 2h). */
+export function formatDurationShort(totalMin: number): string {
   if (totalMin <= 0) return '0m';
   const h = Math.floor(totalMin / 60);
   const m = totalMin % 60;

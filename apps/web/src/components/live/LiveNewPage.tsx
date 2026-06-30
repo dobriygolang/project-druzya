@@ -1,11 +1,8 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { PublicPageShell } from '@/components/brand/PublicNav'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
-import { getMe } from '@/lib/api/auth'
-import { formatApiError, hasValidAccessToken } from '@/lib/apiClient'
+import { formatApiError } from '@/lib/apiClient'
 import { LIVE_LANGS, LIVE_ROOM_MODES, type LiveRoomModeId } from '@/lib/live/constants'
 import { readGuestDisplayName, persistGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { useCreateLiveRoom } from '@/lib/live/useCreateLiveRoom'
@@ -13,22 +10,13 @@ import { useI18n } from '@/lib/i18n'
 
 export function LiveNewPage() {
   const { t } = useI18n()
-  const authed = hasValidAccessToken()
   const [displayName, setDisplayName] = useState(() => readGuestDisplayName())
   const [roomMode, setRoomMode] = useState<LiveRoomModeId>('code')
   const [language, setLanguage] = useState('go')
 
   const modeConfig = LIVE_ROOM_MODES.find((m) => m.id === roomMode) ?? LIVE_ROOM_MODES[0]
   const isDiagram = roomMode === 'diagram'
-
-  const meQ = useQuery({ queryKey: ['me'], queryFn: getMe, enabled: authed })
   const createM = useCreateLiveRoom()
-
-  useEffect(() => {
-    if (meQ.data?.username && !displayName) {
-      setDisplayName(meQ.data.username)
-    }
-  }, [meQ.data?.username, displayName])
 
   function handleCreate() {
     persistGuestDisplayName(displayName || t('common.guest'))
@@ -67,9 +55,7 @@ export function LiveNewPage() {
         <div className="w-full max-w-md shrink-0">
           <div className="rounded-2xl border border-site-border bg-site-card p-6 sm:p-7">
             <h2 className="text-base font-semibold text-site-text">{t('live.newCardTitle')}</h2>
-            <p className="mt-1 text-sm text-site-muted">
-              {authed ? t('live.newCardAuthed') : t('live.newCardGuest')}
-            </p>
+            <p className="mt-1 text-sm text-site-muted">{t('live.newCardGuest')}</p>
 
             <div className="mt-5">
               <label htmlFor="live-name" className="block text-sm font-medium text-site-text">
@@ -137,15 +123,6 @@ export function LiveNewPage() {
             <Button className="mt-6 w-full" size="lg" loading={createM.isPending} onClick={handleCreate}>
               {t('live.createRoom')}
             </Button>
-
-            {!authed ? (
-              <p className="mt-4 text-center text-xs text-site-muted">
-                {t('live.hasAccountShort')}{' '}
-                <Link to="/login?next=/live/new" className="text-site-text underline">
-                  {t('live.login')}
-                </Link>
-              </p>
-            ) : null}
           </div>
 
           <p className="mt-4 text-center text-[11px] leading-relaxed text-site-muted">{t('live.ttlNote')}</p>

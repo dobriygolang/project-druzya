@@ -11,6 +11,7 @@ interface GlobalHotkeysDeps {
   setPaletteOpen: (next: (p: boolean) => boolean) => void;
   goHome: () => void;
   openStats: () => void;
+  closeStats: () => void;
   open: (id: PageId) => void;
 }
 
@@ -52,6 +53,8 @@ export function useGlobalHotkeys(deps: GlobalHotkeysDeps): void {
           return;
         }
         if (d.statsOpen) {
+          e.preventDefault();
+          d.closeStats();
           return;
         }
         if (d.page !== 'home') {
@@ -64,7 +67,7 @@ export function useGlobalHotkeys(deps: GlobalHotkeysDeps): void {
       if (isMod || e.altKey) return;
 
       if (e.code === 'KeyS') {
-        if (d.statsOpen) d.goHome();
+        if (d.statsOpen) d.closeStats();
         else d.openStats();
         return;
       }

@@ -4,6 +4,7 @@ import { translate } from '@d9-i18n';
 
 import { Icon, type IconName } from '@shared/ui/primitives/Icon';
 import { zIndex } from '@shared/lib/z-index';
+import { formatWhenChip } from '@pages/TaskBoard/lib/dates';
 
 export type PageId =
   | 'home'
@@ -17,9 +18,11 @@ export type PaletteAction = PageId | 'stats';
 interface PaletteProps {
   onClose: () => void;
   onOpen: (id: PaletteAction) => void;
+  taskDate?: Date | null;
+  onCreateTask?: (title: string, date: Date) => void;
 }
 
-interface PaletteItem {
+interface NavItem {
   id: string;
   label: string;
   icon: IconName;
@@ -28,7 +31,11 @@ interface PaletteItem {
   section: string;
 }
 
-const ITEMS_BY_SECTION: { section: string; items: Omit<PaletteItem, 'run' | 'section'>[] }[] = [
+type Row =
+  | { kind: 'nav'; item: NavItem; index: number }
+  | { kind: 'task'; title: string; index: number };
+
+const ITEMS_BY_SECTION: { section: string; items: Omit<NavItem, 'run' | 'section'>[] }[] = [
   {
     section: 'Daily',
     items: [
@@ -46,12 +53,15 @@ const ITEMS_BY_SECTION: { section: string; items: Omit<PaletteItem, 'run' | 'sec
   },
 ];
 
-export function Palette({ onClose, onOpen }: PaletteProps) {
+export function Palette({ onClose, onOpen, taskDate, onCreateTask }: PaletteProps) {
   const [idx, setIdx] = useState(0);
   const [q, setQ] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const trimmed = q.trim();
+  const whenDate = taskDate ?? new Date();
+  const when = formatWhenChip(whenDate);
 
-  const items: PaletteItem[] = useMemo(
+  const navItems: NavItem[] = useMemo(
     () =>
       ITEMS_BY_SECTION.flatMap(({ section, items: groupItems }) =>
         groupItems.map((it) => ({
@@ -63,11 +73,23 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
     [onOpen],
   );
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return items;
-    return items.filter((i) => i.label.toLowerCase().includes(s));
-  }, [q, items]);
+  const filteredNav = useMemo(() => {
+    const s = trimmed.toLowerCase();
+    if (!s) return navItems;
+    return navItems.filter((i) => i.label.toLowerCase().includes(s));
+  }, [trimmed, navItems]);
+
+  const rows: Row[] = useMemo(() => {
+    const out: Row[] = [];
+    let i = 0;
+    for (const item of filteredNav) {
+      out.push({ kind: 'nav', item, index: i++ });
+    }
+    if (trimmed && onCreateTask) {
+      out.push({ kind: 'task', title: trimmed, index: i++ });
+    }
+    return out;
+  }, [filteredNav, trimmed, onCreateTask]);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -76,20 +98,27 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
     setIdx(0);
   }, [q]);
 
+  const runRow = (row: Row) => {
+    if (row.kind === 'nav') {
+      row.item.run();
+      onClose();
+      return;
+    }
+    onCreateTask?.(row.title, whenDate);
+    onClose();
+  };
+
   const onKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setIdx((i) => Math.min(filtered.length - 1, i + 1));
+      setIdx((i) => Math.min(rows.length - 1, i + 1));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setIdx((i) => Math.max(0, i - 1));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const it = filtered[idx];
-      if (it) {
-        it.run();
-        onClose();
-      }
+      const row = rows[idx];
+      if (row) runRow(row);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       onClose();
@@ -97,10 +126,11 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
   };
 
   let lastSection: string | null = null;
+  const showWhenChip = Boolean(trimmed || taskDate);
 
   return (
     <div
-      className="fadein"
+      className="motion-scrim-in"
       style={{
         position: 'absolute',
         inset: 0,
@@ -116,11 +146,14 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="scale-pop"
+        className="motion-modal-in"
         style={{
-          width: 348,
+          width: 512,
           maxWidth: '92%',
-          height: 'fit-content',
+          minHeight: 0,
+          maxHeight: 'min(347px, 72vh)',
+          display: 'flex',
+          flexDirection: 'column',
           background: 'rgba(12,12,12,0.96)',
           border: '1px solid rgb(var(--ink-rgb) / 0.07)',
           borderRadius: 12,
@@ -130,27 +163,49 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
       >
         <div
           style={{
-            padding: '9px 11px',
-            display: 'grid',
-            gridTemplateColumns: 'auto 1fr auto',
-            gap: 7,
+            padding: '11px 14px',
+            display: 'flex',
             alignItems: 'center',
+            gap: 8,
             borderBottom: '1px solid rgb(var(--ink-rgb) / 0.05)',
+            flexShrink: 0,
           }}
         >
-          <span style={{ color: 'var(--ink-40)', display: 'flex' }}>
-            <Icon name="search" size={11} />
+          <span style={{ color: 'var(--ink-40)', display: 'flex', flexShrink: 0 }}>
+            <Icon name="search" size={12} />
           </span>
+          {showWhenChip && (
+            <span
+              className="mono"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 8px',
+                borderRadius: 8,
+                background: 'rgb(var(--ink-rgb) / 0.08)',
+                fontSize: 10,
+                color: 'var(--ink-80)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+              }}
+            >
+              When: {when}
+            </span>
+          )}
           <input
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={onKey}
-            placeholder={translate('hone.palette.placeholder')}
+            placeholder={
+              onCreateTask ? 'Type a task to create…' : translate('hone.palette.placeholder')
+            }
             aria-label="Command search"
             style={{
-              width: '100%',
-              fontSize: 11,
+              flex: 1,
+              minWidth: 0,
+              fontSize: 12,
               color: 'var(--ink)',
               background: 'transparent',
               border: 'none',
@@ -160,20 +215,72 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
           <Chip>esc</Chip>
         </div>
 
-        <div role="listbox" aria-label="Commands" style={{ padding: '4px 0' }}>
-          {filtered.map((it, i) => {
+        <div
+          role="listbox"
+          aria-label="Commands"
+          style={{ padding: '4px 0', overflowY: 'auto', flex: 1, minHeight: 0 }}
+        >
+          {rows.map((row, i) => {
             const active = i === idx;
-            const showHeader = !q.trim() && it.section !== lastSection;
+            if (row.kind === 'task') {
+              return (
+                <button
+                  key="add-task"
+                  type="button"
+                  onMouseEnter={() => setIdx(i)}
+                  onClick={() => runRow(row)}
+                  role="option"
+                  aria-selected={active}
+                  style={{
+                    width: '100%',
+                    display: 'grid',
+                    gridTemplateColumns: '28px 1fr auto',
+                    gap: 8,
+                    alignItems: 'center',
+                    padding: '10px 14px',
+                    background: active ? 'rgb(var(--ink-rgb) / 0.08)' : 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'background-color var(--motion-dur-small) var(--motion-ease-standard)',
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 22,
+                      height: 22,
+                      borderRadius: 6,
+                      display: 'grid',
+                      placeItems: 'center',
+                      background: 'rgb(var(--ink-rgb) / 0.1)',
+                      color: 'var(--ink)',
+                    }}
+                  >
+                    <Icon name="plus" size={12} />
+                  </span>
+                  <span>
+                    <span style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ink)' }}>
+                      Add task
+                    </span>
+                    <span style={{ display: 'block', marginTop: 2, fontSize: 10, color: 'var(--ink-40)' }}>
+                      When: {when}
+                    </span>
+                  </span>
+                  <Chip>↵</Chip>
+                </button>
+              );
+            }
+
+            const it = row.item;
+            const showHeader = !trimmed && it.section !== lastSection;
             lastSection = it.section;
             return (
               <div key={it.id}>
                 {showHeader && <SectionHeader>{it.section}</SectionHeader>}
                 <button
+                  type="button"
                   onMouseEnter={() => setIdx(i)}
-                  onClick={() => {
-                    it.run();
-                    onClose();
-                  }}
+                  onClick={() => runRow(row)}
                   role="option"
                   aria-selected={active}
                   className="row"
@@ -183,7 +290,7 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
                     gridTemplateColumns: '26px 1fr auto',
                     gap: 6,
                     alignItems: 'center',
-                    padding: '7px 10px',
+                    padding: '8px 14px',
                     background: active ? 'var(--ink-tint-06)' : 'transparent',
                     border: 'none',
                     cursor: 'pointer',
@@ -207,7 +314,7 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
                   </span>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 500,
                       color: active ? 'var(--ink)' : 'var(--ink-90)',
                       transition: 'color var(--motion-dur-micro) var(--motion-ease-decelerate)',
@@ -232,8 +339,8 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
               </div>
             );
           })}
-          {filtered.length === 0 && (
-            <div style={{ padding: '14px 11px', color: 'var(--ink-40)', fontSize: 9 }}>
+          {rows.length === 0 && (
+            <div style={{ padding: '16px 14px', color: 'var(--ink-40)', fontSize: 10 }}>
               No matches.
             </div>
           )}
@@ -244,18 +351,19 @@ export function Palette({ onClose, onOpen }: PaletteProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            padding: '7px 11px',
+            padding: '8px 14px',
             borderTop: '1px solid rgb(var(--ink-rgb) / 0.05)',
-            fontSize: 7,
+            fontSize: 9,
             color: 'var(--ink-40)',
+            flexShrink: 0,
           }}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Chip>↑</Chip>
-            <Chip>↓</Chip> select
+            Select <Chip>↑</Chip>
+            <Chip>↓</Chip>
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            <Chip>↵</Chip> open
+            Open <Chip>↵</Chip>
           </span>
           <span style={{ flex: 1 }} />
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
@@ -272,8 +380,8 @@ function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        padding: '7px 11px 3px',
-        fontSize: 7,
+        padding: '8px 14px 4px',
+        fontSize: 8,
         letterSpacing: '0.14em',
         textTransform: 'uppercase',
         color: 'var(--ink-40)',
@@ -296,7 +404,7 @@ function Chip({ children }: { children: React.ReactNode }) {
         minWidth: 14,
         height: 14,
         padding: '0 4px',
-        fontSize: 7,
+        fontSize: 8,
         letterSpacing: '0.04em',
         color: 'var(--ink-60)',
         background: 'var(--ink-tint-04)',

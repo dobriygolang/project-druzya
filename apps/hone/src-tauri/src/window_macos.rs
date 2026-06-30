@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 #[cfg(target_os = "macos")]
 pub fn set_traffic_lights(window: &tauri::WebviewWindow, visible: bool) -> Result<(), String> {
     use cocoa::appkit::{NSWindow, NSWindowButton};

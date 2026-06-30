@@ -5,6 +5,9 @@ description = "Hone — focus workspace"
 authors = ["druz9"]
 edition = "2021"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(cargo_clippy)"] }
+
 [lib]
 name = "hone_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]

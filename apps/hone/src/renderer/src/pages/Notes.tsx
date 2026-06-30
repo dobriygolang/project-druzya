@@ -19,7 +19,6 @@
 //
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { translate } from '@d9-i18n';
 import { ConnectError, Code } from '@connectrpc/connect';
 
 import {
@@ -27,27 +26,19 @@ import {
   getNote,
   createNote,
   updateNote,
-  deleteNote,
-  moveNote,
-  listFolders,
-  createFolder,
-  deleteFolder,
   type Note,
   type NoteSummary,
-  type Folder,
 } from '@features/notes/api/notesClient';
+import { HONE_HEADER_H } from '@widgets/Chrome';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
 import {
   INITIAL_LIST,
   SIDEBAR_COLLAPSED_KEY,
-  SIDEBAR_DEFAULT,
-  SIDEBAR_KEY,
-  SIDEBAR_MAX,
-  SIDEBAR_MIN,
   type ListState,
 } from './Notes/utils';
 import { NotesExpandSidebarButton, Sidebar } from './Notes/Sidebar';
-import { Editor, ResizeHandle, Toast } from './Notes/Editor';
+import { NotesSidebarDivider } from './Notes/SidebarDivider';
+import { Editor, Toast } from './Notes/Editor';
 
 // Toast dismiss durations (ms). Tuned to match copy length —
 // short confirmations ~2.2-2.4s, longer prompts (publish/share) 2.8s,
@@ -83,11 +74,6 @@ export function NotesPage({ initialSelectedId, onConsumeInitial }: NotesPageProp
   const activeRef = useRef<Note | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? null);
-  const [folders, setFolders] = useState<Folder[]>([]);
-  // 'all' оставлен в типе для backwards-совместимости с handlers,
-  // но default теперь null (tree-режим, root). User не должен видеть
-  // pseudo-folder «All Notes» поверх настоящих папок.
-  const [selectedFolder, setSelectedFolder] = useState<string | null | 'all'>(null);
   const [active, setActive] = useState<Note | null>(null);
   // Keep refs in lockstep with state for async-callback access.
   activeRef.current = active;
@@ -139,54 +125,6 @@ export function NotesPage({ initialSelectedId, onConsumeInitial }: NotesPageProp
     };
     window.addEventListener(HONE_EVENTS.openNote, onOpen);
     return () => window.removeEventListener(HONE_EVENTS.openNote, onOpen);
-  }, []);
-
-  const [sidebarW, setSidebarW] = useState<number>(() => {
-    if (typeof window === 'undefined') return SIDEBAR_DEFAULT;
-    const raw = window.localStorage.getItem(SIDEBAR_KEY);
-    const n = raw ? parseInt(raw, 10) : NaN;
-    if (!Number.isFinite(n)) return SIDEBAR_DEFAULT;
-    return Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, n));
-  });
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SIDEBAR_KEY, String(sidebarW));
-    } catch {
-      /* ignore */
-    }
-  }, [sidebarW]);
-  const dragRef = useRef<{ x: number; w: number } | null>(null);
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!dragRef.current) return;
-      const dx = e.clientX - dragRef.current.x;
-      setSidebarW(Math.max(SIDEBAR_MIN, Math.min(SIDEBAR_MAX, dragRef.current.w + dx)));
-    };
-    const onUp = () => {
-      dragRef.current = null;
-    };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-  }, []);
-
-  // Load folders once on mount.
-  useEffect(() => {
-    let cancelled = false;
-    listFolders()
-      .then((folders) => {
-        if (!cancelled) setFolders(folders);
-      })
-      .catch(() => {
-        // Folders — secondary navigation; sidebar still functional с flat
-        // list если RPC лёг. Sync poll выгребет на retry.
-      });
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   // Initial list fetch + reactive refetch on SSE-bridged events.
@@ -482,30 +420,6 @@ export function NotesPage({ initialSelectedId, onConsumeInitial }: NotesPageProp
     [flushNow],
   );
 
-  // Stable identity (no list.notes / selectedId in deps). Internal state
-  // mutations через functional setState — без замыкания на устаревшие
-  // значения. Это критично для React.memo на NoteRow: иначе callback
-  // меняется на каждый list.notes update и memo перерисовывает все rows.
-  const handleDelete = useCallback(async (id: string) => {
-    try {
-      await deleteNote(id);
-      setList((prev) => ({ ...prev, notes: prev.notes.filter((n) => n.id !== id) }));
-      setSelectedId((cur) => {
-        if (cur !== id) return cur;
-        const next = listRef.current.notes.find((n) => n.id !== id);
-        return next?.id ?? null;
-      });
-    } catch (err: unknown) {
-      const ce = ConnectError.from(err);
-      setActiveError(ce.rawMessage || ce.message);
-    }
-  }, []);
-
-  const handleSidebarCollapse = useCallback(() => setSidebarCollapsed(true), []);
-
-  // Stable wrapper для Sidebar onSelect: inline arrow ломал memo Sidebar
-  // (а через него — всех NoteRow). Теперь identity стабильно между
-  // re-render'ами при keystroke в editor.
   const handleSidebarSelectNote = useCallback(
     (id: string) => {
       onSelectNote(id);
@@ -513,66 +427,18 @@ export function NotesPage({ initialSelectedId, onConsumeInitial }: NotesPageProp
     [onSelectNote],
   );
 
-  const handleCreateFolder = useCallback(async (name: string, parentId?: string | null) => {
-    try {
-      const f = await createFolder(name, parentId);
-      setFolders((prev) => [...prev, f].sort((a, b) => a.name.localeCompare(b.name)));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setToast(`Could not create folder: ${msg}`);
-      window.setTimeout(() => setToast(null), TOAST_DISMISS_DEFAULT_MS);
-    }
-  }, []);
-
-  const handleDeleteFolder = useCallback(async (id: string) => {
-    try {
-      await deleteFolder(id, true);
-      setFolders((prev) => prev.filter((f) => f.id !== id));
-      setList((prev) => ({
-        ...prev,
-        notes: prev.notes.map((n) => (n.folderId === id ? { ...n, folderId: null } : n)),
-      }));
-      if (selectedFolder === id) setSelectedFolder('all');
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setToast(`Could not delete folder: ${msg}`);
-      window.setTimeout(() => setToast(null), TOAST_DISMISS_DEFAULT_MS);
-    }
-  }, [selectedFolder]);
-
-  const handleMoveNote = useCallback(async (noteId: string, folderId: string | null) => {
-    try {
-      await moveNote(noteId, folderId);
-      setList((prev) => ({
-        ...prev,
-        notes: prev.notes.map((n) => (n.id === noteId ? { ...n, folderId } : n)),
-      }));
-    } catch (err) {
-      console.error('moveNote failed', err);
-      setToast(translate('hone.notes.toast.move_failed'));
-      window.setTimeout(() => setToast(null), TOAST_DISMISS_DEFAULT_MS);
-    }
-  }, []);
-
-  // ─── Render ─────────────────────────────────────────────────────────────
-
-  const gridCols = sidebarCollapsed ? `1fr` : `${sidebarW}px 6px 1fr`;
+  const gridCols = sidebarCollapsed ? '1fr' : '220px 6px 1fr';
 
   return (
     <div
-      className="fadein"
       style={{
         position: 'absolute',
         inset: 0,
-        paddingTop: 80,
+        paddingTop: HONE_HEADER_H,
         paddingBottom: 80,
         display: 'grid',
-        // КРИТИЧНО: при collapsed — single-column grid + right panel,
-        // иначе Editor с одним in-flow child'ом auto-flow'ится в column 1
-        // и схлопывается до нуля ширины (NotesExpandSidebarButton —
-        // position:absolute, в grid flow не участвует).
         gridTemplateColumns: gridCols,
-        animationDuration: '320ms',
+        minHeight: 0,
       }}
     >
       {!sidebarCollapsed && (
@@ -580,41 +446,32 @@ export function NotesPage({ initialSelectedId, onConsumeInitial }: NotesPageProp
           list={list}
           selectedId={selectedId}
           onSelect={handleSidebarSelectNote}
-          folders={folders}
-          selectedFolder={selectedFolder}
-          onSelectFolder={setSelectedFolder}
-          onCreateFolder={handleCreateFolder}
-          onDeleteFolder={handleDeleteFolder}
-          onMoveNote={handleMoveNote}
           onCreate={handleCreate}
-          onDelete={handleDelete}
-          onToggleCollapse={handleSidebarCollapse}
         />
       )}
 
       {!sidebarCollapsed && (
-        <ResizeHandle
-          onMouseDown={(e) => {
-            dragRef.current = { x: e.clientX, w: sidebarW };
-          }}
+        <NotesSidebarDivider
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(true)}
         />
       )}
+
       {sidebarCollapsed && (
         <NotesExpandSidebarButton onClick={() => setSidebarCollapsed(false)} />
       )}
 
       <Editor
-          list={list}
-          active={active}
-          activeError={activeError}
-          draftTitle={draftTitle}
-          draftBody={draftBody}
-          saveStatus={saveStatus}
-          folders={folders}
-          onTitleChange={setDraftTitle}
-          onBodyChange={setDraftBody}
-          onCreate={handleCreate}
-        />
+        list={list}
+        active={active}
+        activeError={activeError}
+        draftTitle={draftTitle}
+        draftBody={draftBody}
+        saveStatus={saveStatus}
+        onTitleChange={setDraftTitle}
+        onBodyChange={setDraftBody}
+        onCreate={handleCreate}
+      />
 
       {toast && <Toast text={toast} />}
     </div>

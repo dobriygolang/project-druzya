@@ -4,17 +4,9 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from 'react'
-import { readStoredLocale, writeStoredLocale, type Locale } from './localeStorage'
 import { en } from './locales/en'
-import { ru, type Messages } from './locales/ru'
-
-export type { Locale } from './localeStorage'
-export { readStoredLocale } from './localeStorage'
-
-const dictionaries: Record<Locale, Messages> = { ru, en }
 
 function getByPath(obj: Record<string, unknown>, path: string): string | undefined {
   const val = path.split('.').reduce<unknown>((acc, key) => {
@@ -32,8 +24,7 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
 }
 
 type I18nContextValue = {
-  locale: Locale
-  setLocale: (locale: Locale) => void
+  locale: 'en'
   t: (key: string, vars?: Record<string, string | number>) => string
   formatDate: (date: Date, options?: Intl.DateTimeFormatOptions) => string
 }
@@ -41,37 +32,22 @@ type I18nContextValue = {
 const I18nContext = createContext<I18nContextValue | null>(null)
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(() => readStoredLocale())
-
-  const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next)
-    writeStoredLocale(next)
-    document.documentElement.lang = next
+  useEffect(() => {
+    document.documentElement.lang = 'en'
   }, [])
 
-  useEffect(() => {
-    document.documentElement.lang = locale
-  }, [locale])
-
-  const t = useCallback(
-    (key: string, vars?: Record<string, string | number>) => {
-      const dict = dictionaries[locale] as unknown as Record<string, unknown>
-      const text = getByPath(dict, key) ?? getByPath(dictionaries.ru as unknown as Record<string, unknown>, key) ?? key
-      return interpolate(text, vars)
-    },
-    [locale],
-  )
+  const t = useCallback((key: string, vars?: Record<string, string | number>) => {
+    const dict = en as unknown as Record<string, unknown>
+    const text = getByPath(dict, key) ?? key
+    return interpolate(text, vars)
+  }, [])
 
   const formatDate = useCallback(
-    (date: Date, options?: Intl.DateTimeFormatOptions) =>
-      date.toLocaleDateString(locale === 'en' ? 'en-US' : 'ru-RU', options),
-    [locale],
+    (date: Date, options?: Intl.DateTimeFormatOptions) => date.toLocaleDateString('en-US', options),
+    [],
   )
 
-  const value = useMemo(
-    () => ({ locale, setLocale, t, formatDate }),
-    [locale, setLocale, t, formatDate],
-  )
+  const value = useMemo(() => ({ locale: 'en' as const, t, formatDate }), [t, formatDate])
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
 }

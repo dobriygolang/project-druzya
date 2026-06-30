@@ -1,13 +1,15 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 
 import { CanvasBg, type CanvasMode, type ThemeId } from '@widgets/CanvasBg';
-import { Wordmark } from '@widgets/Chrome';
+import { Wordmark, HONE_HEADER_H } from '@widgets/Chrome';
 import { TrafficLightsHover } from '@widgets/TrafficLightsHover';
 import { Dock } from '@widgets/Dock';
 import { LoginScreen } from '@widgets/LoginScreen';
-import { StatsOverlay } from '@widgets/StatsOverlay';
+import { AnimatedStatsOverlay } from '@widgets/AnimatedStatsOverlay';
 import { type PageId, type PaletteAction } from '@widgets/Palette';
 import { OfflineBanner } from '@widgets/OfflineBanner';
+import { createTask, scheduleTask } from '@features/tasks/api/tasks';
+import { parseDayKey, toDayKey } from '@pages/TaskBoard/lib/dates';
 import { HomePage } from '@pages/Home';
 import { readStoredTheme, readPomodoroSeconds } from '@shared/model/prefs';
 import { useSessionStore } from '@shared/model/session';
@@ -84,7 +86,17 @@ export default function App() {
     }
   }, []);
 
+  const navigateTo = useCallback(
+    (id: PageId) => {
+      if (id === page) return;
+      setStatsOpen(false);
+      setPage(id);
+    },
+    [page, setPage],
+  );
+
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteTaskDate, setPaletteTaskDate] = useState<Date | null>(null);
   const [theme, setTheme] = useState<ThemeId>(() => readStoredTheme());
   const pomodoroSecsRef = useRef(readPomodoroSeconds());
   const [remain, setRemain] = useState(pomodoroSecsRef.current);
@@ -150,7 +162,7 @@ export default function App() {
           const taskId = u.searchParams.get('id') ?? u.searchParams.get('task');
           if (taskId) {
             setStatsOpen(false);
-            setPage('today');
+            navigateTo('today');
             window.dispatchEvent(new CustomEvent(HONE_EVENTS.openTask, { detail: { taskId } }));
           }
           return;
@@ -159,7 +171,7 @@ export default function App() {
           const noteId = u.searchParams.get('id') ?? u.searchParams.get('note');
           if (noteId) {
             setStatsOpen(false);
-            setPage('notes');
+            navigateTo('notes');
             window.dispatchEvent(new CustomEvent(HONE_EVENTS.openNote, { detail: { noteId } }));
           }
         }
@@ -270,15 +282,15 @@ export default function App() {
       setPinnedTitle(args?.pinnedTitle ?? null);
       setRemain(pomodoroSecsRef.current);
       setRunning(true);
-      setPage('home');
+      navigateTo('home');
     },
-    [setPage],
+    [navigateTo],
   );
 
   const openStats = useCallback(() => {
-    setPage('home');
+    navigateTo('home');
     setStatsOpen(true);
-  }, [setPage]);
+  }, [navigateTo]);
 
   const closeStats = useCallback(() => {
     setStatsOpen(false);
@@ -294,16 +306,55 @@ export default function App() {
         openStats();
         return;
       }
-      setStatsOpen(false);
-      setPage(id as PageId);
+      navigateTo(id as PageId);
     },
-    [startFocus, setPage, openStats],
+    [startFocus, navigateTo, openStats],
   );
+
+  const openPalette = useCallback((taskDate?: Date | null) => {
+    setPaletteTaskDate(taskDate ?? null);
+    setPaletteOpen(true);
+  }, []);
+
+  const closePalette = useCallback(() => {
+    setPaletteOpen(false);
+    setPaletteTaskDate(null);
+  }, []);
+
+  const handlePaletteCreateTask = useCallback(
+    async (title: string, date: Date) => {
+      const dayKey = toDayKey(date);
+      const todayKey = toDayKey(new Date());
+      try {
+        let created = await createTask({ title });
+        if (dayKey !== todayKey) {
+          const start = parseDayKey(dayKey);
+          start.setHours(9, 0, 0, 0);
+          created = await scheduleTask(created.id, start.toISOString(), 30);
+        }
+        window.dispatchEvent(new CustomEvent(HONE_EVENTS.tasksChanged));
+        navigateTo('today');
+      } catch {
+        /* silent */
+      }
+    },
+    [navigateTo],
+  );
+
+  useEffect(() => {
+    const onAddTask = (e: Event) => {
+      const dayKey = (e as CustomEvent<{ dayKey?: string }>).detail?.dayKey;
+      const date = dayKey ? parseDayKey(dayKey) : new Date();
+      openPalette(date);
+    };
+    window.addEventListener(HONE_EVENTS.openPaletteAddTask, onAddTask);
+    return () => window.removeEventListener(HONE_EVENTS.openPaletteAddTask, onAddTask);
+  }, [openPalette]);
 
   const goHome = useCallback(() => {
     setStatsOpen(false);
-    setPage('home');
-  }, [setPage]);
+    navigateTo('home');
+  }, [navigateTo]);
 
   useEffect(() => {
     const onNavHome = () => goHome();
@@ -315,13 +366,18 @@ export default function App() {
     page,
     paletteOpen,
     statsOpen,
-    setPaletteOpen,
+    setPaletteOpen: (fn) => {
+      const next = fn(paletteOpen);
+      if (next) openPalette();
+      else closePalette();
+    },
     goHome,
     openStats,
-    open: openImpl,
+    closeStats,
+    open: (id) => openImpl(id),
   });
 
-  const canvasMode: CanvasMode = page === 'home' && !statsOpen ? 'full' : 'quiet';
+  const canvasMode: CanvasMode = page === 'home' && !statsOpen ? 'full' : 'void';
 
   if (status === 'unknown') {
     return (
@@ -341,8 +397,8 @@ export default function App() {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', overflow: 'hidden' }}>
-      <CanvasBg mode={canvasMode} theme={theme} />
+    <div style={{ position: 'fixed', inset: 0, background: '#000', overflow: 'hidden' }}>
+      {page === 'home' && <CanvasBg mode={canvasMode} theme={theme} />}
 
       <div
         data-tauri-drag-region
@@ -351,7 +407,7 @@ export default function App() {
           top: 0,
           left: 0,
           right: 0,
-          height: 52,
+          height: HONE_HEADER_H,
           zIndex: 8,
           // @ts-expect-error — Tauri/Electron drag region
           WebkitAppRegion: 'drag',
@@ -359,30 +415,44 @@ export default function App() {
       />
 
       <TrafficLightsHover />
-      <Wordmark />
+      {page === 'home' && <Wordmark />}
 
-      {page === 'home' && <HomePage />}
+      {page === 'home' && (
+        <div key="home" className="hone-page-layer motion-page-in">
+          <HomePage />
+        </div>
+      )}
       <PageSuspense>
-        {page === 'today' && <TaskBoardPage />}
-        {page === 'notes' && <NotesPage />}
+        {page === 'today' && (
+          <div key="today" className="hone-page-layer motion-page-in">
+            <TaskBoardPage />
+          </div>
+        )}
+        {page === 'notes' && (
+          <div key="notes" className="hone-page-layer motion-page-in">
+            <NotesPage />
+          </div>
+        )}
       </PageSuspense>
       <PageSuspense>
         {page === 'settings' && (
-          <SettingsPage
-            theme={theme}
-            onThemeChange={setTheme}
-            onPomoChange={(secs) => {
-              pomodoroSecsRef.current = secs;
-              if (!running) setRemain(secs);
-            }}
-          />
+          <div key="settings" className="hone-page-layer motion-page-in">
+            <SettingsPage
+              theme={theme}
+              onThemeChange={setTheme}
+              onPomoChange={(secs) => {
+                pomodoroSecsRef.current = secs;
+                if (!running) setRemain(secs);
+              }}
+            />
+          </div>
         )}
       </PageSuspense>
 
-      {statsOpen && <StatsOverlay onClose={closeStats} />}
+      {page === 'home' && <AnimatedStatsOverlay open={statsOpen} onClose={closeStats} />}
 
       <Dock
-        onMenu={() => setPaletteOpen(true)}
+        onMenu={() => openPalette()}
         running={running}
         onToggle={() => setRunning((r) => !r)}
         remain={remain}
@@ -393,7 +463,15 @@ export default function App() {
 
       {paletteOpen && (
         <Suspense fallback={null}>
-          <Palette onClose={() => setPaletteOpen(false)} onOpen={(id) => openImpl(id)} />
+          <Palette
+            onClose={closePalette}
+            onOpen={(id) => {
+              closePalette();
+              window.setTimeout(() => openImpl(id), 40);
+            }}
+            taskDate={paletteTaskDate}
+            onCreateTask={handlePaletteCreateTask}
+          />
         </Suspense>
       )}
       <OfflineBanner />

@@ -7,11 +7,13 @@ const THEME_KEY: string = STORAGE_KEYS.theme;
 interface HoneSettings {
   pomodoroMinutes: number;
   notifications: boolean;
+  dailyGoalMin: number;
 }
 
 const DEFAULTS: HoneSettings = {
   pomodoroMinutes: 25,
   notifications: true,
+  dailyGoalMin: 120,
 };
 
 export function clampInt(v: unknown, lo: number, hi: number, fallback: number): number {
@@ -28,6 +30,7 @@ function readSettings(): HoneSettings {
     return {
       pomodoroMinutes: clampInt(parsed?.pomodoroMinutes, 5, 90, DEFAULTS.pomodoroMinutes),
       notifications: typeof parsed?.notifications === 'boolean' ? parsed.notifications : DEFAULTS.notifications,
+      dailyGoalMin: clampInt(parsed?.dailyGoalMin, 15, 720, DEFAULTS.dailyGoalMin),
     };
   } catch {
     return DEFAULTS;
@@ -36,6 +39,10 @@ function readSettings(): HoneSettings {
 
 export function readPomodoroSeconds(): number {
   return readSettings().pomodoroMinutes * 60;
+}
+
+export function readDailyGoalMin(): number {
+  return readSettings().dailyGoalMin;
 }
 
 export function readStoredTheme(): ThemeId {

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useT } from '@d9-i18n';
 
 import { type ThemeId, THEME_IDS } from '@widgets/CanvasBg';
+import { HONE_HEADER_H } from '@widgets/Chrome';
 import { readPomodoroSeconds as readPomodoroSecondsFromPrefs, readStoredTheme as readStoredThemeFromPrefs } from '@shared/model/prefs';
 import { SignOutSection } from './sections/SignOutSection';
 import { readSettings, SETTINGS_KEY, THEME_KEY, type HoneSettings } from './lib/settings-store';
@@ -25,7 +26,7 @@ const pageStyle: React.CSSProperties = {
   position: 'absolute',
   inset: 0,
   overflowY: 'auto',
-  padding: '72px 48px 80px',
+  padding: `${HONE_HEADER_H}px 48px 80px`,
 };
 const innerStyle: React.CSSProperties = { maxWidth: 760, margin: '0 auto' };
 const headingStyle: React.CSSProperties = {

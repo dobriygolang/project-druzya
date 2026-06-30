@@ -131,6 +131,8 @@ export async function scheduleTask(
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify({
       id: taskId,
+      scheduledStartIso: startIso,
+      durationMin,
       scheduled_start_iso: startIso,
       duration_min: durationMin,
     }),

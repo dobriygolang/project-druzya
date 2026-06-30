@@ -111,14 +111,9 @@ export function parseAuthTokens(body: Record<string, unknown>): {
   }
 }
 
-function isPublicPath(path: string): boolean {
-  return path.startsWith('/login') || path.startsWith('/auth/') || path.startsWith('/live/')
-}
 
 function redirectToLogin(): void {
-  if (typeof window === 'undefined' || isPublicPath(window.location.pathname)) return
-  const next = encodeURIComponent(window.location.pathname + window.location.search)
-  window.location.href = `/login?next=${next}`
+  /* Auth removed from marketing site */
 }
 
 async function waitForCrossTabRefresh(): Promise<string | null> {
@@ -200,7 +195,7 @@ async function doFetch(path: string, init: RequestInit, bearer: string | null): 
   return fetch(`${API_BASE}${path}`, { ...init, headers })
 }
 
-async function parseResponse<T>(path: string, res: Response): Promise<T> {
+export async function parseResponse<T>(path: string, res: Response): Promise<T> {
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new ApiError(res.status, body)
