@@ -29,10 +29,10 @@
       "@platform/*": ["../hone/src/renderer/src/platform/*"],
       "@d9-i18n": ["../shared/i18n/index.ts"],
       "@d9-i18n/*": ["../shared/i18n/*"],
-      "zustand": ["../hone/node_modules/zustand"],
-      "zustand/*": ["../hone/node_modules/zustand/*"],
-      "@bufbuild/protobuf": ["../hone/node_modules/@bufbuild/protobuf"],
-      "@connectrpc/connect": ["../hone/node_modules/@connectrpc/connect"],
+      "zustand": ["./node_modules/zustand"],
+      "zustand/*": ["./node_modules/zustand/*"],
+      "@bufbuild/protobuf": ["./node_modules/@bufbuild/protobuf"],
+      "@connectrpc/connect": ["./node_modules/@connectrpc/connect"],
       "@excalidraw/excalidraw": ["./node_modules/@excalidraw/excalidraw"],
       "@codemirror/state": ["./node_modules/@codemirror/state"],
       "@codemirror/view": ["./node_modules/@codemirror/view"],
@@ -40,7 +40,9 @@
       "@codemirror/lang-markdown": ["./node_modules/@codemirror/lang-markdown"],
       "@codemirror/language": ["./node_modules/@codemirror/language"],
       "react": ["./node_modules/@types/react/index.d.ts"],
-      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"]
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-dom": ["./node_modules/@types/react-dom/index.d.ts"],
+      "react-dom/client": ["./node_modules/@types/react-dom/client.d.ts"]
     }
   },
   "include": [
