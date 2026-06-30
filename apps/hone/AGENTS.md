@@ -68,12 +68,14 @@ Billing is not called from Hone.
 | POST | `/v1/auth/telegram` | same |
 | HEAD | `/healthz` | `SyncEngine.ts`, `OfflineBanner.tsx` |
 
-**Tauri shell (Rust)** — `src-tauri/src/auth.rs`:
+**Tauri shell (Rust)** — `src-tauri/src/auth.rs` (native HTTP for login in packaged builds):
 
 | Method | Path |
 |--------|------|
-| POST | `/api/v1/auth/telegram/start` |
-| POST | `/api/v1/auth/telegram/poll` |
+| GET | `/v1/auth/config` |
+| POST | `/v1/auth/telegram` |
+| POST | `/api/v1/auth/telegram/start` (legacy, unused) |
+| POST | `/api/v1/auth/telegram/poll` (legacy, unused) |
 
 **tracker** — `features/tasks/repository/tasksRemote.ts`, `features/calendar/api/calendarClient.ts`
 
@@ -193,8 +195,10 @@ Registered in `src-tauri/src/lib.rs`:
 | `auth_session` | Load session from keychain |
 | `auth_persist` | Save session + emit `auth:changed` |
 | `auth_logout` | Clear session |
-| `auth_tg_start` | Telegram login start |
-| `auth_tg_poll` | Telegram login poll |
+| `auth_tg_start` | Telegram login start (legacy poll flow) |
+| `auth_tg_poll` | Telegram login poll (legacy) |
+| `auth_config` | `GET /v1/auth/config` via native HTTP |
+| `auth_telegram` | `POST /v1/auth/telegram` via native HTTP |
 | `vault_pass_load/save/clear` | Vault passphrase keychain |
 | `pomodoro_load/save` | Timer snapshot (Tauri store) |
 | `shell_open_external` | Open URL in browser |

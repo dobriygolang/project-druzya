@@ -30,6 +30,20 @@ async function persistSession(session: {
   }
 }
 
+function formatLoginError(err: unknown, t: (key: string) => string): string {
+  const message = err instanceof Error ? err.message : String(err);
+  const lower = message.toLowerCase();
+  if (
+    message === 'network_error' ||
+    lower === 'load failed' ||
+    lower.includes('failed to fetch') ||
+    lower.includes('network')
+  ) {
+    return t('hone.login.error_network');
+  }
+  return message || t('hone.login.error_sign_in');
+}
+
 export function LoginScreen(): JSX.Element {
   const t = useT();
   const [code, setCode] = useState('');
@@ -84,7 +98,7 @@ export function LoginScreen(): JSX.Element {
         expiresAt: auth.expiresAt,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('hone.login.error_sign_in'));
+      setError(formatLoginError(err, t));
     } finally {
       setBusy(false);
     }

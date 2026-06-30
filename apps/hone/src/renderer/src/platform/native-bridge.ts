@@ -29,6 +29,8 @@ export function installNativeBridge(): void {
       logout: () => invoke('auth_logout'),
       tgStart: () => invoke<TelegramStart>('auth_tg_start'),
       tgPoll: (code) => invoke<TelegramPollResult>('auth_tg_poll', { code }),
+      config: () => invoke<{ telegram_bot_username: string }>('auth_config'),
+      telegram: (code) => invoke<AuthSession>('auth_telegram', { code }),
     },
     pomodoro: {
       load: () => invoke<PomodoroSnapshot | null>('pomodoro_load'),

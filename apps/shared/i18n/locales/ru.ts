@@ -25,6 +25,7 @@ export const ru = {
   'hone.login.error_dev_auth': 'DEV_AUTH не включён на бэкенде',
   'hone.login.error_dev_failed': 'Dev login не удался ({{status}})',
   'hone.login.error_sign_in': 'Не удалось войти',
+  'hone.login.error_network': 'Нет связи с сервером. Проверь интернет и попробуй снова.',
   'hone.notes.back': 'Назад',
   'hone.notes.empty_cta': '+ Новая заметка',
   'hone.notes.empty_dim': 'Выбери заметку или нажми ⌘N, чтобы писать.',

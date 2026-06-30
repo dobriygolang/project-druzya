@@ -3,7 +3,7 @@ mod store;
 mod vault;
 mod window_macos;
 
-use auth::{AuthSession, TelegramPollResult, TelegramStart};
+use auth::{AuthConfig, AuthSession, TelegramPollResult, TelegramStart};
 use store::PomodoroSnapshot;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -40,6 +40,8 @@ pub fn run() {
             auth_logout,
             auth_tg_start,
             auth_tg_poll,
+            auth_config,
+            auth_telegram,
             vault_pass_load,
             vault_pass_save,
             vault_pass_clear,
@@ -85,6 +87,16 @@ async fn auth_tg_start(app: AppHandle) -> Result<TelegramStart, String> {
 #[tauri::command]
 async fn auth_tg_poll(app: AppHandle, code: String) -> Result<TelegramPollResult, String> {
     auth::telegram_poll(&app, &code).await
+}
+
+#[tauri::command]
+async fn auth_config() -> Result<AuthConfig, String> {
+    auth::fetch_auth_config().await
+}
+
+#[tauri::command]
+async fn auth_telegram(code: String) -> Result<AuthSession, String> {
+    auth::exchange_telegram_code(&code).await
 }
 
 #[tauri::command]

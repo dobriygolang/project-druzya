@@ -7,6 +7,8 @@ commands.allow = [
   "auth_logout",
   "auth_tg_start",
   "auth_tg_poll",
+  "auth_config",
+  "auth_telegram",
   "pomodoro_load",
   "pomodoro_save",
   "shell_open_external",

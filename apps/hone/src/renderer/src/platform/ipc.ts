@@ -12,6 +12,8 @@ export interface HoneAPI {
     logout: () => Promise<void>;
     tgStart: () => Promise<TelegramStart>;
     tgPoll: (code: string) => Promise<TelegramPollResult>;
+    config: () => Promise<{ telegram_bot_username: string }>;
+    telegram: (code: string) => Promise<AuthSession>;
   };
   pomodoro: {
     load: () => Promise<PomodoroSnapshot | null>;

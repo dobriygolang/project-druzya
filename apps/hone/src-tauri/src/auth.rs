@@ -85,6 +85,109 @@ pub fn api_base() -> String {
         })
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AuthConfig {
+    pub telegram_bot_username: String,
+}
+
+fn http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new())
+}
+
+fn map_http_error(err: reqwest::Error) -> String {
+    if err.is_connect() || err.is_timeout() || err.is_request() {
+        return "network_error".into();
+    }
+    err.to_string()
+}
+
+fn parse_error_message(body: &str) -> Option<String> {
+    let json: serde_json::Value = serde_json::from_str(body).ok()?;
+    json.get("error")
+        .or_else(|| json.get("message"))
+        .and_then(|v| v.as_str())
+        .map(str::to_string)
+}
+
+pub async fn fetch_auth_config() -> Result<AuthConfig, String> {
+    let url = format!("{}/v1/auth/config", api_base());
+    let resp = http_client()
+        .get(url)
+        .send()
+        .await
+        .map_err(map_http_error)?;
+    if !resp.status().is_success() {
+        return Err(format!("auth config: HTTP {}", resp.status()));
+    }
+    let body: serde_json::Value = resp.json().await.map_err(map_http_error)?;
+    let username = body
+        .get("telegram_bot_username")
+        .or_else(|| body.get("telegramBotUsername"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    Ok(AuthConfig {
+        telegram_bot_username: username,
+    })
+}
+
+pub async fn exchange_telegram_code(code: &str) -> Result<AuthSession, String> {
+    let trimmed = code.trim();
+    if trimmed.is_empty() {
+        return Err("code is required".into());
+    }
+    let url = format!("{}/v1/auth/telegram", api_base());
+    let resp = http_client()
+        .post(url)
+        .header("content-type", "application/json")
+        .json(&serde_json::json!({ "code": trimmed }))
+        .send()
+        .await
+        .map_err(map_http_error)?;
+    if !resp.status().is_success() {
+        let status = resp.status();
+        let text = resp.text().await.unwrap_or_default();
+        return Err(parse_error_message(&text).unwrap_or_else(|| {
+            if text.trim().is_empty() {
+                format!("telegram auth: HTTP {status}")
+            } else {
+                text
+            }
+        }));
+    }
+    let body: serde_json::Value = resp.json().await.map_err(map_http_error)?;
+    let access_token = body
+        .get("accessToken")
+        .or_else(|| body.get("access_token"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let refresh_token = body
+        .get("refreshToken")
+        .or_else(|| body.get("refresh_token"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let user = body.get("user").and_then(|v| v.as_object());
+    let user_id = user
+        .and_then(|u| u.get("id"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    if access_token.is_empty() || user_id.is_empty() {
+        return Err("invalid auth response".into());
+    }
+    Ok(AuthSession {
+        user_id,
+        access_token,
+        refresh_token,
+        expires_at: 0,
+    })
+}
+
 pub async fn telegram_start(_app: &AppHandle) -> Result<TelegramStart, String> {
     let url = format!("{}/api/v1/auth/telegram/start", api_base());
     let client = reqwest::Client::new();

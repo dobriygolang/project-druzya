@@ -25,6 +25,7 @@ export const en = {
   'hone.login.error_dev_auth': 'DEV_AUTH is not enabled on the backend',
   'hone.login.error_dev_failed': 'Dev login failed ({{status}})',
   'hone.login.error_sign_in': 'Could not sign in',
+  'hone.login.error_network': 'Cannot reach the server. Check your connection and try again.',
   'hone.notes.back': 'Back',
   'hone.notes.empty_cta': '+ New note',
   'hone.notes.empty_dim': 'Pick a note or press ⌘N to write.',
