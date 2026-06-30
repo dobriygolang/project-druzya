@@ -93,7 +93,9 @@ jobs:
 
       - name: Install frontend dependencies
         working-directory: apps/hone
-        run: npm ci
+        env:
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org
+        run: npm ci --registry https://registry.npmjs.org
 
       - name: Resolve release tag
         id: release

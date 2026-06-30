@@ -96,10 +96,10 @@ INSERT INTO plans (id, slug, name, description, priority, is_active, metadata) V
         'f0000000-0000-4000-8000-000000000001',
         'free',
         'Free',
-        'Default free tier',
+        'Full free — unlimited quotas',
         0,
         true,
-        '{"tagline":"Для ежедневной продуктивности","highlight":false}'::jsonb
+        '{"tagline":"Всё без лимитов","highlight":false}'::jsonb
     ),
     (
         'f0000000-0000-4000-8000-000000000002',
@@ -112,10 +112,10 @@ INSERT INTO plans (id, slug, name, description, priority, is_active, metadata) V
     );
 
 INSERT INTO plan_entitlements (plan_id, key, value_json) VALUES
-    ('f0000000-0000-4000-8000-000000000001', 'code_runs_per_day', '{"type":"counter","limit":50,"period":"day"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'cloud_notes_count', '{"type":"gauge","limit":10}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_per_month', '{"type":"counter","limit":5,"period":"month"}'::jsonb),
-    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_concurrent', '{"type":"gauge","limit":1}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'code_runs_per_day', '{"type":"counter","period":"day"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'cloud_notes_count', '{"type":"gauge"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_per_month', '{"type":"counter","period":"month"}'::jsonb),
+    ('f0000000-0000-4000-8000-000000000001', 'live_rooms_concurrent', '{"type":"gauge"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'code_runs_per_day', '{"type":"counter","limit":500,"period":"day"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'cloud_notes_count', '{"type":"gauge"}'::jsonb),
     ('f0000000-0000-4000-8000-000000000002', 'live_rooms_per_month', '{"type":"counter","limit":30,"period":"month"}'::jsonb),

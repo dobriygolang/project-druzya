@@ -138,7 +138,7 @@ export default function CollabRoomPage() {
     return <LiveNewPage />
   }
 
-  if (inviteToken && !guestToken) {
+  if (!hasSession) {
     return (
       <GuestGate
         guestName={guestName}
@@ -146,21 +146,6 @@ export default function CollabRoomPage() {
         error={guestJoinM.error}
         loading={guestJoinM.isPending}
         onJoin={() => guestJoinM.mutate()}
-      />
-    )
-  }
-
-  if (!hasSession) {
-    return (
-      <GuestGate
-        guestName={guestName}
-        onNameChange={setGuestName}
-        error={null}
-        loading={false}
-        onJoin={() => {}}
-        title={t('live.accessTitle')}
-        description={t('live.accessDescription')}
-        hideJoin
       />
     )
   }

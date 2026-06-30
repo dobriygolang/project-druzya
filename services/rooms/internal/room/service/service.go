@@ -244,9 +244,6 @@ func (s *roomService) GuestJoin(ctx context.Context, roomID, inviteToken, displa
 	if s.identity == nil {
 		return nil, identityadapter.ErrUnavailable
 	}
-	if inviteToken == "" {
-		return nil, ErrInvalidInvite
-	}
 	name := strings.TrimSpace(displayName)
 	if name == "" {
 		name = "guest"
@@ -256,12 +253,16 @@ func (s *roomService) GuestJoin(ctx context.Context, roomID, inviteToken, displa
 	if err != nil {
 		return nil, fmt.Errorf("invalid room id: %w", err)
 	}
-	tokenRoom, err := model.ValidateInviteToken(inviteToken, s.inviteSecret, s.now().UTC())
-	if err != nil {
-		return nil, ErrInvalidInvite
-	}
-	if tokenRoom != rid {
-		return nil, ErrInvalidInvite
+	// Invite token is optional: when present it must be valid and bind to this
+	// room; when absent, anyone with the room URL can join a shared room.
+	if inviteToken != "" {
+		tokenRoom, err := model.ValidateInviteToken(inviteToken, s.inviteSecret, s.now().UTC())
+		if err != nil {
+			return nil, ErrInvalidInvite
+		}
+		if tokenRoom != rid {
+			return nil, ErrInvalidInvite
+		}
 	}
 
 	room, err := s.repo.GetRoom(ctx, rid)

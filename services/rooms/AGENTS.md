@@ -35,6 +35,8 @@ WebSocket: `GET /ws/editor/{room_id}?token=JWT`.
 
 Frontend: `/live/new` — public create via `CreateGuestRoom`; guest flow mints scoped JWT via identity s2s. `/live/:roomId` → `CollabRoomPage.tsx` (CodeMirror or Excalidraw by `room_type`).
 
+**Guest join is open:** `GuestJoin` accepts an **optional** `invite_token`. When present it must be valid and bind to the room; when absent, anyone with the room URL can join a **shared** room directly (private rooms remain forbidden). The web frontend never gates on the invite token — a direct visit to `/live/{roomId}` shows a name prompt and joins.
+
 Roles: `owner`, `participant`, `viewer`. Legacy DB value `interviewer` may still exist on old rooms.
 
 ## Scale

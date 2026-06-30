@@ -99,7 +99,7 @@ WS envelope kinds: `snapshot`, `op`, `presence`, `cursor`, `freeze`.
 1. `/live/new` → `POST /v1/rooms/guest-create` → scoped JWT + room
 2. Token stored: `sessionStorage['druzya_guest_token_{roomId}']`
 3. Room REST + WS use guest token via `readGuestToken(roomId)`
-4. `?invite=` → `POST guest-join` → new guest token
+4. Joining is open: a direct visit to `/live/:roomId` (with or without `?invite=`) shows a name prompt → `POST guest-join` → guest token. The `invite_token` is optional on the backend; shared rooms accept anyone by URL.
 
 Sandbox run/format should use guest token when in live room (same as room REST).
 

@@ -20,10 +20,10 @@ Seeded in `00001_init.sql`. Plans: `free`, `pro_monthly`.
 
 | Key | Type | Free | Pro |
 |-----|------|------|-----|
-| cloud_notes_count | gauge | 10 | unlimited |
-| live_rooms_per_month | counter/month | 5 | 30 |
-| live_rooms_concurrent | gauge | 1 | 5 |
-| code_runs_per_day | counter/day | 50 | 500 |
+| cloud_notes_count | gauge | unlimited | unlimited |
+| live_rooms_per_month | counter/month | unlimited | 30 |
+| live_rooms_concurrent | gauge | unlimited | 5 |
+| code_runs_per_day | counter/day | unlimited | 500 |
 
 **Not seeded** (retired with interview/content/recommendation): `mock_interviews_per_month`, `ai_evaluations_per_day`, `ai_insights_per_day`, `company_templates_enabled`, `recommendations_enabled`, `advanced_feedback_enabled`, `sd_ai_turns_per_month`, `hidden_tests_enabled`.
 
