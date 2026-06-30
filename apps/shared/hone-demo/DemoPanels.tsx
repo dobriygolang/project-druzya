@@ -11,13 +11,21 @@ interface DemoPanelsProps {
   compact?: boolean
   typedText?: string
   preloadNotes?: boolean
+  notesInteractive?: boolean
 }
 
 function PanelFallback() {
   return <div className="hone-demo-panel hone-demo-panel--loading" aria-hidden />
 }
 
-export function DemoPanels({ panel, labels, compact, typedText, preloadNotes }: DemoPanelsProps) {
+export function DemoPanels({
+  panel,
+  labels,
+  compact,
+  typedText,
+  preloadNotes,
+  notesInteractive = false,
+}: DemoPanelsProps) {
   useEffect(() => {
     if (preloadNotes) preloadNotesPanel()
   }, [preloadNotes])
@@ -36,8 +44,8 @@ export function DemoPanels({ panel, labels, compact, typedText, preloadNotes }: 
             <NotesPanel
               labels={labels}
               compact={compact}
-              typedText={notesVisible ? typedText : ''}
-              readOnly={typedText !== undefined}
+              typedText={notesInteractive ? undefined : notesVisible ? typedText : ''}
+              readOnly={!notesInteractive && typedText !== undefined}
             />
           </Suspense>
         </div>

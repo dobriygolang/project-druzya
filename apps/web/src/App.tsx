@@ -6,6 +6,7 @@ const WelcomePage = lazy(() => import('@/pages/WelcomePage'))
 const PublishedNotePage = lazy(() => import('@/pages/PublishedNotePage'))
 const PublishedBoardPage = lazy(() => import('@/pages/PublishedBoardPage'))
 const CollabRoomPage = lazy(() => import('@/pages/CollabRoomPage'))
+const LiveNewPage = lazy(() => import('@/components/live/LiveNewPage').then((m) => ({ default: m.LiveNewPage })))
 const PricingPage = lazy(() => import('@/pages/PricingPage'))
 const LegalTermsPage = lazy(() => import('@/pages/LegalTermsPage'))
 const LegalPrivacyPage = lazy(() => import('@/pages/LegalPrivacyPage'))
@@ -28,7 +29,7 @@ export default function App() {
         <Route path="/notes/:slug" element={<PublishedNotePage />} />
         <Route path="/board/:slug" element={<PublishedBoardPage />} />
         <Route path="/n/:slug" element={<LegacyNoteSlugRedirect />} />
-        <Route path="/live/new" element={<CollabRoomPage />} />
+        <Route path="/live/new" element={<LiveNewPage />} />
         <Route path="/live/:roomId" element={<CollabRoomPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/legal/terms" element={<LegalTermsPage />} />

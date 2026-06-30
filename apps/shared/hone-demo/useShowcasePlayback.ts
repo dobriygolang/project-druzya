@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { DEFAULT_SHOWCASE_TIMING, typingDelayMs, type ShowcaseTiming } from './showcaseTiming'
 import type { DemoPanel } from './types'
@@ -20,7 +20,7 @@ export interface ShowcaseState {
 
 const POMODORO_SEC = 25 * 60
 
-const INITIAL: ShowcaseState = {
+export const SHOWCASE_INITIAL: ShowcaseState = {
   panel: 'home',
   cursor: { x: 50, y: 50, visible: false, clicking: false },
   timerRunning: false,
@@ -46,7 +46,7 @@ function clickStep(run: (s: ShowcaseState) => ShowcaseState, timing: ShowcaseTim
   ]
 }
 
-function steps(fullDocument: string, timing: ShowcaseTiming): Step[] {
+export function buildShowcaseSteps(fullDocument: string, timing: ShowcaseTiming): Step[] {
   const typingSteps: Step[] = []
   for (let i = 0; i < fullDocument.length; i++) {
     const len = i + 1
@@ -59,7 +59,7 @@ function steps(fullDocument: string, timing: ShowcaseTiming): Step[] {
   return [
     {
       delay: timing.introMs,
-      run: () => ({ ...INITIAL, cursor: { x: 78, y: 88, visible: true, clicking: false } }),
+      run: () => ({ ...SHOWCASE_INITIAL, cursor: { x: 78, y: 88, visible: true, clicking: false } }),
     },
     {
       delay: timing.cursorToPlayMs,
@@ -98,7 +98,7 @@ function steps(fullDocument: string, timing: ShowcaseTiming): Step[] {
       (s) => ({ ...s, cursor: { ...s.cursor, clicking: false }, panel: 'home' }),
       timing,
     ),
-    { delay: timing.loopGapMs, run: () => INITIAL },
+    { delay: timing.loopGapMs, run: () => SHOWCASE_INITIAL },
   ]
 }
 
@@ -107,51 +107,103 @@ export function useShowcasePlayback(
   fullDocument: string,
   timing: ShowcaseTiming = DEFAULT_SHOWCASE_TIMING,
 ) {
-  const [state, setState] = useState<ShowcaseState>(INITIAL)
+  const [state, setState] = useState<ShowcaseState>(SHOWCASE_INITIAL)
+  const [isPaused, setIsPaused] = useState(false)
+
   const timersRef = useRef<number[]>([])
+  const stepIndexRef = useRef(0)
+  const pausedRef = useRef(false)
+  const stepsRef = useRef<Step[]>(buildShowcaseSteps(fullDocument, timing))
 
-  useEffect(() => {
-    if (!enabled) {
-      setState(INITIAL)
-      return
-    }
+  stepsRef.current = buildShowcaseSteps(fullDocument, timing)
 
-    const clearAll = () => {
-      for (const id of timersRef.current) window.clearTimeout(id)
-      timersRef.current = []
-    }
+  const clearAll = useCallback(() => {
+    for (const id of timersRef.current) window.clearTimeout(id)
+    timersRef.current = []
+  }, [])
 
-    const runLoop = () => {
+  const scheduleFrom = useCallback(
+    (fromIndex: number) => {
       clearAll()
-      setState(INITIAL)
+      if (pausedRef.current) return
+
+      const allSteps = stepsRef.current
       let elapsed = 0
-      for (const step of steps(fullDocument, timing)) {
+
+      for (let i = fromIndex; i < allSteps.length; i++) {
+        const step = allSteps[i]!
+        const stepIndex = i
         elapsed += step.delay
         const id = window.setTimeout(() => {
-          setState((prev: ShowcaseState) => step.run(prev))
+          if (pausedRef.current) return
+          setState((prev) => step.run(prev))
+          stepIndexRef.current = stepIndex + 1
         }, elapsed)
         timersRef.current.push(id)
       }
-      const loopId = window.setTimeout(runLoop, elapsed)
-      timersRef.current.push(loopId)
-    }
 
-    runLoop()
-    return clearAll
-  }, [enabled, fullDocument, timing])
+      const loopId = window.setTimeout(() => {
+        if (pausedRef.current) return
+        stepIndexRef.current = 0
+        setState(SHOWCASE_INITIAL)
+        scheduleFrom(0)
+      }, elapsed)
+      timersRef.current.push(loopId)
+    },
+    [clearAll],
+  )
+
+  const pause = useCallback(() => {
+    pausedRef.current = true
+    setIsPaused(true)
+    clearAll()
+  }, [clearAll])
+
+  const resume = useCallback(() => {
+    pausedRef.current = false
+    setIsPaused(false)
+    scheduleFrom(stepIndexRef.current)
+  }, [scheduleFrom])
+
+  const reset = useCallback(() => {
+    clearAll()
+    pausedRef.current = false
+    setIsPaused(false)
+    stepIndexRef.current = 0
+    setState(SHOWCASE_INITIAL)
+    scheduleFrom(0)
+  }, [clearAll, scheduleFrom])
 
   useEffect(() => {
-    if (!enabled || !state.timerRunning) return
+    if (!enabled) {
+      clearAll()
+      pausedRef.current = false
+      setIsPaused(false)
+      stepIndexRef.current = 0
+      setState(SHOWCASE_INITIAL)
+      return
+    }
+
+    pausedRef.current = false
+    setIsPaused(false)
+    stepIndexRef.current = 0
+    setState(SHOWCASE_INITIAL)
+    scheduleFrom(0)
+    return clearAll
+  }, [enabled, fullDocument, timing, clearAll, scheduleFrom])
+
+  useEffect(() => {
+    if (!enabled || pausedRef.current || !state.timerRunning) return
     const id = window.setInterval(() => {
-      setState((s: ShowcaseState) => {
+      setState((s) => {
         if (!s.timerRunning || s.timerRemain <= 0) return s
         return { ...s, timerRemain: s.timerRemain - 1 }
       })
     }, 1000)
     return () => window.clearInterval(id)
-  }, [enabled, state.timerRunning])
+  }, [enabled, state.timerRunning, isPaused])
 
-  return state
+  return { state, isPaused, pause, resume, reset }
 }
 
 export function preloadNotesPanel(): void {

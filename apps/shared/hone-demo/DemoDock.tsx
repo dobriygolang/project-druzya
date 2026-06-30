@@ -47,6 +47,7 @@ interface DemoDockProps {
   labels: HoneDemoLabels
   compact?: boolean
   mode: DemoMode
+  forceInteractive?: boolean
   panel: DemoPanel
   onPanelChange?: (panel: DemoPanel) => void
   timerRunning?: boolean
@@ -60,6 +61,7 @@ export function DemoDock({
   labels,
   compact,
   mode,
+  forceInteractive = false,
   panel,
   onPanelChange,
   timerRunning: timerRunningProp,
@@ -75,7 +77,8 @@ export function DemoDock({
   const timerRemain = timerRemainProp ?? remain
 
   useEffect(() => {
-    if (mode === 'showcase' || !running || remain <= 0) return
+    if (mode === 'showcase' && !forceInteractive) return
+    if (!running || remain <= 0) return
     const id = window.setInterval(() => {
       setRemain((s: number) => {
         if (s <= 1) {
@@ -86,7 +89,7 @@ export function DemoDock({
       })
     }, 1000)
     return () => window.clearInterval(id)
-  }, [mode, running, remain])
+  }, [mode, forceInteractive, running, remain])
 
   const mm = String(Math.floor(timerRemain / 60)).padStart(2, '0')
   const ss = String(timerRemain % 60).padStart(2, '0')
@@ -109,7 +112,7 @@ export function DemoDock({
   }
 
   const bottom = compact ? 20 : 36
-  const interactive = mode === 'interactive'
+  const interactive = mode === 'interactive' || forceInteractive
 
   return (
     <div
@@ -198,7 +201,7 @@ export function DemoDock({
           ariaLabel={timerRunning ? labels.pause : labels.play}
           ariaPressed={timerRunning}
           variant="action"
-          disabled={!interactive && mode !== 'showcase'}
+          disabled={!interactive}
           data-demo-target="play"
         >
           {timerRunning ? <PauseIcon /> : <PlayIcon />}

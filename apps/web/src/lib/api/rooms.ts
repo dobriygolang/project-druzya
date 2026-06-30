@@ -146,11 +146,19 @@ export async function guestJoin(
   inviteToken: string,
   displayName: string,
 ): Promise<GuestJoinResult> {
-  const res = await fetch(`${API_BASE}/rooms/${encodeURIComponent(roomId)}/guest-join`, {
+  const id = roomId.trim()
+  if (!id) {
+    throw new Error('missing room id')
+  }
+  const res = await fetch(`${API_BASE}/rooms/${encodeURIComponent(id)}/guest-join`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ invite_token: inviteToken, display_name: displayName }),
+    redirect: 'manual',
   })
+  if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+    throw new Error('guest join misrouted — check room URL')
+  }
   if (!res.ok) {
     const text = await res.text().catch(() => '')
     throw new Error(text || `guest join ${res.status}`)

@@ -30,7 +30,7 @@ Defined in `src/App.tsx`:
 | `/notes/:slug` | `PublishedNotePage` | — |
 | `/n/:slug` | → `/notes/:slug` | — |
 | `/board/:slug` | `PublishedBoardPage` | — |
-| `/live/new` | `CollabRoomPage` → `LiveNewPage` | guest |
+| `/live/new` | `LiveNewPage` | — |
 | `/live/:roomId` | `CollabRoomPage` | guest JWT |
 | `/pricing` | `PricingPage` | — |
 | `/legal/terms` | `LegalTermsPage` | — |

@@ -13,7 +13,6 @@ import {
 } from '@/components/CollabExcalidrawEditor'
 import { isDesignRoom } from '@/lib/live/roomKind'
 import type { CollabPeer } from '@/lib/codemirror/collabPresence'
-import { LiveNewPage } from '@/components/live/LiveNewPage'
 import { LiveRoomBottomBar } from '@/components/live/LiveRoomBottomBar'
 import { LiveRoomTopBar } from '@/components/live/LiveRoomTopBar'
 import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel'
@@ -35,6 +34,7 @@ import {
   readGuestToken,
 } from '@/lib/api/rooms'
 import { markInviteCopied, readInviteCopied } from '@/lib/live/useCreateLiveRoom'
+import { readGuestDisplayName } from '@/lib/live/guestDisplayName'
 import { liveWsStatusLabel, useI18n } from '@/lib/i18n'
 
 function jwtSubject(token: string): string | null {
@@ -61,26 +61,21 @@ export default function CollabRoomPage() {
   const [copied, setCopied] = useState(false)
   const [showInviteBanner, setShowInviteBanner] = useState(false)
   const [wsStatus, setWsStatus] = useState<import('@/lib/ws/collabEditor').EditorWsStatus>('connecting')
-  const [guestName, setGuestName] = useState('')
+  const [guestName, setGuestName] = useState(() => readGuestDisplayName())
   const [guestToken, setGuestToken] = useState(() => readGuestToken(roomId))
   const [guestRoom, setGuestRoom] = useState<import('@/lib/api/rooms').CodeRoom | null>(null)
   const [fontSize, setFontSize] = useState(14)
   const [peers, setPeers] = useState<CollabPeer[]>([])
-  const isNew = roomId === 'new'
   const hasSession = !!guestToken
 
   useEffect(() => {
-    if (isNew) {
-      setGuestToken(null)
-      return
-    }
     setGuestToken(readGuestToken(roomId))
-  }, [roomId, isNew])
+  }, [roomId])
 
   const roomQ = useQuery({
     queryKey: ['room', roomId, inviteToken],
     queryFn: () => getRoom(roomId),
-    enabled: !!roomId && !isNew && hasSession,
+    enabled: !!roomId && hasSession,
     retry: false,
   })
 
@@ -123,7 +118,6 @@ export default function CollabRoomPage() {
   const fmt = useFormatCode(wsToken || null)
 
   useEffect(() => {
-    if (isNew) return
     document.documentElement.classList.add('light')
     if (readInviteCopied(roomId)) {
       setShowInviteBanner(true)
@@ -132,10 +126,21 @@ export default function CollabRoomPage() {
     return () => {
       document.documentElement.classList.remove('light')
     }
-  }, [isNew, roomId])
+  }, [roomId])
 
-  if (isNew) {
-    return <LiveNewPage />
+  if (!roomId.trim()) {
+    return (
+      <EditorShell
+        message={t('live.roomNotFound')}
+        action={
+          <Link to="/live/new">
+            <Button variant="secondary" size="sm">
+              {t('live.createNew')}
+            </Button>
+          </Link>
+        }
+      />
+    )
   }
 
   if (!hasSession) {

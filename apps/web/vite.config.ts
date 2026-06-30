@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { honeViteAliases } from './hone-vite-aliases'
 
 const identity = process.env.VITE_IDENTITY_URL ?? 'http://localhost:8080'
 const billing = process.env.VITE_BILLING_URL ?? 'http://localhost:8085'
@@ -21,12 +22,16 @@ const CM_ALIASES = [
 
 export default defineConfig({
   plugins: [react()],
+  optimizeDeps: {
+    include: ['zustand', 'zustand/react', '@excalidraw/excalidraw'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@d9-hone-demo': path.resolve(__dirname, '../shared/hone-demo'),
+      ...honeViteAliases(),
       ...CM_ALIASES,
     },
+    dedupe: ['react', 'react-dom', 'zustand', '@excalidraw/excalidraw'],
   },
   server: {
     host: true,

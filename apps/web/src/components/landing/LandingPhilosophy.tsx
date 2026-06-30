@@ -14,7 +14,7 @@ export function LandingPhilosophy() {
         </h2>
 
         <div className="relative mb-12 aspect-[16/10] overflow-hidden rounded-xl border border-site-border">
-          <LandingHoneDemo mode="showcase" compact showThemePicker={false} />
+          <LandingHoneDemo compact />
         </div>
 
         <div className="mx-auto max-w-none text-lg leading-relaxed text-site-muted">

@@ -19,8 +19,16 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@d9-hone-demo": ["../shared/hone-demo/index.ts"],
-      "@d9-hone-demo/*": ["../shared/hone-demo/*"],
+      "@hone/demo": ["../hone/src/renderer/src/demo/index.ts"],
+      "@hone/demo/*": ["../hone/src/renderer/src/demo/*"],
+      "@app/*": ["../hone/src/renderer/src/app/*"],
+      "@pages/*": ["../hone/src/renderer/src/pages/*"],
+      "@widgets/*": ["../hone/src/renderer/src/widgets/*"],
+      "@features/*": ["../hone/src/renderer/src/features/*"],
+      "@shared/*": ["../hone/src/renderer/src/shared/*"],
+      "@platform/*": ["../hone/src/renderer/src/platform/*"],
+      "@d9-i18n": ["../shared/i18n/index.ts"],
+      "@d9-i18n/*": ["../shared/i18n/*"],
       "react": ["./node_modules/@types/react"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
       "react-dom": ["./node_modules/@types/react-dom"],
@@ -30,5 +38,5 @@
       "@codemirror/lang-markdown": ["./node_modules/@codemirror/lang-markdown"]
     }
   },
-  "include": ["src", "../shared/hone-demo"]
+  "include": ["src", "../hone/src/renderer/src", "../shared/i18n"]
 }
