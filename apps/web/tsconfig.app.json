@@ -29,14 +29,17 @@
       "@platform/*": ["../hone/src/renderer/src/platform/*"],
       "@d9-i18n": ["../shared/i18n/index.ts"],
       "@d9-i18n/*": ["../shared/i18n/*"],
-      "react": ["./node_modules/@types/react"],
-      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime"],
-      "react-dom": ["./node_modules/@types/react-dom"],
+      "zustand": ["../hone/node_modules/zustand"],
+      "zustand/*": ["../hone/node_modules/zustand/*"],
+      "@bufbuild/protobuf": ["../hone/node_modules/@bufbuild/protobuf"],
+      "@connectrpc/connect": ["../hone/node_modules/@connectrpc/connect"],
+      "@excalidraw/excalidraw": ["./node_modules/@excalidraw/excalidraw"],
       "@codemirror/state": ["./node_modules/@codemirror/state"],
       "@codemirror/view": ["./node_modules/@codemirror/view"],
       "@codemirror/commands": ["./node_modules/@codemirror/commands"],
-      "@codemirror/lang-markdown": ["./node_modules/@codemirror/lang-markdown"]
+      "@codemirror/lang-markdown": ["./node_modules/@codemirror/lang-markdown"],
+      "@codemirror/language": ["./node_modules/@codemirror/language"]
     }
   },
-  "include": ["src", "../hone/src/renderer/src", "../shared/i18n"]
+  "include": ["src", "../shared/i18n"]
 }
