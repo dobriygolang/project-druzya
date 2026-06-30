@@ -42,7 +42,12 @@
       "react": ["./node_modules/@types/react/index.d.ts"],
       "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"],
       "react-dom": ["./node_modules/@types/react-dom/index.d.ts"],
-      "react-dom/client": ["./node_modules/@types/react-dom/client.d.ts"]
+      "react-dom/client": ["./node_modules/@types/react-dom/client.d.ts"],
+      "@tauri-apps/api/app": ["./src/hone-stubs/tauri-api-app.ts"],
+      "@tauri-apps/api/core": ["./src/hone-stubs/tauri-api-core.ts"],
+      "@tauri-apps/api/event": ["./src/hone-stubs/tauri-api-event.ts"],
+      "@tauri-apps/plugin-process": ["./src/hone-stubs/tauri-plugin-process.ts"],
+      "@tauri-apps/plugin-updater": ["./src/hone-stubs/tauri-plugin-updater.ts"]
     }
   },
   "include": [

@@ -9,6 +9,7 @@ const shared = path.resolve(here, '../shared')
 /** Vite resolve aliases to compile Hone renderer inside apps/web. */
 export function honeViteAliases(): Record<string, string> {
   const nm = (pkg: string) => path.join(webRoot, 'node_modules', pkg)
+  const stub = (name: string) => path.join(webRoot, 'src/hone-stubs', name)
   return {
     '@hone/demo': path.join(honeRenderer, 'demo'),
     '@app': path.join(honeRenderer, 'app'),
@@ -23,6 +24,11 @@ export function honeViteAliases(): Record<string, string> {
     zustand: nm('zustand'),
     '@bufbuild/protobuf': nm('@bufbuild/protobuf'),
     '@connectrpc/connect': nm('@connectrpc/connect'),
+    '@tauri-apps/api/app': stub('tauri-api-app.ts'),
+    '@tauri-apps/api/core': stub('tauri-api-core.ts'),
+    '@tauri-apps/api/event': stub('tauri-api-event.ts'),
+    '@tauri-apps/plugin-process': stub('tauri-plugin-process.ts'),
+    '@tauri-apps/plugin-updater': stub('tauri-plugin-updater.ts'),
   }
 }
 
