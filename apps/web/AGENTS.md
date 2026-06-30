@@ -10,7 +10,7 @@ Thin public web surface for Hone: landing + download, guest live collab (code + 
 
 | Area | Routes |
 |------|--------|
-| Landing | `/welcome` |
+| Landing | `/welcome`, `/download` |
 | Live collab | `/live/new`, `/live/:roomId` |
 | Public notes | `/notes/:slug`, `/n/:slug` → redirect |
 | Public boards | `/board/:slug` |
@@ -27,6 +27,7 @@ Defined in `src/App.tsx`:
 |-------|------|------|
 | `/` | → `/welcome` | — |
 | `/welcome` | `WelcomePage` | — |
+| `/download` | `HoneDownloadPage` | redirects to latest OS installer |
 | `/notes/:slug` | `PublishedNotePage` | — |
 | `/n/:slug` | → `/notes/:slug` | — |
 | `/board/:slug` | `PublishedBoardPage` | — |
@@ -127,8 +128,10 @@ Room types in prod UI: `practice`, `system_design` only.
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `VITE_API_BASE` | `/v1` | API prefix |
-| `VITE_HONE_DOWNLOAD_MAC` | — | Landing download URL |
-| `VITE_HONE_DOWNLOAD_WIN` | — | Landing download URL |
+| `VITE_HONE_DOWNLOAD_MAC` | — | Override landing macOS download URL |
+| `VITE_HONE_DOWNLOAD_WIN` | — | Override landing Windows download URL |
+
+Landing download: `lib/landing/honeRelease.ts` fetches [GitHub latest hone release](https://github.com/dobriygolang/project-druzya/releases/latest) (`.dmg` / `-setup.exe`). Cached 15m in `sessionStorage`. Manifesto CTA: `/welcome#download`.
 | `VITE_HONE_HERO_VIDEO` | — | Landing hero video |
 
 ## Commands

@@ -147,7 +147,12 @@ export const ru = {
     demoTask3: 'Утренний focus block',
     preparingDownload: 'Готовим загрузку',
     downloadCta: 'Скачать Hone',
+    downloadCtaVersion: 'Скачать Hone v{{version}}',
     downloadStarted: 'Загрузка началась',
+    manifestoDownloadTitle: 'Возьми Hone с собой',
+    manifestoDownloadHint: 'Desktop для macOS и Windows — всегда последний релиз',
+    manifestoDownloadHintVersion: 'macOS и Windows · актуальная v{{version}}',
+    allReleases: 'Все версии на GitHub',
     philosophyTitle: 'Наша философия',
     philosophyBody:
       'Hone — не ещё одна вкладка в браузере.\n' +

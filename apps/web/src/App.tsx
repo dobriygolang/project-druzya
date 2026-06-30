@@ -10,6 +10,7 @@ const LiveNewPage = lazy(() => import('@/components/live/LiveNewPage').then((m) 
 const PricingPage = lazy(() => import('@/pages/PricingPage'))
 const LegalTermsPage = lazy(() => import('@/pages/LegalTermsPage'))
 const LegalPrivacyPage = lazy(() => import('@/pages/LegalPrivacyPage'))
+const HoneDownloadPage = lazy(() => import('@/pages/HoneDownloadPage'))
 
 function RetiredRedirect() {
   return <Navigate to="/welcome" replace />
@@ -26,6 +27,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Navigate to="/welcome" replace />} />
         <Route path="/welcome" element={<WelcomePage />} />
+        <Route path="/download" element={<HoneDownloadPage />} />
         <Route path="/notes/:slug" element={<PublishedNotePage />} />
         <Route path="/board/:slug" element={<PublishedBoardPage />} />
         <Route path="/n/:slug" element={<LegacyNoteSlugRedirect />} />

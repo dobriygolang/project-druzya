@@ -148,7 +148,12 @@ export const en: Messages = {
     demoTask3: 'Morning focus block',
     preparingDownload: 'Preparing download',
     downloadCta: 'Download Hone',
+    downloadCtaVersion: 'Download Hone v{{version}}',
     downloadStarted: 'Download started',
+    manifestoDownloadTitle: 'Take Hone with you',
+    manifestoDownloadHint: 'Desktop for macOS and Windows — always the latest release',
+    manifestoDownloadHintVersion: 'macOS & Windows · latest v{{version}}',
+    allReleases: 'All versions on GitHub',
     philosophyTitle: 'Our philosophy',
     philosophyBody:
       'Hone is not another tab in your browser.\n' +
