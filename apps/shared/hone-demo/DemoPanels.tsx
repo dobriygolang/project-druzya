@@ -37,7 +37,7 @@ export function DemoPanels({ panel, labels, compact, typedText, preloadNotes }: 
               labels={labels}
               compact={compact}
               typedText={notesVisible ? typedText : ''}
-              readOnly
+              readOnly={typedText !== undefined}
             />
           </Suspense>
         </div>
