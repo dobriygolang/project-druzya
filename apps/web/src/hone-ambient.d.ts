@@ -36,4 +36,10 @@ declare module '@tauri-apps/plugin-updater' {
   export function check(): Promise<Update | null>;
 }
 
+declare module 'react' {
+  interface CSSProperties {
+    WebkitAppRegion?: 'drag' | 'no-drag';
+  }
+}
+
 export {};

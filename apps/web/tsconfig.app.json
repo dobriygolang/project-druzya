@@ -39,10 +39,8 @@
       "@codemirror/commands": ["./node_modules/@codemirror/commands"],
       "@codemirror/lang-markdown": ["./node_modules/@codemirror/lang-markdown"],
       "@codemirror/language": ["./node_modules/@codemirror/language"],
-      "react": ["./node_modules/react"],
-      "react/jsx-runtime": ["./node_modules/react/jsx-runtime"],
-      "react-dom": ["./node_modules/react-dom"],
-      "react-dom/client": ["./node_modules/react-dom/client"]
+      "react": ["./node_modules/@types/react/index.d.ts"],
+      "react/jsx-runtime": ["./node_modules/@types/react/jsx-runtime.d.ts"]
     }
   },
   "include": [
