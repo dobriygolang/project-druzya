@@ -49,6 +49,8 @@ CI: [`.github/workflows/hone-release.yml`](../../.github/workflows/hone-release.
 
 **Tag rule:** tag must match app version — `hone-v` + semver from `tauri.conf.json` (e.g. `hone-v0.0.1`).
 
+If CI fails on `npm ci` with `Exit handler never called`, ensure `package-lock.json` has no `artifactory` URLs (`grep artifactory apps/hone/package-lock.json` → empty) and re-run the workflow from the latest `main` (workflow pins Node `22.14.0`).
+
 ## Layout
 
 ```

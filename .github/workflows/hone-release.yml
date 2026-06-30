@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22.14.0'
           cache: npm
           cache-dependency-path: apps/hone/package-lock.json
 
@@ -95,7 +95,13 @@ jobs:
         working-directory: apps/hone
         env:
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org
-        run: npm ci --registry https://registry.npmjs.org
+          NPM_CONFIG_PROGRESS: 'false'
+          NPM_CONFIG_AUDIT: 'false'
+          NPM_CONFIG_FUND: 'false'
+        run: |
+          node --version
+          npm --version
+          npm ci --no-audit --no-fund --progress=false --registry https://registry.npmjs.org
 
       - name: Resolve release tag
         id: release

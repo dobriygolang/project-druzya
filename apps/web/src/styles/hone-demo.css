@@ -1,0 +1,210 @@
+/* Scoped Hone workspace demo — winter + particles canvas bg + dock chrome */
+
+.hone-demo {
+  --ink-rgb: 255 255 255;
+  --ink: rgb(255 255 255);
+  --ink-60: rgb(255 255 255 / 0.6);
+  --ink-tint-06: rgb(255 255 255 / 0.06);
+  --ink-tint-04: rgb(255 255 255 / 0.04);
+  --motion-dur-xxlarge: 1.2s;
+  --motion-ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0f0f0f;
+}
+
+.hone-demo[data-theme='light'] {
+  --ink-rgb: 15 15 15;
+  --ink: rgb(15 15 15);
+  --ink-60: rgb(15 15 15 / 0.6);
+  --ink-tint-06: rgb(15 15 15 / 0.06);
+  --ink-tint-04: rgb(15 15 15 / 0.04);
+  background: #fafaf8;
+}
+
+.hone-demo[data-theme='light'] .hone-demo-star {
+  background: rgb(var(--ink-rgb));
+}
+
+@keyframes hone-demo-wave-drift {
+  0% {
+    transform: translate3d(-3%, 0, 0);
+  }
+  50% {
+    transform: translate3d(3%, 0, 0);
+  }
+  100% {
+    transform: translate3d(-3%, 0, 0);
+  }
+}
+
+@keyframes hone-demo-wave-tilt {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-0.6deg);
+  }
+  50% {
+    transform: translate3d(2%, 0, 0) rotate(0.6deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-0.6deg);
+  }
+}
+
+@keyframes hone-demo-star-float {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(var(--star-dx, 6px), var(--star-dy, -4px), 0);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes hone-demo-star-twinkle {
+  0%,
+  100% {
+    opacity: var(--star-base, 0.5);
+  }
+  50% {
+    opacity: calc(var(--star-base, 0.5) + 0.25);
+  }
+}
+
+@keyframes hone-demo-winter-square-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hone-demo-particles-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.65;
+  }
+}
+
+@keyframes hone-demo-dock-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.hone-demo-winter-square {
+  animation: hone-demo-winter-square-spin 90s linear infinite;
+}
+
+.hone-demo-winter-square--offset {
+  animation-delay: -5.5s;
+}
+
+.hone-demo-wave-layer {
+  position: absolute;
+  inset: -10% -10%;
+  will-change: transform;
+}
+
+.hone-demo-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  will-change: transform, opacity;
+}
+
+.hone-demo-dock {
+  animation: hone-demo-dock-enter var(--motion-dur-xxlarge) var(--motion-ease-standard) both;
+}
+
+.hone-demo-dock-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background-color var(--t-fast),
+    color var(--t-fast),
+    transform var(--t-fast),
+    opacity var(--t-fast);
+}
+
+.hone-demo-dock-btn:hover {
+  background: rgb(var(--ink-rgb) / 0.1);
+}
+
+.hone-demo-dock-btn[data-variant='action']:hover {
+  transform: scale(1.02);
+}
+
+.hone-demo-dock-btn[data-variant='action']:active {
+  transform: scale(0.98);
+}
+
+.hone-demo-dock-timer {
+  position: relative;
+  height: 36px;
+  min-width: 96px;
+  padding: 0 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.hone-demo-dock-timer-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity var(--t-base),
+    transform var(--t-base);
+}
+
+.hone-demo-dock-timer-layer--time {
+  gap: 4px;
+}
+
+.hone-demo-dock-timer-layer--reset {
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+.hone-demo-dock-timer:hover .hone-demo-dock-timer-layer--time {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.hone-demo-dock-timer:hover .hone-demo-dock-timer-layer--reset {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hone-demo-winter-square,
+  .hone-demo-wave-layer,
+  .hone-demo-star,
+  .hone-demo-dock,
+  .hone-demo-dock-btn,
+  .hone-demo-dock-timer {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
