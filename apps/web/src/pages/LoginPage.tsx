@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
+import { PublicPageShell } from '@/components/brand/PublicNav'
 import { authTelegram, getAuthConfig, getYandexAuthURL } from '@/lib/api/auth'
 import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n'
@@ -64,8 +64,6 @@ export default function LoginPage() {
 
   return (
     <PublicPageShell>
-      <PublicNav />
-
       <main className="mx-auto flex max-w-7xl flex-1 justify-center px-6 pb-16 pt-12 sm:px-8 sm:pt-16">
         <div className="w-full max-w-[400px]">
           <h1 className="text-[28px] font-semibold leading-[1.15] tracking-[-0.02em] text-site-text">{t('login.title')}</h1>

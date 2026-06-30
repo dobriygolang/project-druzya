@@ -48,7 +48,7 @@ export default function CheckoutPage() {
   const hasTelegram = !!meQ.data?.telegram_id
 
   return (
-    <PublicOrAuthedShell publicNav={{ centerLinks: [{ href: '/pricing', label: t('common.pricing') }] }}>
+    <PublicOrAuthedShell>
       <PageContent>
         <header className="text-center">
           <Eyebrow className={c.muted}>{t('checkout.eyebrow')}</Eyebrow>

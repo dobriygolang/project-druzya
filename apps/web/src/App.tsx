@@ -1,7 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { readAccessToken } from '@/lib/apiClient'
-import { AppShell } from '@/components/AppShell'
+import { PublicPageShell } from '@/components/brand/PublicNav'
 import { RequireAuth } from '@/components/RequireAuth'
 import { RouteLoader } from '@/components/RouteLoader'
 
@@ -21,7 +21,7 @@ function RootRedirect() {
 }
 
 function AuthedLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>
+  return <PublicPageShell>{children}</PublicPageShell>
 }
 
 function RetiredRedirect() {

@@ -1,10 +1,11 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 
 import { CanvasBg, type CanvasMode, type ThemeId } from '@widgets/CanvasBg';
-import { Wordmark, Versionmark } from '@widgets/Chrome';
+import { Wordmark } from '@widgets/Chrome';
 import { TrafficLightsHover } from '@widgets/TrafficLightsHover';
 import { Dock } from '@widgets/Dock';
 import { LoginScreen } from '@widgets/LoginScreen';
+import { StatsOverlay } from '@widgets/StatsOverlay';
 import { type PageId, type PaletteAction } from '@widgets/Palette';
 import { OfflineBanner } from '@widgets/OfflineBanner';
 import { HomePage } from '@pages/Home';
@@ -16,7 +17,6 @@ import { PageSkeleton } from '@shared/ui/Skeleton';
 import { useGlobalHotkeys } from '@shared/hooks/useGlobalHotkeys';
 import { HONE_EVENTS } from '@shared/lib/custom-events';
 
-const Stats = lazy(() => import('@pages/Stats').then((m) => ({ default: m.Stats })));
 const TaskBoardPage = lazy(() => import('@pages/TaskBoard').then((m) => ({ default: m.TaskBoardPage })));
 const NotesPage = lazy(() => import('@pages/Notes').then((m) => ({ default: m.NotesPage })));
 const SettingsPage = lazy(() => import('@pages/Settings').then((m) => ({ default: m.SettingsPage })));
@@ -33,6 +33,8 @@ export interface StartFocusArgs {
   pinnedTitle?: string;
 }
 
+const NAV_PAGES = new Set<PageId>(['home', 'today', 'notes', 'settings']);
+
 export default function App() {
   const status = useSessionStore((s) => s.status);
   const bootstrap = useSessionStore((s) => s.bootstrap);
@@ -40,12 +42,12 @@ export default function App() {
   const clear = useSessionStore((s) => s.clear);
 
   const PAGE_STORAGE_KEY = 'hone:lastPage:v1';
-  const VALID_PAGES = new Set<PageId>(['home', 'today', 'notes', 'stats', 'settings']);
   const readStoredPage = (): PageId => {
     if (typeof window === 'undefined') return 'home';
     try {
       const v = window.sessionStorage.getItem(PAGE_STORAGE_KEY);
-      if (v && VALID_PAGES.has(v as PageId)) return v as PageId;
+      if (v === 'stats') return 'home';
+      if (v && NAV_PAGES.has(v as PageId)) return v as PageId;
     } catch {
       /* sessionStorage may be unavailable */
     }
@@ -53,6 +55,15 @@ export default function App() {
   };
 
   const [page, setPageRaw] = useState<PageId>(() => readStoredPage());
+  const [statsOpen, setStatsOpen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.sessionStorage.getItem(PAGE_STORAGE_KEY) === 'stats';
+    } catch {
+      return false;
+    }
+  });
+
   const setPage = useCallback((next: PageId | ((p: PageId) => PageId)) => {
     const update = () => {
       setPageRaw((current) => {
@@ -138,6 +149,7 @@ export default function App() {
         if (host === 'task.open') {
           const taskId = u.searchParams.get('id') ?? u.searchParams.get('task');
           if (taskId) {
+            setStatsOpen(false);
             setPage('today');
             window.dispatchEvent(new CustomEvent(HONE_EVENTS.openTask, { detail: { taskId } }));
           }
@@ -146,6 +158,7 @@ export default function App() {
         if (host === 'note.open') {
           const noteId = u.searchParams.get('id') ?? u.searchParams.get('note');
           if (noteId) {
+            setStatsOpen(false);
             setPage('notes');
             window.dispatchEvent(new CustomEvent(HONE_EVENTS.openNote, { detail: { noteId } }));
           }
@@ -262,12 +275,14 @@ export default function App() {
     [setPage],
   );
 
-  const stopFocus = useCallback(() => {
-    if (!running && !sessionRef.current) return;
-    setRunning(false);
-    void finishSession();
-    setRemain(pomodoroSecsRef.current);
-  }, [running, finishSession]);
+  const openStats = useCallback(() => {
+    setPage('home');
+    setStatsOpen(true);
+  }, [setPage]);
+
+  const closeStats = useCallback(() => {
+    setStatsOpen(false);
+  }, []);
 
   const openImpl = useCallback(
     (id: PaletteAction, args?: StartFocusArgs) => {
@@ -275,28 +290,38 @@ export default function App() {
         startFocus(args);
         return;
       }
+      if (id === 'stats') {
+        openStats();
+        return;
+      }
+      setStatsOpen(false);
       setPage(id as PageId);
     },
-    [startFocus, setPage],
+    [startFocus, setPage, openStats],
   );
 
-  const goHome = () => setPage('home');
+  const goHome = useCallback(() => {
+    setStatsOpen(false);
+    setPage('home');
+  }, [setPage]);
 
   useEffect(() => {
-    const onNavHome = () => setPage('home');
+    const onNavHome = () => goHome();
     window.addEventListener(HONE_EVENTS.navHome, onNavHome);
     return () => window.removeEventListener(HONE_EVENTS.navHome, onNavHome);
-  }, [setPage]);
+  }, [goHome]);
 
   useGlobalHotkeys({
     page,
     paletteOpen,
+    statsOpen,
     setPaletteOpen,
     goHome,
+    openStats,
     open: openImpl,
   });
 
-  const canvasMode: CanvasMode = page === 'home' || page === 'stats' ? 'full' : 'quiet';
+  const canvasMode: CanvasMode = page === 'home' && !statsOpen ? 'full' : 'quiet';
 
   if (status === 'unknown') {
     return (
@@ -318,28 +343,27 @@ export default function App() {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'var(--bg)', overflow: 'hidden' }}>
       <CanvasBg mode={canvasMode} theme={theme} />
+
       <div
+        data-tauri-drag-region
         style={{
-          position: 'absolute',
+          position: 'fixed',
           top: 0,
           left: 0,
           right: 0,
-          height: 48,
-          zIndex: 5,
-          // @ts-expect-error — Electron/Tauri drag region
+          height: 52,
+          zIndex: 8,
+          // @ts-expect-error — Tauri/Electron drag region
           WebkitAppRegion: 'drag',
         }}
       />
+
       <TrafficLightsHover />
       <Wordmark />
-      <Versionmark escHint={page !== 'home'} onEsc={goHome} />
 
-      {page === 'home' && (
-        <HomePage running={running} remain={remain} pinnedTitle={pinnedTitle} onStop={stopFocus} />
-      )}
+      {page === 'home' && <HomePage />}
       <PageSuspense>
         {page === 'today' && <TaskBoardPage />}
-        {page === 'stats' && <Stats />}
         {page === 'notes' && <NotesPage />}
       </PageSuspense>
       <PageSuspense>
@@ -354,6 +378,8 @@ export default function App() {
           />
         )}
       </PageSuspense>
+
+      {statsOpen && <StatsOverlay onClose={closeStats} />}
 
       <Dock
         onMenu={() => setPaletteOpen(true)}

@@ -26,6 +26,7 @@ export type IconName =
   | 'infinity'
   | 'circle'
   | 'rewind'
+  | 'reset'
   | 'bold'
   | 'italic'
   | 'underline'
@@ -197,6 +198,13 @@ export function Icon({ name, size = 14, stroke = 'currentColor', strokeWidth = 1
         <svg {...p}>
           <path d="M3 12a9 9 0 109-9" />
           <path d="M3 4v6h6" />
+        </svg>
+      );
+    case 'reset':
+      return (
+        <svg {...p}>
+          <path d="M4 4v5h5" />
+          <path d="M4 9a8 8 0 1 1 2.3 5.7" />
         </svg>
       );
     case 'bold':

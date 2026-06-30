@@ -387,10 +387,10 @@
       "description": "Permission identifier",
       "oneOf": [
         {
-          "description": "Hone custom invoke handlers (auth, vault, pomodoro, focus, shell).",
+          "description": "Hone custom invoke handlers (auth, pomodoro, shell).",
           "type": "string",
           "const": "allow-hone-commands",
-          "markdownDescription": "Hone custom invoke handlers (auth, vault, pomodoro, focus, shell)."
+          "markdownDescription": "Hone custom invoke handlers (auth, pomodoro, shell)."
         },
         {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",

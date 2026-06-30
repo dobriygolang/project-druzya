@@ -5,7 +5,7 @@ import { useT } from '@d9-i18n';
 
 import { useOnlineStatus } from '@shared/hooks/useOnlineStatus';
 import { zIndex } from '@shared/lib/z-index';
-import { API_BASE_URL } from '@shared/api/config';
+import { HEALTH_CHECK_URL } from '@shared/api/config';
 
 type ServerState = 'unknown' | 'ok' | 'degraded' | 'unreachable';
 
@@ -21,7 +21,7 @@ async function probeServer(signal: AbortSignal): Promise<{ state: ServerState; l
   signal.addEventListener('abort', onParentAbort);
   const timer = window.setTimeout(() => localCtl.abort(), PROBE_TIMEOUT_MS);
   try {
-    const resp = await fetch(`${API_BASE_URL}/v1/billing/me`, {
+    const resp = await fetch(HEALTH_CHECK_URL, {
       method: 'HEAD',
       signal: localCtl.signal,
     });

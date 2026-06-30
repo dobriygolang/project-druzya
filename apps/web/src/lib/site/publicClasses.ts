@@ -1,18 +1,5 @@
-import { hasValidAccessToken } from '@/lib/apiClient'
-
-/** Token classes for pages that render in PublicPageShell (guest) or AppShell (authed). */
-export function siteAwareClasses(authed = hasValidAccessToken()) {
-  if (authed) {
-    return {
-      text: 'text-text-primary',
-      muted: 'text-text-muted',
-      secondary: 'text-text-secondary',
-      card: 'rounded-2xl border border-border bg-surface-1',
-      cardMuted: 'rounded-2xl border border-border bg-surface-2',
-      border: 'border-border',
-      link: 'text-text-primary underline underline-offset-2 hover:text-text-secondary',
-    }
-  }
+/** Token classes for pages inside PublicPageShell. */
+export function siteAwareClasses(_authed?: boolean) {
   return {
     text: 'text-site-text',
     muted: 'text-site-muted',

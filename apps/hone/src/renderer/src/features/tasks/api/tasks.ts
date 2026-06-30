@@ -32,13 +32,6 @@ export interface TaskCard {
   scheduledDurationMin?: number;
 }
 
-export interface TaskComment {
-  id: string;
-  authorKind: 'ai' | 'user';
-  bodyMd: string;
-  createdAt: string;
-}
-
 type JsonWorkTask = Record<string, unknown>;
 
 function pickStr(obj: JsonWorkTask, camel: string, snake: string): string {
@@ -96,22 +89,14 @@ export async function listTasks(): Promise<TaskCard[]> {
   return (j.tasks ?? []).map(unwrapWorkTask);
 }
 
-export async function createTask(input: {
-  kind: TaskKind;
-  title: string;
-  briefMd?: string;
-  skillKey?: string;
-  deepLink?: string;
-}): Promise<TaskCard> {
+export async function createTask(input: { title: string; briefMd?: string }): Promise<TaskCard> {
   const resp = await fetch(BASE, {
     method: 'POST',
     headers: { ...authHeaders(), 'content-type': 'application/json' },
     body: JSON.stringify({
-      kind: input.kind,
+      kind: 'custom',
       title: input.title,
       brief_md: input.briefMd ?? '',
-      skill_key: input.skillKey ?? '',
-      deep_link: input.deepLink ?? '',
     }),
   });
   if (!resp.ok) throw new Error(`createTask: ${resp.status}`);
@@ -162,67 +147,4 @@ export async function unscheduleTask(taskId: string): Promise<TaskCard> {
   });
   if (!resp.ok) throw new Error(`unscheduleTask: ${resp.status}`);
   return unwrapTaskResponse(await resp.json());
-}
-
-export async function listTaskComments(_taskId: string): Promise<TaskComment[]> {
-  return [];
-}
-
-export async function addTaskComment(_taskId: string, _bodyMd: string): Promise<TaskComment> {
-  throw new Error('task comments not implemented');
-}
-
-export async function updateTaskKind(
-  taskId: string,
-  kind: TaskKind,
-  manualOverride: boolean = true,
-): Promise<TaskCard> {
-  const resp = await fetch(`${BASE}/${encodeURIComponent(taskId)}/kind`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'content-type': 'application/json' },
-    body: JSON.stringify({ id: taskId, kind, manual_override: manualOverride }),
-  });
-  if (!resp.ok) throw new Error(`updateTaskKind: ${resp.status}`);
-  return unwrapTaskResponse(await resp.json());
-}
-
-export interface BulkAutoCategoriseEvent {
-  taskId: string;
-  kind: TaskKind;
-  reasoning: string;
-  confidence: number;
-  processed: number;
-  total: number;
-  done: boolean;
-}
-
-export async function bulkAutoCategorise(
-  _taskIds: string[],
-  onEvent: (e: BulkAutoCategoriseEvent) => void,
-  _signal?: AbortSignal,
-): Promise<void> {
-  onEvent({ taskId: '', kind: 'custom', reasoning: 'disabled', confidence: 0, processed: 0, total: 0, done: true });
-}
-
-export type CursorEventKind =
-  | 'cursor.move'
-  | 'card.focus'
-  | 'card.thinking'
-  | 'card.comment'
-  | 'card.move'
-  | 'card.categorise';
-
-export interface CursorEvent {
-  kind: CursorEventKind;
-  taskId?: string;
-  toColumn?: TaskStatus;
-  fromColumn?: TaskStatus;
-  body?: string;
-  occurredAt: string;
-  detectedKind?: TaskKind;
-  confidence?: number;
-}
-
-export function subscribeCursorEvents(_token: string, _onEvent: (e: CursorEvent) => void): () => void {
-  return () => undefined;
 }

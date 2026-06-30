@@ -835,7 +835,7 @@ html.light .hone-tldraw-mount .tl-background {
   font-size: 12px;
   line-height: 1.5;
   letter-spacing: 0.02em;
-  color: rgb(255 255 255 / 0.45);
+  color: rgb(255 255 255 / 0.58);
   text-align: center;
 }
 
@@ -845,9 +845,9 @@ html.light .hone-tldraw-mount .tl-background {
   height: 32px;
   margin-bottom: 12px;
   padding: 8px 10px;
-  border: 1px solid rgb(255 255 255 / 0.18);
+  border: 1px solid rgb(255 255 255 / 0.22);
   border-radius: 8px;
-  background: rgb(255 255 255 / 0.04);
+  background: rgb(255 255 255 / 0.06);
   color: #fff;
   font-size: 13px;
   letter-spacing: 0.08em;
@@ -870,16 +870,17 @@ html.light .hone-tldraw-mount .tl-background {
   width: 156px;
   height: 32px;
   padding: 8px 10px;
-  border: none;
+  border: 1px solid rgb(255 255 255 / 0.22);
   border-radius: 8px;
-  background: #fff;
-  color: #0a0a0a;
+  background: rgb(255 255 255 / 0.88);
+  color: #141414;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform var(--motion-dur-small) var(--motion-ease-standard),
-    opacity var(--motion-dur-small) var(--motion-ease-standard);
+  transition:
+    background-color var(--motion-dur-medium) var(--motion-ease-standard),
+    border-color var(--motion-dur-medium) var(--motion-ease-standard);
 }
 
 .login-tg-icon {
@@ -888,11 +889,12 @@ html.light .hone-tldraw-mount .tl-background {
 }
 
 .login-tg-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
+  background: rgb(255 255 255 / 0.94);
+  border-color: rgb(255 255 255 / 0.32);
 }
 
 .login-tg-btn:active:not(:disabled) {
-  transform: translateY(0);
+  background: rgb(255 255 255 / 0.82);
 }
 
 .login-tg-btn:disabled {

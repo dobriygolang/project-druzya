@@ -19,8 +19,8 @@ import { memo, useEffect, useRef, type CSSProperties } from 'react';
 
 // Hover-зона. ВАЖНО: должна совпадать с inline-style ниже — оба значения
 // используются и React-onMouseEnter (как fallback), и глобальным mousemove.
-const ZONE_WIDTH = 140;
-const ZONE_HEIGHT = 56;
+const ZONE_WIDTH = 200;
+const ZONE_HEIGHT = 64;
 
 // Задержка перед скрытием. 350ms — комфортный буфер чтобы юзер успел
 // довести курсор от Wordmark'а до кнопки и не дёргать show/hide на
@@ -33,7 +33,7 @@ const ZONE_STYLE = {
   left: 0,
   width: ZONE_WIDTH,
   height: ZONE_HEIGHT,
-  zIndex: 5,
+  zIndex: 9,
   pointerEvents: 'none',
   WebkitAppRegion: 'no-drag',
 } as CSSProperties;

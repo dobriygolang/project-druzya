@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
+import { PublicPageShell } from '@/components/brand/PublicNav'
 import { Button } from '@/components/ui/Button'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { getMe } from '@/lib/api/auth'
@@ -41,8 +41,6 @@ export function LiveNewPage() {
 
   return (
     <PublicPageShell>
-      <PublicNav />
-
       <main className="mx-auto flex max-w-7xl flex-col gap-10 px-6 pb-20 pt-12 sm:px-8 lg:flex-row lg:items-start lg:gap-16 lg:pt-16">
         <div className="flex-1 lg:max-w-md">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-site-muted">{t('live.newEyebrow')}</p>

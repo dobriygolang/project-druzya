@@ -11,7 +11,12 @@ import { useDataState } from '@shared/hooks/useDataState';
 
 type Range = '7d' | '30d' | '90d';
 
-export const Stats: React.FC = () => {
+interface StatsProps {
+  variant?: 'page' | 'overlay';
+  onClose?: () => void;
+}
+
+export const Stats: React.FC<StatsProps> = ({ variant = 'page', onClose }) => {
   const [range, setRange] = useState<Range>('7d');
   const [reload, setReload] = useState(0);
 
@@ -32,9 +37,9 @@ export const Stats: React.FC = () => {
     statsState.status === 'error' && statsState.error ? statsState.error : null;
 
   return (
-    <div style={shell} className="motion-page-in">
+    <div style={variant === 'overlay' ? overlayShell : shell} className="motion-page-in">
       <div style={innerWrap}>
-        <Header range={range} setRange={setRange} />
+        <Header range={range} setRange={setRange} onClose={variant === 'overlay' ? onClose : undefined} />
 
         {firstError && (
           <ErrorStripe
@@ -75,28 +80,52 @@ export const Stats: React.FC = () => {
 const Header: React.FC<{
   range: Range;
   setRange: (r: Range) => void;
-}> = ({ range, setRange }) => (
+  onClose?: () => void;
+}> = ({ range, setRange, onClose }) => (
   <header style={headerWrap}>
     <span style={captionMonoSmall}>stats</span>
-    <div role="tablist" aria-label="Date range" style={rangeBox}>
-      {(['7d', '30d', '90d'] as Range[]).map((r) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div role="tablist" aria-label="Date range" style={rangeBox}>
+        {(['7d', '30d', '90d'] as Range[]).map((r) => (
+          <button
+            key={r}
+            onClick={() => setRange(r)}
+            role="tab"
+            aria-selected={range === r}
+            aria-pressed={range === r}
+            className="focus-ring motion-press"
+            style={{
+              ...rangeBtn,
+              color: range === r ? 'var(--ink)' : 'var(--ink-60)',
+              background: range === r ? 'rgb(var(--ink-rgb) / 0.06)' : 'transparent',
+              borderColor: range === r ? 'var(--hair-2)' : 'transparent',
+            }}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
+      {onClose && (
         <button
-          key={r}
-          onClick={() => setRange(r)}
-          role="tab"
-          aria-selected={range === r}
-          aria-pressed={range === r}
-          className="focus-ring motion-press"
+          type="button"
+          onClick={onClose}
+          aria-label="Close stats"
+          className="focus-ring"
           style={{
-            ...rangeBtn,
-            color: range === r ? 'var(--ink)' : 'var(--ink-60)',
-            background: range === r ? 'rgb(var(--ink-rgb) / 0.06)' : 'transparent',
-            borderColor: range === r ? 'var(--hair-2)' : 'transparent',
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            border: '1px solid var(--hair-2)',
+            background: 'transparent',
+            color: 'var(--ink-60)',
+            cursor: 'pointer',
+            fontSize: 16,
+            lineHeight: 1,
           }}
         >
-          {r}
+          ×
         </button>
-      ))}
+      )}
     </div>
   </header>
 );
@@ -198,6 +227,17 @@ const shell: React.CSSProperties = {
   background: 'var(--bg)',
   color: 'var(--ink)',
   padding: '60px 28px 96px',
+  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+  letterSpacing: '-0.005em',
+};
+
+const overlayShell: React.CSSProperties = {
+  position: 'relative',
+  height: '100%',
+  overflowY: 'auto',
+  background: 'var(--bg)',
+  color: 'var(--ink)',
+  padding: '56px 24px 96px',
   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
   letterSpacing: '-0.005em',
 };

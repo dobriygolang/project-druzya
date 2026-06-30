@@ -82,7 +82,7 @@ export default function PricingPage() {
   }, [paidReturn, isProActive, setSearchParams])
 
   return (
-    <PublicOrAuthedShell publicNav={{ centerLinks: [{ href: '/welcome', label: t('public.home') }] }}>
+    <PublicOrAuthedShell>
       <PageContent>
         <header className="text-center">
           <Eyebrow className={c.muted}>{t('pricing.eyebrow')}</Eyebrow>

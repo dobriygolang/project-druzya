@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
+import { PublicPageShell } from '@/components/brand/PublicNav'
 import { useI18n } from '@/lib/i18n'
 
 export function LegalLayout({
@@ -21,8 +21,7 @@ export function LegalLayout({
   const { t } = useI18n()
 
   return (
-    <PublicPageShell>
-      <PublicNav right={nav} />
+    <PublicPageShell headerRight={nav}>
       <main className="mx-auto max-w-[760px] px-6 py-16">
         <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-site-muted">{eyebrow}</p>
         <h1 className="mt-3 text-[36px] font-semibold tracking-tight text-site-text sm:text-[44px]">{title}</h1>

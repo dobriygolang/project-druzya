@@ -7,15 +7,16 @@ import { HONE_EVENTS } from '@shared/lib/custom-events';
 interface GlobalHotkeysDeps {
   page: PageId;
   paletteOpen: boolean;
+  statsOpen: boolean;
   setPaletteOpen: (next: (p: boolean) => boolean) => void;
   goHome: () => void;
+  openStats: () => void;
   open: (id: PageId) => void;
 }
 
 const LETTER_HOTKEYS: Record<string, PageId> = {
   KeyT: 'today',
   KeyN: 'notes',
-  KeyS: 'stats',
   Comma: 'settings',
 };
 
@@ -50,6 +51,9 @@ export function useGlobalHotkeys(deps: GlobalHotkeysDeps): void {
           d.setPaletteOpen(() => false);
           return;
         }
+        if (d.statsOpen) {
+          return;
+        }
         if (d.page !== 'home') {
           d.goHome();
         }
@@ -58,6 +62,12 @@ export function useGlobalHotkeys(deps: GlobalHotkeysDeps): void {
 
       if (isText || d.paletteOpen) return;
       if (isMod || e.altKey) return;
+
+      if (e.code === 'KeyS') {
+        if (d.statsOpen) d.goHome();
+        else d.openStats();
+        return;
+      }
 
       const id = LETTER_HOTKEYS[e.code];
       if (!id) return;

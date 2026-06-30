@@ -17,6 +17,7 @@ import { LiveNewPage } from '@/components/live/LiveNewPage'
 import { LiveRoomBottomBar } from '@/components/live/LiveRoomBottomBar'
 import { LiveRoomTopBar } from '@/components/live/LiveRoomTopBar'
 import { RunOutputPanel, runPanelHeight } from '@/components/live/RunOutputPanel'
+import { PublicPageShell } from '@/components/brand/PublicNav'
 import { Logo } from '@/components/brand/Logo'
 import { brand } from '@/lib/brand/tokens'
 import { Button } from '@/components/ui/Button'
@@ -411,36 +412,24 @@ function GuestGate({
 }) {
   const { t } = useI18n()
 
-  useEffect(() => {
-    document.documentElement.classList.add('light')
-  }, [])
-
   return (
-    <div className="min-h-screen bg-bg text-text-primary">
-      <header className="border-b px-6 py-5 sm:px-8" style={{ borderColor: brand.hair }}>
-        <div className="mx-auto flex max-w-lg items-center justify-between">
-          <Logo to="/welcome" />
-          <Link to={loginTo} className="text-sm text-text-secondary no-underline">
-            {t('live.login')}
-          </Link>
-        </div>
-      </header>
+    <PublicPageShell>
       <main className="mx-auto flex max-w-lg flex-col items-center px-6 py-16">
-        <div className="sdvg-card w-full p-6 sm:p-7" style={{ boxShadow: brand.cardShadow }}>
-          <h1 className="text-xl font-semibold tracking-[-0.02em]">{title ?? t('live.guestTitle')}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+        <div className="w-full rounded-2xl border border-site-border bg-site-card p-6 sm:p-7">
+          <h1 className="text-xl font-semibold tracking-[-0.02em] text-site-text">{title ?? t('live.guestTitle')}</h1>
+          <p className="mt-2 text-sm leading-relaxed text-site-muted">
             {description ?? t('live.guestDescription')}
           </p>
           {!hideJoin ? (
             <>
-              <label htmlFor="guest-name" className="mt-5 block text-sm font-medium">
+              <label htmlFor="guest-name" className="mt-5 block text-sm font-medium text-site-text">
                 {t('live.name')}
               </label>
               <input
                 id="guest-name"
                 value={guestName}
                 onChange={(e) => onNameChange(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-border bg-surface-1 px-3 py-2.5 text-sm outline-none focus:border-border-strong"
+                className="mt-1.5 w-full rounded-xl border border-site-border bg-site-bg px-3 py-2.5 text-sm text-site-text outline-none focus:border-site-muted"
                 placeholder={t('live.namePlaceholder')}
               />
               {error ? (
@@ -467,15 +456,15 @@ function GuestGate({
             </div>
           )}
           {!hideJoin ? (
-            <p className="mt-4 text-center text-xs text-text-muted">
+            <p className="mt-4 text-center text-xs text-site-muted">
               {t('live.hasAccount')}{' '}
-              <Link to={loginTo} className="text-text-primary underline">
+              <Link to={loginTo} className="text-site-text underline">
                 {t('live.login')}
               </Link>
             </p>
           ) : null}
         </div>
       </main>
-    </div>
+    </PublicPageShell>
   )
 }

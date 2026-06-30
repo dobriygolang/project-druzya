@@ -4,6 +4,7 @@ import { authTelegram, getAuthConfig } from '@features/auth/api/auth';
 import { API_BASE_URL, TELEGRAM_BOT_USERNAME } from '@shared/api/config';
 import { DEV_LOGIN_ENABLED } from '@app/config/features';
 import { useSessionStore } from '@shared/model/session';
+import { BrandLogo } from '@shared/ui/BrandLogo';
 
 function TelegramIcon(): JSX.Element {
   return (
@@ -128,7 +129,7 @@ export function LoginScreen(): JSX.Element {
   return (
     <div className="login-screen">
       <div className="login-stack">
-        <h1 className="login-brand">Hone</h1>
+        <BrandLogo size={40} />
         <span className="login-rule" aria-hidden />
 
         <form className="login-form" onSubmit={(e) => void onSubmit(e)}>

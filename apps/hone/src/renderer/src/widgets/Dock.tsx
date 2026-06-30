@@ -1,25 +1,4 @@
-// Dock — the persistent bottom timer pill. Visible on every page; HomePage
-// рисует свой большой mm:ss поверх когда running.
-//
-// 6 focus modes (mirrors backend hone_focus_mode_valid CHECK миграция 00067):
-//   pomodoro  — 25-min cycles + reflection prompt после finish'а
-//   stopwatch — ∞ от 00:00 вверх; auto-end не срабатывает
-//   free      — no timer, session tracked без mm:ss (для свободного флоу)
-//   plan      — multi-block sequence (50 focus + 10 break × 3 для MVP)
-//   pinned    — focus tied к pinned task; ends когда task → done
-//   countdown — fixed minutes (configured pomodoroMinutes)
-//
-// Visual — rounded-2xl панель (winter-style), кнопки 40×40 rounded-xl.
-// Анимации:
-//   • Mount  — fade + slide-up на 720ms (motion-dur-xxlarge).
-//   • Menu   — hover rotates icon 180°.
-//   • Action — hover scale 1.05 / active scale 0.95.
-//   • Timer  — hover swap: time-layer уезжает вниз с blur+fade,
-//              controls-layer въезжает сверху (520ms motion-dur-xlarge).
-//
-// Mode pill (после dock'а) — отдельный mini-pill с 6 кружочками; click
-// switches mode + resets timer. Сама секция collapse'ится в иконку
-// текущего режима после 1.2s idle.
+// Dock — persistent bottom timer pill on every page.
 import { memo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 import { Icon } from '@shared/ui/primitives/Icon';
@@ -73,6 +52,38 @@ const DOCK_CSS = `
   border-radius: 10px;
   overflow: hidden;
   cursor: pointer;
+}
+
+.hone-dock-timer-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    opacity var(--motion-dur-xlarge) var(--motion-ease-standard),
+    transform var(--motion-dur-xlarge) var(--motion-ease-standard);
+}
+
+.hone-dock-timer-layer--time {
+  gap: 4px;
+}
+
+.hone-dock-timer-layer--reset {
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.hone-dock-timer:hover .hone-dock-timer-layer--time {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.hone-dock-timer:hover .hone-dock-timer-layer--reset {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -173,32 +184,9 @@ interface TimerAreaProps {
 }
 
 function TimerArea({ running, mm, ss, onReset }: TimerAreaProps) {
-  const [hover, setHover] = useState(false);
-  const swapTransition =
-    'opacity var(--motion-dur-medium) var(--motion-ease-standard),' +
-    'transform var(--motion-dur-medium) var(--motion-ease-standard),' +
-    'filter var(--motion-dur-medium) var(--motion-ease-standard)';
-
   return (
-    <div
-      className="hone-dock-timer"
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 4,
-          opacity: hover ? 0 : 1,
-          transform: `translateY(${hover ? 32 : 0}px)`,
-          filter: hover ? 'blur(4px)' : 'blur(0)',
-          transition: swapTransition,
-        }}
-      >
+    <div className="hone-dock-timer">
+      <div className="hone-dock-timer-layer hone-dock-timer-layer--time">
         <span
           style={{
             width: 9,
@@ -212,22 +200,9 @@ function TimerArea({ running, mm, ss, onReset }: TimerAreaProps) {
           {mm}:{ss}
         </span>
       </div>
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: hover ? 1 : 0,
-          transform: `translateY(${hover ? 0 : -32}px)`,
-          transition:
-            'opacity var(--motion-dur-medium) var(--motion-ease-standard),' +
-            'transform var(--motion-dur-medium) var(--motion-ease-standard)',
-        }}
-      >
+      <div className="hone-dock-timer-layer hone-dock-timer-layer--reset">
         <DockBtn onClick={onReset} title="Reset timer" ariaLabel="Reset timer" small variant="action">
-          <Icon name="rewind" size={15} />
+          <Icon name="reset" size={14} strokeWidth={1.6} />
         </DockBtn>
       </div>
     </div>

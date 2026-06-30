@@ -1,10 +1,10 @@
 mod auth;
-mod focus;
 mod store;
+mod window_macos;
 
 use auth::{AuthSession, TelegramPollResult, TelegramStart};
 use store::PomodoroSnapshot;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -26,6 +26,9 @@ pub fn run() {
                     }
                 });
             }
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window_macos::set_traffic_lights(&window, false);
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -37,14 +40,8 @@ pub fn run() {
             pomodoro_load,
             pomodoro_save,
             shell_open_external,
-            vault_pass_load,
-            vault_pass_save,
-            vault_pass_clear,
-            focus_mode_start,
-            focus_mode_stop,
             tray_update,
             window_traffic_lights_show,
-            updater_install,
         ])
         .run(tauri::generate_context!())
         .expect("error while running hone");
@@ -53,13 +50,6 @@ pub fn run() {
 #[derive(Clone, serde::Serialize)]
 struct DeepLinkPayload {
     url: String,
-}
-
-#[derive(serde::Serialize)]
-struct FocusModeResult {
-    ok: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    error: Option<String>,
 }
 
 #[tauri::command]
@@ -77,7 +67,6 @@ fn auth_persist(app: AppHandle, session: AuthSession) -> Result<(), String> {
 #[tauri::command]
 fn auth_logout(app: AppHandle) -> Result<(), String> {
     auth::clear_session(&app)?;
-    store::clear_vault_pass(&app)?;
     let _ = app.emit("auth:changed", Option::<AuthSession>::None);
     Ok(())
 }
@@ -112,42 +101,11 @@ async fn shell_open_external(app: AppHandle, url: String) -> Result<(), String> 
 }
 
 #[tauri::command]
-fn vault_pass_load(app: AppHandle) -> Result<Option<String>, String> {
-    store::load_vault_pass(&app)
-}
-
-#[tauri::command]
-fn vault_pass_save(app: AppHandle, passphrase: String) -> Result<(), String> {
-    store::save_vault_pass(&app, &passphrase)
-}
-
-#[tauri::command]
-fn vault_pass_clear(app: AppHandle) -> Result<(), String> {
-    store::clear_vault_pass(&app)
-}
-
-#[tauri::command]
-fn focus_mode_start(name: String) -> FocusModeResult {
-    focus::run_shortcut(&name)
-}
-
-#[tauri::command]
-fn focus_mode_stop(name: String) -> FocusModeResult {
-    focus::run_shortcut(&name)
-}
-
-#[tauri::command]
 fn tray_update(_title: String, _tooltip: String) -> Result<(), String> {
-    // TODO: system tray title (Tauri tray plugin)
     Ok(())
 }
 
 #[tauri::command]
-fn window_traffic_lights_show(_visible: bool) -> Result<(), String> {
-    Ok(())
-}
-
-#[tauri::command]
-fn updater_install() -> Result<(), String> {
-    Err("auto-updater not wired yet".into())
+fn window_traffic_lights_show(window: tauri::WebviewWindow, visible: bool) -> Result<(), String> {
+    window_macos::set_traffic_lights(&window, visible)
 }

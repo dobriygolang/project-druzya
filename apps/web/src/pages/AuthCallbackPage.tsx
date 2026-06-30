@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
+import { PublicPageShell } from '@/components/brand/PublicNav'
 import { exchangeYandexCode } from '@/lib/api/auth'
 
 export default function AuthCallbackPage() {
@@ -42,7 +42,6 @@ export default function AuthCallbackPage() {
 
   return (
     <PublicPageShell>
-      <PublicNav />
       <main className="flex flex-1 items-center justify-center px-6 py-24">
         <div className="max-w-md text-center">
           {error ? (

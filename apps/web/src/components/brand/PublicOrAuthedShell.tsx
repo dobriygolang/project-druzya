@@ -1,29 +1,18 @@
 import type { ReactNode } from 'react'
-import { AppShell } from '@/components/AppShell'
-import { PublicNav, PublicPageShell } from '@/components/brand/PublicNav'
-import { hasValidAccessToken } from '@/lib/apiClient'
+import { PublicPageShell } from '@/components/brand/PublicNav'
 
 type LinkItem = { href: string; label: string; external?: boolean }
 
 type Props = {
   children: ReactNode
-  /** Shown only when the visitor is not signed in. */
-  publicNav?: {
-    centerLinks?: LinkItem[]
-    right?: ReactNode
-  }
+  headerRight?: ReactNode
+  centerLinks?: LinkItem[]
+  hideHeader?: boolean
 }
 
-export function PublicOrAuthedShell({ children, publicNav }: Props) {
-  const isAuthed = hasValidAccessToken()
-
-  if (isAuthed) {
-    return <AppShell>{children}</AppShell>
-  }
-
+export function PublicOrAuthedShell({ children, headerRight, centerLinks, hideHeader }: Props) {
   return (
-    <PublicPageShell>
-      <PublicNav centerLinks={publicNav?.centerLinks} right={publicNav?.right} />
+    <PublicPageShell centerLinks={centerLinks} headerRight={headerRight} hideHeader={hideHeader}>
       {children}
     </PublicPageShell>
   )

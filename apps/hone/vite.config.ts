@@ -26,22 +26,22 @@ export default defineConfig(({ mode }) => {
 
   const proxy = useLocal
     ? {
+        '/healthz': { target: 'http://localhost:8080', changeOrigin: true },
         '/v1/auth': { target: 'http://localhost:8080', changeOrigin: true },
         '/v1/me': { target: 'http://localhost:8080', changeOrigin: true },
         '/v1/jwt': { target: 'http://localhost:8080', changeOrigin: true },
         '/v1/tracker': { target: 'http://localhost:8089', changeOrigin: true },
         '/v1/notes': { target: 'http://localhost:8090', changeOrigin: true },
         '/v1/focus': { target: 'http://localhost:8091', changeOrigin: true },
-        '/v1/billing': { target: 'http://localhost:8085', changeOrigin: true },
       }
     : {
+        '/healthz': { target: prodApi, changeOrigin: true },
         '/v1/auth': { target: prodApi, changeOrigin: true },
         '/v1/me': { target: prodApi, changeOrigin: true },
         '/v1/jwt': { target: prodApi, changeOrigin: true },
         '/v1/tracker': { target: prodApi, changeOrigin: true },
         '/v1/notes': { target: prodApi, changeOrigin: true },
         '/v1/focus': { target: prodApi, changeOrigin: true },
-        '/v1/billing': { target: prodApi, changeOrigin: true },
       };
 
   return {
