@@ -274,7 +274,6 @@ export const en = {
   'hone.whiteboard.publish_copied': 'Published link copied',
   'hone.theme.active_badge': 'Active',
   'hone.theme.aria_label': 'Theme: {{name}}',
-  'hone.theme.birthday': 'Birthday',
   'hone.theme.birthday-light': 'Birthday Light',
   'hone.theme.debris': 'Debris',
   'hone.theme.drift': 'Drift',

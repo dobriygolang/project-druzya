@@ -4,7 +4,6 @@ import { useI18n } from '@/lib/i18n'
 
 type Props = {
   compact?: boolean
-  variant?: 'primary' | 'text'
   className?: string
 }
 
@@ -30,25 +29,14 @@ function DownloadIcon({ className }: { className?: string }) {
   )
 }
 
-export function LandingDownloadButton({ compact, variant = 'primary', className }: Props) {
+export function LandingDownloadButton({ compact, className }: Props) {
   const { t } = useI18n()
   const { preparing, label, onDownload } = useLandingDownload()
-
-  if (variant === 'text') {
-    return (
-      <button
-        type="button"
-        disabled={preparing}
-        onClick={onDownload}
-        className={cn(
-          'text-sm text-site-muted no-underline transition-colors hover:text-site-text disabled:opacity-50',
-          className,
-        )}
-      >
-        {preparing ? '…' : t('welcome.navDownload')}
-      </button>
-    )
-  }
+  const buttonLabel = compact
+    ? preparing
+      ? '…'
+      : t('welcome.navDownload')
+    : label
 
   return (
     <button
@@ -63,7 +51,7 @@ export function LandingDownloadButton({ compact, variant = 'primary', className 
     >
       <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.2),transparent)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       {!compact ? <DownloadIcon className="relative z-10 mr-2 fill-white" /> : null}
-      <span className="relative z-10">{label}</span>
+      <span className="relative z-10">{buttonLabel}</span>
     </button>
   )
 }

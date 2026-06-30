@@ -1,10 +1,9 @@
 // CanvasBg — медитативный фон Hone'а.
 //
-// Themes (8):
+// Themes (7):
 //   - drift (light): line-art astronaut drifting near a capsule on white
 //   - visor (light): line-art astronaut portrait with Earth reflected in visor
 //   - winter (default): grid + stars float/twinkle + waves drift + 2 rotating squares
-//   - birthday (dark): manga ink scene — astronaut holding a birthday cake in space,
 //   - birthday-light: line-art birthday scene — cake, gift, balloons on white
 //   - particles: dense floating particles with proximity lines (canvas2D),
 //     line opacity pulses with sine wave, mouse parallax
@@ -37,7 +36,6 @@ export type ThemeId =
   | 'drift'
   | 'visor'
   | 'winter'
-  | 'birthday'
   | 'birthday-light'
   | 'particles'
   | 'debris'
@@ -47,7 +45,6 @@ export const THEME_IDS: ThemeId[] = [
   'drift',
   'visor',
   'winter',
-  'birthday',
   'birthday-light',
   'particles',
   'debris',
@@ -70,8 +67,6 @@ export function CanvasBg({ mode = 'full', theme = 'winter' }: CanvasBgProps) {
       return <ImageBg mode={mode} src="/backgrounds/debris.png" />;
     case 'launch':
       return <ImageBg mode={mode} src="/backgrounds/launch.png" />;
-    case 'birthday':
-      return <ImageBg mode={mode} src="/backgrounds/birthday.png" />;
     case 'birthday-light':
       return <ImageBg mode={mode} src="/backgrounds/birthday-light.png" />;
     case 'particles':

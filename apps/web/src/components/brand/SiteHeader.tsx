@@ -33,7 +33,7 @@ export function SiteHeader({ centerLinks, right, className }: SiteHeaderProps) {
     <>
       <SiteLocaleToggle compact className="hidden sm:inline-flex" />
       <SiteThemeToggle theme={theme} onToggle={toggleTheme} compact className="hidden sm:inline-flex" />
-      <LandingDownloadButton variant="text" />
+      <LandingDownloadButton compact />
     </>
   )
 
