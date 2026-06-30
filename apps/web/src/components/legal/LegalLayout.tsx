@@ -21,9 +21,12 @@ export function LegalLayout({
   const { t } = useI18n()
 
   return (
-    <PublicPageShell headerRight={nav}>
+    <PublicPageShell>
       <main className="mx-auto max-w-[760px] px-6 py-16">
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-site-muted">{eyebrow}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-site-muted">{eyebrow}</p>
+          {nav}
+        </div>
         <h1 className="mt-3 text-[36px] font-semibold tracking-tight text-site-text sm:text-[44px]">{title}</h1>
         <p className="mt-3 text-[12.5px] text-site-muted">
           {t('legal.layout.updated')} {updated}
